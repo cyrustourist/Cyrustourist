@@ -25,6 +25,9 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android .
 
+      - name: Remove default Flutter test
+        run: rm -f test/widget_test.dart
+
       - name: Configure Android application ID and namespace
         run: |
           python3 - <<'PY'
