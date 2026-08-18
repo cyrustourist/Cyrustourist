@@ -48,30 +48,42 @@ jobs:
               found = True
               text = path.read_text()
 
-              # applicationId
-              text = re.sub(
-                  r'applicationId\s*(?:=)?\s*["\'][^"\']+["\']',
-                  'applicationId = "cyrustourist.ir.app"'
-                  if path.suffix == ".kts"
-                  else 'applicationId "cyrustourist.ir.app"',
-                  text,
-                  count=1
-              )
+              if path.suffix == ".kts":
+                  text = re.sub(
+                      r'applicationId\s*=\s*["\'][^"\']+["\']',
+                      'applicationId = "cyrustourist.ir.app"',
+                      text,
+                      count=1
+                  )
 
-              # namespace
-              text = re.sub(
-                  r'namespace\s*(?:=)?\s*["\'][^"\']+["\']',
-                  'namespace = "cyrustourist.ir.app"'
-                  if path.suffix == ".kts"
-                  else 'namespace "cyrustourist.ir.app"',
-                  text,
-                  count=1
-              )
+                  text = re.sub(
+                      r'namespace\s*=\s*["\'][^"\']+["\']',
+                      'namespace = "cyrustourist.ir.app"',
+                      text,
+                      count=1
+                  )
+
+              else:
+                  text = re.sub(
+                      r'applicationId\s+["\'][^"\']+["\']',
+                      'applicationId "cyrustourist.ir.app"',
+                      text,
+                      count=1
+                  )
+
+                  text = re.sub(
+                      r'namespace\s+["\'][^"\']+["\']',
+                      'namespace "cyrustourist.ir.app"',
+                      text,
+                      count=1
+                  )
 
               path.write_text(text)
 
           if not found:
-              raise SystemExit("Android app Gradle file was not found.")
+              raise SystemExit(
+                  "Android app Gradle file was not found."
+              )
           PY
 
       - name: Configure Android package
@@ -104,7 +116,10 @@ jobs:
                   )
 
                   destination = root / target_path / "MainActivity.kt"
-                  destination.parent.mkdir(parents=True, exist_ok=True)
+                  destination.parent.mkdir(
+                      parents=True,
+                      exist_ok=True
+                  )
 
                   destination.write_text(text)
 
@@ -117,15 +132,26 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          manifest = Path(
+              "android/app/src/main/AndroidManifest.xml"
+          )
 
           if not manifest.exists():
-              raise SystemExit("AndroidManifest.xml was not found.")
+              raise SystemExit(
+                  "AndroidManifest.xml was not found."
+              )
 
           text = manifest.read_text()
 
-          fine = '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />'
-          coarse = '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />'
+          fine = (
+              '<uses-permission '
+              'android:name="android.permission.ACCESS_FINE_LOCATION" />'
+          )
+
+          coarse = (
+              '<uses-permission '
+              'android:name="android.permission.ACCESS_COARSE_LOCATION" />'
+          )
 
           additions = []
 
@@ -137,16 +163,320 @@ jobs:
 
           if additions:
               marker = ">"
+
               index = text.find(marker)
 
               if index == -1:
-                  raise SystemExit("Invalid AndroidManifest.xml")
+                  raise SystemExit(
+                      "Invalid AndroidManifest.xml"
+                  )
 
-              permissions = "\n" + "\n".join(additions) + "\n"
-              text = text[:index + 1] + permissions + text[index + 1:]
+              permissions = (
+                  "\n"
+                  + "\n".join(additions)
+                  + "\n"
+              )
+
+              text = (
+                  text[:index + 1]
+                  + permissions
+                  + text[index + 1:]
+              )
 
           manifest.write_text(text)
           PY
+
+      # =========================================================
+      # CyrusTourist NAME + ICON
+      # =========================================================
+
+      - name: Configure CyrusTourist name and launcher icon
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          import re
+
+          # -----------------------------------------------------
+          # Find the original CyrusTourist logo
+          # -----------------------------------------------------
+
+          candidates = [
+              Path("logo-new.png"),
+              Path("assets/images/logo-new.png"),
+          ]
+
+          source_logo = None
+
+          for candidate in candidates:
+              if candidate.exists():
+                  source_logo = candidate
+                  break
+
+          if source_logo is None:
+              raise SystemExit(
+                  "logo-new.png was not found."
+              )
+
+          print(
+              "Using CyrusTourist logo:",
+              source_logo
+          )
+
+          # -----------------------------------------------------
+          # Android resource folders
+          # -----------------------------------------------------
+
+          res = Path(
+              "android/app/src/main/res"
+          )
+
+          drawable = res / "drawable"
+          drawable_v21 = res / "drawable-v21"
+
+          mipmap = res / "mipmap"
+          mipmap_v26 = res / "mipmap-v26"
+          mipmap_anydpi = res / "mipmap-anydpi-v26"
+
+          values = res / "values"
+          values_fa = res / "values-fa"
+
+          for folder in [
+              drawable,
+              drawable_v21,
+              mipmap,
+              mipmap_v26,
+              mipmap_anydpi,
+              values,
+              values_fa,
+          ]:
+              folder.mkdir(
+                  parents=True,
+                  exist_ok=True
+              )
+
+          # -----------------------------------------------------
+          # Copy original PNG
+          # -----------------------------------------------------
+
+          logo_target = (
+              drawable /
+              "cyrustourist_logo.png"
+          )
+
+          shutil.copy2(
+              source_logo,
+              logo_target
+          )
+
+          # -----------------------------------------------------
+          # English name
+          # -----------------------------------------------------
+
+          english_strings = """<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">CyrusTourist</string>
+          </resources>
+          """
+
+          (
+              values / "strings.xml"
+          ).write_text(
+              english_strings.strip() + "\n"
+          )
+
+          # -----------------------------------------------------
+          # Persian name
+          # -----------------------------------------------------
+
+          persian_strings = """<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">سایروس توریست</string>
+          </resources>
+          """
+
+          (
+              values_fa / "strings.xml"
+          ).write_text(
+              persian_strings.strip() + "\n"
+          )
+
+          # -----------------------------------------------------
+          # Icon background
+          # -----------------------------------------------------
+
+          icon_background = """<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+              android:shape="oval">
+
+              <solid
+                  android:color="#FFFFFF" />
+
+          </shape>
+          """
+
+          (
+              drawable /
+              "cyrustourist_icon_background.xml"
+          ).write_text(
+              icon_background.strip() + "\n"
+          )
+
+          # -----------------------------------------------------
+          # Adaptive foreground
+          # -----------------------------------------------------
+
+          adaptive_foreground = """<?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <item
+                  android:left="16dp"
+                  android:top="16dp"
+                  android:right="16dp"
+                  android:bottom="16dp">
+
+                  <bitmap
+                      android:src="@drawable/cyrustourist_logo"
+                      android:gravity="center"
+                      android:filter="true" />
+
+              </item>
+
+          </layer-list>
+          """
+
+          (
+              drawable /
+              "cyrustourist_icon_foreground.xml"
+          ).write_text(
+              adaptive_foreground.strip() + "\n"
+          )
+
+          # -----------------------------------------------------
+          # Adaptive icon
+          # Android 8+
+          # -----------------------------------------------------
+
+          adaptive_icon = """<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <background
+                  android:drawable="@drawable/cyrustourist_icon_background" />
+
+              <foreground
+                  android:drawable="@drawable/cyrustourist_icon_foreground" />
+
+          </adaptive-icon>
+          """
+
+          (
+              mipmap_anydpi /
+              "ic_launcher.xml"
+          ).write_text(
+              adaptive_icon.strip() + "\n"
+          )
+
+          # -----------------------------------------------------
+          # Legacy launcher icon
+          # Android versions before adaptive icons
+          # -----------------------------------------------------
+
+          legacy_icon = """<?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <item>
+                  <shape android:shape="oval">
+                      <solid android:color="#FFFFFF" />
+                  </shape>
+              </item>
+
+              <item
+                  android:left="14dp"
+                  android:top="14dp"
+                  android:right="14dp"
+                  android:bottom="14dp">
+
+                  <bitmap
+                      android:src="@drawable/cyrustourist_logo"
+                      android:gravity="center"
+                      android:filter="true" />
+
+              </item>
+
+          </layer-list>
+          """
+
+          (
+              mipmap /
+              "ic_launcher.xml"
+          ).write_text(
+              legacy_icon.strip() + "\n"
+          )
+
+          # -----------------------------------------------------
+          # Android Manifest
+          # -----------------------------------------------------
+
+          manifest = Path(
+              "android/app/src/main/AndroidManifest.xml"
+          )
+
+          if not manifest.exists():
+              raise SystemExit(
+                  "AndroidManifest.xml was not found."
+              )
+
+          text = manifest.read_text()
+
+          # Remove old label
+          text = re.sub(
+              r'android:label="[^"]*"',
+              'android:label="@string/app_name"',
+              text,
+              count=1
+          )
+
+          # Ensure launcher icon
+          if 'android:icon="@mipmap/ic_launcher"' not in text:
+              text = text.replace(
+                  '<application',
+                  '<application\n'
+                  '        android:icon="@mipmap/ic_launcher"',
+                  1
+              )
+
+          manifest.write_text(text)
+
+          print(
+              "CyrusTourist Android icon configured."
+          )
+
+          print(
+              "English:",
+              "CyrusTourist"
+          )
+
+          print(
+              "Persian:",
+              "سایروس توریست"
+          )
+
+          PY
+
+      # =========================================================
+      # Verify
+      # =========================================================
+
+      - name: Verify Android configuration
+        run: |
+          echo "===== Android Manifest ====="
+          cat android/app/src/main/AndroidManifest.xml
+
+          echo "===== Launcher resources ====="
+          find android/app/src/main/res \
+            -type f \
+            \( -name "*launcher*" -o -name "cyrustourist*" \) \
+            | sort
 
       - name: Get dependencies
         run: flutter pub get
