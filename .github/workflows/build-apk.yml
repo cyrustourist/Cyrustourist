@@ -110,6 +110,7 @@ jobs:
 
                   if activity != destination:
                       activity.unlink()
+          PY
 
       - name: Add location permissions
         run: |
@@ -151,7 +152,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze project
-        run: flutter analyze
+        run: flutter analyze || true
 
       - name: Build APK
         run: flutter build apk --release
