@@ -23,81 +23,125 @@ jobs:
         run: flutter --version
 
       - name: Generate Android project
-        run: flutter create --platforms=android --org ir.cyrustourist .
+        run: flutter create --platforms=android .
 
-      - name: Configure Android application ID
+      - name: Configure Android application ID and namespace
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
-          candidates = [
+          gradle_files = [
               Path("android/app/build.gradle"),
               Path("android/app/build.gradle.kts"),
           ]
 
-          for path in candidates:
+          found = False
+
+          for path in gradle_files:
               if not path.exists():
                   continue
 
+              found = True
               text = path.read_text()
 
-              text = text.replace(
-                  "applicationId = \"ir.cyrustourist.cyrustourist\"",
-                  "applicationId = \"cyrustourist.ir.app\""
+              # applicationId
+              text = re.sub(
+                  r'applicationId\s*(?:=)?\s*["\'][^"\']+["\']',
+                  'applicationId = "cyrustourist.ir.app"'
+                  if path.suffix == ".kts"
+                  else 'applicationId "cyrustourist.ir.app"',
+                  text,
+                  count=1
               )
 
-              text = text.replace(
-                  "applicationId 'ir.cyrustourist.cyrustourist'",
-                  "applicationId 'cyrustourist.ir.app'"
-              )
-
-              text = text.replace(
-                  "namespace = \"ir.cyrustourist.cyrustourist\"",
-                  "namespace = \"cyrustourist.ir.app\""
-              )
-
-              text = text.replace(
-                  "namespace 'ir.cyrustourist.cyrustourist'",
-                  "namespace 'cyrustourist.ir.app'"
+              # namespace
+              text = re.sub(
+                  r'namespace\s*(?:=)?\s*["\'][^"\']+["\']',
+                  'namespace = "cyrustourist.ir.app"'
+                  if path.suffix == ".kts"
+                  else 'namespace "cyrustourist.ir.app"',
+                  text,
+                  count=1
               )
 
               path.write_text(text)
+
+          if not found:
+              raise SystemExit("Android app Gradle file was not found.")
           PY
 
-      - name: Configure Android package and activity
+      - name: Configure Android package
         run: |
-          if [ -f android/app/src/main/kotlin/ir/cyrustourist/cyrustourist/MainActivity.kt ]; then
-            mkdir -p android/app/src/main/kotlin/cyrustourist/ir/app
-            mv android/app/src/main/kotlin/ir/cyrustourist/cyrustourist/MainActivity.kt \
-               android/app/src/main/kotlin/cyrustourist/ir/app/MainActivity.kt
-            sed -i 's/^package .*/package cyrustourist.ir.app/' \
-              android/app/src/main/kotlin/cyrustourist/ir/app/MainActivity.kt
-          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          roots = [
+              Path("android/app/src/main/kotlin"),
+              Path("android/app/src/main/java"),
+          ]
+
+          target_package = "cyrustourist.ir.app"
+          target_path = Path("cyrustourist/ir/app")
+
+          for root in roots:
+              if not root.exists():
+                  continue
+
+              for activity in root.rglob("MainActivity.kt"):
+                  text = activity.read_text()
+
+                  text = re.sub(
+                      r'^\s*package\s+[^\n]+',
+                      f'package {target_package}',
+                      text,
+                      count=1,
+                      flags=re.MULTILINE
+                  )
+
+                  destination = root / target_path / "MainActivity.kt"
+                  destination.parent.mkdir(parents=True, exist_ok=True)
+
+                  destination.write_text(text)
+
+                  if activity != destination:
+                      activity.unlink()
 
       - name: Add location permissions
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path("android/app/src/main/AndroidManifest.xml")
-          text = path.read_text()
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
 
-          fine = '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>'
-          coarse = '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>'
+          if not manifest.exists():
+              raise SystemExit("AndroidManifest.xml was not found.")
 
-          permissions = ""
+          text = manifest.read_text()
+
+          fine = '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />'
+          coarse = '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />'
+
+          additions = []
+
           if fine not in text:
-              permissions += f"    {fine}\n"
+              additions.append(fine)
+
           if coarse not in text:
-              permissions += f"    {coarse}\n"
+              additions.append(coarse)
 
-          if permissions:
-              marker = "<manifest"
-              start = text.find(">")
-              if start != -1:
-                  text = text[:start + 1] + "\n" + permissions + text[start + 1:]
+          if additions:
+              marker = ">"
+              index = text.find(marker)
 
-          path.write_text(text)
+              if index == -1:
+                  raise SystemExit("Invalid AndroidManifest.xml")
+
+              permissions = "\n" + "\n".join(additions) + "\n"
+              text = text[:index + 1] + permissions + text[index + 1:]
+
+          manifest.write_text(text)
           PY
 
       - name: Get dependencies
