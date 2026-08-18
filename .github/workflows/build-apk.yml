@@ -22,8 +22,89 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
+      - name: Generate Android project
+        run: flutter create --platforms=android --org ir.cyrustourist .
+
+      - name: Configure Android application ID
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          candidates = [
+              Path("android/app/build.gradle"),
+              Path("android/app/build.gradle.kts"),
+          ]
+
+          for path in candidates:
+              if not path.exists():
+                  continue
+
+              text = path.read_text()
+
+              text = text.replace(
+                  "applicationId = \"ir.cyrustourist.cyrustourist\"",
+                  "applicationId = \"cyrustourist.ir.app\""
+              )
+
+              text = text.replace(
+                  "applicationId 'ir.cyrustourist.cyrustourist'",
+                  "applicationId 'cyrustourist.ir.app'"
+              )
+
+              text = text.replace(
+                  "namespace = \"ir.cyrustourist.cyrustourist\"",
+                  "namespace = \"cyrustourist.ir.app\""
+              )
+
+              text = text.replace(
+                  "namespace 'ir.cyrustourist.cyrustourist'",
+                  "namespace 'cyrustourist.ir.app'"
+              )
+
+              path.write_text(text)
+          PY
+
+      - name: Configure Android package and activity
+        run: |
+          if [ -f android/app/src/main/kotlin/ir/cyrustourist/cyrustourist/MainActivity.kt ]; then
+            mkdir -p android/app/src/main/kotlin/cyrustourist/ir/app
+            mv android/app/src/main/kotlin/ir/cyrustourist/cyrustourist/MainActivity.kt \
+               android/app/src/main/kotlin/cyrustourist/ir/app/MainActivity.kt
+            sed -i 's/^package .*/package cyrustourist.ir.app/' \
+              android/app/src/main/kotlin/cyrustourist/ir/app/MainActivity.kt
+          fi
+
+      - name: Add location permissions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/app/src/main/AndroidManifest.xml")
+          text = path.read_text()
+
+          fine = '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>'
+          coarse = '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>'
+
+          permissions = ""
+          if fine not in text:
+              permissions += f"    {fine}\n"
+          if coarse not in text:
+              permissions += f"    {coarse}\n"
+
+          if permissions:
+              marker = "<manifest"
+              start = text.find(">")
+              if start != -1:
+                  text = text[:start + 1] + "\n" + permissions + text[start + 1:]
+
+          path.write_text(text)
+          PY
+
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Analyze project
+        run: flutter analyze
 
       - name: Build APK
         run: flutter build apk --release
@@ -31,5 +112,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cyrustourist-app3-apk
+          name: cyrustourist-app-5.7.0-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
