@@ -13,7 +13,7 @@ jobs:
 
     steps:
 
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
 
@@ -23,7 +23,11 @@ jobs:
           channel: stable
 
 
-      - name: Create Android
+      - name: Flutter version
+        run: flutter --version
+
+
+      - name: Generate Android project
         run: flutter create --platforms=android .
 
 
@@ -37,25 +41,29 @@ jobs:
           from pathlib import Path
           import re
 
-          file = Path("android/app/build.gradle")
+          files = [
+              Path("android/app/build.gradle"),
+              Path("android/app/build.gradle.kts")
+          ]
 
-          if file.exists():
+          for file in files:
+              if file.exists():
 
-              text = file.read_text()
+                  text = file.read_text()
 
-              text = re.sub(
-                  r'applicationId\s+"[^"]+"',
-                  'applicationId "cyrustourist.ir.app"',
-                  text
-              )
+                  text = re.sub(
+                      r'applicationId\s*[=]?\s*["\'][^"\']+["\']',
+                      'applicationId "cyrustourist.ir.app"',
+                      text
+                  )
 
-              text = re.sub(
-                  r'namespace\s+"[^"]+"',
-                  'namespace "cyrustourist.ir.app"',
-                  text
-              )
+                  text = re.sub(
+                      r'namespace\s*[=]?\s*["\'][^"\']+["\']',
+                      'namespace "cyrustourist.ir.app"',
+                      text
+                  )
 
-              file.write_text(text)
+                  file.write_text(text)
 
           PY
 
@@ -71,16 +79,16 @@ jobs:
 
           text = manifest.read_text()
 
-          permission = """
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-"""
-
           if "ACCESS_FINE_LOCATION" not in text:
+
+              add = (
+                  '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n'
+                  '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n'
+              )
 
               text = text.replace(
                   "<application",
-                  permission + "\n    <application",
+                  add + "\n<application",
                   1
               )
 
@@ -89,94 +97,13 @@ jobs:
           PY
 
 
-      - name: Configure CyrusTourist name and logo
+      - name: Check logo file
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import shutil
-          import re
-
-
-          logos = [
-              Path("logo-new.jpg"),
-              Path("assets/images/logo-new.jpg")
-          ]
-
-          logo = None
-
-          for item in logos:
-              if item.exists():
-                  logo = item
-                  break
-
-
-          res = Path(
-              "android/app/src/main/res"
-          )
-
-          drawable = res / "drawable"
-          values = res / "values"
-          values_fa = res / "values-fa"
-
-          drawable.mkdir(
-              parents=True,
-              exist_ok=True
-          )
-
-          values.mkdir(
-              parents=True,
-              exist_ok=True
-          )
-
-          values_fa.mkdir(
-              parents=True,
-              exist_ok=True
-          )
-
-
-          if logo:
-
-              shutil.copy2(
-                  logo,
-                  drawable / "cyrustourist_logo.jpg"
-              )
-
-              print("Logo installed")
-
-          else:
-
-              print("Logo not found - continue")
-
-
-          (values / "strings.xml").write_text(
-          """<resources>
-          <string name="app_name">CyrusTourist</string>
-          </resources>"""
-          )
-
-
-          (values_fa / "strings.xml").write_text(
-          """<resources>
-          <string name="app_name">سایروس توریست</string>
-          </resources>"""
-          )
-
-
-          manifest = Path(
-              "android/app/src/main/AndroidManifest.xml"
-          )
-
-          text = manifest.read_text()
-
-          text = re.sub(
-              r'android:label="[^"]*"',
-              'android:label="@string/app_name"',
-              text
-          )
-
-          manifest.write_text(text)
-
-          PY
+          if [ -f "logo-new.jpg" ]; then
+            echo "Logo found"
+          else
+            echo "Logo not found - continue"
+          fi
 
 
       - name: Get packages
@@ -193,15 +120,14 @@ jobs:
 
       - name: Rename APK
         run: |
-          cp \
-          build/app/outputs/flutter-apk/app-release.apk \
+          cp build/app/outputs/flutter-apk/app-release.apk \
           build/app/outputs/flutter-apk/Cyrustourist.ir.apk
 
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
-
         with:
+
           name: Cyrustourist.ir
 
           path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
