@@ -35,7 +35,7 @@ jobs:
         run: rm -f test/widget_test.dart
 
 
-      - name: Configure Android ID
+      - name: Configure Android package
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -47,28 +47,46 @@ jobs:
           ]
 
           for file in files:
-              if file.exists():
 
-                  text = file.read_text()
+              if not file.exists():
+                  continue
+
+              text = file.read_text()
+
+              if file.name.endswith(".kts"):
 
                   text = re.sub(
-                      r'applicationId\s*[=]?\s*["\'][^"\']+["\']',
-                      'applicationId "cyrustourist.ir.app"',
+                      r'namespace\s*=\s*".*?"',
+                      'namespace = "cyrustourist.ir.app"',
                       text
                   )
 
                   text = re.sub(
-                      r'namespace\s*[=]?\s*["\'][^"\']+["\']',
+                      r'applicationId\s*=\s*".*?"',
+                      'applicationId = "cyrustourist.ir.app"',
+                      text
+                  )
+
+              else:
+
+                  text = re.sub(
+                      r'namespace\s+".*?"',
                       'namespace "cyrustourist.ir.app"',
                       text
                   )
 
-                  file.write_text(text)
+                  text = re.sub(
+                      r'applicationId\s+".*?"',
+                      'applicationId "cyrustourist.ir.app"',
+                      text
+                  )
+
+              file.write_text(text)
 
           PY
 
 
-      - name: Add Location permission
+      - name: Add Location permissions
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -81,14 +99,14 @@ jobs:
 
           if "ACCESS_FINE_LOCATION" not in text:
 
-              add = (
+              permissions = (
                   '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n'
                   '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n'
               )
 
               text = text.replace(
                   "<application",
-                  add + "\n<application",
+                  permissions + "<application",
                   1
               )
 
@@ -97,16 +115,16 @@ jobs:
           PY
 
 
-      - name: Check logo file
+      - name: Check CyrusTourist logo
         run: |
-          if [ -f "logo-new.jpg" ]; then
-            echo "Logo found"
+          if [ -f logo-new.jpg ]; then
+            echo "logo-new.jpg found"
           else
-            echo "Logo not found - continue"
+            echo "logo-new.jpg not found - continue"
           fi
 
 
-      - name: Get packages
+      - name: Get dependencies
         run: flutter pub get
 
 
@@ -127,9 +145,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-
           name: Cyrustourist.ir
-
           path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
-
           if-no-files-found: error
