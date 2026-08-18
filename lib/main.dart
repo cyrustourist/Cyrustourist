@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -25,9 +26,9 @@ class CyrusTouristApp extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------
-// Splash - نمایش تصویر آغازین به مدت ۲ ثانیه
-// ------------------------------------------------------------
+// ============================================================
+// Splash
+// ============================================================
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -70,9 +71,9 @@ class _SplashPageState extends State<SplashPage> {
   }
 }
 
-// ------------------------------------------------------------
+// ============================================================
 // صفحه اصلی
-// ------------------------------------------------------------
+// ============================================================
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -82,55 +83,51 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SizedBox.expand(
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: SizedBox(
-                  width: 1024,
-                  height: 1536,
-                  child: Stack(
-                    children: [
-                      const Positioned.fill(
-                        child: Image(
-                          image: AssetImage('assets/images/home.jpg'),
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-
-                      // کلید ورود به نقشه
-                      Positioned(
-                        left: 25,
-                        right: 25,
-                        bottom: 205,
-                        height: 130,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const TouristMapPage(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+        child: SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: SizedBox(
+              width: 1024,
+              height: 1536,
+              child: Stack(
+                children: [
+                  const Positioned.fill(
+                    child: Image(
+                      image: AssetImage('assets/images/home.jpg'),
+                      fit: BoxFit.contain,
+                    ),
                   ),
-                ),
+
+                  // کلید شماره ۱ ـ نقشه گردشگری
+                  Positioned(
+                    left: 25,
+                    right: 25,
+                    bottom: 205,
+                    height: 130,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const TouristMapPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-// ------------------------------------------------------------
-// صفحه نقشه گردشگری
-// ------------------------------------------------------------
+// ============================================================
+// نقشه گردشگری
+// ============================================================
 
 class TouristMapPage extends StatefulWidget {
   const TouristMapPage({super.key});
@@ -151,9 +148,9 @@ class _TouristMapPageState extends State<TouristMapPage> {
 
   bool _loadingLocation = false;
 
-  // ----------------------------------------------------------
-  // دریافت موقعیت کاربر
-  // ----------------------------------------------------------
+  // ==========================================================
+  // دریافت مکان کاربر
+  // ==========================================================
 
   Future<void> _locateUser() async {
     if (_loadingLocation) return;
@@ -167,6 +164,14 @@ class _TouristMapPageState extends State<TouristMapPage> {
           await Geolocator.isLocationServiceEnabled();
 
       if (!serviceEnabled) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('مکان‌یابی گوشی خاموش است.'),
+          ),
+        );
+
         return;
       }
 
@@ -179,6 +184,14 @@ class _TouristMapPageState extends State<TouristMapPage> {
 
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('اجازه دسترسی به موقعیت داده نشد.'),
+          ),
+        );
+
         return;
       }
 
@@ -201,6 +214,16 @@ class _TouristMapPageState extends State<TouristMapPage> {
         location,
         14,
       );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'دریافت موقعیت انجام نشد.',
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -210,9 +233,9 @@ class _TouristMapPageState extends State<TouristMapPage> {
     }
   }
 
-  // ----------------------------------------------------------
-  // رابط کاربری نقشه
-  // ----------------------------------------------------------
+  // ==========================================================
+  // صفحه نقشه
+  // ==========================================================
 
   @override
   Widget build(BuildContext context) {
@@ -228,8 +251,8 @@ class _TouristMapPageState extends State<TouristMapPage> {
               initialCenter: _center,
               initialZoom: 5.5,
 
-              // فعال بودن کامل لمس نقشه:
-              // حرکت، زوم، کشیدن و سایر تعاملات
+              // لمس کامل نقشه:
+              // حرکت، زوم، کشیدن، چرخش و سایر تعاملات
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all,
               ),
@@ -242,7 +265,7 @@ class _TouristMapPageState extends State<TouristMapPage> {
                     'cyrustourist.ir.app',
               ),
 
-              // مکان‌نمای کاربر
+              // مکان‌نمای آبی کاربر
               if (_userLocation != null)
                 MarkerLayer(
                   markers: [
