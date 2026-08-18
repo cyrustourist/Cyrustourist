@@ -13,7 +13,7 @@ jobs:
 
     steps:
 
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
 
 
@@ -23,7 +23,7 @@ jobs:
           channel: stable
 
 
-      - name: Create Android project
+      - name: Create Android
         run: flutter create --platforms=android .
 
 
@@ -65,29 +65,31 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          file = Path(
-          "android/app/src/main/AndroidManifest.xml"
+          manifest = Path(
+              "android/app/src/main/AndroidManifest.xml"
           )
 
-          text = file.read_text()
+          text = manifest.read_text()
 
-          perms = """
-          <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-          <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-          """
+          permission = """
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+"""
 
           if "ACCESS_FINE_LOCATION" not in text:
+
               text = text.replace(
-                  "<manifest",
-                  "<manifest" + perms
+                  "<application",
+                  permission + "\n    <application",
+                  1
               )
 
-          file.write_text(text)
+          manifest.write_text(text)
 
           PY
 
 
-      - name: Configure CyrusTourist icon and name
+      - name: Configure CyrusTourist name and logo
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -95,11 +97,9 @@ jobs:
           import re
 
 
-          # logo search
-
           logos = [
-              Path("logo-new.png"),
-              Path("assets/images/logo-new.png")
+              Path("logo-new.jpg"),
+              Path("assets/images/logo-new.jpg")
           ]
 
           logo = None
@@ -111,7 +111,7 @@ jobs:
 
 
           res = Path(
-          "android/app/src/main/res"
+              "android/app/src/main/res"
           )
 
           drawable = res / "drawable"
@@ -138,17 +138,14 @@ jobs:
 
               shutil.copy2(
                   logo,
-                  drawable /
-                  "cyrustourist_logo.png"
+                  drawable / "cyrustourist_logo.jpg"
               )
 
-              print("Logo OK")
+              print("Logo installed")
 
           else:
 
-              print(
-              "Logo not found - continue"
-              )
+              print("Logo not found - continue")
 
 
           (values / "strings.xml").write_text(
@@ -166,11 +163,10 @@ jobs:
 
 
           manifest = Path(
-          "android/app/src/main/AndroidManifest.xml"
+              "android/app/src/main/AndroidManifest.xml"
           )
 
           text = manifest.read_text()
-
 
           text = re.sub(
               r'android:label="[^"]*"',
@@ -178,9 +174,7 @@ jobs:
               text
           )
 
-
           manifest.write_text(text)
-
 
           PY
 
@@ -206,8 +200,8 @@ jobs:
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
-        with:
 
+        with:
           name: Cyrustourist.ir
 
           path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
