@@ -62,7 +62,7 @@ class _SplashPageState extends State<SplashPage> {
           child: FittedBox(
             fit: BoxFit.contain,
             child: Image(
-              image: AssetImage('assets/images/splash.jpg'),
+              image: AssetImage('assets/images/splash.png'),
             ),
           ),
         ),
@@ -93,7 +93,7 @@ class HomePage extends StatelessWidget {
                 children: [
                   const Positioned.fill(
                     child: Image(
-                      image: AssetImage('assets/images/home.jpg'),
+                      image: AssetImage('assets/images/home.png'),
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -218,10 +218,8 @@ class _TouristMapPageState extends State<TouristMapPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'دریافت موقعیت انجام نشد.',
-          ),
+        const SnackBar(
+          content: Text('دریافت موقعیت انجام نشد.'),
         ),
       );
     } finally {
