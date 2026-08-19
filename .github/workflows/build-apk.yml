@@ -39,12 +39,12 @@ jobs:
           from pathlib import Path
           import re
 
-          candidates = [
+          files = [
               Path("android/app/build.gradle"),
-              Path("android/app/build.gradle.kts"),
+              Path("android/app/build.gradle.kts")
           ]
 
-          for file in candidates:
+          for file in files:
               if not file.exists():
                   continue
 
@@ -63,6 +63,18 @@ jobs:
                       text
                   )
 
+                  text = re.sub(
+                      r'minSdk\s*=\s*\d+',
+                      'minSdk = 23',
+                      text
+                  )
+
+                  text = re.sub(
+                      r'targetSdk\s*=\s*\d+',
+                      'targetSdk = 35',
+                      text
+                  )
+
               else:
                   text = re.sub(
                       r'namespace\s+"[^"]*"',
@@ -76,76 +88,17 @@ jobs:
                       text
                   )
 
-              file.write_text(text)
+                  text = re.sub(
+                      r'minSdkVersion\s+\d+',
+                      'minSdkVersion 23',
+                      text
+                  )
 
-          PY
-
-      - name: Configure Android SDK
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          files = [
-              Path("android/app/build.gradle"),
-              Path("android/app/build.gradle.kts"),
-          ]
-
-          for file in files:
-              if not file.exists():
-                  continue
-
-              text = file.read_text()
-
-              if file.suffix == ".kts":
-
-                  if re.search(r'minSdk\s*=', text):
-                      text = re.sub(
-                          r'minSdk\s*=\s*\d+',
-                          'minSdk = 23',
-                          text
-                      )
-                  else:
-                      text = text.replace(
-                          'defaultConfig {',
-                          'defaultConfig {\n        minSdk = 23',
-                          1
-                      )
-
-                  if re.search(r'targetSdk\s*=', text):
-                      text = re.sub(
-                          r'targetSdk\s*=\s*\d+',
-                          'targetSdk = 35',
-                          text
-                      )
-
-              else:
-
-                  if re.search(r'minSdkVersion\s+\d+', text):
-                      text = re.sub(
-                          r'minSdkVersion\s+\d+',
-                          'minSdkVersion 23',
-                          text
-                      )
-                  elif re.search(r'minSdk\s+\d+', text):
-                      text = re.sub(
-                          r'minSdk\s+\d+',
-                          'minSdk 23',
-                          text
-                      )
-
-                  if re.search(r'targetSdkVersion\s+\d+', text):
-                      text = re.sub(
-                          r'targetSdkVersion\s+\d+',
-                          'targetSdkVersion 35',
-                          text
-                      )
-                  elif re.search(r'targetSdk\s+\d+', text):
-                      text = re.sub(
-                          r'targetSdk\s+\d+',
-                          'targetSdk 35',
-                          text
-                      )
+                  text = re.sub(
+                      r'targetSdkVersion\s+\d+',
+                      'targetSdkVersion 35',
+                      text
+                  )
 
               file.write_text(text)
 
@@ -179,49 +132,44 @@ jobs:
 
           PY
 
-      - name: Check project files
+      - name: Verify Android project
         run: |
-          echo "Checking CyrusTourist project..."
-          test -f pubspec.yaml
           test -f android/app/src/main/AndroidManifest.xml
-          echo "Android project created successfully"
-          echo "Application package:"
-          grep -R "cyrustourist.ir.app" android/app || true
-
-      - name: Check CyrusTourist logo
-        run: |
-          if [ -f logo-new.jpg ]; then
-            echo "logo-new.jpg found"
-          else
-            echo "logo-new.jpg not found - continue"
-          fi
+          echo "Android project OK"
+          echo "===== Manifest ====="
+          cat android/app/src/main/AndroidManifest.xml
 
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Analyze
+      - name: Analyze project
         run: flutter analyze || true
 
-      - name: Clean Flutter build
+      - name: Clean project
         run: flutter clean
 
       - name: Get dependencies again
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --verbose
 
       - name: Verify APK
         run: |
           APK="build/app/outputs/flutter-apk/app-release.apk"
 
           if [ ! -f "$APK" ]; then
-            echo "ERROR: APK was not created"
+            echo "ERROR: APK was not created."
             exit 1
           fi
 
-          echo "APK created successfully:"
+          echo "===== APK CREATED ====="
           ls -lh "$APK"
+
+      - name: Extract APK information
+        run: |
+          echo "===== APK DIRECTORY ====="
+          find build/app/outputs/flutter-apk -maxdepth 1 -type f -print
 
       - name: Rename APK
         run: |
@@ -232,6 +180,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Cyrustourist.ir
+          name: Cyrustourist.ir-diagnostic
           path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
           if-no-files-found: error
