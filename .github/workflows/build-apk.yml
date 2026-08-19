@@ -7,7 +7,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-apk:
@@ -22,10 +22,12 @@ jobs:
 
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
 
       # ==========================================================
-      # 2. Setup Flutter
+      # 2. Flutter
       # ==========================================================
 
       - name: Setup Flutter
@@ -34,119 +36,221 @@ jobs:
           channel: stable
           cache: true
 
-
-      # ==========================================================
-      # 3. Flutter version
-      # ==========================================================
-
       - name: Flutter version
         run: flutter --version
 
 
       # ==========================================================
-      # 4. Verify Android project
+      # 3. Android project
       # ==========================================================
 
-      - name: Verify Android project
+      - name: Check Android project
         run: |
-
           if [ ! -d "android" ]; then
-            echo "ERROR: android directory does not exist."
-            exit 1
-          fi
-
-          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
-            echo "ERROR: AndroidManifest.xml does not exist."
+            echo "ERROR: android/ directory is missing."
             exit 1
           fi
 
           echo "Android project found."
-          echo ""
-
-          echo "===== Android files ====="
-          find android -maxdepth 3 -type f | sort | head -200
-
-          echo ""
-
-          echo "===== Android package ====="
-          grep -R "cyrustourist.ir.app" android/app || true
 
 
       # ==========================================================
-      # 5. Verify assets
+      # 4. Package configuration
       # ==========================================================
 
-      - name: Verify CyrusTourist assets
+      - name: Configure Android package
         run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
 
-          echo "===== Assets ====="
+          candidates = [
+              Path("android/app/build.gradle"),
+              Path("android/app/build.gradle.kts"),
+          ]
 
-          if [ -d "assets/images" ]; then
-            find assets/images -maxdepth 1 -type f -print | sort
-          else
-            echo "WARNING: assets/images does not exist."
-          fi
+          found = False
+
+          for file in candidates:
+
+              if not file.exists():
+                  continue
+
+              found = True
+              text = file.read_text()
+
+              if file.suffix == ".kts":
+
+                  text = re.sub(
+                      r'namespace\s*=\s*"[^"]*"',
+                      'namespace = "cyrustourist.ir.app"',
+                      text
+                  )
+
+                  text = re.sub(
+                      r'applicationId\s*=\s*"[^"]*"',
+                      'applicationId = "cyrustourist.ir.app"',
+                      text
+                  )
+
+              else:
+
+                  text = re.sub(
+                      r'namespace\s+"[^"]*"',
+                      'namespace "cyrustourist.ir.app"',
+                      text
+                  )
+
+                  text = re.sub(
+                      r'applicationId\s+"[^"]*"',
+                      'applicationId "cyrustourist.ir.app"',
+                      text
+                  )
+
+              file.write_text(text)
+
+          if not found:
+              raise SystemExit(
+                  "ERROR: Android Gradle file was not found."
+              )
+
+          print("Package ID:")
+          print("cyrustourist.ir.app")
+
+          PY
+
+
+      # ==========================================================
+      # 5. Location permissions
+      # ==========================================================
+
+      - name: Configure Location permissions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path(
+              "android/app/src/main/AndroidManifest.xml"
+          )
+
+          if not manifest.exists():
+              raise SystemExit(
+                  "ERROR: AndroidManifest.xml was not found."
+              )
+
+          text = manifest.read_text()
+
+          fine = (
+              '<uses-permission '
+              'android:name="android.permission.ACCESS_FINE_LOCATION"/>'
+          )
+
+          coarse = (
+              '<uses-permission '
+              'android:name="android.permission.ACCESS_COARSE_LOCATION"/>'
+          )
+
+          if fine not in text:
+              text = text.replace(
+                  "<application",
+                  fine + "\n    <application",
+                  1
+              )
+
+          if coarse not in text:
+              text = text.replace(
+                  "<application",
+                  coarse + "\n    <application",
+                  1
+              )
+
+          manifest.write_text(text)
+
+          print("Location permissions configured.")
+
+          PY
+
+
+      # ==========================================================
+      # 6. Check assets
+      # ==========================================================
+
+      - name: Check assets
+        run: |
+          echo "===== assets/images ====="
+
+          find assets/images \
+            -maxdepth 1 \
+            -type f \
+            -print \
+            -exec ls -lh {} \; \
+            | sort
 
           echo ""
+          echo "===== Root files ====="
 
-          if [ -f "logo-new.jpg" ]; then
-            echo "Root logo:"
-            ls -lh logo-new.jpg
-          fi
+          ls -lh logo-new.jpg 2>/dev/null || true
 
 
       # ==========================================================
-      # 6. Get dependencies
+      # 7. Dependencies
       # ==========================================================
+
+      - name: Flutter clean
+        run: flutter clean
 
       - name: Flutter pub get
         run: flutter pub get
 
 
       # ==========================================================
-      # 7. Analyze
+      # 8. Analyze
       # ==========================================================
 
-      - name: Flutter analyze
+      - name: Analyze project
         run: flutter analyze || true
 
 
       # ==========================================================
-      # 8. Clean previous build
+      # 9. Show Android configuration
       # ==========================================================
 
-      - name: Flutter clean
-        run: flutter clean
+      - name: Show Android configuration
+        run: |
+          echo "===== Android files ====="
+          find android/app/src/main -maxdepth 3 -type f | sort
+
+          echo ""
+          echo "===== Package ====="
+
+          grep -R \
+            "cyrustourist.ir.app" \
+            android/app \
+            || true
 
 
       # ==========================================================
-      # 9. Get dependencies after clean
-      # ==========================================================
-
-      - name: Flutter pub get after clean
-        run: flutter pub get
-
-
-      # ==========================================================
-      # 10. Build Universal Release APK
+      # 10. Build ARM64 ONLY
+      #
+      # Moto G54 5G uses ARM64.
       #
       # IMPORTANT:
-      # No --split-per-abi
-      # No ABI restriction
+      # This is NOT Universal APK.
+      # This removes unnecessary CPU architectures.
       # ==========================================================
 
-      - name: Build Release APK
+      - name: Build ARM64 Release APK
         run: |
-
           flutter build apk \
-            --release
+            --release \
+            --target-platform android-arm64
 
 
       # ==========================================================
-      # 11. Verify generated APK
+      # 11. Verify APK
       # ==========================================================
 
-      - name: Verify generated APK
+      - name: Verify APK
         run: |
 
           APK="build/app/outputs/flutter-apk/app-release.apk"
@@ -158,36 +262,40 @@ jobs:
 
           echo ""
           echo "=========================================="
-          echo "CyrusTourist APK CREATED SUCCESSFULLY"
+          echo "CyrusTourist ARM64 APK"
           echo "=========================================="
 
           ls -lh "$APK"
 
           echo ""
-          echo "APK size:"
-          du -h "$APK"
+          echo "APK size in bytes:"
+
+          stat -c "%s" "$APK"
+
+          echo ""
+          echo "APK architecture check:"
+
+          unzip -l "$APK" | grep "lib/" | head -30 || true
 
 
       # ==========================================================
-      # 12. Rename APK
+      # 12. Rename
       # ==========================================================
 
       - name: Rename APK
         run: |
-
           cp \
             build/app/outputs/flutter-apk/app-release.apk \
-            build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+            build/app/outputs/flutter-apk/Cyrustourist.ir-arm64.apk
 
 
       # ==========================================================
-      # 13. Upload APK
+      # 13. Upload
       # ==========================================================
 
-      - name: Upload APK
+      - name: Upload ARM64 APK
         uses: actions/upload-artifact@v4
-
         with:
-          name: Cyrustourist.ir
-          path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+          name: Cyrustourist-ir-ARM64
+          path: build/app/outputs/flutter-apk/Cyrustourist.ir-arm64.apk
           if-no-files-found: error
