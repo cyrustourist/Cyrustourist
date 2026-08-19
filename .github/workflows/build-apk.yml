@@ -1,34 +1,23 @@
-name: Build CyrusTourist APK
+name: Create Android Project
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 permissions:
   contents: write
 
 jobs:
-  build-apk:
+  create-android:
 
     runs-on: ubuntu-latest
 
     steps:
 
-      # ==========================================================
-      # 1. Checkout
-      # ==========================================================
-
-      - name: Checkout source
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-
-      # ==========================================================
-      # 2. Setup Flutter
-      # ==========================================================
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -37,56 +26,56 @@ jobs:
           cache: true
 
 
-      - name: Flutter version
+      - name: Show Flutter version
         run: flutter --version
 
 
-      # ==========================================================
-      # 3. Create STANDARD Android project
-      #
-      # IMPORTANT:
-      # If android/ already exists, DO NOT recreate it.
-      # ==========================================================
-
-      - name: Create Android project if missing
+      - name: Create Android project
         run: |
-          if [ ! -d "android" ]; then
+          if [ -d "android" ]; then
+            echo "ERROR: android directory already exists."
+            exit 1
+          fi
 
-            echo "Android project does not exist."
-            echo "Creating standard Flutter Android project..."
+          flutter create \
+            --platforms=android \
+            --org cyrustourist.ir \
+            --project-name cyrustourist \
+            .
 
-            flutter create \
-              --platforms=android \
-              --org cyrustourist.ir \
-              --project-name app \
-              .
 
+      - name: Verify Android project
+        run: |
+          echo "===== ANDROID DIRECTORY ====="
+          find android -maxdepth 3 -type f | sort
+
+          echo ""
+          echo "===== BUILD FILE ====="
+
+          if [ -f android/app/build.gradle ]; then
+            cat android/app/build.gradle
+          elif [ -f android/app/build.gradle.kts ]; then
+            cat android/app/build.gradle.kts
           else
-
-            echo "Android project already exists."
-            echo "Keeping existing Android project."
-
+            echo "Android build file not found."
+            exit 1
           fi
 
 
-      # ==========================================================
-      # 4. Configure Android package
-      # ==========================================================
-
-      - name: Configure Android package
+      - name: Configure package
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          candidates = [
+          files = [
               Path("android/app/build.gradle"),
               Path("android/app/build.gradle.kts"),
           ]
 
           found = False
 
-          for file in candidates:
+          for file in files:
 
               if not file.exists():
                   continue
@@ -126,20 +115,13 @@ jobs:
 
           if not found:
               raise SystemExit(
-                  "ERROR: Android Gradle file was not found."
+                  "Android Gradle file not found."
               )
-
-          print("Android package configured:")
-          print("cyrustourist.ir.app")
 
           PY
 
 
-      # ==========================================================
-      # 5. Configure Location permissions
-      # ==========================================================
-
-      - name: Configure Location permissions
+      - name: Configure location permissions
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -150,198 +132,58 @@ jobs:
 
           if not manifest.exists():
               raise SystemExit(
-                  "ERROR: AndroidManifest.xml was not found."
+                  "AndroidManifest.xml not found."
               )
 
           text = manifest.read_text()
 
-          fine = (
-              '<uses-permission '
-              'android:name="android.permission.ACCESS_FINE_LOCATION"/>'
-          )
+          permissions = [
+              '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>',
+              '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>'
+          ]
 
-          coarse = (
-              '<uses-permission '
-              'android:name="android.permission.ACCESS_COARSE_LOCATION"/>'
-          )
+          for permission in permissions:
 
-          if fine not in text:
-              text = text.replace(
-                  "<application",
-                  fine + "\n    <application",
-                  1
-              )
+              if permission not in text:
 
-          if coarse not in text:
-              text = text.replace(
-                  "<application",
-                  coarse + "\n    <application",
-                  1
-              )
+                  text = text.replace(
+                      "<application",
+                      permission + "\n    <application",
+                      1
+                  )
 
           manifest.write_text(text)
-
-          print("Location permissions configured.")
 
           PY
 
 
-      # ==========================================================
-      # 6. Check project assets
-      # ==========================================================
-
-      - name: Check CyrusTourist assets
-        run: |
-          echo "===== assets/images ====="
-
-          if [ -d "assets/images" ]; then
-            find assets/images -maxdepth 1 -type f -print | sort
-          else
-            echo "assets/images directory not found."
-          fi
-
-          echo ""
-          echo "===== Root logo ====="
-
-          if [ -f "logo-new.jpg" ]; then
-            ls -lh logo-new.jpg
-          else
-            echo "Root logo not found."
-          fi
-
-
-      # ==========================================================
-      # 7. Get dependencies
-      # ==========================================================
-
-      - name: Get dependencies
-        run: flutter pub get
-
-
-      # ==========================================================
-      # 8. Analyze
-      # ==========================================================
-
-      - name: Analyze project
-        run: flutter analyze || true
-
-
-      # ==========================================================
-      # 9. Commit Android project to repository
-      #
-      # This happens only if Android was newly generated
-      # or Android files were changed.
-      # ==========================================================
-
-      - name: Save Android project to repository
+      - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+
+      - name: Add Android project
+        run: |
           git add android/
 
-          if git diff --cached --quiet; then
 
-            echo "No Android changes to commit."
-
-          else
-
-            echo "Android project changes detected."
-
-            git commit \
-              -m "Add standard Android project for CyrusTourist"
-
-            git push
-
-          fi
-
-
-      # ==========================================================
-      # 10. Clean
-      # ==========================================================
-
-      - name: Flutter clean
-        run: flutter clean
-
-
-      # ==========================================================
-      # 11. Dependencies again after clean
-      # ==========================================================
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-
-      # ==========================================================
-      # 12. Verify package
-      # ==========================================================
-
-      - name: Verify Android configuration
+      - name: Check staged Android files
         run: |
-          echo "===== Android package search ====="
-
-          grep -R \
-            "cyrustourist.ir.app" \
-            android/app \
-            || true
+          echo "===== STAGED FILES ====="
+          git diff --cached --name-status
 
           echo ""
-          echo "===== Manifest ====="
+          echo "===== STAGED COUNT ====="
+          git diff --cached --name-only | wc -l
 
-          cat android/app/src/main/AndroidManifest.xml
 
-
-      # ==========================================================
-      # 13. Build Universal APK
-      #
-      # IMPORTANT:
-      # No --split-per-abi
-      # ==========================================================
-
-      - name: Build Universal APK
+      - name: Commit Android project
         run: |
-          flutter build apk --release
+          git commit \
+            -m "Add standard Android project"
 
 
-      # ==========================================================
-      # 14. Verify APK
-      # ==========================================================
-
-      - name: Verify APK
+      - name: Push Android project
         run: |
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          if [ ! -f "$APK" ]; then
-            echo "ERROR: APK was not created."
-            exit 1
-          fi
-
-          echo ""
-          echo "======================================"
-          echo "CyrusTourist APK successfully created"
-          echo "======================================"
-
-          ls -lh "$APK"
-
-
-      # ==========================================================
-      # 15. Rename APK
-      # ==========================================================
-
-      - name: Rename APK
-        run: |
-          cp \
-            build/app/outputs/flutter-apk/app-release.apk \
-            build/app/outputs/flutter-apk/Cyrustourist.ir.apk
-
-
-      # ==========================================================
-      # 16. Upload APK
-      # ==========================================================
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Cyrustourist.ir
-          path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
-          if-no-files-found: error
+          git push origin HEAD:main
