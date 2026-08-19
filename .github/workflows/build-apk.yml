@@ -1,4 +1,4 @@
-name: Build CyrusTourist APK - Diagnostic
+name: Build CyrusTourist APK - Universal Diagnostic
 
 on:
   workflow_dispatch:
@@ -300,16 +300,15 @@ jobs:
 
 
       # ==========================================================
-      # 16. Build ARM64 RELEASE APK
+      # 16. Build UNIVERSAL RELEASE APK
       # ==========================================================
 
-      - name: Build ARM64 release APK
+      - name: Build Universal release APK
         run: |
           set -e
 
           flutter build apk \
-            --release \
-            --target-platform android-arm64
+            --release
 
 
       # ==========================================================
@@ -516,6 +515,24 @@ jobs:
             | grep "lib/arm64-v8a/" \
             | head -50 || true
 
+          echo ""
+          echo "=============================================="
+          echo "ARM32 LIBRARIES"
+          echo "=============================================="
+
+          unzip -l "$APK" \
+            | grep "lib/armeabi-v7a/" \
+            | head -50 || true
+
+          echo ""
+          echo "=============================================="
+          echo "x86_64 LIBRARIES"
+          echo "=============================================="
+
+          unzip -l "$APK" \
+            | grep "lib/x86_64/" \
+            | head -50 || true
+
 
       # ==========================================================
       # 24. Check APK assets
@@ -622,7 +639,7 @@ jobs:
 
           echo ""
           echo "=================================================="
-          echo "CYRUSTOURIST APK DIAGNOSTIC SUMMARY"
+          echo "CYRUSTOURIST UNIVERSAL APK DIAGNOSTIC SUMMARY"
           echo "=================================================="
 
           echo ""
@@ -667,7 +684,7 @@ jobs:
 
           echo ""
           echo "=================================================="
-          echo "DIAGNOSTIC BUILD COMPLETED"
+          echo "UNIVERSAL DIAGNOSTIC BUILD COMPLETED"
           echo "=================================================="
 
 
@@ -679,16 +696,16 @@ jobs:
         run: |
           cp \
             build/app/outputs/flutter-apk/app-release.apk \
-            build/app/outputs/flutter-apk/Cyrustourist.ir-arm64-test.apk
+            build/app/outputs/flutter-apk/Cyrustourist-Universal-Test.apk
 
 
       # ==========================================================
-      # 29. Upload diagnostic APK
+      # 29. Upload Universal diagnostic APK
       # ==========================================================
 
-      - name: Upload ARM64 diagnostic APK
+      - name: Upload Universal diagnostic APK
         uses: actions/upload-artifact@v4
         with:
-          name: Cyrustourist-ARM64-Diagnostic
-          path: build/app/outputs/flutter-apk/Cyrustourist.ir-arm64-test.apk
+          name: Cyrustourist-Universal-Diagnostic
+          path: build/app/outputs/flutter-apk/Cyrustourist-Universal-Test.apk
           if-no-files-found: error
