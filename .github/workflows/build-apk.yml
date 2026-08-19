@@ -11,27 +11,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout source
         uses: actions/checkout@v4
+
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
+
       - name: Flutter version
         run: flutter --version
 
+
       - name: Generate Android project
-        run: |
-          flutter create \
-            --platforms=android \
-            --org cyrustourist.ir \
-            --project-name cyrustourist \
-            .
+        run: flutter create --platforms=android .
+
 
       - name: Remove default test
         run: rm -f test/widget_test.dart
+
 
       - name: Configure Android package
         run: |
@@ -45,64 +46,44 @@ jobs:
           ]
 
           for file in files:
+
               if not file.exists():
                   continue
 
               text = file.read_text()
 
-              if file.suffix == ".kts":
+              if file.name.endswith(".kts"):
+
                   text = re.sub(
-                      r'namespace\s*=\s*"[^"]*"',
+                      r'namespace\s*=\s*".*?"',
                       'namespace = "cyrustourist.ir.app"',
                       text
                   )
 
                   text = re.sub(
-                      r'applicationId\s*=\s*"[^"]*"',
+                      r'applicationId\s*=\s*".*?"',
                       'applicationId = "cyrustourist.ir.app"',
                       text
                   )
 
-                  text = re.sub(
-                      r'minSdk\s*=\s*\d+',
-                      'minSdk = 23',
-                      text
-                  )
-
-                  text = re.sub(
-                      r'targetSdk\s*=\s*\d+',
-                      'targetSdk = 35',
-                      text
-                  )
-
               else:
+
                   text = re.sub(
-                      r'namespace\s+"[^"]*"',
+                      r'namespace\s+".*?"',
                       'namespace "cyrustourist.ir.app"',
                       text
                   )
 
                   text = re.sub(
-                      r'applicationId\s+"[^"]*"',
+                      r'applicationId\s+".*?"',
                       'applicationId "cyrustourist.ir.app"',
-                      text
-                  )
-
-                  text = re.sub(
-                      r'minSdkVersion\s+\d+',
-                      'minSdkVersion 23',
-                      text
-                  )
-
-                  text = re.sub(
-                      r'targetSdkVersion\s+\d+',
-                      'targetSdkVersion 35',
                       text
                   )
 
               file.write_text(text)
 
           PY
+
 
       - name: Add Location permissions
         run: |
@@ -115,71 +96,65 @@ jobs:
 
           text = manifest.read_text()
 
-          permissions = [
-              '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>',
-              '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>'
-          ]
+          if "ACCESS_FINE_LOCATION" not in text:
 
-          for permission in permissions:
-              if permission not in text:
-                  text = text.replace(
-                      "<application",
-                      permission + "\n    <application",
-                      1
-                  )
+              permissions = (
+                  '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n'
+                  '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n'
+              )
+
+              text = text.replace(
+                  "<application",
+                  permissions + "<application",
+                  1
+              )
 
           manifest.write_text(text)
 
           PY
 
-      - name: Verify Android project
+
+      - name: Check CyrusTourist logo
         run: |
-          test -f android/app/src/main/AndroidManifest.xml
-          echo "Android project OK"
-          echo "===== Manifest ====="
-          cat android/app/src/main/AndroidManifest.xml
+          if [ -f logo-new.jpg ]; then
+            echo "logo-new.jpg found"
+          else
+            echo "logo-new.jpg not found - continue"
+          fi
+
 
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Analyze project
+
+      - name: Analyze
         run: flutter analyze || true
 
-      - name: Clean project
-        run: flutter clean
-
-      - name: Get dependencies again
-        run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release --verbose
+        run: flutter build apk --release
+
 
       - name: Verify APK
         run: |
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          if [ ! -f "$APK" ]; then
-            echo "ERROR: APK was not created."
+          if [ ! -f build/app/outputs/flutter-apk/app-release.apk ]; then
+            echo "APK was not created."
             exit 1
           fi
 
-          echo "===== APK CREATED ====="
-          ls -lh "$APK"
+          echo "APK successfully created."
+          ls -lh build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Extract APK information
-        run: |
-          echo "===== APK DIRECTORY ====="
-          find build/app/outputs/flutter-apk -maxdepth 1 -type f -print
 
       - name: Rename APK
         run: |
-          cp \
-            build/app/outputs/flutter-apk/app-release.apk \
-            build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+          cp build/app/outputs/flutter-apk/app-release.apk \
+          build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Cyrustourist.ir-diagnostic
+          name: Cyrustourist.ir
           path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
           if-no-files-found: error
