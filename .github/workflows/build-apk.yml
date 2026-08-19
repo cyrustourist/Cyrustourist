@@ -1,4 +1,4 @@
-name: Build CyrusTourist APK - Universal Diagnostic
+name: Build CyrusTourist 5.7.1
 
 on:
   workflow_dispatch:
@@ -20,10 +20,8 @@ jobs:
       # 1. Checkout
       # ==========================================================
 
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
 
       # ==========================================================
@@ -38,109 +36,49 @@ jobs:
 
 
       # ==========================================================
-      # 3. Flutter / Dart version
+      # 3. Flutter version
       # ==========================================================
 
       - name: Flutter version
         run: |
           flutter --version
-          echo ""
           dart --version
 
 
       # ==========================================================
-      # 4. Verify Android project
+      # 4. Verify project
       # ==========================================================
 
-      - name: Verify Android project
+      - name: Verify project
         run: |
           set -e
 
-          test -d android
-          test -f android/app/build.gradle.kts
-          test -f android/app/src/main/AndroidManifest.xml
-
-          echo "Android project: OK"
-
-
-      # ==========================================================
-      # 5. Verify JPG assets
-      # ==========================================================
-
-      - name: Verify JPG assets
-        run: |
-          set -e
-
-          echo "===== assets/images ====="
-
-          find assets/images \
-            -maxdepth 1 \
-            -type f \
-            -print \
-            | sort
-
-          echo ""
-          echo "===== Required JPG files ====="
-
+          test -f pubspec.yaml
+          test -f lib/main.dart
           test -f assets/images/splash.jpg
           test -f assets/images/home.jpg
+          test -f assets/images/logo-new.jpg
 
-          echo "splash.jpg: OK"
-          echo "home.jpg: OK"
+          echo "Project files: OK"
 
 
       # ==========================================================
-      # 6. Verify pubspec
+      # 5. Verify version
       # ==========================================================
 
-      - name: Verify pubspec
+      - name: Verify version
         run: |
           set -e
-
-          echo "===== pubspec assets ====="
-
-          grep -n "assets/images" pubspec.yaml
-
-          echo ""
-          echo "===== Project version ====="
 
           grep -n "^version:" pubspec.yaml
 
+          grep -q "^version: 5.7.1+5710" pubspec.yaml
 
-      # ==========================================================
-      # 7. Verify Dart image references
-      # ==========================================================
-
-      - name: Verify Dart JPG references
-        run: |
-          set -e
-
-          echo "===== Checking PNG references ====="
-
-          if grep -R -n \
-            --include="*.dart" \
-            -E "splash\.png|home\.png" \
-            lib; then
-
-            echo ""
-            echo "ERROR: PNG reference found in lib."
-            exit 1
-
-          fi
-
-          echo "No splash.png/home.png references found."
-
-          echo ""
-          echo "===== JPG references ====="
-
-          grep -R -n \
-            --include="*.dart" \
-            -E "splash\.jpg|home\.jpg" \
-            lib
+          echo "Version 5.7.1: OK"
 
 
       # ==========================================================
-      # 8. Get dependencies
+      # 6. Get dependencies
       # ==========================================================
 
       - name: Flutter pub get
@@ -148,7 +86,7 @@ jobs:
 
 
       # ==========================================================
-      # 9. Flutter analyze
+      # 7. Analyze
       # ==========================================================
 
       - name: Flutter analyze
@@ -156,135 +94,7 @@ jobs:
 
 
       # ==========================================================
-      # 10. Show Android configuration
-      # ==========================================================
-
-      - name: Show Android configuration
-        run: |
-          echo "===== android/app/build.gradle.kts ====="
-          cat android/app/build.gradle.kts
-
-          echo ""
-          echo "===== AndroidManifest.xml ====="
-          cat android/app/src/main/AndroidManifest.xml
-
-
-      # ==========================================================
-      # 11. Create temporary RELEASE keystore
-      #
-      # TEST ONLY
-      # Never saved into repository.
-      # ==========================================================
-
-      - name: Create temporary release keystore
-        shell: bash
-        run: |
-          set -e
-
-          mkdir -p android/app/temporary-signing
-
-          STORE_PASSWORD="$(openssl rand -hex 16)"
-          KEY_PASSWORD="$(openssl rand -hex 16)"
-
-          echo "STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
-
-          keytool \
-            -genkeypair \
-            -v \
-            -keystore android/app/temporary-signing/cyrustourist-test.jks \
-            -storetype JKS \
-            -alias cyrustourist_test \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 3650 \
-            -storepass "$STORE_PASSWORD" \
-            -keypass "$KEY_PASSWORD" \
-            -dname "CN=CyrusTourist Test, OU=CyrusTourist, O=CyrusTourist, L=Test, ST=Test, C=AZ"
-
-          echo ""
-          echo "Temporary release keystore created."
-
-
-      # ==========================================================
-      # 12. Configure temporary RELEASE signing
-      # ==========================================================
-
-      - name: Configure temporary release signing
-        shell: bash
-        run: |
-          set -e
-
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path("android/app/build.gradle.kts")
-          text = path.read_text()
-
-          signing_block = r'''
-              signingConfigs {
-                  create("cyrusTouristTest") {
-                      storeFile = file("temporary-signing/cyrustourist-test.jks")
-                      storePassword = System.getenv("STORE_PASSWORD")
-                      keyAlias = "cyrustourist_test"
-                      keyPassword = System.getenv("KEY_PASSWORD")
-                  }
-              }
-
-          '''
-
-          if 'create("cyrusTouristTest")' not in text:
-
-              marker = "    buildTypes {"
-
-              if marker not in text:
-                  raise SystemExit(
-                      "ERROR: buildTypes block was not found."
-                  )
-
-              text = text.replace(
-                  marker,
-                  signing_block + marker,
-                  1
-              )
-
-          old = 'signingConfig = signingConfigs.getByName("debug")'
-          new = 'signingConfig = signingConfigs.getByName("cyrusTouristTest")'
-
-          if old in text:
-              text = text.replace(old, new, 1)
-
-          elif new not in text:
-              raise SystemExit(
-                  "ERROR: Release signing configuration could not be configured."
-              )
-
-          path.write_text(text)
-
-          print("Temporary RELEASE signing configured.")
-          PY
-
-
-      # ==========================================================
-      # 13. Verify temporary signing configuration
-      # ==========================================================
-
-      - name: Verify temporary signing
-        run: |
-          set -e
-
-          echo "===== Temporary signing configuration ====="
-
-          grep -n \
-            "cyrusTouristTest" \
-            android/app/build.gradle.kts
-
-          echo ""
-          echo "Temporary signing configuration: OK"
-
-
-      # ==========================================================
-      # 14. Clean
+      # 8. Clean
       # ==========================================================
 
       - name: Flutter clean
@@ -292,7 +102,7 @@ jobs:
 
 
       # ==========================================================
-      # 15. Get dependencies again
+      # 9. Get dependencies after clean
       # ==========================================================
 
       - name: Flutter pub get after clean
@@ -300,76 +110,21 @@ jobs:
 
 
       # ==========================================================
-      # 16. Build UNIVERSAL RELEASE APK
+      # 10. Build simple RELEASE APK
       # ==========================================================
 
-      - name: Build Universal release APK
+      - name: Build release APK
         run: |
           set -e
 
-          flutter build apk \
-            --release
+          flutter build apk --release
 
 
       # ==========================================================
-      # 17. Locate APK
+      # 11. Verify APK
       # ==========================================================
 
-      - name: Locate APK
-        run: |
-          set -e
-
-          echo "===== APK files ====="
-
-          find build/app/outputs/flutter-apk \
-            -maxdepth 1 \
-            -type f \
-            -name "*.apk" \
-            -print \
-            -exec ls -lh {} \;
-
-
-      # ==========================================================
-      # 18. Find Android SDK build tools
-      # ==========================================================
-
-      - name: Find Android build tools
-        shell: bash
-        run: |
-          set -e
-
-          echo "===== Android SDK ====="
-          echo "$ANDROID_HOME"
-
-          echo ""
-          echo "===== Available Build Tools ====="
-
-          ls -la "$ANDROID_HOME/build-tools"
-
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-
-          echo ""
-          echo "===== Selected Build Tools ====="
-          echo "$BUILD_TOOLS"
-
-          echo ""
-          echo "===== Tool versions ====="
-
-          if [ -x "$BUILD_TOOLS/apksigner" ]; then
-            "$BUILD_TOOLS/apksigner" version
-          fi
-
-          if [ -x "$BUILD_TOOLS/aapt2" ]; then
-            "$BUILD_TOOLS/aapt2" version
-          fi
-
-
-      # ==========================================================
-      # 19. Verify APK exists and calculate SHA256
-      # ==========================================================
-
-      - name: Verify APK and SHA256
-        shell: bash
+      - name: Verify APK
         run: |
           set -e
 
@@ -377,335 +132,24 @@ jobs:
 
           test -f "$APK"
 
-          echo "=============================================="
-          echo "APK FILE"
-          echo "=============================================="
+          echo "=========================================="
+          echo "CYRUSTOURIST 5.7.1 APK"
+          echo "=========================================="
 
           ls -lh "$APK"
 
           echo ""
-          echo "=============================================="
-          echo "APK SHA256"
-          echo "=============================================="
-
+          echo "SHA256:"
           sha256sum "$APK"
 
 
       # ==========================================================
-      # 20. ZIP alignment verification
+      # 12. Upload APK
       # ==========================================================
 
-      - name: Verify APK zip alignment
-        shell: bash
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-
-          echo "=============================================="
-          echo "ZIPALIGN VERIFICATION"
-          echo "=============================================="
-
-          if [ -x "$BUILD_TOOLS/zipalign" ]; then
-
-            "$BUILD_TOOLS/zipalign" -c -v 4 "$APK"
-
-          else
-
-            echo "WARNING: zipalign not found."
-
-          fi
-
-
-      # ==========================================================
-      # 21. APK signature verification
-      # ==========================================================
-
-      - name: Verify APK signature and certificate
-        shell: bash
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-
-          echo "=============================================="
-          echo "APK SIGNATURE"
-          echo "=============================================="
-
-          "$BUILD_TOOLS/apksigner" verify \
-            --verbose \
-            --print-certs \
-            "$APK"
-
-
-      # ==========================================================
-      # 22. APK Manifest / Package / SDK / ABI
-      # ==========================================================
-
-      - name: Inspect APK package SDK and ABI
-        shell: bash
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-
-          echo "=============================================="
-          echo "APK PACKAGE / SDK / ABI"
-          echo "=============================================="
-
-          if [ -x "$BUILD_TOOLS/aapt2" ]; then
-
-            "$BUILD_TOOLS/aapt2" dump badging "$APK" \
-              | grep -E \
-              "package:|sdkVersion:|targetSdkVersion:|native-code:|application-label:"
-
-          elif [ -x "$BUILD_TOOLS/aapt" ]; then
-
-            "$BUILD_TOOLS/aapt" dump badging "$APK" \
-              | grep -E \
-              "package:|sdkVersion:|targetSdkVersion:|native-code:|application-label:"
-
-          else
-
-            echo "WARNING: aapt/aapt2 not found."
-
-          fi
-
-
-      # ==========================================================
-      # 23. Detailed APK contents
-      # ==========================================================
-
-      - name: Inspect APK contents
-        shell: bash
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          echo "=============================================="
-          echo "APK CONTENTS"
-          echo "=============================================="
-
-          unzip -l "$APK" | head -150
-
-          echo ""
-          echo "=============================================="
-          echo "NATIVE LIBRARIES / ABI"
-          echo "=============================================="
-
-          unzip -l "$APK" \
-            | grep "lib/" \
-            | awk -F'lib/' 'NF > 1 {print $2}' \
-            | cut -d/ -f1 \
-            | sort -u
-
-          echo ""
-          echo "=============================================="
-          echo "ARM64 LIBRARIES"
-          echo "=============================================="
-
-          unzip -l "$APK" \
-            | grep "lib/arm64-v8a/" \
-            | head -50 || true
-
-          echo ""
-          echo "=============================================="
-          echo "ARM32 LIBRARIES"
-          echo "=============================================="
-
-          unzip -l "$APK" \
-            | grep "lib/armeabi-v7a/" \
-            | head -50 || true
-
-          echo ""
-          echo "=============================================="
-          echo "x86_64 LIBRARIES"
-          echo "=============================================="
-
-          unzip -l "$APK" \
-            | grep "lib/x86_64/" \
-            | head -50 || true
-
-
-      # ==========================================================
-      # 24. Check APK assets
-      # ==========================================================
-
-      - name: Check APK image assets
-        shell: bash
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          echo "=============================================="
-          echo "CHECKING SPLASH / HOME JPG IN APK"
-          echo "=============================================="
-
-          echo ""
-          echo "Searching APK for splash.jpg:"
-          unzip -l "$APK" | grep -i "splash\.jpg" || true
-
-          echo ""
-          echo "Searching APK for home.jpg:"
-          unzip -l "$APK" | grep -i "home\.jpg" || true
-
-          echo ""
-          echo "Flutter asset entries:"
-          unzip -l "$APK" | grep -E "flutter_assets" | grep -E "splash|home" || true
-
-
-      # ==========================================================
-      # 25. Check package name from APK
-      # ==========================================================
-
-      - name: Verify expected package ID
-        shell: bash
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-
-          echo "=============================================="
-          echo "EXPECTED PACKAGE ID"
-          echo "=============================================="
-
-          EXPECTED="cyrustourist.ir.app"
-
-          if [ -x "$BUILD_TOOLS/aapt2" ]; then
-            PACKAGE_LINE="$("$BUILD_TOOLS/aapt2" dump badging "$APK" | grep '^package:' | head -1)"
-          else
-            PACKAGE_LINE="$("$BUILD_TOOLS/aapt" dump badging "$APK" | grep '^package:' | head -1)"
-          fi
-
-          echo "$PACKAGE_LINE"
-
-          echo "$PACKAGE_LINE" | grep -q "name='$EXPECTED'" || {
-            echo ""
-            echo "ERROR: APK package ID is NOT $EXPECTED"
-            exit 1
-          }
-
-          echo ""
-          echo "Package ID: OK"
-
-
-      # ==========================================================
-      # 26. Check signing certificate fingerprint directly
-      # ==========================================================
-
-      - name: Show signing certificate fingerprint
-        shell: bash
-        run: |
-          set -e
-
-          KEYSTORE="android/app/temporary-signing/cyrustourist-test.jks"
-
-          echo "=============================================="
-          echo "TEMPORARY KEYSTORE CERTIFICATE"
-          echo "=============================================="
-
-          keytool \
-            -list \
-            -v \
-            -keystore "$KEYSTORE" \
-            -storepass "$STORE_PASSWORD" \
-            -alias cyrustourist_test \
-            | grep -E \
-            "Alias name:|Entry type:|Owner:|SHA256:|SHA1:"
-
-
-      # ==========================================================
-      # 27. Final diagnostic summary
-      # ==========================================================
-
-      - name: Final diagnostic summary
-        shell: bash
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-
-          echo ""
-          echo "=================================================="
-          echo "CYRUSTOURIST UNIVERSAL APK DIAGNOSTIC SUMMARY"
-          echo "=================================================="
-
-          echo ""
-          echo "APK:"
-          echo "$APK"
-
-          echo ""
-          echo "SIZE:"
-          ls -lh "$APK"
-
-          echo ""
-          echo "APK SHA256:"
-          sha256sum "$APK"
-
-          echo ""
-          echo "PACKAGE / SDK / ABI:"
-
-          if [ -x "$BUILD_TOOLS/aapt2" ]; then
-            "$BUILD_TOOLS/aapt2" dump badging "$APK" \
-              | grep -E \
-              "package:|sdkVersion:|targetSdkVersion:|native-code:|application-label:"
-          else
-            "$BUILD_TOOLS/aapt" dump badging "$APK" \
-              | grep -E \
-              "package:|sdkVersion:|targetSdkVersion:|native-code:|application-label:"
-          fi
-
-          echo ""
-          echo "SIGNATURE:"
-
-          "$BUILD_TOOLS/apksigner" verify \
-            --verbose \
-            --print-certs \
-            "$APK"
-
-          echo ""
-          echo "ZIPALIGN:"
-
-          if [ -x "$BUILD_TOOLS/zipalign" ]; then
-            "$BUILD_TOOLS/zipalign" -c -v 4 "$APK"
-          fi
-
-          echo ""
-          echo "=================================================="
-          echo "UNIVERSAL DIAGNOSTIC BUILD COMPLETED"
-          echo "=================================================="
-
-
-      # ==========================================================
-      # 28. Rename APK
-      # ==========================================================
-
-      - name: Rename APK
-        run: |
-          cp \
-            build/app/outputs/flutter-apk/app-release.apk \
-            build/app/outputs/flutter-apk/Cyrustourist-Universal-Test.apk
-
-
-      # ==========================================================
-      # 29. Upload Universal diagnostic APK
-      # ==========================================================
-
-      - name: Upload Universal diagnostic APK
+      - name: Upload CyrusTourist 5.7.1 APK
         uses: actions/upload-artifact@v4
         with:
-          name: Cyrustourist-Universal-Diagnostic
-          path: build/app/outputs/flutter-apk/Cyrustourist-Universal-Test.apk
+          name: CyrusTourist-5.7.1
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
