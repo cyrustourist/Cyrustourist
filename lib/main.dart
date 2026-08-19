@@ -62,7 +62,7 @@ class _SplashPageState extends State<SplashPage> {
           child: FittedBox(
             fit: BoxFit.contain,
             child: Image(
-              image: AssetImage('assets/images/splash.png'),
+              image: AssetImage('assets/images/splash.jpg'),
             ),
           ),
         ),
@@ -93,7 +93,7 @@ class HomePage extends StatelessWidget {
                 children: [
                   const Positioned.fill(
                     child: Image(
-                      image: AssetImage('assets/images/home.png'),
+                      image: AssetImage('assets/images/home.jpg'),
                       fit: BoxFit.contain,
                     ),
                   ),
