@@ -38,7 +38,7 @@ jobs:
 
 
       # ==========================================================
-      # 3. Flutter version
+      # 3. Flutter / Dart version
       # ==========================================================
 
       - name: Flutter version
@@ -161,7 +161,7 @@ jobs:
 
       - name: Show Android configuration
         run: |
-          echo "===== build.gradle.kts ====="
+          echo "===== android/app/build.gradle.kts ====="
           cat android/app/build.gradle.kts
 
           echo ""
@@ -172,8 +172,8 @@ jobs:
       # ==========================================================
       # 11. Create temporary RELEASE keystore
       #
-      # This key exists only on the GitHub runner.
-      # It is NOT saved to the repository.
+      # TEST ONLY
+      # Never saved into repository.
       # ==========================================================
 
       - name: Create temporary release keystore
@@ -266,12 +266,14 @@ jobs:
 
 
       # ==========================================================
-      # 13. Verify signing
+      # 13. Verify temporary signing configuration
       # ==========================================================
 
       - name: Verify temporary signing
         run: |
           set -e
+
+          echo "===== Temporary signing configuration ====="
 
           grep -n \
             "cyrusTouristTest" \
@@ -299,8 +301,6 @@ jobs:
 
       # ==========================================================
       # 16. Build ARM64 RELEASE APK
-      #
-      # Motorola G54 5G
       # ==========================================================
 
       - name: Build ARM64 release APK
@@ -331,34 +331,7 @@ jobs:
 
 
       # ==========================================================
-      # 18. Verify APK
-      # ==========================================================
-
-      - name: Verify APK
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          if [ ! -f "$APK" ]; then
-            echo "ERROR: APK was not created."
-            exit 1
-          fi
-
-          echo ""
-          echo "=============================================="
-          echo "CyrusTourist ARM64 RELEASE APK"
-          echo "=============================================="
-
-          ls -lh "$APK"
-
-          echo ""
-          echo "SHA256:"
-          sha256sum "$APK"
-
-
-      # ==========================================================
-      # 19. Find Android SDK build tools
+      # 18. Find Android SDK build tools
       # ==========================================================
 
       - name: Find Android build tools
@@ -367,20 +340,63 @@ jobs:
           set -e
 
           echo "===== Android SDK ====="
-
           echo "$ANDROID_HOME"
 
           echo ""
-          echo "===== Build Tools ====="
+          echo "===== Available Build Tools ====="
 
           ls -la "$ANDROID_HOME/build-tools"
 
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+
+          echo ""
+          echo "===== Selected Build Tools ====="
+          echo "$BUILD_TOOLS"
+
+          echo ""
+          echo "===== Tool versions ====="
+
+          if [ -x "$BUILD_TOOLS/apksigner" ]; then
+            "$BUILD_TOOLS/apksigner" version
+          fi
+
+          if [ -x "$BUILD_TOOLS/aapt2" ]; then
+            "$BUILD_TOOLS/aapt2" version
+          fi
+
 
       # ==========================================================
-      # 20. Inspect APK with available SDK tools
+      # 19. Verify APK exists and calculate SHA256
       # ==========================================================
 
-      - name: Inspect APK with SDK tools
+      - name: Verify APK and SHA256
+        shell: bash
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          test -f "$APK"
+
+          echo "=============================================="
+          echo "APK FILE"
+          echo "=============================================="
+
+          ls -lh "$APK"
+
+          echo ""
+          echo "=============================================="
+          echo "APK SHA256"
+          echo "=============================================="
+
+          sha256sum "$APK"
+
+
+      # ==========================================================
+      # 20. ZIP alignment verification
+      # ==========================================================
+
+      - name: Verify APK zip alignment
         shell: bash
         run: |
           set -e
@@ -389,30 +405,37 @@ jobs:
 
           BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
 
-          echo "Using build tools:"
-          echo "$BUILD_TOOLS"
+          echo "=============================================="
+          echo "ZIPALIGN VERIFICATION"
+          echo "=============================================="
 
-          echo ""
-          echo "===== APK SIZE ====="
+          if [ -x "$BUILD_TOOLS/zipalign" ]; then
 
-          ls -lh "$APK"
+            "$BUILD_TOOLS/zipalign" -c -v 4 "$APK"
 
-          echo ""
-          echo "===== APK ZIP CONTENTS ====="
+          else
 
-          unzip -l "$APK" | head -100
+            echo "WARNING: zipalign not found."
 
-          echo ""
-          echo "===== ABI ====="
+          fi
 
-          unzip -l "$APK" \
-            | grep "lib/" \
-            | awk -F'lib/' 'NF > 1 {print $2}' \
-            | cut -d/ -f1 \
-            | sort -u
 
-          echo ""
-          echo "===== SIGNATURE ====="
+      # ==========================================================
+      # 21. APK signature verification
+      # ==========================================================
+
+      - name: Verify APK signature and certificate
+        shell: bash
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+
+          echo "=============================================="
+          echo "APK SIGNATURE"
+          echo "=============================================="
 
           "$BUILD_TOOLS/apksigner" verify \
             --verbose \
@@ -421,12 +444,10 @@ jobs:
 
 
       # ==========================================================
-      # 21. Extract APK Manifest information
-      #
-      # Uses Android SDK aapt2 when available.
+      # 22. APK Manifest / Package / SDK / ABI
       # ==========================================================
 
-      - name: Inspect APK manifest
+      - name: Inspect APK package SDK and ABI
         shell: bash
         run: |
           set -e
@@ -435,7 +456,9 @@ jobs:
 
           BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
 
-          echo "===== APK MANIFEST ====="
+          echo "=============================================="
+          echo "APK PACKAGE / SDK / ABI"
+          echo "=============================================="
 
           if [ -x "$BUILD_TOOLS/aapt2" ]; then
 
@@ -452,24 +475,155 @@ jobs:
           else
 
             echo "WARNING: aapt/aapt2 not found."
-            echo "APK was already successfully built."
 
           fi
 
 
       # ==========================================================
-      # 22. Final diagnostic summary
+      # 23. Detailed APK contents
+      # ==========================================================
+
+      - name: Inspect APK contents
+        shell: bash
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          echo "=============================================="
+          echo "APK CONTENTS"
+          echo "=============================================="
+
+          unzip -l "$APK" | head -150
+
+          echo ""
+          echo "=============================================="
+          echo "NATIVE LIBRARIES / ABI"
+          echo "=============================================="
+
+          unzip -l "$APK" \
+            | grep "lib/" \
+            | awk -F'lib/' 'NF > 1 {print $2}' \
+            | cut -d/ -f1 \
+            | sort -u
+
+          echo ""
+          echo "=============================================="
+          echo "ARM64 LIBRARIES"
+          echo "=============================================="
+
+          unzip -l "$APK" \
+            | grep "lib/arm64-v8a/" \
+            | head -50 || true
+
+
+      # ==========================================================
+      # 24. Check APK assets
+      # ==========================================================
+
+      - name: Check APK image assets
+        shell: bash
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          echo "=============================================="
+          echo "CHECKING SPLASH / HOME JPG IN APK"
+          echo "=============================================="
+
+          echo ""
+          echo "Searching APK for splash.jpg:"
+          unzip -l "$APK" | grep -i "splash\.jpg" || true
+
+          echo ""
+          echo "Searching APK for home.jpg:"
+          unzip -l "$APK" | grep -i "home\.jpg" || true
+
+          echo ""
+          echo "Flutter asset entries:"
+          unzip -l "$APK" | grep -E "flutter_assets" | grep -E "splash|home" || true
+
+
+      # ==========================================================
+      # 25. Check package name from APK
+      # ==========================================================
+
+      - name: Verify expected package ID
+        shell: bash
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+
+          echo "=============================================="
+          echo "EXPECTED PACKAGE ID"
+          echo "=============================================="
+
+          EXPECTED="cyrustourist.ir.app"
+
+          if [ -x "$BUILD_TOOLS/aapt2" ]; then
+            PACKAGE_LINE="$("$BUILD_TOOLS/aapt2" dump badging "$APK" | grep '^package:' | head -1)"
+          else
+            PACKAGE_LINE="$("$BUILD_TOOLS/aapt" dump badging "$APK" | grep '^package:' | head -1)"
+          fi
+
+          echo "$PACKAGE_LINE"
+
+          echo "$PACKAGE_LINE" | grep -q "name='$EXPECTED'" || {
+            echo ""
+            echo "ERROR: APK package ID is NOT $EXPECTED"
+            exit 1
+          }
+
+          echo ""
+          echo "Package ID: OK"
+
+
+      # ==========================================================
+      # 26. Check signing certificate fingerprint directly
+      # ==========================================================
+
+      - name: Show signing certificate fingerprint
+        shell: bash
+        run: |
+          set -e
+
+          KEYSTORE="android/app/temporary-signing/cyrustourist-test.jks"
+
+          echo "=============================================="
+          echo "TEMPORARY KEYSTORE CERTIFICATE"
+          echo "=============================================="
+
+          keytool \
+            -list \
+            -v \
+            -keystore "$KEYSTORE" \
+            -storepass "$STORE_PASSWORD" \
+            -alias cyrustourist_test \
+            | grep -E \
+            "Alias name:|Entry type:|Owner:|SHA256:|SHA1:"
+
+
+      # ==========================================================
+      # 27. Final diagnostic summary
       # ==========================================================
 
       - name: Final diagnostic summary
         shell: bash
         run: |
+          set -e
+
           APK="build/app/outputs/flutter-apk/app-release.apk"
 
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+
           echo ""
-          echo "=============================================="
+          echo "=================================================="
           echo "CYRUSTOURIST APK DIAGNOSTIC SUMMARY"
-          echo "=============================================="
+          echo "=================================================="
 
           echo ""
           echo "APK:"
@@ -480,25 +634,45 @@ jobs:
           ls -lh "$APK"
 
           echo ""
-          echo "SHA256:"
+          echo "APK SHA256:"
           sha256sum "$APK"
 
           echo ""
-          echo "ABI:"
-          unzip -l "$APK" \
-            | grep "lib/" \
-            | awk -F'lib/' 'NF > 1 {print $2}' \
-            | cut -d/ -f1 \
-            | sort -u
+          echo "PACKAGE / SDK / ABI:"
+
+          if [ -x "$BUILD_TOOLS/aapt2" ]; then
+            "$BUILD_TOOLS/aapt2" dump badging "$APK" \
+              | grep -E \
+              "package:|sdkVersion:|targetSdkVersion:|native-code:|application-label:"
+          else
+            "$BUILD_TOOLS/aapt" dump badging "$APK" \
+              | grep -E \
+              "package:|sdkVersion:|targetSdkVersion:|native-code:|application-label:"
+          fi
 
           echo ""
-          echo "=============================================="
-          echo "BUILD COMPLETED"
-          echo "=============================================="
+          echo "SIGNATURE:"
+
+          "$BUILD_TOOLS/apksigner" verify \
+            --verbose \
+            --print-certs \
+            "$APK"
+
+          echo ""
+          echo "ZIPALIGN:"
+
+          if [ -x "$BUILD_TOOLS/zipalign" ]; then
+            "$BUILD_TOOLS/zipalign" -c -v 4 "$APK"
+          fi
+
+          echo ""
+          echo "=================================================="
+          echo "DIAGNOSTIC BUILD COMPLETED"
+          echo "=================================================="
 
 
       # ==========================================================
-      # 23. Rename APK
+      # 28. Rename APK
       # ==========================================================
 
       - name: Rename APK
@@ -509,7 +683,7 @@ jobs:
 
 
       # ==========================================================
-      # 24. Upload APK
+      # 29. Upload diagnostic APK
       # ==========================================================
 
       - name: Upload ARM64 diagnostic APK
