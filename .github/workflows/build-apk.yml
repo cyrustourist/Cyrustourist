@@ -20,19 +20,41 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
 
       - name: Flutter version
         run: flutter --version
 
 
-      - name: Generate Android project
-        run: flutter create --platforms=android .
+      # ==========================================================
+      # Create standard Android project only if it does not exist
+      # ==========================================================
 
+      - name: Create Android project
+        run: |
+          if [ ! -d "android" ]; then
+            flutter create \
+              --platforms=android \
+              --org cyrustourist.ir \
+              --project-name cyrustourist \
+              .
+          else
+            echo "Android project already exists."
+          fi
+
+
+      # ==========================================================
+      # Remove Flutter default test
+      # ==========================================================
 
       - name: Remove default test
         run: rm -f test/widget_test.dart
 
+
+      # ==========================================================
+      # Configure package name
+      # ==========================================================
 
       - name: Configure Android package
         run: |
@@ -52,16 +74,16 @@ jobs:
 
               text = file.read_text()
 
-              if file.name.endswith(".kts"):
+              if file.suffix == ".kts":
 
                   text = re.sub(
-                      r'namespace\s*=\s*".*?"',
+                      r'namespace\s*=\s*"[^"]*"',
                       'namespace = "cyrustourist.ir.app"',
                       text
                   )
 
                   text = re.sub(
-                      r'applicationId\s*=\s*".*?"',
+                      r'applicationId\s*=\s*"[^"]*"',
                       'applicationId = "cyrustourist.ir.app"',
                       text
                   )
@@ -69,13 +91,13 @@ jobs:
               else:
 
                   text = re.sub(
-                      r'namespace\s+".*?"',
+                      r'namespace\s+"[^"]*"',
                       'namespace "cyrustourist.ir.app"',
                       text
                   )
 
                   text = re.sub(
-                      r'applicationId\s+".*?"',
+                      r'applicationId\s+"[^"]*"',
                       'applicationId "cyrustourist.ir.app"',
                       text
                   )
@@ -85,7 +107,11 @@ jobs:
           PY
 
 
-      - name: Add Location permissions
+      # ==========================================================
+      # Location permissions
+      # ==========================================================
+
+      - name: Configure Location permissions
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -94,63 +120,118 @@ jobs:
               "android/app/src/main/AndroidManifest.xml"
           )
 
+          if not manifest.exists():
+              raise SystemExit(
+                  "AndroidManifest.xml was not found."
+              )
+
           text = manifest.read_text()
 
-          if "ACCESS_FINE_LOCATION" not in text:
+          permissions = [
+              '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>',
+              '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>'
+          ]
 
-              permissions = (
-                  '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n'
-                  '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n'
-              )
-
-              text = text.replace(
-                  "<application",
-                  permissions + "<application",
-                  1
-              )
+          for permission in permissions:
+              if permission not in text:
+                  text = text.replace(
+                      "<application",
+                      permission + "\n    <application",
+                      1
+                  )
 
           manifest.write_text(text)
 
           PY
 
 
-      - name: Check CyrusTourist logo
-        run: |
-          if [ -f logo-new.jpg ]; then
-            echo "logo-new.jpg found"
-          else
-            echo "logo-new.jpg not found - continue"
-          fi
+      # ==========================================================
+      # Verify project
+      # ==========================================================
 
+      - name: Verify Android project
+        run: |
+          echo "===== Android directory ====="
+          find android -maxdepth 3 -type f | sort | head -200
+
+          echo "===== Manifest ====="
+          cat android/app/src/main/AndroidManifest.xml
+
+          echo "===== Package ====="
+          grep -R "cyrustourist.ir.app" android/app || true
+
+
+      # ==========================================================
+      # Dependencies
+      # ==========================================================
 
       - name: Get dependencies
         run: flutter pub get
 
 
-      - name: Analyze
+      # ==========================================================
+      # Analyze
+      # ==========================================================
+
+      - name: Analyze project
         run: flutter analyze || true
 
 
-      - name: Build APK
-        run: flutter build apk --release
+      # ==========================================================
+      # Clean build
+      # ==========================================================
 
+      - name: Clean Flutter
+        run: flutter clean
+
+
+      - name: Get dependencies again
+        run: flutter pub get
+
+
+      # ==========================================================
+      # Build UNIVERSAL APK
+      #
+      # No --split-per-abi
+      # No ABI restriction
+      # ==========================================================
+
+      - name: Build Universal APK
+        run: |
+          flutter build apk --release
+
+
+      # ==========================================================
+      # Verify APK
+      # ==========================================================
 
       - name: Verify APK
         run: |
-          if [ ! -f build/app/outputs/flutter-apk/app-release.apk ]; then
-            echo "APK was not created."
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          if [ ! -f "$APK" ]; then
+            echo "ERROR: APK was not created."
             exit 1
           fi
 
-          echo "APK successfully created."
-          ls -lh build/app/outputs/flutter-apk/app-release.apk
+          echo "===== APK CREATED ====="
+          ls -lh "$APK"
 
+
+      # ==========================================================
+      # Rename
+      # ==========================================================
 
       - name: Rename APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk \
-          build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+          cp \
+            build/app/outputs/flutter-apk/app-release.apk \
+            build/app/outputs/flutter-apk/Cyrustourist.ir.apk
 
+
+      # ==========================================================
+      # Upload
+      # ==========================================================
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
