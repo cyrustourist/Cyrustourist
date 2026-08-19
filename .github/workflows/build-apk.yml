@@ -7,7 +7,7 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-apk:
@@ -23,11 +23,11 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
 
       # ==========================================================
-      # 2. Flutter
+      # 2. Setup Flutter
       # ==========================================================
 
       - name: Setup Flutter
@@ -36,18 +36,33 @@ jobs:
           channel: stable
           cache: true
 
+
+      # ==========================================================
+      # 3. Flutter version
+      # ==========================================================
+
       - name: Flutter version
         run: flutter --version
 
 
       # ==========================================================
-      # 3. Android project
+      # 4. Verify Android project
       # ==========================================================
 
-      - name: Check Android project
+      - name: Verify Android project
         run: |
           if [ ! -d "android" ]; then
             echo "ERROR: android/ directory is missing."
+            exit 1
+          fi
+
+          if [ ! -f "android/app/build.gradle.kts" ]; then
+            echo "ERROR: android/app/build.gradle.kts is missing."
+            exit 1
+          fi
+
+          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
+            echo "ERROR: AndroidManifest.xml is missing."
             exit 1
           fi
 
@@ -55,191 +70,202 @@ jobs:
 
 
       # ==========================================================
-      # 4. Package configuration
+      # 5. Verify JPG assets
       # ==========================================================
 
-      - name: Configure Android package
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          candidates = [
-              Path("android/app/build.gradle"),
-              Path("android/app/build.gradle.kts"),
-          ]
-
-          found = False
-
-          for file in candidates:
-
-              if not file.exists():
-                  continue
-
-              found = True
-              text = file.read_text()
-
-              if file.suffix == ".kts":
-
-                  text = re.sub(
-                      r'namespace\s*=\s*"[^"]*"',
-                      'namespace = "cyrustourist.ir.app"',
-                      text
-                  )
-
-                  text = re.sub(
-                      r'applicationId\s*=\s*"[^"]*"',
-                      'applicationId = "cyrustourist.ir.app"',
-                      text
-                  )
-
-              else:
-
-                  text = re.sub(
-                      r'namespace\s+"[^"]*"',
-                      'namespace "cyrustourist.ir.app"',
-                      text
-                  )
-
-                  text = re.sub(
-                      r'applicationId\s+"[^"]*"',
-                      'applicationId "cyrustourist.ir.app"',
-                      text
-                  )
-
-              file.write_text(text)
-
-          if not found:
-              raise SystemExit(
-                  "ERROR: Android Gradle file was not found."
-              )
-
-          print("Package ID:")
-          print("cyrustourist.ir.app")
-
-          PY
-
-
-      # ==========================================================
-      # 5. Location permissions
-      # ==========================================================
-
-      - name: Configure Location permissions
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          manifest = Path(
-              "android/app/src/main/AndroidManifest.xml"
-          )
-
-          if not manifest.exists():
-              raise SystemExit(
-                  "ERROR: AndroidManifest.xml was not found."
-              )
-
-          text = manifest.read_text()
-
-          fine = (
-              '<uses-permission '
-              'android:name="android.permission.ACCESS_FINE_LOCATION"/>'
-          )
-
-          coarse = (
-              '<uses-permission '
-              'android:name="android.permission.ACCESS_COARSE_LOCATION"/>'
-          )
-
-          if fine not in text:
-              text = text.replace(
-                  "<application",
-                  fine + "\n    <application",
-                  1
-              )
-
-          if coarse not in text:
-              text = text.replace(
-                  "<application",
-                  coarse + "\n    <application",
-                  1
-              )
-
-          manifest.write_text(text)
-
-          print("Location permissions configured.")
-
-          PY
-
-
-      # ==========================================================
-      # 6. Check assets
-      # ==========================================================
-
-      - name: Check assets
+      - name: Verify JPG assets
         run: |
           echo "===== assets/images ====="
 
-          find assets/images \
-            -maxdepth 1 \
-            -type f \
-            -print \
-            -exec ls -lh {} \; \
-            | sort
+          find assets/images -maxdepth 1 -type f -print | sort
 
           echo ""
-          echo "===== Root files ====="
+          echo "===== Required files ====="
 
-          ls -lh logo-new.jpg 2>/dev/null || true
+          test -f assets/images/splash.jpg
+          test -f assets/images/home.jpg
+
+          echo "splash.jpg: OK"
+          echo "home.jpg: OK"
 
 
       # ==========================================================
-      # 7. Dependencies
+      # 6. Get dependencies
       # ==========================================================
-
-      - name: Flutter clean
-        run: flutter clean
 
       - name: Flutter pub get
         run: flutter pub get
 
 
       # ==========================================================
+      # 7. Verify Flutter assets
+      # ==========================================================
+
+      - name: Verify pubspec assets
+        run: |
+          grep -n "assets/images" pubspec.yaml
+
+          echo ""
+          echo "Checking Dart references..."
+
+          if grep -R "splash.png" lib; then
+            echo "ERROR: splash.png reference still exists."
+            exit 1
+          fi
+
+          if grep -R "home.png" lib; then
+            echo "ERROR: home.png reference still exists."
+            exit 1
+          fi
+
+          echo "JPG references verified."
+
+
+      # ==========================================================
       # 8. Analyze
       # ==========================================================
 
-      - name: Analyze project
+      - name: Flutter analyze
         run: flutter analyze || true
 
 
       # ==========================================================
-      # 9. Show Android configuration
-      # ==========================================================
-
-      - name: Show Android configuration
-        run: |
-          echo "===== Android files ====="
-          find android/app/src/main -maxdepth 3 -type f | sort
-
-          echo ""
-          echo "===== Package ====="
-
-          grep -R \
-            "cyrustourist.ir.app" \
-            android/app \
-            || true
-
-
-      # ==========================================================
-      # 10. Build ARM64 ONLY
-      #
-      # Moto G54 5G uses ARM64.
+      # 9. Create temporary RELEASE keystore
       #
       # IMPORTANT:
-      # This is NOT Universal APK.
-      # This removes unnecessary CPU architectures.
+      # This key exists only on the GitHub runner.
+      # It is NOT committed to the public repository.
+      #
+      # The old production key is NOT touched.
       # ==========================================================
 
-      - name: Build ARM64 Release APK
+      - name: Create temporary release keystore
+        shell: bash
+        run: |
+          set -e
+
+          mkdir -p android/app/temporary-signing
+
+          STORE_PASSWORD="$(openssl rand -hex 16)"
+          KEY_PASSWORD="$(openssl rand -hex 16)"
+
+          echo "STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
+          keytool \
+            -genkeypair \
+            -v \
+            -keystore android/app/temporary-signing/cyrustourist-test.jks \
+            -storetype JKS \
+            -alias cyrustourist_test \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650 \
+            -storepass "$STORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            -dname "CN=CyrusTourist Test, OU=CyrusTourist, O=CyrusTourist, L=Test, ST=Test, C=AZ"
+
+          echo "Temporary release keystore created."
+
+
+      # ==========================================================
+      # 10. Configure temporary release signing
+      #
+      # This changes the Android Gradle file ONLY inside the
+      # temporary GitHub runner.
+      # Nothing is committed back to GitHub.
+      # ==========================================================
+
+      - name: Configure temporary release signing
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("android/app/build.gradle.kts")
+          text = path.read_text()
+
+          signing_block = r'''
+              signingConfigs {
+                  create("cyrusTouristTest") {
+                      storeFile = file("temporary-signing/cyrustourist-test.jks")
+                      storePassword = System.getenv("STORE_PASSWORD")
+                      keyAlias = "cyrustourist_test"
+                      keyPassword = System.getenv("KEY_PASSWORD")
+                  }
+              }
+
+          '''
+
+          if 'create("cyrusTouristTest")' not in text:
+              text = text.replace(
+                  '    buildTypes {',
+                  signing_block + '    buildTypes {',
+                  1
+              )
+
+          text = text.replace(
+              'signingConfig = signingConfigs.getByName("debug")',
+              'signingConfig = signingConfigs.getByName("cyrusTouristTest")'
+          )
+
+          path.write_text(text)
+          PY
+
+          echo "Temporary release signing configured."
+
+
+      # ==========================================================
+      # 11. Verify package configuration
+      # ==========================================================
+
+      - name: Verify Android package
+        run: |
+          echo "===== Package ====="
+
+          grep -n \
+            'applicationId = "cyrustourist.ir.app"' \
+            android/app/build.gradle.kts
+
+          echo ""
+          echo "===== Namespace ====="
+
+          grep -n \
+            'namespace = "cyrustourist.ir.app"' \
+            android/app/build.gradle.kts
+
+          echo ""
+          echo "===== Signing ====="
+
+          grep -n \
+            'cyrusTouristTest' \
+            android/app/build.gradle.kts
+
+
+      # ==========================================================
+      # 12. Clean
+      # ==========================================================
+
+      - name: Flutter clean
+        run: flutter clean
+
+
+      # ==========================================================
+      # 13. Dependencies after clean
+      # ==========================================================
+
+      - name: Flutter pub get after clean
+        run: flutter pub get
+
+
+      # ==========================================================
+      # 14. Build ARM64 RELEASE APK
+      #
+      # Motorola G54 5G test target.
+      # No universal APK.
+      # ==========================================================
+
+      - name: Build ARM64 release APK
         run: |
           flutter build apk \
             --release \
@@ -247,11 +273,13 @@ jobs:
 
 
       # ==========================================================
-      # 11. Verify APK
+      # 15. Verify APK
       # ==========================================================
 
       - name: Verify APK
+        shell: bash
         run: |
+          set -e
 
           APK="build/app/outputs/flutter-apk/app-release.apk"
 
@@ -261,41 +289,36 @@ jobs:
           fi
 
           echo ""
-          echo "=========================================="
-          echo "CyrusTourist ARM64 APK"
-          echo "=========================================="
+          echo "=============================================="
+          echo "CyrusTourist ARM64 RELEASE APK"
+          echo "=============================================="
 
           ls -lh "$APK"
 
           echo ""
-          echo "APK size in bytes:"
+          echo "APK SHA256:"
 
-          stat -c "%s" "$APK"
-
-          echo ""
-          echo "APK architecture check:"
-
-          unzip -l "$APK" | grep "lib/" | head -30 || true
+          sha256sum "$APK"
 
 
       # ==========================================================
-      # 12. Rename
+      # 16. Rename APK
       # ==========================================================
 
       - name: Rename APK
         run: |
           cp \
             build/app/outputs/flutter-apk/app-release.apk \
-            build/app/outputs/flutter-apk/Cyrustourist.ir-arm64.apk
+            build/app/outputs/flutter-apk/Cyrustourist.ir-arm64-test.apk
 
 
       # ==========================================================
-      # 13. Upload
+      # 17. Upload APK
       # ==========================================================
 
-      - name: Upload ARM64 APK
+      - name: Upload ARM64 test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Cyrustourist-ir-ARM64
-          path: build/app/outputs/flutter-apk/Cyrustourist.ir-arm64.apk
+          name: Cyrustourist-ARM64-Test
+          path: build/app/outputs/flutter-apk/Cyrustourist.ir-arm64-test.apk
           if-no-files-found: error
