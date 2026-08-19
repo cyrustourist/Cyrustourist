@@ -1,4 +1,4 @@
-name: Build CyrusTourist APK
+name: Build CyrusTourist APK - Diagnostic
 
 on:
   workflow_dispatch:
@@ -42,7 +42,10 @@ jobs:
       # ==========================================================
 
       - name: Flutter version
-        run: flutter --version
+        run: |
+          flutter --version
+          echo ""
+          dart --version
 
 
       # ==========================================================
@@ -51,22 +54,13 @@ jobs:
 
       - name: Verify Android project
         run: |
-          if [ ! -d "android" ]; then
-            echo "ERROR: android/ directory is missing."
-            exit 1
-          fi
+          set -e
 
-          if [ ! -f "android/app/build.gradle.kts" ]; then
-            echo "ERROR: android/app/build.gradle.kts is missing."
-            exit 1
-          fi
+          test -d android
+          test -f android/app/build.gradle.kts
+          test -f android/app/src/main/AndroidManifest.xml
 
-          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
-            echo "ERROR: AndroidManifest.xml is missing."
-            exit 1
-          fi
-
-          echo "Android project found."
+          echo "Android project: OK"
 
 
       # ==========================================================
@@ -75,12 +69,13 @@ jobs:
 
       - name: Verify JPG assets
         run: |
-          echo "===== assets/images ====="
+          set -e
 
+          echo "===== assets/images ====="
           find assets/images -maxdepth 1 -type f -print | sort
 
           echo ""
-          echo "===== Required files ====="
+          echo "===== Required JPG files ====="
 
           test -f assets/images/splash.jpg
           test -f assets/images/home.jpg
@@ -90,7 +85,57 @@ jobs:
 
 
       # ==========================================================
-      # 6. Get dependencies
+      # 6. Verify pubspec
+      # ==========================================================
+
+      - name: Verify pubspec
+        run: |
+          set -e
+
+          echo "===== pubspec assets ====="
+
+          grep -n "assets/images" pubspec.yaml
+
+          echo ""
+          echo "===== Project version ====="
+
+          grep -n "^version:" pubspec.yaml
+
+
+      # ==========================================================
+      # 7. Verify Dart image references
+      # ==========================================================
+
+      - name: Verify Dart JPG references
+        run: |
+          set -e
+
+          echo "===== Checking PNG references ====="
+
+          if grep -R -n \
+            --include="*.dart" \
+            "splash.png\|home.png" \
+            lib; then
+
+            echo ""
+            echo "ERROR: PNG reference found in lib."
+            exit 1
+
+          fi
+
+          echo "No splash.png/home.png references found."
+
+          echo ""
+          echo "===== JPG references ====="
+
+          grep -R -n \
+            --include="*.dart" \
+            "splash.jpg\|home.jpg" \
+            lib
+
+
+      # ==========================================================
+      # 8. Get dependencies
       # ==========================================================
 
       - name: Flutter pub get
@@ -98,45 +143,32 @@ jobs:
 
 
       # ==========================================================
-      # 7. Verify Flutter assets
-      # ==========================================================
-
-      - name: Verify pubspec assets
-        run: |
-          grep -n "assets/images" pubspec.yaml
-
-          echo ""
-          echo "Checking Dart references..."
-
-          if grep -R "splash.png" lib; then
-            echo "ERROR: splash.png reference still exists."
-            exit 1
-          fi
-
-          if grep -R "home.png" lib; then
-            echo "ERROR: home.png reference still exists."
-            exit 1
-          fi
-
-          echo "JPG references verified."
-
-
-      # ==========================================================
-      # 8. Analyze
+      # 9. Flutter analyze
       # ==========================================================
 
       - name: Flutter analyze
-        run: flutter analyze || true
+        run: flutter analyze
 
 
       # ==========================================================
-      # 9. Create temporary RELEASE keystore
+      # 10. Show Android configuration BEFORE modification
+      # ==========================================================
+
+      - name: Show Android configuration
+        run: |
+          echo "===== build.gradle.kts ====="
+          cat android/app/build.gradle.kts
+
+          echo ""
+          echo "===== AndroidManifest.xml ====="
+          cat android/app/src/main/AndroidManifest.xml
+
+
+      # ==========================================================
+      # 11. Create temporary RELEASE keystore
       #
-      # IMPORTANT:
-      # This key exists only on the GitHub runner.
-      # It is NOT committed to the public repository.
-      #
-      # The old production key is NOT touched.
+      # This key is created only on the GitHub runner.
+      # It is NOT saved to the repository.
       # ==========================================================
 
       - name: Create temporary release keystore
@@ -165,20 +197,19 @@ jobs:
             -keypass "$KEY_PASSWORD" \
             -dname "CN=CyrusTourist Test, OU=CyrusTourist, O=CyrusTourist, L=Test, ST=Test, C=AZ"
 
+          echo ""
           echo "Temporary release keystore created."
 
 
       # ==========================================================
-      # 10. Configure temporary release signing
-      #
-      # This changes the Android Gradle file ONLY inside the
-      # temporary GitHub runner.
-      # Nothing is committed back to GitHub.
+      # 12. Configure temporary RELEASE signing
       # ==========================================================
 
       - name: Configure temporary release signing
         shell: bash
         run: |
+          set -e
+
           python3 - <<'PY'
           from pathlib import Path
 
@@ -198,52 +229,53 @@ jobs:
           '''
 
           if 'create("cyrusTouristTest")' not in text:
+              marker = "    buildTypes {"
+
+              if marker not in text:
+                  raise SystemExit(
+                      "ERROR: buildTypes block was not found."
+                  )
+
               text = text.replace(
-                  '    buildTypes {',
-                  signing_block + '    buildTypes {',
+                  marker,
+                  signing_block + marker,
                   1
               )
 
-          text = text.replace(
-              'signingConfig = signingConfigs.getByName("debug")',
-              'signingConfig = signingConfigs.getByName("cyrusTouristTest")'
-          )
+          old = 'signingConfig = signingConfigs.getByName("debug")'
+          new = 'signingConfig = signingConfigs.getByName("cyrusTouristTest")'
+
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          elif new not in text:
+              raise SystemExit(
+                  "ERROR: Release signing configuration could not be configured."
+              )
 
           path.write_text(text)
+
+          print("Temporary RELEASE signing configured.")
           PY
 
-          echo "Temporary release signing configured."
-
 
       # ==========================================================
-      # 11. Verify package configuration
+      # 13. Verify temporary signing
       # ==========================================================
 
-      - name: Verify Android package
+      - name: Verify temporary signing
         run: |
-          echo "===== Package ====="
+          set -e
 
-          grep -n \
-            'applicationId = "cyrustourist.ir.app"' \
+          grep -n "cyrusTouristTest" \
             android/app/build.gradle.kts
 
           echo ""
-          echo "===== Namespace ====="
-
-          grep -n \
-            'namespace = "cyrustourist.ir.app"' \
-            android/app/build.gradle.kts
-
-          echo ""
-          echo "===== Signing ====="
-
-          grep -n \
-            'cyrusTouristTest' \
-            android/app/build.gradle.kts
+          echo "Temporary signing configuration: OK"
 
 
       # ==========================================================
-      # 12. Clean
+      # 14. Clean
       # ==========================================================
 
       - name: Flutter clean
@@ -251,7 +283,7 @@ jobs:
 
 
       # ==========================================================
-      # 13. Dependencies after clean
+      # 15. Get dependencies again
       # ==========================================================
 
       - name: Flutter pub get after clean
@@ -259,25 +291,46 @@ jobs:
 
 
       # ==========================================================
-      # 14. Build ARM64 RELEASE APK
+      # 16. Build ARM64 RELEASE APK
       #
-      # Motorola G54 5G test target.
-      # No universal APK.
+      # Target:
+      # Motorola G54 5G
+      #
+      # No Universal APK.
       # ==========================================================
 
       - name: Build ARM64 release APK
         run: |
+          set -e
+
           flutter build apk \
             --release \
             --target-platform android-arm64
 
 
       # ==========================================================
-      # 15. Verify APK
+      # 17. Locate APK
+      # ==========================================================
+
+      - name: Locate APK
+        run: |
+          set -e
+
+          echo "===== APK files ====="
+
+          find build/app/outputs/flutter-apk \
+            -maxdepth 1 \
+            -type f \
+            -name "*.apk" \
+            -print \
+            -exec ls -lh {} \;
+
+
+      # ==========================================================
+      # 18. Verify APK exists
       # ==========================================================
 
       - name: Verify APK
-        shell: bash
         run: |
           set -e
 
@@ -289,20 +342,117 @@ jobs:
           fi
 
           echo ""
-          echo "=============================================="
-          echo "CyrusTourist ARM64 RELEASE APK"
-          echo "=============================================="
+          echo "APK successfully created."
 
           ls -lh "$APK"
 
-          echo ""
-          echo "APK SHA256:"
+
+      # ==========================================================
+      # 19. APK SHA256
+      # ==========================================================
+
+      - name: APK SHA256
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          echo "===== SHA256 ====="
 
           sha256sum "$APK"
 
 
       # ==========================================================
-      # 16. Rename APK
+      # 20. Inspect APK with Android build tools
+      # ==========================================================
+
+      - name: Inspect APK
+        shell: bash
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          echo "=============================================="
+          echo "CYRUSTOURIST APK DIAGNOSTIC"
+          echo "=============================================="
+
+          echo ""
+          echo "===== APK SIZE ====="
+
+          ls -lh "$APK"
+
+          echo ""
+          echo "===== APK PACKAGE / SDK / VERSION ====="
+
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apkanalyzer" \
+            manifest application-id "$APK"
+
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apkanalyzer" \
+            manifest min-sdk "$APK"
+
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apkanalyzer" \
+            manifest target-sdk "$APK"
+
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apkanalyzer" \
+            manifest version-code "$APK"
+
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apkanalyzer" \
+            manifest version-name "$APK"
+
+          echo ""
+          echo "===== APK FILES ====="
+
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apkanalyzer" \
+            files list "$APK" | head -100
+
+
+      # ==========================================================
+      # 21. Inspect native libraries / ABI
+      # ==========================================================
+
+      - name: Inspect APK ABI
+        shell: bash
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          echo "===== Native libraries ====="
+
+          unzip -l "$APK" | grep "lib/" || true
+
+          echo ""
+          echo "===== ABI summary ====="
+
+          unzip -l "$APK" \
+            | grep "lib/" \
+            | awk -F'lib/' 'NF > 1 {print $2}' \
+            | cut -d/ -f1 \
+            | sort -u
+
+
+      # ==========================================================
+      # 22. Verify APK signing certificate
+      # ==========================================================
+
+      - name: Inspect APK signing
+        shell: bash
+        run: |
+          set -e
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          echo "===== APK SIGNATURE ====="
+
+          apksigner verify \
+            --verbose \
+            --print-certs \
+            "$APK"
+
+
+      # ==========================================================
+      # 23. Rename APK
       # ==========================================================
 
       - name: Rename APK
@@ -313,12 +463,12 @@ jobs:
 
 
       # ==========================================================
-      # 17. Upload APK
+      # 24. Upload APK
       # ==========================================================
 
-      - name: Upload ARM64 test APK
+      - name: Upload ARM64 diagnostic APK
         uses: actions/upload-artifact@v4
         with:
-          name: Cyrustourist-ARM64-Test
+          name: Cyrustourist-ARM64-Diagnostic
           path: build/app/outputs/flutter-apk/Cyrustourist.ir-arm64-test.apk
           if-no-files-found: error
