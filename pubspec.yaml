@@ -1,8 +1,8 @@
 name: cyrustourist_app3
-description: CyrusTourist app3 base - splash, home and tourist map.
+description: CyrusTourist base app - splash, home and logo test.
 publish_to: "none"
 
-version: 5.7.0+5700
+version: 5.7.1+5710
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -12,9 +12,6 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  flutter_map: ^7.0.2
-  latlong2: ^0.9.1
-  geolocator: ^13.0.1
 
 dev_dependencies:
   flutter_test:
@@ -28,3 +25,4 @@ flutter:
   assets:
     - assets/images/splash.jpg
     - assets/images/home.jpg
+    - assets/images/logo-new.jpg
