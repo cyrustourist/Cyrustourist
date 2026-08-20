@@ -24,7 +24,6 @@ class CyrusTouristApp extends StatelessWidget {
       title: 'CyrusTourist',
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'sans',
       ),
       home: const SplashPage(),
     );
@@ -42,18 +41,13 @@ enum AppLanguage {
 }
 
 class AppText {
-  static String languageCode() {
-    final locale = WidgetsBinding.instance.platformDispatcher.locale;
-    final code = locale.languageCode.toLowerCase();
-
-    if (code == 'fa') return 'fa';
-    if (code == 'ar') return 'ar';
-
-    return 'en';
-  }
-
   static AppLanguage get language {
-    final code = languageCode();
+    final code = WidgetsBinding
+        .instance
+        .platformDispatcher
+        .locale
+        .languageCode
+        .toLowerCase();
 
     if (code == 'fa') return AppLanguage.persian;
     if (code == 'ar') return AppLanguage.arabic;
@@ -61,9 +55,7 @@ class AppText {
     return AppLanguage.english;
   }
 
-  static bool get rtl {
-    return language != AppLanguage.english;
-  }
+  static bool get rtl => language != AppLanguage.english;
 
   static String homeTitle() {
     switch (language) {
@@ -295,10 +287,32 @@ class AppText {
         return 'Services';
     }
   }
+
+  static String comingSoon() {
+    switch (language) {
+      case AppLanguage.persian:
+        return 'این بخش در مرحله بعد فعال می‌شود.';
+      case AppLanguage.arabic:
+        return 'سيتم تفعيل هذا القسم في المرحلة القادمة.';
+      case AppLanguage.english:
+        return 'This section will be activated in the next stage.';
+    }
+  }
+
+  static String serviceNextStage() {
+    switch (language) {
+      case AppLanguage.persian:
+        return 'این بخش در مرحله بعد تکمیل می‌شود.';
+      case AppLanguage.arabic:
+        return 'سيتم استكمال هذا القسم في المرحلة القادمة.';
+      case AppLanguage.english:
+        return 'This section will be completed in the next stage.';
+    }
+  }
 }
 
 // ============================================================
-// SPLASH
+// SPLASH PAGE
 // ============================================================
 
 class SplashPage extends StatefulWidget {
@@ -357,10 +371,9 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rtl = AppText.rtl;
-
     return Directionality(
-      textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
+      textDirection:
+          AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         body: SafeArea(
           child: Container(
@@ -372,7 +385,7 @@ class HomePage extends StatelessWidget {
               children: [
 
                 // ==================================================
-                // SECOND IMAGE / HOME IMAGE
+                // HOME IMAGE
                 // ==================================================
 
                 Image.asset(
@@ -386,7 +399,7 @@ class HomePage extends StatelessWidget {
                 ),
 
                 // ==================================================
-                // DARK TRANSPARENT LAYER
+                // DARK OVERLAY
                 // ==================================================
 
                 Container(
@@ -395,7 +408,7 @@ class HomePage extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.18),
+                        Colors.black.withValues(alpha: 0.15),
                         Colors.transparent,
                         Colors.black.withValues(alpha: 0.30),
                       ],
@@ -411,17 +424,13 @@ class HomePage extends StatelessWidget {
                   builder: (context, constraints) {
                     return Padding(
                       padding: const EdgeInsets.fromLTRB(
-                        14,
-                        18,
-                        14,
                         12,
+                        16,
+                        12,
+                        10,
                       ),
                       child: Column(
                         children: [
-
-                          // -------------------------------
-                          // HEADER
-                          // -------------------------------
 
                           Text(
                             'CYRUS TOURIST',
@@ -429,7 +438,9 @@ class HomePage extends StatelessWidget {
                             style: TextStyle(
                               color: Colors.white,
                               fontSize:
-                                  constraints.maxWidth < 380 ? 20 : 24,
+                                  constraints.maxWidth < 380
+                                      ? 20
+                                      : 24,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.5,
                               shadows: const [
@@ -441,7 +452,7 @@ class HomePage extends StatelessWidget {
                             ),
                           ),
 
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 4),
 
                           Text(
                             AppText.homeTitle(),
@@ -449,7 +460,7 @@ class HomePage extends StatelessWidget {
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               shadows: [
                                 Shadow(
                                   blurRadius: 6,
@@ -459,11 +470,11 @@ class HomePage extends StatelessWidget {
                             ),
                           ),
 
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
 
-                          // -------------------------------
-                          // 10 MAIN BUTTONS
-                          // -------------------------------
+                          // ==================================================
+                          // 10 BUTTONS
+                          // ==================================================
 
                           Expanded(
                             child: GridView.builder(
@@ -473,20 +484,24 @@ class HomePage extends StatelessWidget {
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 1.55,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                                childAspectRatio: 1.48,
                               ),
                               itemBuilder: (context, index) {
+                                final number = index + 1;
+
                                 return HomeServiceButton(
-                                  number: index + 1,
-                                  title: _homeTitle(index + 1),
-                                  icon: _homeIcon(index + 1),
-                                  active: index == 0,
+                                  number: number,
+                                  title:
+                                      _homeTitle(number),
+                                  icon:
+                                      _homeIcon(number),
+                                  active: number == 1,
                                   onTap: () {
                                     _handleHomeButton(
                                       context,
-                                      index + 1,
+                                      number,
                                     );
                                   },
                                 );
@@ -494,18 +509,14 @@ class HomePage extends StatelessWidget {
                             ),
                           ),
 
-                          const SizedBox(height: 8),
-
-                          // -------------------------------
-                          // FOOTER
-                          // -------------------------------
+                          const SizedBox(height: 6),
 
                           Text(
                             AppText.slogan(),
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               shadows: [
                                 Shadow(
@@ -516,11 +527,13 @@ class HomePage extends StatelessWidget {
                             ),
                           ),
 
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
 
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment:
+                                MainAxisAlignment.center,
                             children: [
+
                               TextButton(
                                 onPressed: () {
                                   _showInfo(
@@ -532,16 +545,19 @@ class HomePage extends StatelessWidget {
                                   AppText.about(),
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight:
+                                        FontWeight.bold,
                                   ),
                                 ),
                               ),
+
                               const Text(
                                 ' • ',
                                 style: TextStyle(
                                   color: Colors.white,
                                 ),
                               ),
+
                               TextButton(
                                 onPressed: () {
                                   _showInfo(
@@ -553,7 +569,8 @@ class HomePage extends StatelessWidget {
                                   AppText.social(),
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight:
+                                        FontWeight.bold,
                                   ),
                                 ),
                               ),
@@ -630,10 +647,6 @@ class HomePage extends StatelessWidget {
     BuildContext context,
     int number,
   ) {
-    // ================================================
-    // کلید شماره ۱ = نقشه
-    // ================================================
-
     if (number == 1) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -643,33 +656,17 @@ class HomePage extends StatelessWidget {
       return;
     }
 
-    // ================================================
-    // سایر کلیدها فعلاً فقط پیام اطلاع‌رسانی دارند.
-    // عملکرد اصلی آنها در مراحل بعد توسعه داده می‌شود.
-    // ================================================
-
-    String title = _homeTitle(number);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$title\n${_comingSoonText()}',
-          textAlign: TextAlign.center,
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_homeTitle(number)}\n${AppText.comingSoon()}',
+            textAlign: TextAlign.center,
+          ),
+          duration: const Duration(seconds: 1),
         ),
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
-
-  String _comingSoonText() {
-    switch (AppText.language) {
-      case AppLanguage.persian:
-        return 'این بخش در مرحله بعد فعال می‌شود.';
-      case AppLanguage.arabic:
-        return 'سيتم تفعيل هذا القسم في المرحلة القادمة.';
-      case AppLanguage.english:
-        return 'This section will be activated in the next stage.';
-    }
+      );
   }
 
   void _showInfo(
@@ -684,7 +681,9 @@ class HomePage extends StatelessWidget {
           content: Text(AppText.slogan()),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);
+              },
               child: Text(AppText.back()),
             ),
           ],
@@ -695,7 +694,7 @@ class HomePage extends StatelessWidget {
 }
 
 // ============================================================
-// HOME BUTTON
+// HOME SERVICE BUTTON
 // ============================================================
 
 class HomeServiceButton extends StatefulWidget {
@@ -740,6 +739,7 @@ class _HomeServiceButtonState
         setState(() {
           pressed = false;
         });
+
         widget.onTap();
       },
       child: AnimatedScale(
@@ -749,11 +749,12 @@ class _HomeServiceButtonState
           duration: const Duration(milliseconds: 100),
           decoration: BoxDecoration(
             color: Colors.white.withValues(
-              alpha: widget.active ? 0.94 : 0.88,
+              alpha: widget.active ? 0.95 : 0.88,
             ),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius:
+                BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.95),
+              color: Colors.white,
               width: 1.5,
             ),
             boxShadow: [
@@ -771,48 +772,56 @@ class _HomeServiceButtonState
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 7,
+              horizontal: 7,
+              vertical: 6,
             ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment:
+                  MainAxisAlignment.center,
               children: [
 
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
                   children: [
+
                     Container(
-                      width: 34,
-                      height: 34,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xff0b506b),
+                        color:
+                            const Color(0xff0b506b),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(
+                            color:
+                                Colors.black.withValues(
                               alpha: 0.25,
                             ),
                             blurRadius: 5,
-                            offset: const Offset(0, 3),
+                            offset:
+                                const Offset(0, 3),
                           ),
                         ],
                       ),
                       child: Icon(
                         widget.icon,
                         color: Colors.white,
-                        size: 20,
+                        size: 21,
                       ),
                     ),
 
                     const SizedBox(width: 6),
 
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
+                      padding:
+                          const EdgeInsets.symmetric(
+                        horizontal: 8,
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xffd7a33d),
+                        color:
+                            const Color(0xffd7a33d),
                         borderRadius:
                             BorderRadius.circular(20),
                       ),
@@ -821,7 +830,8 @@ class _HomeServiceButtonState
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
-                          fontWeight: FontWeight.w900,
+                          fontWeight:
+                              FontWeight.w900,
                         ),
                       ),
                     ),
@@ -834,7 +844,8 @@ class _HomeServiceButtonState
                   widget.title,
                   textAlign: TextAlign.center,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  overflow:
+                      TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xff09212d),
                     fontSize: 13,
@@ -858,11 +869,14 @@ class SmartMapPage extends StatefulWidget {
   const SmartMapPage({super.key});
 
   @override
-  State<SmartMapPage> createState() => _SmartMapPageState();
+  State<SmartMapPage> createState() =>
+      _SmartMapPageState();
 }
 
-class _SmartMapPageState extends State<SmartMapPage> {
-  final MapController mapController = MapController();
+class _SmartMapPageState
+    extends State<SmartMapPage> {
+  final MapController mapController =
+      MapController();
 
   static const LatLng iranCenter =
       LatLng(32.4279, 53.6880);
@@ -876,8 +890,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
   void initState() {
     super.initState();
 
-    // مکان کاربر در شروع نقشه بررسی می‌شود.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) {
       _loadUserLocation();
     });
   }
@@ -889,25 +903,27 @@ class _SmartMapPageState extends State<SmartMapPage> {
   Future<void> _loadUserLocation() async {
     if (locationLoading) return;
 
-    setState(() {
-      locationLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        locationLoading = true;
+      });
+    }
 
     try {
       final serviceEnabled =
           await Geolocator.isLocationServiceEnabled();
 
       if (!serviceEnabled) {
-        if (mounted) {
-          setState(() {
-            locationEnabled = false;
-            locationLoading = false;
-          });
+        if (!mounted) return;
 
-          _showLocationMessage(
-            AppText.locationOff(),
-          );
-        }
+        setState(() {
+          locationEnabled = false;
+          locationLoading = false;
+        });
+
+        _showLocationMessage(
+          AppText.locationOff(),
+        );
 
         return;
       }
@@ -915,24 +931,26 @@ class _SmartMapPageState extends State<SmartMapPage> {
       LocationPermission permission =
           await Geolocator.checkPermission();
 
-      if (permission == LocationPermission.denied) {
+      if (permission ==
+          LocationPermission.denied) {
         permission =
             await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.denied ||
+      if (permission ==
+              LocationPermission.denied ||
           permission ==
               LocationPermission.deniedForever) {
-        if (mounted) {
-          setState(() {
-            locationEnabled = false;
-            locationLoading = false;
-          });
+        if (!mounted) return;
 
-          _showLocationMessage(
-            AppText.locationPermission(),
-          );
-        }
+        setState(() {
+          locationEnabled = false;
+          locationLoading = false;
+        });
+
+        _showLocationMessage(
+          AppText.locationPermission(),
+        );
 
         return;
       }
@@ -976,7 +994,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     }
   }
 
-  void _showLocationMessage(String message) {
+  void _showLocationMessage(
+    String message,
+  ) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context)
@@ -987,21 +1007,18 @@ class _SmartMapPageState extends State<SmartMapPage> {
             message,
             textAlign: TextAlign.center,
           ),
-          duration: const Duration(seconds: 3),
+          duration:
+              const Duration(seconds: 3),
         ),
       );
   }
 
   // ==========================================================
-  // MARKERS
+  // TEST MARKERS
   // ==========================================================
 
   List<Marker> _buildMarkers() {
     final markers = <Marker>[];
-
-    // ----------------------------------------------------------
-    // نمونه جاذبه‌ها برای نمایش اولیه
-    // ----------------------------------------------------------
 
     markers.add(
       _categoryMarker(
@@ -1030,10 +1047,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
         Icons.location_city,
       ),
     );
-
-    // ----------------------------------------------------------
-    // USER LOCATION
-    // ----------------------------------------------------------
 
     if (userLocation != null) {
       markers.add(
@@ -1099,20 +1112,23 @@ class _SmartMapPageState extends State<SmartMapPage> {
   }
 
   // ==========================================================
-  // MAP
+  // MAP PAGE
   // ==========================================================
 
   @override
   Widget build(BuildContext context) {
-    final rtl = AppText.rtl;
-
     return Directionality(
       textDirection:
-          rtl ? TextDirection.rtl : TextDirection.ltr,
+          AppText.rtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xff071722),
+        backgroundColor:
+            const Color(0xff071722),
+
         appBar: AppBar(
-          backgroundColor: const Color(0xff071722),
+          backgroundColor:
+              const Color(0xff071722),
           foregroundColor: Colors.white,
           centerTitle: true,
           title: Text(
@@ -1122,11 +1138,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
             ),
           ),
         ),
+
         body: Column(
           children: [
 
             // ==================================================
-            // MAP AREA
+            // REAL MAP
             // ==================================================
 
             Expanded(
@@ -1134,9 +1151,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 children: [
 
                   FlutterMap(
-                    mapController: mapController,
+                    mapController:
+                        mapController,
                     options: const MapOptions(
-                      initialCenter: iranCenter,
+                      initialCenter:
+                          iranCenter,
                       initialZoom: 5.0,
                       minZoom: 3.0,
                       maxZoom: 18.0,
@@ -1151,7 +1170,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
                       ),
 
                       MarkerLayer(
-                        markers: _buildMarkers(),
+                        markers:
+                            _buildMarkers(),
                       ),
                     ],
                   ),
@@ -1172,18 +1192,24 @@ class _SmartMapPageState extends State<SmartMapPage> {
                             horizontal: 16,
                             vertical: 8,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(
+                          decoration:
+                              BoxDecoration(
+                            color:
+                                Colors.black.withValues(
                               alpha: 0.62,
                             ),
                             borderRadius:
-                                BorderRadius.circular(22),
+                                BorderRadius.circular(
+                              22,
+                            ),
                           ),
                           child: Text(
                             AppText.mapReady(),
-                            style: const TextStyle(
+                            style:
+                                const TextStyle(
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                              fontWeight:
+                                  FontWeight.bold,
                             ),
                           ),
                         ),
@@ -1192,18 +1218,23 @@ class _SmartMapPageState extends State<SmartMapPage> {
                   ),
 
                   // ==================================================
-                  // MY LOCATION BUTTON
+                  // MY LOCATION
                   // ==================================================
 
                   Positioned(
                     bottom: 18,
                     right: 14,
                     child: FloatingActionButton(
-                      heroTag: 'myLocationButton',
-                      backgroundColor: Colors.white,
+                      heroTag:
+                          'myLocationButton',
+                      backgroundColor:
+                          Colors.white,
                       foregroundColor:
-                          const Color(0xff0b506b),
-                      onPressed: _loadUserLocation,
+                          const Color(
+                        0xff0b506b,
+                      ),
+                      onPressed:
+                          _loadUserLocation,
                       child: locationLoading
                           ? const SizedBox(
                               width: 22,
@@ -1215,8 +1246,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
                             )
                           : Icon(
                               locationEnabled
-                                  ? Icons.my_location
-                                  : Icons.location_searching,
+                                  ? Icons
+                                      .my_location
+                                  : Icons
+                                      .location_searching,
                             ),
                     ),
                   ),
@@ -1272,23 +1305,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
       ..showSnackBar(
         SnackBar(
           content: Text(
-            '$title\n${_serviceNextStage()}',
+            '$title\n${AppText.serviceNextStage()}',
             textAlign: TextAlign.center,
           ),
-          duration: const Duration(seconds: 2),
+          duration:
+              const Duration(seconds: 2),
         ),
       );
-  }
-
-  String _serviceNextStage() {
-    switch (AppText.language) {
-      case AppLanguage.persian:
-        return 'این بخش در مرحله بعد تکمیل می‌شود.';
-      case AppLanguage.arabic:
-        return 'سيتم استكمال هذا القسم في المرحلة القادمة.';
-      case AppLanguage.english:
-        return 'This section will be completed in the next stage.';
-    }
   }
 }
 
@@ -1296,7 +1319,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
 // MAP SERVICES PANEL
 // ============================================================
 
-class _MapServicesPanel extends StatelessWidget {
+class _MapServicesPanel
+    extends StatelessWidget {
   final VoidCallback onResidence;
   final VoidCallback onAttractions;
   final VoidCallback onHealth;
@@ -1327,7 +1351,7 @@ class _MapServicesPanel extends StatelessWidget {
         children: [
 
           // ==================================================
-          // SERVICE BUTTONS
+          // FOUR SERVICE BUTTONS
           // ==================================================
 
           SizedBox(
@@ -1337,8 +1361,10 @@ class _MapServicesPanel extends StatelessWidget {
 
                 Expanded(
                   child: MapServiceButton(
-                    icon: Icons.hotel_rounded,
-                    title: AppText.residence(),
+                    icon:
+                        Icons.hotel_rounded,
+                    title:
+                        AppText.residence(),
                     onTap: onResidence,
                   ),
                 ),
@@ -1347,8 +1373,10 @@ class _MapServicesPanel extends StatelessWidget {
 
                 Expanded(
                   child: MapServiceButton(
-                    icon: Icons.account_balance_rounded,
-                    title: AppText.attractions(),
+                    icon: Icons
+                        .account_balance_rounded,
+                    title:
+                        AppText.attractions(),
                     onTap: onAttractions,
                   ),
                 ),
@@ -1357,8 +1385,10 @@ class _MapServicesPanel extends StatelessWidget {
 
                 Expanded(
                   child: MapServiceButton(
-                    icon: Icons.favorite_rounded,
-                    title: AppText.healthTourism(),
+                    icon:
+                        Icons.favorite_rounded,
+                    title:
+                        AppText.healthTourism(),
                     onTap: onHealth,
                   ),
                 ),
@@ -1367,8 +1397,10 @@ class _MapServicesPanel extends StatelessWidget {
 
                 Expanded(
                   child: MapServiceButton(
-                    icon: Icons.miscellaneous_services_rounded,
-                    title: AppText.services(),
+                    icon: Icons
+                        .miscellaneous_services_rounded,
+                    title:
+                        AppText.services(),
                     onTap: onServices,
                   ),
                 ),
@@ -1393,19 +1425,26 @@ class _MapServicesPanel extends StatelessWidget {
               label: Text(
                 AppText.homeTitle(),
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight:
+                      FontWeight.bold,
                   fontSize: 15,
                 ),
               ),
-              style: ElevatedButton.styleFrom(
+              style:
+                  ElevatedButton.styleFrom(
                 backgroundColor:
                     const Color(0xffd7a33d),
-                foregroundColor: Colors.white,
+                foregroundColor:
+                    Colors.white,
                 elevation: 8,
-                shadowColor: Colors.black,
-                shape: RoundedRectangleBorder(
+                shadowColor:
+                    Colors.black,
+                shape:
+                    RoundedRectangleBorder(
                   borderRadius:
-                      BorderRadius.circular(16),
+                      BorderRadius.circular(
+                    16,
+                  ),
                 ),
               ),
             ),
@@ -1420,7 +1459,8 @@ class _MapServicesPanel extends StatelessWidget {
 // MAP SERVICE BUTTON
 // ============================================================
 
-class MapServiceButton extends StatefulWidget {
+class MapServiceButton
+    extends StatefulWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
@@ -1463,25 +1503,32 @@ class _MapServiceButtonState
       },
       child: AnimatedScale(
         scale: pressed ? 0.93 : 1.0,
-        duration: const Duration(milliseconds: 100),
+        duration:
+            const Duration(milliseconds: 100),
         child: Container(
-          padding: const EdgeInsets.symmetric(
+          padding:
+              const EdgeInsets.symmetric(
             horizontal: 4,
             vertical: 5,
           ),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
+            borderRadius:
+                BorderRadius.circular(15),
             border: Border.all(
-              color: const Color(0xffd7a33d),
+              color:
+                  const Color(0xffd7a33d),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: pressed ? 0.15 : 0.40,
+                color:
+                    Colors.black.withValues(
+                  alpha:
+                      pressed ? 0.15 : 0.40,
                 ),
-                blurRadius: pressed ? 3 : 8,
+                blurRadius:
+                    pressed ? 3 : 8,
                 offset: Offset(
                   0,
                   pressed ? 1 : 4,
@@ -1493,21 +1540,29 @@ class _MapServiceButtonState
             mainAxisAlignment:
                 MainAxisAlignment.center,
             children: [
+
               Icon(
                 widget.icon,
                 size: 25,
-                color: const Color(0xff0b506b),
+                color:
+                    const Color(0xff0b506b),
               ),
+
               const SizedBox(height: 3),
+
               Text(
                 widget.title,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
+                overflow:
+                    TextOverflow.ellipsis,
+                textAlign:
+                    TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xff09212d),
+                  color:
+                      Color(0xff09212d),
                   fontSize: 10,
-                  fontWeight: FontWeight.w800,
+                  fontWeight:
+                      FontWeight.w800,
                 ),
               ),
             ],
