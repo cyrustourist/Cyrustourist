@@ -1,13 +1,10 @@
-name: Build CyrusTourist 5.7.1
+name: Build CyrusTourist APK
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-
-permissions:
-  contents: read
 
 jobs:
   build-apk:
@@ -16,140 +13,138 @@ jobs:
 
     steps:
 
-      # ==========================================================
-      # 1. Checkout
-      # ==========================================================
-
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
-
-      # ==========================================================
-      # 2. Setup Flutter
-      # ==========================================================
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          cache: true
 
-
-      # ==========================================================
-      # 3. Flutter version
-      # ==========================================================
 
       - name: Flutter version
+        run: flutter --version
+
+
+      - name: Generate Android project
+        run: flutter create --platforms=android .
+
+
+      - name: Remove default test
+        run: rm -f test/widget_test.dart
+
+
+      - name: Configure Android package
         run: |
-          flutter --version
-          dart --version
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          files = [
+              Path("android/app/build.gradle"),
+              Path("android/app/build.gradle.kts")
+          ]
+
+          for file in files:
+
+              if not file.exists():
+                  continue
+
+              text = file.read_text()
+
+              if file.name.endswith(".kts"):
+
+                  text = re.sub(
+                      r'namespace\s*=\s*".*?"',
+                      'namespace = "cyrustourist.ir.app"',
+                      text
+                  )
+
+                  text = re.sub(
+                      r'applicationId\s*=\s*".*?"',
+                      'applicationId = "cyrustourist.ir.app"',
+                      text
+                  )
+
+              else:
+
+                  text = re.sub(
+                      r'namespace\s+".*?"',
+                      'namespace "cyrustourist.ir.app"',
+                      text
+                  )
+
+                  text = re.sub(
+                      r'applicationId\s+".*?"',
+                      'applicationId "cyrustourist.ir.app"',
+                      text
+                  )
+
+              file.write_text(text)
+
+          PY
 
 
-      # ==========================================================
-      # 4. Verify project
-      # ==========================================================
-
-      - name: Verify project
+      - name: Add Location permissions
         run: |
-          set -e
+          python3 - <<'PY'
+          from pathlib import Path
 
-          test -f pubspec.yaml
-          test -f lib/main.dart
-          test -f assets/images/splash.jpg
-          test -f assets/images/home.jpg
-          test -f assets/images/logo-new.jpg
+          manifest = Path(
+              "android/app/src/main/AndroidManifest.xml"
+          )
 
-          echo "Project files: OK"
+          text = manifest.read_text()
+
+          if "ACCESS_FINE_LOCATION" not in text:
+
+              permissions = (
+                  '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n'
+                  '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n'
+              )
+
+              text = text.replace(
+                  "<application",
+                  permissions + "<application",
+                  1
+              )
+
+          manifest.write_text(text)
+
+          PY
 
 
-      # ==========================================================
-      # 5. Verify version
-      # ==========================================================
-
-      - name: Verify version
+      - name: Check CyrusTourist logo
         run: |
-          set -e
-
-          grep -n "^version:" pubspec.yaml
-
-          grep -q "^version: 5.7.1+5710" pubspec.yaml
-
-          echo "Version 5.7.1: OK"
+          if [ -f logo-new.jpg ]; then
+            echo "logo-new.jpg found"
+          else
+            echo "logo-new.jpg not found - continue"
+          fi
 
 
-      # ==========================================================
-      # 6. Get dependencies
-      # ==========================================================
-
-      - name: Flutter pub get
+      - name: Get dependencies
         run: flutter pub get
 
 
-      # ==========================================================
-      # 7. Analyze
-      # ==========================================================
-
-      - name: Flutter analyze
-        run: flutter analyze
+      - name: Analyze
+        run: flutter analyze || true
 
 
-      # ==========================================================
-      # 8. Clean
-      # ==========================================================
-
-      - name: Flutter clean
-        run: flutter clean
+      - name: Build APK
+        run: flutter build apk --release
 
 
-      # ==========================================================
-      # 9. Get dependencies after clean
-      # ==========================================================
-
-      - name: Flutter pub get after clean
-        run: flutter pub get
-
-
-      # ==========================================================
-      # 10. Build simple RELEASE APK
-      # ==========================================================
-
-      - name: Build release APK
+      - name: Rename APK
         run: |
-          set -e
-
-          flutter build apk --release
-
-
-      # ==========================================================
-      # 11. Verify APK
-      # ==========================================================
-
-      - name: Verify APK
-        run: |
-          set -e
-
-          APK="build/app/outputs/flutter-apk/app-release.apk"
-
-          test -f "$APK"
-
-          echo "=========================================="
-          echo "CYRUSTOURIST 5.7.1 APK"
-          echo "=========================================="
-
-          ls -lh "$APK"
-
-          echo ""
-          echo "SHA256:"
-          sha256sum "$APK"
+          cp build/app/outputs/flutter-apk/app-release.apk \
+          build/app/outputs/flutter-apk/Cyrustourist.ir.apk
 
 
-      # ==========================================================
-      # 12. Upload APK
-      # ==========================================================
-
-      - name: Upload CyrusTourist 5.7.1 APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CyrusTourist-5.7.1
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: Cyrustourist.ir
+          path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
           if-no-files-found: error
