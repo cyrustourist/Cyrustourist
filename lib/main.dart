@@ -11,7 +11,7 @@ void main() {
 }
 
 // ============================================================
-// CYRUS TOURIST APP
+// CYRUS TOURIST
 // ============================================================
 
 class CyrusTouristApp extends StatelessWidget {
@@ -49,15 +49,22 @@ class AppText {
         .languageCode
         .toLowerCase();
 
-    if (code == 'fa') return AppLanguage.persian;
-    if (code == 'ar') return AppLanguage.arabic;
+    if (code == 'fa') {
+      return AppLanguage.persian;
+    }
+
+    if (code == 'ar') {
+      return AppLanguage.arabic;
+    }
 
     return AppLanguage.english;
   }
 
-  static bool get rtl => language != AppLanguage.english;
+  static bool get rtl {
+    return language != AppLanguage.english;
+  }
 
-  static String homeTitle() {
+  static String title() {
     switch (language) {
       case AppLanguage.persian:
         return 'سایروس توریست';
@@ -214,11 +221,11 @@ class AppText {
   static String locationOff() {
     switch (language) {
       case AppLanguage.persian:
-        return 'برای پیدا کردن بهترین جاذبه‌های اطراف شما، لطفاً مکان‌نما را روشن کنید.';
+        return 'برای پیدا کردن بهترین مکان‌ها، لطفاً مکان‌نما را روشن کنید.';
       case AppLanguage.arabic:
-        return 'للعثور على أفضل المعالم القريبة منك، يرجى تشغيل الموقع.';
+        return 'للعثور على أفضل الأماكن، يرجى تشغيل الموقع.';
       case AppLanguage.english:
-        return 'To find the best attractions around you, please turn on your location.';
+        return 'To find the best places, please turn on your location.';
     }
   }
 
@@ -247,26 +254,26 @@ class AppText {
   static String mapReady() {
     switch (language) {
       case AppLanguage.persian:
-        return 'نقشه گردشگری آماده است';
+        return 'نقشه گردشگری';
       case AppLanguage.arabic:
-        return 'خريطة السياحة جاهزة';
+        return 'خريطة السياحة';
       case AppLanguage.english:
-        return 'Tourism map is ready';
+        return 'Tourism Map';
     }
   }
 
-  static String back() {
+  static String backToHome() {
     switch (language) {
       case AppLanguage.persian:
-        return 'بازگشت';
+        return 'بازگشت به سایروس توریست';
       case AppLanguage.arabic:
-        return 'رجوع';
+        return 'العودة إلى سايروس توريست';
       case AppLanguage.english:
-        return 'Back';
+        return 'Back to Cyrus Tourist';
     }
   }
 
-  static String healthTourism() {
+  static String health() {
     switch (language) {
       case AppLanguage.persian:
         return 'گردشگری سلامت';
@@ -298,21 +305,10 @@ class AppText {
         return 'This section will be activated in the next stage.';
     }
   }
-
-  static String serviceNextStage() {
-    switch (language) {
-      case AppLanguage.persian:
-        return 'این بخش در مرحله بعد تکمیل می‌شود.';
-      case AppLanguage.arabic:
-        return 'سيتم استكمال هذا القسم في المرحلة القادمة.';
-      case AppLanguage.english:
-        return 'This section will be completed in the next stage.';
-    }
-  }
 }
 
 // ============================================================
-// SPLASH PAGE
+// SPLASH
 // ============================================================
 
 class SplashPage extends StatefulWidget {
@@ -376,213 +372,146 @@ class HomePage extends StatelessWidget {
           AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         body: SafeArea(
-          child: Container(
-            color: Colors.black,
-            width: double.infinity,
-            height: double.infinity,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
 
-                // ==================================================
-                // HOME IMAGE
-                // ==================================================
+              // عکس دوم
+              Image.asset(
+                'assets/images/home.jpg',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) {
+                  return Container(
+                    color: const Color(0xff06121d),
+                  );
+                },
+              ),
 
-                Image.asset(
-                  'assets/images/home.jpg',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) {
-                    return Container(
-                      color: const Color(0xff06121d),
-                    );
-                  },
-                ),
-
-                // ==================================================
-                // DARK OVERLAY
-                // ==================================================
-
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.15),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.30),
-                      ],
-                    ),
+              // لایه بسیار ملایم برای خوانایی کلیدها
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.12),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.22),
+                    ],
                   ),
                 ),
+              ),
 
-                // ==================================================
-                // HOME CONTENT
-                // ==================================================
+              // محتوای روی عکس
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      12,
+                      14,
+                      12,
+                      10,
+                    ),
+                    child: Column(
+                      children: [
 
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        12,
-                        16,
-                        12,
-                        10,
-                      ),
-                      child: Column(
-                        children: [
-
-                          Text(
-                            'CYRUS TOURIST',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize:
-                                  constraints.maxWidth < 380
-                                      ? 20
-                                      : 24,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.5,
-                              shadows: const [
-                                Shadow(
-                                  blurRadius: 8,
-                                  offset: Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 4),
-
-                          Text(
-                            AppText.homeTitle(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          // ==================================================
-                          // 10 BUTTONS
-                          // ==================================================
-
-                          Expanded(
-                            child: GridView.builder(
-                              physics:
-                                  const NeverScrollableScrollPhysics(),
-                              itemCount: 10,
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                                childAspectRatio: 1.48,
-                              ),
-                              itemBuilder: (context, index) {
-                                final number = index + 1;
-
-                                return HomeServiceButton(
-                                  number: number,
-                                  title:
-                                      _homeTitle(number),
-                                  icon:
-                                      _homeIcon(number),
-                                  active: number == 1,
-                                  onTap: () {
-                                    _handleHomeButton(
-                                      context,
-                                      number,
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-
-                          const SizedBox(height: 6),
-
-                          Text(
-                            AppText.slogan(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 2),
-
-                          Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.center,
-                            children: [
-
-                              TextButton(
-                                onPressed: () {
-                                  _showInfo(
-                                    context,
-                                    AppText.about(),
-                                  );
-                                },
-                                child: Text(
-                                  AppText.about(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-
-                              const Text(
-                                ' • ',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                ),
-                              ),
-
-                              TextButton(
-                                onPressed: () {
-                                  _showInfo(
-                                    context,
-                                    AppText.social(),
-                                  );
-                                },
-                                child: Text(
-                                  AppText.social(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
+                        // عنوان
+                        Text(
+                          'CYRUS TOURIST',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize:
+                                constraints.maxWidth < 380
+                                    ? 21
+                                    : 25,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.4,
+                            shadows: const [
+                              Shadow(
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        Text(
+                          AppText.title(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // ۱۰ کلید روی عکس
+                        Expanded(
+                          child: GridView.builder(
+                            physics:
+                                const NeverScrollableScrollPhysics(),
+                            itemCount: 10,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 1.48,
+                            ),
+                            itemBuilder: (context, index) {
+                              final number = index + 1;
+
+                              return HomeButton(
+                                number: number,
+                                title:
+                                    _homeTitle(number),
+                                icon:
+                                    _homeIcon(number),
+                                onTap: () {
+                                  _homeAction(
+                                    context,
+                                    number,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        Text(
+                          AppText.slogan(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
@@ -643,10 +572,11 @@ class HomePage extends StatelessWidget {
     }
   }
 
-  void _handleHomeButton(
+  void _homeAction(
     BuildContext context,
     int number,
   ) {
+    // فقط کلید شماره ۱ فعلاً وارد نقشه می‌شود.
     if (number == 1) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -656,6 +586,7 @@ class HomePage extends StatelessWidget {
       return;
     }
 
+    // کلیدهای ۲ تا ۱۰ برای مرحله بعد
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -664,62 +595,35 @@ class HomePage extends StatelessWidget {
             '${_homeTitle(number)}\n${AppText.comingSoon()}',
             textAlign: TextAlign.center,
           ),
-          duration: const Duration(seconds: 1),
+          duration: const Duration(seconds: 2),
         ),
       );
-  }
-
-  void _showInfo(
-    BuildContext context,
-    String title,
-  ) {
-    showDialog<void>(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(AppText.slogan()),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(AppText.back()),
-            ),
-          ],
-        );
-      },
-    );
   }
 }
 
 // ============================================================
-// HOME SERVICE BUTTON
+// HOME BUTTON
 // ============================================================
 
-class HomeServiceButton extends StatefulWidget {
+class HomeButton extends StatefulWidget {
   final int number;
   final String title;
   final IconData icon;
-  final bool active;
   final VoidCallback onTap;
 
-  const HomeServiceButton({
+  const HomeButton({
     super.key,
     required this.number,
     required this.title,
     required this.icon,
-    required this.active,
     required this.onTap,
   });
 
   @override
-  State<HomeServiceButton> createState() =>
-      _HomeServiceButtonState();
+  State<HomeButton> createState() => _HomeButtonState();
 }
 
-class _HomeServiceButtonState
-    extends State<HomeServiceButton> {
+class _HomeButtonState extends State<HomeButton> {
   bool pressed = false;
 
   @override
@@ -743,26 +647,25 @@ class _HomeServiceButtonState
         widget.onTap();
       },
       child: AnimatedScale(
-        scale: pressed ? 0.96 : 1.0,
+        scale: pressed ? 0.95 : 1.0,
         duration: const Duration(milliseconds: 100),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 100),
           decoration: BoxDecoration(
             color: Colors.white.withValues(
-              alpha: widget.active ? 0.95 : 0.88,
+              alpha: pressed ? 0.78 : 0.91,
             ),
-            borderRadius:
-                BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white,
+              color: const Color(0xffd7a33d),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(
-                  alpha: pressed ? 0.18 : 0.38,
+                  alpha: pressed ? 0.18 : 0.40,
                 ),
-                blurRadius: pressed ? 4 : 12,
+                blurRadius: pressed ? 4 : 11,
                 offset: Offset(
                   0,
                   pressed ? 2 : 6,
@@ -794,10 +697,8 @@ class _HomeServiceButtonState
                             const Color(0xff0b506b),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                Colors.black.withValues(
-                              alpha: 0.25,
-                            ),
+                            color: Colors.black
+                                .withValues(alpha: 0.28),
                             blurRadius: 5,
                             offset:
                                 const Offset(0, 3),
@@ -811,7 +712,7 @@ class _HomeServiceButtonState
                       ),
                     ),
 
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
 
                     Container(
                       padding:
@@ -875,6 +776,7 @@ class SmartMapPage extends StatefulWidget {
 
 class _SmartMapPageState
     extends State<SmartMapPage> {
+
   final MapController mapController =
       MapController();
 
@@ -897,7 +799,7 @@ class _SmartMapPageState
   }
 
   // ==========================================================
-  // LOCATION
+  // USER LOCATION
   // ==========================================================
 
   Future<void> _loadUserLocation() async {
@@ -921,7 +823,7 @@ class _SmartMapPageState
           locationLoading = false;
         });
 
-        _showLocationMessage(
+        _showMessage(
           AppText.locationOff(),
         );
 
@@ -941,6 +843,7 @@ class _SmartMapPageState
               LocationPermission.denied ||
           permission ==
               LocationPermission.deniedForever) {
+
         if (!mounted) return;
 
         setState(() {
@@ -948,7 +851,7 @@ class _SmartMapPageState
           locationLoading = false;
         });
 
-        _showLocationMessage(
+        _showMessage(
           AppText.locationPermission(),
         );
 
@@ -981,7 +884,7 @@ class _SmartMapPageState
         13.0,
       );
 
-      _showLocationMessage(
+      _showMessage(
         AppText.locationFound(),
       );
     } catch (_) {
@@ -994,9 +897,7 @@ class _SmartMapPageState
     }
   }
 
-  void _showLocationMessage(
-    String message,
-  ) {
+  void _showMessage(String message) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context)
@@ -1014,10 +915,10 @@ class _SmartMapPageState
   }
 
   // ==========================================================
-  // TEST MARKERS
+  // SAMPLE MARKERS
   // ==========================================================
 
-  List<Marker> _buildMarkers() {
+  List<Marker> _markers() {
     final markers = <Marker>[];
 
     markers.add(
@@ -1052,8 +953,8 @@ class _SmartMapPageState
       markers.add(
         Marker(
           point: userLocation!,
-          width: 58,
-          height: 58,
+          width: 62,
+          height: 62,
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -1065,7 +966,7 @@ class _SmartMapPageState
               child: Icon(
                 Icons.my_location,
                 color: Colors.blue,
-                size: 34,
+                size: 35,
               ),
             ),
           ),
@@ -1082,8 +983,8 @@ class _SmartMapPageState
   ) {
     return Marker(
       point: point,
-      width: 50,
-      height: 50,
+      width: 52,
+      height: 52,
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -1105,7 +1006,7 @@ class _SmartMapPageState
         child: Icon(
           icon,
           color: const Color(0xff0b506b),
-          size: 27,
+          size: 28,
         ),
       ),
     );
@@ -1153,6 +1054,7 @@ class _SmartMapPageState
                   FlutterMap(
                     mapController:
                         mapController,
+
                     options: const MapOptions(
                       initialCenter:
                           iranCenter,
@@ -1160,6 +1062,7 @@ class _SmartMapPageState
                       minZoom: 3.0,
                       maxZoom: 18.0,
                     ),
+
                     children: [
 
                       TileLayer(
@@ -1170,16 +1073,12 @@ class _SmartMapPageState
                       ),
 
                       MarkerLayer(
-                        markers:
-                            _buildMarkers(),
+                        markers: _markers(),
                       ),
                     ],
                   ),
 
-                  // ==================================================
-                  // MAP TITLE
-                  // ==================================================
-
+                  // عنوان بالای نقشه
                   Positioned(
                     top: 12,
                     left: 12,
@@ -1188,14 +1087,15 @@ class _SmartMapPageState
                       child: Center(
                         child: Container(
                           padding:
-                              const EdgeInsets.symmetric(
+                              const EdgeInsets
+                                  .symmetric(
                             horizontal: 16,
                             vertical: 8,
                           ),
                           decoration:
                               BoxDecoration(
-                            color:
-                                Colors.black.withValues(
+                            color: Colors.black
+                                .withValues(
                               alpha: 0.62,
                             ),
                             borderRadius:
@@ -1217,31 +1117,29 @@ class _SmartMapPageState
                     ),
                   ),
 
-                  // ==================================================
-                  // MY LOCATION
-                  // ==================================================
-
+                  // کلید مکان من
                   Positioned(
                     bottom: 18,
                     right: 14,
-                    child: FloatingActionButton(
+                    child:
+                        FloatingActionButton(
                       heroTag:
                           'myLocationButton',
                       backgroundColor:
                           Colors.white,
                       foregroundColor:
                           const Color(
-                        0xff0b506b,
-                      ),
+                              0xff0b506b),
                       onPressed:
                           _loadUserLocation,
                       child: locationLoading
                           ? const SizedBox(
-                              width: 22,
-                              height: 22,
+                              width: 23,
+                              height: 23,
                               child:
                                   CircularProgressIndicator(
-                                strokeWidth: 2.5,
+                                strokeWidth:
+                                    2.5,
                               ),
                             )
                           : Icon(
@@ -1261,28 +1159,24 @@ class _SmartMapPageState
             // SERVICES BELOW MAP
             // ==================================================
 
-            _MapServicesPanel(
+            MapServicesPanel(
               onResidence: () {
-                _showMapService(
-                  context,
+                _serviceMessage(
                   AppText.residence(),
                 );
               },
               onAttractions: () {
-                _showMapService(
-                  context,
+                _serviceMessage(
                   AppText.attractions(),
                 );
               },
               onHealth: () {
-                _showMapService(
-                  context,
-                  AppText.healthTourism(),
+                _serviceMessage(
+                  AppText.health(),
                 );
               },
               onServices: () {
-                _showMapService(
-                  context,
+                _serviceMessage(
                   AppText.services(),
                 );
               },
@@ -1296,22 +1190,10 @@ class _SmartMapPageState
     );
   }
 
-  void _showMapService(
-    BuildContext context,
-    String title,
-  ) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            '$title\n${AppText.serviceNextStage()}',
-            textAlign: TextAlign.center,
-          ),
-          duration:
-              const Duration(seconds: 2),
-        ),
-      );
+  void _serviceMessage(String title) {
+    _showMessage(
+      '$title\n${AppText.comingSoon()}',
+    );
   }
 }
 
@@ -1319,15 +1201,15 @@ class _SmartMapPageState
 // MAP SERVICES PANEL
 // ============================================================
 
-class _MapServicesPanel
-    extends StatelessWidget {
+class MapServicesPanel extends StatelessWidget {
   final VoidCallback onResidence;
   final VoidCallback onAttractions;
   final VoidCallback onHealth;
   final VoidCallback onServices;
   final VoidCallback onBack;
 
-  const _MapServicesPanel({
+  const MapServicesPanel({
+    super.key,
     required this.onResidence,
     required this.onAttractions,
     required this.onHealth,
@@ -1338,10 +1220,11 @@ class _MapServicesPanel
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+          const EdgeInsets.fromLTRB(
+        9,
         10,
-        10,
-        10,
+        9,
         12,
       ),
       decoration: const BoxDecoration(
@@ -1349,10 +1232,6 @@ class _MapServicesPanel
       ),
       child: Column(
         children: [
-
-          // ==================================================
-          // FOUR SERVICE BUTTONS
-          // ==================================================
 
           SizedBox(
             height: 82,
@@ -1365,7 +1244,8 @@ class _MapServicesPanel
                         Icons.hotel_rounded,
                     title:
                         AppText.residence(),
-                    onTap: onResidence,
+                    onTap:
+                        onResidence,
                   ),
                 ),
 
@@ -1377,7 +1257,8 @@ class _MapServicesPanel
                         .account_balance_rounded,
                     title:
                         AppText.attractions(),
-                    onTap: onAttractions,
+                    onTap:
+                        onAttractions,
                   ),
                 ),
 
@@ -1386,10 +1267,11 @@ class _MapServicesPanel
                 Expanded(
                   child: MapServiceButton(
                     icon:
-                        Icons.favorite_rounded,
+                        Icons.health_and_safety_rounded,
                     title:
-                        AppText.healthTourism(),
-                    onTap: onHealth,
+                        AppText.health(),
+                    onTap:
+                        onHealth,
                   ),
                 ),
 
@@ -1401,7 +1283,8 @@ class _MapServicesPanel
                         .miscellaneous_services_rounded,
                     title:
                         AppText.services(),
-                    onTap: onServices,
+                    onTap:
+                        onServices,
                   ),
                 ),
               ],
@@ -1410,21 +1293,18 @@ class _MapServicesPanel
 
           const SizedBox(height: 9),
 
-          // ==================================================
-          // BACK TO CYRUS TOURIST
-          // ==================================================
-
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 50,
             child: ElevatedButton.icon(
               onPressed: onBack,
               icon: const Icon(
                 Icons.arrow_back_rounded,
               ),
               label: Text(
-                AppText.homeTitle(),
-                style: const TextStyle(
+                AppText.backToHome(),
+                style:
+                    const TextStyle(
                   fontWeight:
                       FontWeight.bold,
                   fontSize: 15,
@@ -1479,6 +1359,7 @@ class MapServiceButton
 
 class _MapServiceButtonState
     extends State<MapServiceButton> {
+
   bool pressed = false;
 
   @override
@@ -1505,10 +1386,12 @@ class _MapServiceButtonState
         scale: pressed ? 0.93 : 1.0,
         duration:
             const Duration(milliseconds: 100),
-        child: Container(
+        child: AnimatedContainer(
+          duration:
+              const Duration(milliseconds: 100),
           padding:
               const EdgeInsets.symmetric(
-            horizontal: 4,
+            horizontal: 3,
             vertical: 5,
           ),
           decoration: BoxDecoration(
@@ -1555,9 +1438,9 @@ class _MapServiceButtonState
                 maxLines: 2,
                 overflow:
                     TextOverflow.ellipsis,
-                textAlign:
-                    TextAlign.center,
-                style: const TextStyle(
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(
                   color:
                       Color(0xff09212d),
                   fontSize: 10,
