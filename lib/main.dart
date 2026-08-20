@@ -52,25 +52,21 @@ class _SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(
-                Icons.travel_explore,
-                size: 100,
-              ),
-              SizedBox(height: 20),
-              Text(
+      body: SizedBox.expand(
+        child: Image.asset(
+          'assets/images/splash.jpg',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Center(
+              child: Text(
                 'CyrusTourist',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -87,40 +83,75 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('CyrusTourist'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      body: SizedBox.expand(
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            // شماره ۱ - نقشه
-            Card(
-              child: ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.map),
-                ),
-                title: const Text(
-                  '۱. نقشه',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+
+            // Home image
+            Image.asset(
+              'assets/images/home.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.white,
+                );
+              },
+            ),
+
+            // Dark transparent layer
+            Container(
+              color: Colors.black.withValues(alpha: 0.15),
+            ),
+
+            // Map button
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    top: 30,
+                    left: 20,
+                    right: 20,
+                  ),
+                  child: Material(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(18),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SmartMapPage(),
+                          ),
+                        );
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 18,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.map,
+                              size: 32,
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              '۱. نقشه',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                subtitle: const Text(
-                  'برای فعال کردن نقشه هوشمند کلیک کنید',
-                ),
-                trailing: const Icon(
-                  Icons.arrow_forward_ios,
-                ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const SmartMapPage(),
-                    ),
-                  );
-                },
               ),
             ),
           ],
@@ -134,60 +165,90 @@ class HomePage extends StatelessWidget {
 // SMART MAP PAGE
 // ============================================================
 
-class SmartMapPage extends StatelessWidget {
+class SmartMapPage extends StatefulWidget {
   const SmartMapPage({super.key});
+
+  @override
+  State<SmartMapPage> createState() => _SmartMapPageState();
+}
+
+class _SmartMapPageState extends State<SmartMapPage> {
+  bool smartMapActive = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('نقشه هوشمند'),
+        title: const Text(
+          'نقشه هوشمند',
+        ),
         centerTitle: true,
       ),
-      body: Center(
-        child: GestureDetector(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'نقشه هوشمند فعال شد',
-                ),
-              ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.all(20),
-            width: double.infinity,
-            height: 400,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                width: 2,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          setState(() {
+            smartMapActive = true;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'نقشه هوشمند فعال شد',
               ),
             ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.map,
-                    size: 80,
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xffe8f1f7),
+                Color(0xffcfdfe8),
+              ],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+
+                Icon(
+                  smartMapActive
+                      ? Icons.explore
+                      : Icons.map,
+                  size: 90,
+                ),
+
+                const SizedBox(height: 20),
+
+                Text(
+                  smartMapActive
+                      ? 'نقشه هوشمند فعال است'
+                      : 'نقشه هوشمند',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    'نقشه هوشمند',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  smartMapActive
+                      ? 'آماده برای مرحله بعد'
+                      : 'برای فعال کردن نقشه لمس کنید',
+                  style: const TextStyle(
+                    fontSize: 17,
                   ),
-                  SizedBox(height: 10),
-                  Text(
-                    'برای فعال شدن نقشه کلیک کنید',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ),
