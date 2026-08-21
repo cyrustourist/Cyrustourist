@@ -102,19 +102,6 @@ class AppText {
     return LanguageManager.current != AppLanguage.english;
   }
 
-  static String title() {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'سایروس توریست';
-
-      case AppLanguage.english:
-        return 'Cyrus Tourist';
-
-      case AppLanguage.arabic:
-        return 'سايروس توريست';
-    }
-  }
-
   static String languageName() {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
@@ -141,55 +128,42 @@ class AppText {
     }
   }
 
-  static String button(int number) {
+  static String mapLoading() {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
-        const items = [
-          '',
-          'نقشه گردشگری',
-          'گردشگری سلامت',
-          'جاذبه‌های گردشگری',
-          'فیلم‌های گردشگری',
-          'اقامتگاه',
-          'راهنمای سفر',
-          'شبکه‌های اجتماعی',
-          'درباره ما',
-          'پشتیبانی و تماس',
-          'علاقه‌مندی‌ها',
-        ];
-        return items[number];
+        return 'در حال آماده‌سازی نقشه...';
 
       case AppLanguage.english:
-        const items = [
-          '',
-          'Tourism Map',
-          'Health Tourism',
-          'Tourist Attractions',
-          'Tourism Videos',
-          'Accommodation',
-          'Travel Guide',
-          'Social Networks',
-          'About Us',
-          'Support & Contact',
-          'Favorites',
-        ];
-        return items[number];
+        return 'Preparing the map...';
 
       case AppLanguage.arabic:
-        const items = [
-          '',
-          'خريطة السياحة',
-          'السياحة العلاجية',
-          'المعالم السياحية',
-          'أفلام سياحية',
-          'الإقامة',
-          'دليل السفر',
-          'الشبكات الاجتماعية',
-          'معلومات عنا',
-          'الدعم والاتصال',
-          'المفضلة',
-        ];
-        return items[number];
+        return 'جارٍ تجهيز الخريطة...';
+    }
+  }
+
+  static String locationSearching() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'در حال پیدا کردن موقعیت شما';
+
+      case AppLanguage.english:
+        return 'Finding your location';
+
+      case AppLanguage.arabic:
+        return 'جارٍ تحديد موقعك';
+    }
+  }
+
+  static String locationUnavailable() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'موقعیت مکانی در دسترس نیست';
+
+      case AppLanguage.english:
+        return 'Location is unavailable';
+
+      case AppLanguage.arabic:
+        return 'الموقع غير متاح';
     }
   }
 }
@@ -245,8 +219,6 @@ class _SplashPageState extends State<SplashPage> {
 
 // ============================================================
 // HOME PAGE
-// IMAGE CONTAINS ALL VISUAL TEXT AND BUTTONS
-// FLUTTER ONLY PROVIDES TRANSPARENT TOUCH AREAS
 // ============================================================
 
 class HomePage extends StatefulWidget {
@@ -258,6 +230,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _pressedButton = 0;
+
+  // ----------------------------------------------------------
+  // SELECT LANGUAGE IMAGE
+  // ----------------------------------------------------------
 
   String get homeImage {
     switch (LanguageManager.current) {
@@ -280,6 +256,7 @@ class _HomePageState extends State<HomePage> {
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) {
         return Directionality(
           textDirection:
@@ -287,17 +264,17 @@ class _HomePageState extends State<HomePage> {
                   ? TextDirection.rtl
                   : TextDirection.ltr,
           child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xff0b506b),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+            ),
             padding: const EdgeInsets.fromLTRB(
               15,
               15,
               15,
               25,
-            ),
-            decoration: const BoxDecoration(
-              color: Color(0xff071722),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(28),
-              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -306,29 +283,30 @@ class _HomePageState extends State<HomePage> {
                   width: 45,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.white30,
+                    color: Colors.white54,
                     borderRadius:
                         BorderRadius.circular(10),
                   ),
                 ),
+
                 const SizedBox(height: 18),
 
                 _languageItem(
-                  '🇮🇷',
                   'پارسی',
                   AppLanguage.persian,
+                  '🇮🇷',
                 ),
 
                 _languageItem(
-                  '🇬🇧',
                   'English',
                   AppLanguage.english,
+                  '🇬🇧',
                 ),
 
                 _languageItem(
-                  '🇸🇦',
                   'العربية',
                   AppLanguage.arabic,
+                  '🇸🇦',
                 ),
               ],
             ),
@@ -343,9 +321,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _languageItem(
-    String flag,
     String title,
     AppLanguage language,
+    String flag,
   ) {
     final selected =
         LanguageManager.current == language;
@@ -385,7 +363,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ----------------------------------------------------------
-  // BUTTON ACTION
+  // BUTTON TOUCH
   // ----------------------------------------------------------
 
   Future<void> serviceTap(int number) async {
@@ -393,8 +371,38 @@ class _HomePageState extends State<HomePage> {
       _pressedButton = number;
     });
 
+    // افکت فشرده شدن
     await Future.delayed(
-      const Duration(milliseconds: 180),
+      const Duration(milliseconds: 130),
+    );
+
+    if (!mounted) return;
+
+    // --------------------------------------------------------
+    // MAP BUTTON
+    // --------------------------------------------------------
+
+    if (number == 1) {
+      setState(() {
+        _pressedButton = 0;
+      });
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MapLoadingPage(),
+        ),
+      );
+
+      return;
+    }
+
+    // --------------------------------------------------------
+    // OTHER BUTTONS
+    // --------------------------------------------------------
+
+    await Future.delayed(
+      const Duration(milliseconds: 80),
     );
 
     if (!mounted) return;
@@ -402,72 +410,6 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _pressedButton = 0;
     });
-
-    switch (number) {
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const SmartMapPage(),
-          ),
-        );
-        break;
-
-      case 2:
-        _showComingSoon(number);
-        break;
-
-      case 3:
-        _showComingSoon(number);
-        break;
-
-      case 4:
-        _showComingSoon(number);
-        break;
-
-      case 5:
-        _showComingSoon(number);
-        break;
-
-      case 6:
-        _showComingSoon(number);
-        break;
-
-      case 7:
-        _showComingSoon(number);
-        break;
-
-      case 8:
-        _showComingSoon(number);
-        break;
-
-      case 9:
-        _showComingSoon(number);
-        break;
-
-      case 10:
-        _showComingSoon(number);
-        break;
-    }
-  }
-
-  void _showComingSoon(int number) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor:
-            const Color(0xff0b506b),
-        content: Text(
-          AppText.button(number),
-          textAlign:
-              AppText.rtl
-                  ? TextAlign.right
-                  : TextAlign.left,
-        ),
-        duration:
-            const Duration(seconds: 2),
-      ),
-    );
   }
 
   // ----------------------------------------------------------
@@ -476,53 +418,59 @@ class _HomePageState extends State<HomePage> {
 
   Widget touchButton({
     required int number,
-    required double left,
-    required double top,
     required double width,
     required double height,
   }) {
     final selected =
         _pressedButton == number;
 
-    return Positioned(
-      left: left,
-      top: top,
-      width: width,
-      height: height,
-      child: GestureDetector(
-        behavior:
-            HitTestBehavior.translucent,
-        onTap: () => serviceTap(number),
-        child: AnimatedScale(
-          scale: selected ? 0.94 : 1.0,
+    return GestureDetector(
+      behavior:
+          HitTestBehavior.translucent,
+
+      onTap: () {
+        serviceTap(number);
+      },
+
+      child: AnimatedScale(
+        scale:
+            selected ? 0.91 : 1.0,
+
+        duration:
+            const Duration(milliseconds: 110),
+
+        curve:
+            Curves.easeOutBack,
+
+        child: AnimatedContainer(
           duration:
-              const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-          child: AnimatedContainer(
-            duration:
-                const Duration(milliseconds: 100),
-            decoration: BoxDecoration(
-              color: selected
-                  ? Colors.white.withValues(
-                      alpha: 0.08,
-                    )
-                  : Colors.transparent,
-              borderRadius:
-                  BorderRadius.circular(18),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: const Color(
-                          0xffffd36a,
-                        ).withValues(
-                          alpha: 0.35,
+              const Duration(milliseconds: 110),
+
+          width: width,
+          height: height,
+
+          decoration: BoxDecoration(
+            color:
+                Colors.transparent,
+
+            borderRadius:
+                BorderRadius.circular(18),
+
+            boxShadow:
+                selected
+                    ? [
+                        BoxShadow(
+                          color:
+                              const Color(
+                            0xffffd36a,
+                          ).withValues(
+                            alpha: 0.60,
+                          ),
+                          blurRadius: 18,
+                          spreadRadius: 2,
                         ),
-                        blurRadius: 14,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : [],
-            ),
+                      ]
+                    : [],
           ),
         ),
       ),
@@ -530,7 +478,57 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ----------------------------------------------------------
-  // BUILD HOME
+  // BUTTON POSITION
+  // ----------------------------------------------------------
+
+  Widget buildTouchAreas(
+    double width,
+    double height,
+  ) {
+    final buttonWidth =
+        width / 5;
+
+    final buttonHeight =
+        height * 0.105;
+
+    return Positioned(
+      left: 3,
+      right: 3,
+      bottom: height * 0.075,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              for (int i = 1; i <= 5; i++)
+                touchButton(
+                  number: i,
+                  width: buttonWidth,
+                  height: buttonHeight,
+                ),
+            ],
+          ),
+
+          const SizedBox(
+            height: 4,
+          ),
+
+          Row(
+            children: [
+              for (int i = 6; i <= 10; i++)
+                touchButton(
+                  number: i,
+                  width: buttonWidth,
+                  height: buttonHeight,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ----------------------------------------------------------
+  // HOME
   // ----------------------------------------------------------
 
   @override
@@ -540,48 +538,55 @@ class _HomePageState extends State<HomePage> {
           AppText.rtl
               ? TextDirection.rtl
               : TextDirection.ltr,
+
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor:
+            Colors.black,
+
         body: SafeArea(
           child: LayoutBuilder(
             builder:
-                (context, constraints) {
+                (
+                  context,
+                  constraints,
+                ) {
               final screenWidth =
                   constraints.maxWidth;
 
               final screenHeight =
                   constraints.maxHeight;
 
-              double width =
+              double imageWidth =
                   screenWidth;
 
-              double height =
-                  width * 16 / 9;
+              double imageHeight =
+                  imageWidth * 16 / 9;
 
-              if (height >
+              if (imageHeight >
                   screenHeight) {
-                height =
+                imageHeight =
                     screenHeight;
 
-                width =
-                    height * 9 / 16;
+                imageWidth =
+                    imageHeight * 9 / 16;
               }
 
               return Center(
                 child: SizedBox(
-                  width: width,
-                  height: height,
+                  width: imageWidth,
+                  height: imageHeight,
+
                   child: Stack(
+                    fit: StackFit.expand,
+
                     children: [
                       // ==================================================
-                      // LANGUAGE-SPECIFIC IMAGE
+                      // LANGUAGE IMAGE
                       // ==================================================
 
-                      Positioned.fill(
-                        child: Image.asset(
-                          homeImage,
-                          fit: BoxFit.cover,
-                        ),
+                      Image.asset(
+                        homeImage,
+                        fit: BoxFit.cover,
                       ),
 
                       // ==================================================
@@ -589,55 +594,63 @@ class _HomePageState extends State<HomePage> {
                       // ==================================================
 
                       Positioned(
-                        top: height * 0.025,
+                        top: 15,
+
                         left:
                             AppText.rtl
                                 ? null
-                                : width * 0.035,
+                                : 15,
+
                         right:
                             AppText.rtl
-                                ? width * 0.035
+                                ? 15
                                 : null,
+
                         child:
                             GestureDetector(
                           onTap:
                               openLanguage,
+
                           child:
                               Container(
                             padding:
                                 const EdgeInsets
                                     .symmetric(
-                              horizontal: 11,
-                              vertical: 7,
+                              horizontal: 12,
+                              vertical: 8,
                             ),
+
                             decoration:
                                 BoxDecoration(
                               color:
                                   const Color(
                                 0xff0b506b,
-                              ).withValues(
-                                alpha: 0.90,
                               ),
+
                               borderRadius:
                                   BorderRadius
                                       .circular(
                                 22,
                               ),
+
                               border:
                                   Border.all(
                                 color:
                                     const Color(
                                   0xffffd36a,
                                 ).withValues(
-                                  alpha: 0.85,
+                                  alpha: 0.80,
                                 ),
+                                width: 1.2,
                               ),
+
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors
-                                      .black
-                                      .withValues(
-                                    alpha: 0.55,
+                                  color:
+                                      Colors
+                                          .black
+                                          .withValues(
+                                    alpha: 0.45,
                                   ),
                                   blurRadius: 9,
                                   offset:
@@ -648,11 +661,12 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ],
                             ),
+
                             child:
                                 Row(
                               mainAxisSize:
-                                  MainAxisSize
-                                      .min,
+                                  MainAxisSize.min,
+
                               children: [
                                 const Icon(
                                   Icons.language,
@@ -662,9 +676,11 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   size: 18,
                                 ),
+
                                 const SizedBox(
-                                  width: 5,
+                                  width: 6,
                                 ),
+
                                 Text(
                                   AppText
                                       .languageName(),
@@ -674,7 +690,8 @@ class _HomePageState extends State<HomePage> {
                                         Colors.white,
                                     fontWeight:
                                         FontWeight.bold,
-                                    fontSize: 12,
+                                    fontSize:
+                                        12,
                                   ),
                                 ),
                               ],
@@ -684,108 +701,12 @@ class _HomePageState extends State<HomePage> {
                       ),
 
                       // ==================================================
-                      // TOUCH AREAS
-                      //
-                      // 5 BUTTONS TOP ROW
-                      // 5 BUTTONS BOTTOM ROW
-                      //
-                      // Coordinates are relative to the 9:16 image.
+                      // 10 TRANSPARENT TOUCH AREAS
                       // ==================================================
 
-                      touchButton(
-                        number: 1,
-                        left: width * 0.00,
-                        top: height * 0.695,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 2,
-                        left: width * 0.20,
-                        top: height * 0.695,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 3,
-                        left: width * 0.40,
-                        top: height * 0.695,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 4,
-                        left: width * 0.60,
-                        top: height * 0.695,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 5,
-                        left: width * 0.80,
-                        top: height * 0.695,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 6,
-                        left: width * 0.00,
-                        top: height * 0.805,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 7,
-                        left: width * 0.20,
-                        top: height * 0.805,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 8,
-                        left: width * 0.40,
-                        top: height * 0.805,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 9,
-                        left: width * 0.60,
-                        top: height * 0.805,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      touchButton(
-                        number: 10,
-                        left: width * 0.80,
-                        top: height * 0.805,
-                        width: width * 0.20,
-                        height: height * 0.10,
-                      ),
-
-                      // ==================================================
-                      // MAP SPECIAL LIGHT EFFECT
-                      // ==================================================
-
-                      Positioned(
-                        left: width * 0.01,
-                        top: height * 0.695,
-                        width: width * 0.18,
-                        height: height * 0.10,
-                        child:
-                            IgnorePointer(
-                          child:
-                              const _MapPulseEffect(),
-                        ),
+                      buildTouchAreas(
+                        imageWidth,
+                        imageHeight,
                       ),
                     ],
                   ),
@@ -800,66 +721,289 @@ class _HomePageState extends State<HomePage> {
 }
 
 // ============================================================
-// MAP PULSE EFFECT
+// MAP LOADING PAGE
 // ============================================================
 
-class _MapPulseEffect extends StatefulWidget {
-  const _MapPulseEffect();
+class MapLoadingPage extends StatefulWidget {
+  const MapLoadingPage({super.key});
 
   @override
-  State<_MapPulseEffect> createState() =>
-      _MapPulseEffectState();
+  State<MapLoadingPage> createState() =>
+      _MapLoadingPageState();
 }
 
-class _MapPulseEffectState
-    extends State<_MapPulseEffect>
+class _MapLoadingPageState
+    extends State<MapLoadingPage>
     with SingleTickerProviderStateMixin {
-  late final AnimationController
-      _controller;
+  late AnimationController
+      _animationController;
+
+  late Animation<double>
+      _scaleAnimation;
+
+  LatLng? foundLocation;
+
+  bool searching = true;
 
   @override
   void initState() {
     super.initState();
 
-    _controller =
+    _animationController =
         AnimationController(
       vsync: this,
       duration:
-          const Duration(seconds: 2),
-    )..repeat();
+          const Duration(
+        milliseconds: 1100,
+      ),
+    )..repeat(reverse: true);
+
+    _scaleAnimation =
+        Tween<double>(
+      begin: 0.88,
+      end: 1.12,
+    ).animate(
+      CurvedAnimation(
+        parent:
+            _animationController,
+        curve:
+            Curves.easeInOut,
+      ),
+    );
+
+    _prepareMap();
+  }
+
+  Future<void> _prepareMap() async {
+    LatLng? location;
+
+    try {
+      final enabled =
+          await Geolocator
+              .isLocationServiceEnabled();
+
+      if (enabled) {
+        LocationPermission permission =
+            await Geolocator
+                .checkPermission();
+
+        if (permission ==
+            LocationPermission.denied) {
+          permission =
+              await Geolocator
+                  .requestPermission();
+        }
+
+        if (permission !=
+                LocationPermission.denied &&
+            permission !=
+                LocationPermission
+                    .deniedForever) {
+          final position =
+              await Geolocator
+                  .getCurrentPosition(
+            locationSettings:
+                const LocationSettings(
+              accuracy:
+                  LocationAccuracy.high,
+            ),
+          ).timeout(
+            const Duration(
+              seconds: 8,
+            ),
+          );
+
+          location = LatLng(
+            position.latitude,
+            position.longitude,
+          );
+        }
+      }
+    } catch (_) {
+      location = null;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      foundLocation = location;
+      searching = false;
+    });
+
+    // اجازه بده انیمیشن کوتاه کامل شود
+    await Future.delayed(
+      const Duration(
+        milliseconds: 650,
+      ),
+    );
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            SmartMapPage(
+          initialLocation:
+              foundLocation,
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (_, child) {
-        final value =
-            _controller.value;
+    return Directionality(
+      textDirection:
+          AppText.rtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
 
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(18),
-            border: Border.all(
-              color: const Color(
-                0xffffd36a,
-              ).withValues(
-                alpha:
-                    0.08 +
-                    (value * 0.18),
+      child: Scaffold(
+        backgroundColor:
+            const Color(0xff071722),
+
+        body: Center(
+          child: Column(
+            mainAxisAlignment:
+                MainAxisAlignment.center,
+
+            children: [
+              AnimatedBuilder(
+                animation:
+                    _scaleAnimation,
+
+                builder:
+                    (
+                      context,
+                      child,
+                    ) {
+                  return Transform.scale(
+                    scale:
+                        _scaleAnimation.value,
+
+                    child:
+                        Container(
+                      width: 105,
+                      height: 105,
+
+                      decoration:
+                          BoxDecoration(
+                        shape:
+                            BoxShape.circle,
+
+                        color:
+                            const Color(
+                          0xff0b506b,
+                        ),
+
+                        border:
+                            Border.all(
+                          color:
+                              const Color(
+                            0xffffd36a,
+                          ),
+                          width: 2,
+                        ),
+
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(
+                              0xffffd36a,
+                            ).withValues(
+                              alpha: 0.45,
+                            ),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+
+                      child:
+                          const Icon(
+                        Icons
+                            .location_on_rounded,
+                        color:
+                            Color(
+                          0xffffd36a,
+                        ),
+                        size: 58,
+                      ),
+                    ),
+                  );
+                },
               ),
-              width: 1,
-            ),
+
+              const SizedBox(
+                height: 35,
+              ),
+
+              Text(
+                AppText.mapLoading(),
+                textAlign:
+                    TextAlign.center,
+
+                style:
+                    const TextStyle(
+                  color:
+                      Colors.white,
+                  fontSize: 20,
+                  fontWeight:
+                      FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(
+                height: 12,
+              ),
+
+              Text(
+                searching
+                    ? AppText
+                        .locationSearching()
+                    : AppText
+                        .mapLoading(),
+
+                textAlign:
+                    TextAlign.center,
+
+                style:
+                    TextStyle(
+                  color:
+                      const Color(
+                    0xffffd36a,
+                  ).withValues(
+                    alpha: 0.90,
+                  ),
+                  fontSize: 13,
+                ),
+              ),
+
+              const SizedBox(
+                height: 25,
+              ),
+
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child:
+                    CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color:
+                      Color(0xffffd36a),
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -868,9 +1012,13 @@ class _MapPulseEffectState
 // SMART MAP PAGE
 // ============================================================
 
-class SmartMapPage
-    extends StatefulWidget {
-  const SmartMapPage({super.key});
+class SmartMapPage extends StatefulWidget {
+  final LatLng? initialLocation;
+
+  const SmartMapPage({
+    super.key,
+    this.initialLocation,
+  });
 
   @override
   State<SmartMapPage> createState() =>
@@ -897,10 +1045,18 @@ class _SmartMapPageState
   void initState() {
     super.initState();
 
+    userLocation =
+        widget.initialLocation;
+
     WidgetsBinding.instance
         .addPostFrameCallback(
       (_) {
-        getLocation();
+        if (userLocation != null) {
+          mapController.move(
+            userLocation!,
+            13,
+          );
+        }
       },
     );
   }
@@ -926,14 +1082,12 @@ class _SmartMapPageState
         return;
       }
 
-      LocationPermission
-          permission =
+      LocationPermission permission =
           await Geolocator
               .checkPermission();
 
       if (permission ==
-          LocationPermission
-              .denied) {
+          LocationPermission.denied) {
         permission =
             await Geolocator
                 .requestPermission();
@@ -986,25 +1140,28 @@ class _SmartMapPageState
     final list =
         <Marker>[];
 
-    if (userLocation !=
-        null) {
+    if (userLocation != null) {
       list.add(
         Marker(
           point:
               userLocation!,
+
           width: 60,
           height: 60,
+
           child:
               Container(
             decoration:
                 BoxDecoration(
-              color: Colors.blue
-                  .withValues(
+              color:
+                  Colors.blue
+                      .withValues(
                 alpha: 0.25,
               ),
               shape:
                   BoxShape.circle,
             ),
+
             child:
                 const Icon(
               Icons.my_location,
@@ -1020,45 +1177,29 @@ class _SmartMapPageState
     return list;
   }
 
-  String mapServiceText(
-    String fa,
-    String en,
-    String ar,
-  ) {
-    switch (
-        LanguageManager
-            .current) {
-      case AppLanguage.persian:
-        return fa;
-
-      case AppLanguage.english:
-        return en;
-
-      case AppLanguage.arabic:
-        return ar;
-    }
-  }
-
   @override
   Widget build(
-      BuildContext context) {
+    BuildContext context,
+  ) {
     return Directionality(
       textDirection:
           AppText.rtl
               ? TextDirection.rtl
               : TextDirection.ltr,
+
       child: Scaffold(
         backgroundColor:
-            const Color(
-          0xff071722,
-        ),
+            const Color(0xff071722),
+
         appBar: AppBar(
           backgroundColor:
               const Color(
             0xff071722,
           ),
+
           foregroundColor:
               Colors.white,
+
           title: Text(
             AppText.map(),
             style:
@@ -1067,8 +1208,10 @@ class _SmartMapPageState
                   FontWeight.bold,
             ),
           ),
+
           centerTitle: true,
         ),
+
         body: Column(
           children: [
             Expanded(
@@ -1077,19 +1220,29 @@ class _SmartMapPageState
                   FlutterMap(
                     mapController:
                         mapController,
+
                     options:
-                        const MapOptions(
+                        MapOptions(
                       initialCenter:
-                          iranCenter,
-                      initialZoom: 5,
+                          userLocation ??
+                              iranCenter,
+
+                      initialZoom:
+                          userLocation !=
+                                  null
+                              ? 13
+                              : 5,
                     ),
+
                     children: [
                       TileLayer(
                         urlTemplate:
                             'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+
                         userAgentPackageName:
                             'cyrustourist.ir.app',
                       ),
+
                       MarkerLayer(
                         markers:
                             markers(),
@@ -1100,79 +1253,76 @@ class _SmartMapPageState
                   Positioned(
                     right: 15,
                     bottom: 15,
+
                     child:
                         FloatingActionButton(
                       backgroundColor:
                           Colors.white,
+
                       onPressed:
                           getLocation,
-                      child: loading
-                          ? const SizedBox(
-                              width: 23,
-                              height: 23,
-                              child:
-                                  CircularProgressIndicator(),
-                            )
-                          : const Icon(
-                              Icons
-                                  .my_location,
-                            ),
+
+                      child:
+                          loading
+                              ? const SizedBox(
+                                  width: 23,
+                                  height: 23,
+                                  child:
+                                      CircularProgressIndicator(),
+                                )
+                              : const Icon(
+                                  Icons
+                                      .my_location,
+                                ),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // ==================================================
-            // MAP SERVICES
-            // ==================================================
-
             Container(
               padding:
                   const EdgeInsets.all(
                 10,
               ),
+
               color:
                   const Color(
                 0xff071722,
               ),
-              child:
-                  Column(
+
+              child: Column(
                 children: [
                   Row(
                     children: [
                       mapServiceButton(
                         Icons.hotel,
-                        mapServiceText(
-                          'اقامتگاه',
-                          'Accommodation',
-                          'الإقامة',
-                        ),
+                        'Accommodation',
+                        'الإقامة',
+                        'اقامتگاه',
                       ),
+
                       mapServiceButton(
                         Icons.place,
-                        mapServiceText(
-                          'جاذبه‌ها',
-                          'Attractions',
-                          'المعالم',
-                        ),
+                        'Attractions',
+                        'المعالم',
+                        'جاذبه‌ها',
                       ),
+
                       mapServiceButton(
-                        Icons.health_and_safety,
-                        mapServiceText(
-                          'سلامت',
-                          'Health',
-                          'الصحة',
-                        ),
+                        Icons
+                            .health_and_safety,
+                        'Health',
+                        'الصحة',
+                        'سلامت',
                       ),
+
                       mapServiceButton(
                         Icons
                             .miscellaneous_services,
-                        mapServiceText(
-                          'خدمات',
-                          'Services',
-                          'الخدمات',
-                        ),
+                        'Services',
+                        'الخدمات',
+                        'خدمات',
                       ),
                     ],
                   ),
@@ -1184,6 +1334,7 @@ class _SmartMapPageState
                   SizedBox(
                     width:
                         double.infinity,
+
                     child:
                         ElevatedButton(
                       onPressed: () {
@@ -1191,8 +1342,19 @@ class _SmartMapPageState
                           context,
                         );
                       },
+
                       child: Text(
-                        AppText.title(),
+                        LanguageManager
+                                    .current ==
+                                AppLanguage
+                                    .persian
+                            ? 'بازگشت'
+                            : LanguageManager
+                                        .current ==
+                                    AppLanguage
+                                        .arabic
+                                ? 'رجوع'
+                                : 'Back',
                       ),
                     ),
                   ),
@@ -1207,27 +1369,49 @@ class _SmartMapPageState
 
   Widget mapServiceButton(
     IconData icon,
-    String text,
+    String english,
+    String arabic,
+    String persian,
   ) {
+    String text;
+
+    switch (
+        LanguageManager.current) {
+      case AppLanguage.persian:
+        text = persian;
+        break;
+
+      case AppLanguage.arabic:
+        text = arabic;
+        break;
+
+      case AppLanguage.english:
+        text = english;
+        break;
+    }
+
     return Expanded(
       child: Container(
         margin:
-            const EdgeInsets.all(
-          4,
-        ),
+            const EdgeInsets.all(4),
+
         height: 70,
+
         decoration:
             BoxDecoration(
-          color: Colors.white,
+          color:
+              Colors.white,
+
           borderRadius:
               BorderRadius.circular(
             15,
           ),
         ),
+
         child: Column(
           mainAxisAlignment:
-              MainAxisAlignment
-                  .center,
+              MainAxisAlignment.center,
+
           children: [
             Icon(
               icon,
@@ -1236,12 +1420,13 @@ class _SmartMapPageState
                 0xff0b506b,
               ),
             ),
+
             Text(
               text,
               maxLines: 1,
               overflow:
-                  TextOverflow
-                      .ellipsis,
+                  TextOverflow.ellipsis,
+
               style:
                   const TextStyle(
                 fontSize: 10,
