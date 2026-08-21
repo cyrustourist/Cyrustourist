@@ -77,18 +77,12 @@ class LanguageManager {
 
     final pref = await SharedPreferences.getInstance();
 
-    switch (lang) {
-      case AppLanguage.persian:
-        await pref.setString('language', 'fa');
-        break;
-
-      case AppLanguage.english:
-        await pref.setString('language', 'en');
-        break;
-
-      case AppLanguage.arabic:
-        await pref.setString('language', 'ar');
-        break;
+    if (lang == AppLanguage.persian) {
+      await pref.setString('language', 'fa');
+    } else if (lang == AppLanguage.arabic) {
+      await pref.setString('language', 'ar');
+    } else {
+      await pref.setString('language', 'en');
     }
   }
 }
@@ -100,6 +94,19 @@ class LanguageManager {
 class AppText {
   static bool get rtl {
     return LanguageManager.current != AppLanguage.english;
+  }
+
+  static String title() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'سایروس توریست';
+
+      case AppLanguage.english:
+        return 'Cyrus Tourist';
+
+      case AppLanguage.arabic:
+        return 'سايروس توريست';
+    }
   }
 
   static String languageName() {
@@ -128,42 +135,98 @@ class AppText {
     }
   }
 
-  static String mapLoading() {
+  static String button(int number) {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
-        return 'در حال آماده‌سازی نقشه...';
+        const items = [
+          '',
+          'نقشه گردشگری',
+          'گردشگری سلامت',
+          'جاذبه‌های گردشگری',
+          'فیلم‌های گردشگری',
+          'اقامتگاه',
+          'راهنمای سفر',
+          'شبکه‌های اجتماعی',
+          'درباره ما',
+          'پشتیبانی و تماس',
+          'علاقه‌مندی‌ها',
+        ];
+        return items[number];
 
       case AppLanguage.english:
-        return 'Preparing the map...';
+        const items = [
+          '',
+          'Tourism Map',
+          'Health Tourism',
+          'Tourist Attractions',
+          'Tourism Videos',
+          'Accommodation',
+          'Travel Guide',
+          'Social Networks',
+          'About Us',
+          'Support & Contact',
+          'Favorites',
+        ];
+        return items[number];
 
       case AppLanguage.arabic:
-        return 'جارٍ تجهيز الخريطة...';
+        const items = [
+          '',
+          'خريطة السياحة',
+          'السياحة العلاجية',
+          'المعالم السياحية',
+          'أفلام سياحية',
+          'الإقامة',
+          'دليل السفر',
+          'الشبكات الاجتماعية',
+          'معلومات عنا',
+          'الدعم والاتصال',
+          'المفضلة',
+        ];
+        return items[number];
     }
   }
+}
 
-  static String locationSearching() {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'در حال پیدا کردن موقعیت شما';
+// ============================================================
+// ICONS
+// ============================================================
 
-      case AppLanguage.english:
-        return 'Finding your location';
+class AppIcons {
+  static IconData get(int number) {
+    switch (number) {
+      case 1:
+        return Icons.map_rounded;
 
-      case AppLanguage.arabic:
-        return 'جارٍ تحديد موقعك';
-    }
-  }
+      case 2:
+        return Icons.health_and_safety_rounded;
 
-  static String locationUnavailable() {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'موقعیت مکانی در دسترس نیست';
+      case 3:
+        return Icons.location_on_rounded;
 
-      case AppLanguage.english:
-        return 'Location is unavailable';
+      case 4:
+        return Icons.ondemand_video_rounded;
 
-      case AppLanguage.arabic:
-        return 'الموقع غير متاح';
+      case 5:
+        return Icons.hotel_rounded;
+
+      case 6:
+        return Icons.explore_rounded;
+
+      case 7:
+        return Icons.language_rounded;
+
+      case 8:
+        return Icons.info_outline_rounded;
+
+      case 9:
+        return Icons.support_agent_rounded;
+
+      case 10:
+        return Icons.star_rounded;
+
+      default:
+        return Icons.apps_rounded;
     }
   }
 }
@@ -229,13 +292,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _pressedButton = 0;
+  int _selectedButton = 0;
 
-  // ----------------------------------------------------------
-  // SELECT LANGUAGE IMAGE
-  // ----------------------------------------------------------
-
-  String get homeImage {
+  String get _homeImage {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'assets/images/home_fa.jpg';
@@ -248,15 +307,10 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // ----------------------------------------------------------
-  // LANGUAGE
-  // ----------------------------------------------------------
-
   Future<void> openLanguage() async {
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true,
       builder: (_) {
         return Directionality(
           textDirection:
@@ -265,7 +319,7 @@ class _HomePageState extends State<HomePage> {
                   : TextDirection.ltr,
           child: Container(
             decoration: const BoxDecoration(
-              color: Color(0xff0b506b),
+              color: Color(0xff071722),
               borderRadius: BorderRadius.vertical(
                 top: Radius.circular(28),
               ),
@@ -283,12 +337,11 @@ class _HomePageState extends State<HomePage> {
                   width: 45,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.white54,
+                    color: Colors.white30,
                     borderRadius:
                         BorderRadius.circular(10),
                   ),
                 ),
-
                 const SizedBox(height: 18),
 
                 _languageItem(
@@ -325,9 +378,6 @@ class _HomePageState extends State<HomePage> {
     AppLanguage language,
     String flag,
   ) {
-    final selected =
-        LanguageManager.current == language;
-
     return ListTile(
       leading: Text(
         flag,
@@ -342,12 +392,13 @@ class _HomePageState extends State<HomePage> {
           fontWeight: FontWeight.bold,
         ),
       ),
-      trailing: selected
-          ? const Icon(
-              Icons.check_circle,
-              color: Color(0xffffd36a),
-            )
-          : null,
+      trailing:
+          LanguageManager.current == language
+              ? const Icon(
+                  Icons.check_circle,
+                  color: Color(0xffffd36a),
+                )
+              : null,
       onTap: () async {
         await LanguageManager.setLanguage(
           language,
@@ -362,126 +413,305 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ----------------------------------------------------------
-  // BUTTON TOUCH
-  // ----------------------------------------------------------
+  // ==========================================================
+  // BUTTON ACTION
+  // ==========================================================
 
   Future<void> serviceTap(int number) async {
     setState(() {
-      _pressedButton = number;
+      _selectedButton = number;
     });
 
-    // افکت فشرده شدن
     await Future.delayed(
-      const Duration(milliseconds: 130),
-    );
-
-    if (!mounted) return;
-
-    // --------------------------------------------------------
-    // MAP BUTTON
-    // --------------------------------------------------------
-
-    if (number == 1) {
-      setState(() {
-        _pressedButton = 0;
-      });
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const MapLoadingPage(),
-        ),
-      );
-
-      return;
-    }
-
-    // --------------------------------------------------------
-    // OTHER BUTTONS
-    // --------------------------------------------------------
-
-    await Future.delayed(
-      const Duration(milliseconds: 80),
+      const Duration(milliseconds: 180),
     );
 
     if (!mounted) return;
 
     setState(() {
-      _pressedButton = 0;
+      _selectedButton = 0;
     });
+
+    if (number == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const SmartMapPage(),
+        ),
+      );
+    } else {
+      _showComingSoon(number);
+    }
   }
 
-  // ----------------------------------------------------------
-  // TRANSPARENT TOUCH BUTTON
-  // ----------------------------------------------------------
+  void _showComingSoon(int number) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior:
+            SnackBarBehavior.floating,
+        backgroundColor:
+            const Color(0xff0b506b),
+        content: Text(
+          AppText.button(number),
+          textAlign:
+              AppText.rtl
+                  ? TextAlign.right
+                  : TextAlign.left,
+        ),
+        duration:
+            const Duration(seconds: 2),
+      ),
+    );
+  }
 
-  Widget touchButton({
-    required int number,
+  // ==========================================================
+  // HOME BUTTON
+  // ==========================================================
+
+  Widget serviceButton(
+    int number, {
     required double width,
     required double height,
   }) {
     final selected =
-        _pressedButton == number;
+        _selectedButton == number;
 
     return GestureDetector(
-      behavior:
-          HitTestBehavior.translucent,
-
-      onTap: () {
-        serviceTap(number);
-      },
+      onTap: () => serviceTap(number),
 
       child: AnimatedScale(
-        scale:
-            selected ? 0.91 : 1.0,
+        scale: selected ? 0.92 : 1.0,
 
         duration:
-            const Duration(milliseconds: 110),
+            const Duration(milliseconds: 100),
 
-        curve:
-            Curves.easeOutBack,
+        curve: Curves.easeOut,
 
         child: AnimatedContainer(
           duration:
-              const Duration(milliseconds: 110),
+              const Duration(milliseconds: 120),
 
           width: width,
           height: height,
 
-          decoration: BoxDecoration(
-            color:
-                Colors.transparent,
+          margin:
+              const EdgeInsets.all(4),
 
+          decoration: BoxDecoration(
             borderRadius:
                 BorderRadius.circular(18),
 
-            boxShadow:
-                selected
-                    ? [
-                        BoxShadow(
+            border: Border.all(
+              color:
+                  const Color(0xffffd36a)
+                      .withValues(
+                alpha:
+                    selected
+                        ? 0.95
+                        : 0.55,
+              ),
+              width: 1.2,
+            ),
+
+            gradient:
+                LinearGradient(
+              begin:
+                  Alignment.topLeft,
+              end:
+                  Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(
+                  alpha:
+                      selected
+                          ? 0.28
+                          : 0.18,
+                ),
+                const Color(0xff0b506b)
+                    .withValues(
+                  alpha:
+                      selected
+                          ? 0.78
+                          : 0.62,
+                ),
+              ],
+            ),
+
+            boxShadow: [
+              BoxShadow(
+                color:
+                    Colors.black.withValues(
+                  alpha:
+                      selected
+                          ? 0.75
+                          : 0.45,
+                ),
+                blurRadius:
+                    selected ? 5 : 10,
+                offset:
+                    Offset(
+                  0,
+                  selected ? 2 : 5,
+                ),
+              ),
+
+              BoxShadow(
+                color:
+                    const Color(0xffffd36a)
+                        .withValues(
+                  alpha:
+                      selected
+                          ? 0.35
+                          : 0.10,
+                ),
+                blurRadius:
+                    selected ? 12 : 4,
+              ),
+            ],
+          ),
+
+          child: Stack(
+            children: [
+              Positioned(
+                top: 2,
+                left: 8,
+                right: 8,
+                child: Container(
+                  height: 1.5,
+                  decoration:
+                      BoxDecoration(
+                    gradient:
+                        LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.white
+                            .withValues(
+                          alpha: 0.75,
+                        ),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              Center(
+                child: Padding(
+                  padding:
+                      const EdgeInsets
+                          .symmetric(
+                    horizontal: 3,
+                    vertical: 5,
+                  ),
+
+                  child: Column(
+                    mainAxisAlignment:
+                        MainAxisAlignment
+                            .center,
+
+                    children: [
+                      Icon(
+                        AppIcons.get(
+                          number,
+                        ),
+
+                        color:
+                            const Color(
+                          0xffffd36a,
+                        ),
+
+                        size:
+                            height * 0.28,
+
+                        shadows: const [
+                          Shadow(
+                            color:
+                                Colors.black87,
+                            blurRadius: 4,
+                            offset:
+                                Offset(1, 2),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(
+                        height: 3,
+                      ),
+
+                      Text(
+                        AppText.button(
+                          number,
+                        ),
+
+                        maxLines: 2,
+
+                        overflow:
+                            TextOverflow
+                                .ellipsis,
+
+                        textAlign:
+                            TextAlign.center,
+
+                        style: TextStyle(
+                          color:
+                              Colors.white,
+
+                          fontSize:
+                              height < 70
+                                  ? 8.5
+                                  : 10,
+
+                          height: 1.05,
+
+                          fontWeight:
+                              FontWeight.w800,
+
+                          shadows: const [
+                            Shadow(
+                              color:
+                                  Colors.black,
+                              blurRadius: 3,
+                              offset:
+                                  Offset(1, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(
+                        height: 2,
+                      ),
+
+                      Text(
+                        '$number',
+
+                        style:
+                            TextStyle(
                           color:
                               const Color(
                             0xffffd36a,
-                          ).withValues(
-                            alpha: 0.60,
                           ),
-                          blurRadius: 18,
-                          spreadRadius: 2,
+
+                          fontSize:
+                              height < 70
+                                  ? 8
+                                  : 9,
+
+                          fontWeight:
+                              FontWeight.bold,
                         ),
-                      ]
-                    : [],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // ----------------------------------------------------------
-  // BUTTON POSITION
-  // ----------------------------------------------------------
-
-  Widget buildTouchAreas(
+  Widget buildButtons(
     double width,
     double height,
   ) {
@@ -495,15 +725,22 @@ class _HomePageState extends State<HomePage> {
       left: 3,
       right: 3,
       bottom: height * 0.075,
+
       child: Column(
         children: [
           Row(
             children: [
-              for (int i = 1; i <= 5; i++)
-                touchButton(
-                  number: i,
-                  width: buttonWidth,
-                  height: buttonHeight,
+              for (
+                int i = 1;
+                i <= 5;
+                i++
+              )
+                serviceButton(
+                  i,
+                  width:
+                      buttonWidth,
+                  height:
+                      buttonHeight,
                 ),
             ],
           ),
@@ -514,11 +751,17 @@ class _HomePageState extends State<HomePage> {
 
           Row(
             children: [
-              for (int i = 6; i <= 10; i++)
-                touchButton(
-                  number: i,
-                  width: buttonWidth,
-                  height: buttonHeight,
+              for (
+                int i = 6;
+                i <= 10;
+                i++
+              )
+                serviceButton(
+                  i,
+                  width:
+                      buttonWidth,
+                  height:
+                      buttonHeight,
                 ),
             ],
           ),
@@ -527,12 +770,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ----------------------------------------------------------
-  // HOME
-  // ----------------------------------------------------------
+  // ==========================================================
+  // HOME BUILD
+  // ==========================================================
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Directionality(
       textDirection:
           AppText.rtl
@@ -547,9 +792,9 @@ class _HomePageState extends State<HomePage> {
           child: LayoutBuilder(
             builder:
                 (
-                  context,
-                  constraints,
-                ) {
+              context,
+              constraints,
+            ) {
               final screenWidth =
                   constraints.maxWidth;
 
@@ -573,24 +818,56 @@ class _HomePageState extends State<HomePage> {
 
               return Center(
                 child: SizedBox(
-                  width: imageWidth,
-                  height: imageHeight,
+                  width:
+                      imageWidth,
+                  height:
+                      imageHeight,
 
                   child: Stack(
-                    fit: StackFit.expand,
+                    fit:
+                        StackFit.expand,
 
                     children: [
-                      // ==================================================
-                      // LANGUAGE IMAGE
-                      // ==================================================
-
                       Image.asset(
-                        homeImage,
-                        fit: BoxFit.cover,
+                        _homeImage,
+                        fit:
+                            BoxFit.cover,
+                      ),
+
+                      IgnorePointer(
+                        child:
+                            Container(
+                          decoration:
+                              BoxDecoration(
+                            gradient:
+                                LinearGradient(
+                              begin:
+                                  Alignment
+                                      .topCenter,
+                              end:
+                                  Alignment
+                                      .bottomCenter,
+                              colors: [
+                                Colors.black
+                                    .withValues(
+                                  alpha:
+                                      0.08,
+                                ),
+                                Colors
+                                    .transparent,
+                                Colors.black
+                                    .withValues(
+                                  alpha:
+                                      0.20,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
 
                       // ==================================================
-                      // LANGUAGE BUTTON
+                      // LANGUAGE
                       // ==================================================
 
                       Positioned(
@@ -616,8 +893,10 @@ class _HomePageState extends State<HomePage> {
                             padding:
                                 const EdgeInsets
                                     .symmetric(
-                              horizontal: 12,
-                              vertical: 8,
+                              horizontal:
+                                  12,
+                              vertical:
+                                  8,
                             ),
 
                             decoration:
@@ -625,6 +904,8 @@ class _HomePageState extends State<HomePage> {
                               color:
                                   const Color(
                                 0xff0b506b,
+                              ).withValues(
+                                alpha: 0.88,
                               ),
 
                               borderRadius:
@@ -639,20 +920,21 @@ class _HomePageState extends State<HomePage> {
                                     const Color(
                                   0xffffd36a,
                                 ).withValues(
-                                  alpha: 0.80,
+                                  alpha:
+                                      0.75,
                                 ),
-                                width: 1.2,
                               ),
 
                               boxShadow: [
                                 BoxShadow(
                                   color:
-                                      Colors
-                                          .black
+                                      Colors.black
                                           .withValues(
-                                    alpha: 0.45,
+                                    alpha:
+                                        0.55,
                                   ),
-                                  blurRadius: 9,
+                                  blurRadius:
+                                      9,
                                   offset:
                                       const Offset(
                                     0,
@@ -662,14 +944,15 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
 
-                            child:
-                                Row(
+                            child: Row(
                               mainAxisSize:
-                                  MainAxisSize.min,
+                                  MainAxisSize
+                                      .min,
 
                               children: [
                                 const Icon(
-                                  Icons.language,
+                                  Icons
+                                      .language,
                                   color:
                                       Color(
                                     0xffffd36a,
@@ -684,12 +967,15 @@ class _HomePageState extends State<HomePage> {
                                 Text(
                                   AppText
                                       .languageName(),
+
                                   style:
                                       const TextStyle(
                                     color:
-                                        Colors.white,
+                                        Colors
+                                            .white,
                                     fontWeight:
-                                        FontWeight.bold,
+                                        FontWeight
+                                            .bold,
                                     fontSize:
                                         12,
                                   ),
@@ -701,12 +987,123 @@ class _HomePageState extends State<HomePage> {
                       ),
 
                       // ==================================================
-                      // 10 TRANSPARENT TOUCH AREAS
+                      // TITLE
                       // ==================================================
 
-                      buildTouchAreas(
+                      Positioned(
+                        top:
+                            imageHeight *
+                                0.12,
+
+                        left: 15,
+                        right: 15,
+
+                        child:
+                            IgnorePointer(
+                          child: Text(
+                            AppText
+                                .title(),
+
+                            textAlign:
+                                TextAlign
+                                    .center,
+
+                            style:
+                                TextStyle(
+                              color:
+                                  Colors.white,
+
+                              fontSize:
+                                  imageWidth *
+                                      0.075,
+
+                              fontWeight:
+                                  FontWeight
+                                      .w900,
+
+                              letterSpacing:
+                                  LanguageManager
+                                              .current ==
+                                          AppLanguage
+                                              .english
+                                      ? 1.5
+                                      : 0,
+
+                              shadows:
+                                  const [
+                                Shadow(
+                                  color:
+                                      Colors.black,
+                                  blurRadius:
+                                      8,
+                                  offset:
+                                      Offset(
+                                    2,
+                                    3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      buildButtons(
                         imageWidth,
                         imageHeight,
+                      ),
+
+                      Positioned(
+                        left: 10,
+                        right: 10,
+                        bottom: 8,
+
+                        child:
+                            IgnorePointer(
+                          child: Text(
+                            LanguageManager
+                                        .current ==
+                                    AppLanguage
+                                        .persian
+                                ? 'همراه هوشمند سفر شما'
+                                : LanguageManager
+                                            .current ==
+                                        AppLanguage
+                                            .arabic
+                                    ? 'رفيقك الذكي في السفر'
+                                    : 'Your Smart Travel Companion',
+
+                            textAlign:
+                                TextAlign
+                                    .center,
+
+                            style:
+                                TextStyle(
+                              color:
+                                  const Color(
+                                0xffffd36a,
+                              ),
+
+                              fontSize:
+                                  imageWidth *
+                                      0.027,
+
+                              fontWeight:
+                                  FontWeight
+                                      .bold,
+
+                              shadows:
+                                  const [
+                                Shadow(
+                                  color:
+                                      Colors.black,
+                                  blurRadius:
+                                      5,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -721,304 +1118,11 @@ class _HomePageState extends State<HomePage> {
 }
 
 // ============================================================
-// MAP LOADING PAGE
-// ============================================================
-
-class MapLoadingPage extends StatefulWidget {
-  const MapLoadingPage({super.key});
-
-  @override
-  State<MapLoadingPage> createState() =>
-      _MapLoadingPageState();
-}
-
-class _MapLoadingPageState
-    extends State<MapLoadingPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController
-      _animationController;
-
-  late Animation<double>
-      _scaleAnimation;
-
-  LatLng? foundLocation;
-
-  bool searching = true;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _animationController =
-        AnimationController(
-      vsync: this,
-      duration:
-          const Duration(
-        milliseconds: 1100,
-      ),
-    )..repeat(reverse: true);
-
-    _scaleAnimation =
-        Tween<double>(
-      begin: 0.88,
-      end: 1.12,
-    ).animate(
-      CurvedAnimation(
-        parent:
-            _animationController,
-        curve:
-            Curves.easeInOut,
-      ),
-    );
-
-    _prepareMap();
-  }
-
-  Future<void> _prepareMap() async {
-    LatLng? location;
-
-    try {
-      final enabled =
-          await Geolocator
-              .isLocationServiceEnabled();
-
-      if (enabled) {
-        LocationPermission permission =
-            await Geolocator
-                .checkPermission();
-
-        if (permission ==
-            LocationPermission.denied) {
-          permission =
-              await Geolocator
-                  .requestPermission();
-        }
-
-        if (permission !=
-                LocationPermission.denied &&
-            permission !=
-                LocationPermission
-                    .deniedForever) {
-          final position =
-              await Geolocator
-                  .getCurrentPosition(
-            locationSettings:
-                const LocationSettings(
-              accuracy:
-                  LocationAccuracy.high,
-            ),
-          ).timeout(
-            const Duration(
-              seconds: 8,
-            ),
-          );
-
-          location = LatLng(
-            position.latitude,
-            position.longitude,
-          );
-        }
-      }
-    } catch (_) {
-      location = null;
-    }
-
-    if (!mounted) return;
-
-    setState(() {
-      foundLocation = location;
-      searching = false;
-    });
-
-    // اجازه بده انیمیشن کوتاه کامل شود
-    await Future.delayed(
-      const Duration(
-        milliseconds: 650,
-      ),
-    );
-
-    if (!mounted) return;
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            SmartMapPage(
-          initialLocation:
-              foundLocation,
-        ),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection:
-          AppText.rtl
-              ? TextDirection.rtl
-              : TextDirection.ltr,
-
-      child: Scaffold(
-        backgroundColor:
-            const Color(0xff071722),
-
-        body: Center(
-          child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
-
-            children: [
-              AnimatedBuilder(
-                animation:
-                    _scaleAnimation,
-
-                builder:
-                    (
-                      context,
-                      child,
-                    ) {
-                  return Transform.scale(
-                    scale:
-                        _scaleAnimation.value,
-
-                    child:
-                        Container(
-                      width: 105,
-                      height: 105,
-
-                      decoration:
-                          BoxDecoration(
-                        shape:
-                            BoxShape.circle,
-
-                        color:
-                            const Color(
-                          0xff0b506b,
-                        ),
-
-                        border:
-                            Border.all(
-                          color:
-                              const Color(
-                            0xffffd36a,
-                          ),
-                          width: 2,
-                        ),
-
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                const Color(
-                              0xffffd36a,
-                            ).withValues(
-                              alpha: 0.45,
-                            ),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-
-                      child:
-                          const Icon(
-                        Icons
-                            .location_on_rounded,
-                        color:
-                            Color(
-                          0xffffd36a,
-                        ),
-                        size: 58,
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(
-                height: 35,
-              ),
-
-              Text(
-                AppText.mapLoading(),
-                textAlign:
-                    TextAlign.center,
-
-                style:
-                    const TextStyle(
-                  color:
-                      Colors.white,
-                  fontSize: 20,
-                  fontWeight:
-                      FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(
-                height: 12,
-              ),
-
-              Text(
-                searching
-                    ? AppText
-                        .locationSearching()
-                    : AppText
-                        .mapLoading(),
-
-                textAlign:
-                    TextAlign.center,
-
-                style:
-                    TextStyle(
-                  color:
-                      const Color(
-                    0xffffd36a,
-                  ).withValues(
-                    alpha: 0.90,
-                  ),
-                  fontSize: 13,
-                ),
-              ),
-
-              const SizedBox(
-                height: 25,
-              ),
-
-              const SizedBox(
-                width: 28,
-                height: 28,
-                child:
-                    CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color:
-                      Color(0xffffd36a),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
 // SMART MAP PAGE
 // ============================================================
 
 class SmartMapPage extends StatefulWidget {
-  final LatLng? initialLocation;
-
-  const SmartMapPage({
-    super.key,
-    this.initialLocation,
-  });
+  const SmartMapPage({super.key});
 
   @override
   State<SmartMapPage> createState() =>
@@ -1026,9 +1130,10 @@ class SmartMapPage extends StatefulWidget {
 }
 
 class _SmartMapPageState
-    extends State<SmartMapPage> {
-  final MapController
-      mapController =
+    extends State<SmartMapPage>
+    with SingleTickerProviderStateMixin {
+
+  final MapController mapController =
       MapController();
 
   static const LatLng iranCenter =
@@ -1039,27 +1144,121 @@ class _SmartMapPageState
 
   LatLng? userLocation;
 
-  bool loading = false;
+  bool loading = true;
+  bool mapReady = false;
+
+  late AnimationController
+      _animationController;
+
+  late Animation<double>
+      _scaleAnimation;
+
+  late Animation<double>
+      _rotationAnimation;
+
+  late Animation<double>
+      _glowAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    userLocation =
-        widget.initialLocation;
+    _animationController =
+        AnimationController(
+      vsync: this,
 
-    WidgetsBinding.instance
+      duration:
+          const Duration(
+        seconds: 3,
+      ),
+    )..repeat();
+
+    _scaleAnimation =
+        Tween<double>(
+      begin: 0.94,
+      end: 1.06,
+    ).animate(
+      CurvedAnimation(
+        parent:
+            _animationController,
+        curve:
+            Curves.easeInOut,
+      ),
+    );
+
+    _rotationAnimation =
+        Tween<double>(
+      begin: 0,
+      end: 6.283185,
+    ).animate(
+      CurvedAnimation(
+        parent:
+            _animationController,
+        curve:
+            Curves.linear,
+      ),
+    );
+
+    _glowAnimation =
+        Tween<double>(
+      begin: 0.25,
+      end: 0.85,
+    ).animate(
+      CurvedAnimation(
+        parent:
+            _animationController,
+        curve:
+            Curves.easeInOut,
+      ),
+    );
+
+    WidgetsBinding
+        .instance
         .addPostFrameCallback(
       (_) {
-        if (userLocation != null) {
-          mapController.move(
-            userLocation!,
-            13,
-          );
-        }
+        _prepareMap();
       },
     );
   }
+
+  @override
+  void dispose() {
+    _animationController
+        .dispose();
+
+    super.dispose();
+  }
+
+  // ==========================================================
+  // PREPARE MAP
+  // ==========================================================
+
+  Future<void> _prepareMap() async {
+    if (!mounted) return;
+
+    setState(() {
+      loading = true;
+      mapReady = false;
+    });
+
+    await Future.delayed(
+      const Duration(
+        milliseconds: 1800,
+      ),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      mapReady = true;
+    });
+
+    await getLocation();
+  }
+
+  // ==========================================================
+  // LOCATION
+  // ==========================================================
 
   Future<void> getLocation() async {
     if (mounted) {
@@ -1079,6 +1278,7 @@ class _SmartMapPageState
             loading = false;
           });
         }
+
         return;
       }
 
@@ -1094,8 +1294,7 @@ class _SmartMapPageState
       }
 
       if (permission ==
-              LocationPermission
-                  .denied ||
+              LocationPermission.denied ||
           permission ==
               LocationPermission
                   .deniedForever) {
@@ -1104,6 +1303,7 @@ class _SmartMapPageState
             loading = false;
           });
         }
+
         return;
       }
 
@@ -1111,7 +1311,8 @@ class _SmartMapPageState
           await Geolocator
               .getCurrentPosition();
 
-      final point = LatLng(
+      final point =
+          LatLng(
         position.latitude,
         position.longitude,
       );
@@ -1119,7 +1320,9 @@ class _SmartMapPageState
       if (!mounted) return;
 
       setState(() {
-        userLocation = point;
+        userLocation =
+            point;
+
         loading = false;
       });
 
@@ -1135,6 +1338,10 @@ class _SmartMapPageState
       }
     }
   }
+
+  // ==========================================================
+  // MARKERS
+  // ==========================================================
 
   List<Marker> markers() {
     final list =
@@ -1158,6 +1365,7 @@ class _SmartMapPageState
                       .withValues(
                 alpha: 0.25,
               ),
+
               shape:
                   BoxShape.circle,
             ),
@@ -1177,6 +1385,388 @@ class _SmartMapPageState
     return list;
   }
 
+  // ==========================================================
+  // LOADING TEXT
+  // ==========================================================
+
+  String get loadingTitle {
+    switch (
+        LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'در حال آماده‌سازی نقشه گردشگری...';
+
+      case AppLanguage.english:
+        return 'Preparing Tourism Map...';
+
+      case AppLanguage.arabic:
+        return 'جارٍ إعداد الخريطة السياحية...';
+    }
+  }
+
+  String get loadingSubtitle {
+    switch (
+        LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'لطفاً چند لحظه صبر کنید';
+
+      case AppLanguage.english:
+        return 'Please wait a moment';
+
+      case AppLanguage.arabic:
+        return 'يرجى الانتظار لحظة';
+    }
+  }
+
+  String get locationText {
+    switch (
+        LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'در حال بررسی موقعیت شما...';
+
+      case AppLanguage.english:
+        return 'Checking your location...';
+
+      case AppLanguage.arabic:
+        return 'جارٍ تحديد موقعك...';
+    }
+  }
+
+  // ==========================================================
+  // PROFESSIONAL LOADING SCREEN
+  // ==========================================================
+
+  Widget loadingScreen() {
+    return Container(
+      color:
+          const Color(0xff071722),
+
+      child:
+          Center(
+        child:
+            AnimatedBuilder(
+          animation:
+              _animationController,
+
+          builder:
+              (context, child) {
+            return Column(
+              mainAxisAlignment:
+                  MainAxisAlignment
+                      .center,
+
+              children: [
+                // ==================================================
+                // LOGO + RINGS
+                // ==================================================
+
+                SizedBox(
+                  width: 210,
+                  height: 210,
+
+                  child:
+                      Stack(
+                    alignment:
+                        Alignment
+                            .center,
+
+                    children: [
+                      // OUTER RING
+
+                      Transform.rotate(
+                        angle:
+                            _rotationAnimation
+                                .value,
+
+                        child:
+                            Container(
+                          width: 190,
+                          height: 190,
+
+                          decoration:
+                              BoxDecoration(
+                            shape:
+                                BoxShape
+                                    .circle,
+
+                            border:
+                                Border.all(
+                              color:
+                                  const Color(
+                                0xffffd36a,
+                              ).withValues(
+                                alpha:
+                                    _glowAnimation
+                                        .value,
+                              ),
+
+                              width: 2,
+                            ),
+
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    const Color(
+                                  0xffffd36a,
+                                ).withValues(
+                                  alpha:
+                                      _glowAnimation
+                                          .value *
+                                      0.45,
+                                ),
+
+                                blurRadius:
+                                    25,
+
+                                spreadRadius:
+                                    3,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // INNER RING
+
+                      Transform.rotate(
+                        angle:
+                            -_rotationAnimation
+                                .value,
+
+                        child:
+                            Container(
+                          width: 155,
+                          height: 155,
+
+                          decoration:
+                              BoxDecoration(
+                            shape:
+                                BoxShape
+                                    .circle,
+
+                            border:
+                                Border.all(
+                              color:
+                                  const Color(
+                                0xff0b8caf,
+                              ).withValues(
+                                alpha:
+                                    0.8,
+                              ),
+
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // LOGO
+
+                      Transform.scale(
+                        scale:
+                            _scaleAnimation
+                                .value,
+
+                        child:
+                            Container(
+                          width: 112,
+                          height: 112,
+
+                          padding:
+                              const EdgeInsets
+                                  .all(
+                            8,
+                          ),
+
+                          decoration:
+                              BoxDecoration(
+                            shape:
+                                BoxShape
+                                    .circle,
+
+                            color:
+                                Colors.white,
+
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    const Color(
+                                  0xffffd36a,
+                                ).withValues(
+                                  alpha:
+                                      _glowAnimation
+                                          .value,
+                                ),
+
+                                blurRadius:
+                                    28,
+
+                                spreadRadius:
+                                    3,
+                              ),
+                            ],
+                          ),
+
+                          child:
+                              ClipOval(
+                            child:
+                                Image.asset(
+                              'assets/images/logo-new.jpg',
+
+                              fit:
+                                  BoxFit
+                                      .cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 28,
+                ),
+
+                // ==================================================
+                // APP NAME
+                // ==================================================
+
+                Text(
+                  AppText.title(),
+
+                  textAlign:
+                      TextAlign.center,
+
+                  style:
+                      const TextStyle(
+                    color:
+                        Color(
+                      0xffffd36a,
+                    ),
+
+                    fontSize: 25,
+
+                    fontWeight:
+                        FontWeight.w900,
+
+                    shadows: [
+                      Shadow(
+                        color:
+                            Colors.black,
+                        blurRadius:
+                            8,
+                        offset:
+                            Offset(
+                          1,
+                          2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 18,
+                ),
+
+                // ==================================================
+                // LOADING TITLE
+                // ==================================================
+
+                Text(
+                  loadingTitle,
+
+                  textAlign:
+                      TextAlign.center,
+
+                  style:
+                      const TextStyle(
+                    color:
+                        Colors.white,
+
+                    fontSize: 15,
+
+                    fontWeight:
+                        FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 10,
+                ),
+
+                // ==================================================
+                // SUBTITLE
+                // ==================================================
+
+                Text(
+                  loadingSubtitle,
+
+                  textAlign:
+                      TextAlign.center,
+
+                  style:
+                      TextStyle(
+                    color:
+                        Colors.white
+                            .withValues(
+                      alpha: 0.70,
+                    ),
+
+                    fontSize: 12,
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 28,
+                ),
+
+                // ==================================================
+                // PROGRESS
+                // ==================================================
+
+                SizedBox(
+                  width: 190,
+
+                  child:
+                      ClipRRect(
+                    borderRadius:
+                        BorderRadius
+                            .circular(
+                      20,
+                    ),
+
+                    child:
+                        const LinearProgressIndicator(
+                      minHeight: 4,
+
+                      backgroundColor:
+                          Color(
+                        0xff183746,
+                      ),
+
+                      valueColor:
+                          AlwaysStoppedAnimation<
+                              Color>(
+                        Color(
+                          0xffffd36a,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // MAP PAGE
+  // ==========================================================
+
   @override
   Widget build(
     BuildContext context,
@@ -1187,11 +1777,13 @@ class _SmartMapPageState
               ? TextDirection.rtl
               : TextDirection.ltr,
 
-      child: Scaffold(
+      child:
+          Scaffold(
         backgroundColor:
             const Color(0xff071722),
 
-        appBar: AppBar(
+        appBar:
+            AppBar(
           backgroundColor:
               const Color(
             0xff071722,
@@ -1200,8 +1792,10 @@ class _SmartMapPageState
           foregroundColor:
               Colors.white,
 
-          title: Text(
+          title:
+              Text(
             AppText.map(),
+
             style:
                 const TextStyle(
               fontWeight:
@@ -1209,189 +1803,330 @@ class _SmartMapPageState
             ),
           ),
 
-          centerTitle: true,
+          centerTitle:
+              true,
         ),
 
-        body: Column(
+        body:
+            Stack(
           children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  FlutterMap(
-                    mapController:
-                        mapController,
+            // ====================================================
+            // MAP
+            // ====================================================
 
-                    options:
-                        MapOptions(
-                      initialCenter:
-                          userLocation ??
+            Column(
+              children: [
+                Expanded(
+                  child:
+                      Stack(
+                    children: [
+                      FlutterMap(
+                        mapController:
+                            mapController,
+
+                        options:
+                            const MapOptions(
+                          initialCenter:
                               iranCenter,
 
-                      initialZoom:
-                          userLocation !=
-                                  null
-                              ? 13
-                              : 5,
-                    ),
+                          initialZoom:
+                              5,
+                        ),
 
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 
-                        userAgentPackageName:
-                            'cyrustourist.ir.app',
+                            userAgentPackageName:
+                                'cyrustourist.ir.app',
+                          ),
+
+                          MarkerLayer(
+                            markers:
+                                markers(),
+                          ),
+                        ],
                       ),
 
-                      MarkerLayer(
-                        markers:
-                            markers(),
+                      // ==================================================
+                      // LOCATION BUTTON
+                      // ==================================================
+
+                      Positioned(
+                        right: 15,
+                        bottom: 15,
+
+                        child:
+                            FloatingActionButton(
+                          backgroundColor:
+                              Colors.white,
+
+                          onPressed:
+                              getLocation,
+
+                          child:
+                              loading
+                                  ? const SizedBox(
+                                      width: 23,
+                                      height: 23,
+
+                                      child:
+                                          CircularProgressIndicator(
+                                        strokeWidth:
+                                            2.5,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons
+                                          .my_location,
+                                    ),
+                        ),
                       ),
-                    ],
-                  ),
 
-                  Positioned(
-                    right: 15,
-                    bottom: 15,
+                      // ==================================================
+                      // LOCATION STATUS
+                      // ==================================================
 
-                    child:
-                        FloatingActionButton(
-                      backgroundColor:
-                          Colors.white,
+                      if (loading &&
+                          mapReady)
+                        Positioned(
+                          top: 15,
+                          left: 15,
+                          right: 15,
 
-                      onPressed:
-                          getLocation,
+                          child:
+                              Center(
+                            child:
+                                Container(
+                              padding:
+                                  const EdgeInsets
+                                      .symmetric(
+                                horizontal:
+                                    16,
+                                vertical:
+                                    10,
+                              ),
 
-                      child:
-                          loading
-                              ? const SizedBox(
-                                  width: 23,
-                                  height: 23,
-                                  child:
-                                      CircularProgressIndicator(),
-                                )
-                              : const Icon(
-                                  Icons
-                                      .my_location,
+                              decoration:
+                                  BoxDecoration(
+                                color:
+                                    const Color(
+                                  0xff071722,
+                                ).withValues(
+                                  alpha:
+                                      0.90,
                                 ),
-                    ),
+
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                  25,
+                                ),
+
+                                border:
+                                    Border.all(
+                                  color:
+                                      const Color(
+                                    0xffffd36a,
+                                  ).withValues(
+                                    alpha:
+                                        0.55,
+                                  ),
+                                ),
+                              ),
+
+                              child:
+                                  Row(
+                                mainAxisSize:
+                                    MainAxisSize
+                                        .min,
+
+                                children: [
+                                  const SizedBox(
+                                    width:
+                                        16,
+                                    height:
+                                        16,
+
+                                    child:
+                                        CircularProgressIndicator(
+                                      strokeWidth:
+                                          2,
+
+                                      valueColor:
+                                          AlwaysStoppedAnimation<
+                                              Color>(
+                                        Color(
+                                          0xffffd36a,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(
+                                    width:
+                                        10,
+                                  ),
+
+                                  Text(
+                                    locationText,
+
+                                    style:
+                                        const TextStyle(
+                                      color:
+                                          Colors
+                                              .white,
+
+                                      fontSize:
+                                          11,
+
+                                      fontWeight:
+                                          FontWeight
+                                              .bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            Container(
-              padding:
-                  const EdgeInsets.all(
-                10,
-              ),
+                // ==================================================
+                // MAP TOOLBOX
+                // ==================================================
 
-              color:
-                  const Color(
-                0xff071722,
-              ),
+                Container(
+                  padding:
+                      const EdgeInsets
+                          .all(10),
 
-              child: Column(
-                children: [
-                  Row(
+                  color:
+                      const Color(
+                    0xff071722,
+                  ),
+
+                  child:
+                      Column(
                     children: [
-                      mapServiceButton(
-                        Icons.hotel,
-                        'Accommodation',
-                        'الإقامة',
-                        'اقامتگاه',
+                      Row(
+                        children: [
+                          mapServiceButton(
+                            Icons.hotel,
+                            LanguageManager.current ==
+                                    AppLanguage
+                                        .persian
+                                ? 'اقامتگاه'
+                                : LanguageManager
+                                            .current ==
+                                        AppLanguage
+                                            .arabic
+                                    ? 'الإقامة'
+                                    : 'Accommodation',
+                          ),
+
+                          mapServiceButton(
+                            Icons.place,
+                            LanguageManager.current ==
+                                    AppLanguage
+                                        .persian
+                                ? 'جاذبه‌ها'
+                                : LanguageManager
+                                            .current ==
+                                        AppLanguage
+                                            .arabic
+                                    ? 'المعالم'
+                                    : 'Attractions',
+                          ),
+
+                          mapServiceButton(
+                            Icons.health_and_safety,
+                            LanguageManager.current ==
+                                    AppLanguage
+                                        .persian
+                                ? 'سلامت'
+                                : LanguageManager
+                                            .current ==
+                                        AppLanguage
+                                            .arabic
+                                    ? 'الصحة'
+                                    : 'Health',
+                          ),
+
+                          mapServiceButton(
+                            Icons
+                                .miscellaneous_services,
+                            LanguageManager.current ==
+                                    AppLanguage
+                                        .persian
+                                ? 'خدمات'
+                                : LanguageManager
+                                            .current ==
+                                        AppLanguage
+                                            .arabic
+                                    ? 'الخدمات'
+                                    : 'Services',
+                          ),
+                        ],
                       ),
 
-                      mapServiceButton(
-                        Icons.place,
-                        'Attractions',
-                        'المعالم',
-                        'جاذبه‌ها',
+                      const SizedBox(
+                        height: 10,
                       ),
 
-                      mapServiceButton(
-                        Icons
-                            .health_and_safety,
-                        'Health',
-                        'الصحة',
-                        'سلامت',
-                      ),
+                      SizedBox(
+                        width:
+                            double.infinity,
 
-                      mapServiceButton(
-                        Icons
-                            .miscellaneous_services,
-                        'Services',
-                        'الخدمات',
-                        'خدمات',
+                        child:
+                            ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(
+                              context,
+                            );
+                          },
+
+                          child:
+                              Text(
+                            AppText.title(),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-
-                  const SizedBox(
-                    height: 10,
-                  ),
-
-                  SizedBox(
-                    width:
-                        double.infinity,
-
-                    child:
-                        ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(
-                          context,
-                        );
-                      },
-
-                      child: Text(
-                        LanguageManager
-                                    .current ==
-                                AppLanguage
-                                    .persian
-                            ? 'بازگشت'
-                            : LanguageManager
-                                        .current ==
-                                    AppLanguage
-                                        .arabic
-                                ? 'رجوع'
-                                : 'Back',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+
+            // ====================================================
+            // PROFESSIONAL LOADING SCREEN
+            // ====================================================
+
+            if (!mapReady)
+              Positioned.fill(
+                child:
+                    loadingScreen(),
+              ),
           ],
         ),
       ),
     );
   }
 
+  // ==========================================================
+  // MAP TOOLBOX BUTTON
+  // ==========================================================
+
   Widget mapServiceButton(
     IconData icon,
-    String english,
-    String arabic,
-    String persian,
+    String text,
   ) {
-    String text;
-
-    switch (
-        LanguageManager.current) {
-      case AppLanguage.persian:
-        text = persian;
-        break;
-
-      case AppLanguage.arabic:
-        text = arabic;
-        break;
-
-      case AppLanguage.english:
-        text = english;
-        break;
-    }
-
     return Expanded(
-      child: Container(
+      child:
+          Container(
         margin:
             const EdgeInsets.all(4),
 
@@ -1406,30 +2141,59 @@ class _SmartMapPageState
               BorderRadius.circular(
             15,
           ),
+
+          boxShadow: [
+            BoxShadow(
+              color:
+                  Colors.black
+                      .withValues(
+                alpha: 0.30,
+              ),
+
+              blurRadius: 8,
+
+              offset:
+                  const Offset(
+                0,
+                3,
+              ),
+            ),
+          ],
         ),
 
-        child: Column(
+        child:
+            Column(
           mainAxisAlignment:
-              MainAxisAlignment.center,
+              MainAxisAlignment
+                  .center,
 
           children: [
             Icon(
               icon,
+
               color:
                   const Color(
                 0xff0b506b,
               ),
             ),
 
+            const SizedBox(
+              height: 3,
+            ),
+
             Text(
               text,
+
               maxLines: 1,
+
               overflow:
-                  TextOverflow.ellipsis,
+                  TextOverflow
+                      .ellipsis,
 
               style:
                   const TextStyle(
                 fontSize: 10,
+
                 fontWeight:
                     FontWeight.bold,
               ),
