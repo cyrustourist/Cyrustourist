@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -9,7 +10,6 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const CyrusTouristApp());
 }
-
 
 // ============================================================
 // APP
@@ -22,15 +22,15 @@ class CyrusTouristApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'CyrusTourist',
+      title: 'Cyrus Tourist',
       theme: ThemeData(
         useMaterial3: true,
+        fontFamily: 'sans',
       ),
       home: const SplashPage(),
     );
   }
 }
-
 
 // ============================================================
 // LANGUAGE
@@ -42,155 +42,103 @@ enum AppLanguage {
   arabic,
 }
 
-
 class LanguageManager {
-
-  static AppLanguage current =
-      AppLanguage.english;
-
+  static AppLanguage current = AppLanguage.english;
 
   static Future<void> load() async {
-
-    final pref =
-        await SharedPreferences.getInstance();
-
-    final saved =
-        pref.getString('language');
+    final pref = await SharedPreferences.getInstance();
+    final saved = pref.getString('language');
 
     if (saved == 'fa') {
       current = AppLanguage.persian;
-    }
-
-    else if (saved == 'ar') {
+    } else if (saved == 'ar') {
       current = AppLanguage.arabic;
-    }
-
-    else if (saved == 'en') {
+    } else if (saved == 'en') {
       current = AppLanguage.english;
-    }
-
-    else {
-
-      final code = WidgetsBinding
-          .instance
-          .platformDispatcher
-          .locale
-          .languageCode
+    } else {
+      final code = WidgetsBinding.instance.platformDispatcher.locale.languageCode
           .toLowerCase();
-
 
       if (code == 'fa') {
         current = AppLanguage.persian;
-      }
-
-      else if (code == 'ar') {
+      } else if (code == 'ar') {
         current = AppLanguage.arabic;
-      }
-
-      else {
+      } else {
         current = AppLanguage.english;
       }
     }
   }
 
-
-  static Future<void> setLanguage(
-      AppLanguage lang) async {
-
+  static Future<void> setLanguage(AppLanguage lang) async {
     current = lang;
 
-    final pref =
-        await SharedPreferences.getInstance();
-
+    final pref = await SharedPreferences.getInstance();
 
     if (lang == AppLanguage.persian) {
-      await pref.setString('language','fa');
-    }
-
-    else if (lang == AppLanguage.arabic) {
-      await pref.setString('language','ar');
-    }
-
-    else {
-      await pref.setString('language','en');
+      await pref.setString('language', 'fa');
+    } else if (lang == AppLanguage.arabic) {
+      await pref.setString('language', 'ar');
+    } else {
+      await pref.setString('language', 'en');
     }
   }
 }
+
+// ============================================================
+// TEXT
+// ============================================================
+
 class AppText {
-
-
   static bool get rtl {
-
-    return LanguageManager.current !=
-        AppLanguage.english;
-
+    return LanguageManager.current != AppLanguage.english;
   }
 
-
-
   static String title() {
-
-    switch(LanguageManager.current){
-
+    switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'سایروس توریست';
-
-      case AppLanguage.arabic:
-        return 'سايروس توريست';
 
       case AppLanguage.english:
         return 'Cyrus Tourist';
 
-    }
-  }
-
-
-
-  static String map(){
-
-    switch(LanguageManager.current){
-
-      case AppLanguage.persian:
-        return 'نقشه گردشگری';
-
       case AppLanguage.arabic:
-        return 'خريطة السياحة';
-
-      case AppLanguage.english:
-        return 'Tourism Map';
-
+        return 'سايروس توريست';
     }
   }
 
-
-
-  static String languageName(){
-
-    switch(LanguageManager.current){
-
+  static String languageName() {
+    switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'پارسی';
-
-      case AppLanguage.arabic:
-        return 'العربية';
 
       case AppLanguage.english:
         return 'English';
 
+      case AppLanguage.arabic:
+        return 'العربية';
     }
   }
 
-
-
-  static String button(int number){
-
-    switch(LanguageManager.current){
-
+  static String map() {
+    switch (LanguageManager.current) {
       case AppLanguage.persian:
-        return [
+        return 'نقشه گردشگری';
+
+      case AppLanguage.english:
+        return 'Tourism Map';
+
+      case AppLanguage.arabic:
+        return 'خريطة السياحة';
+    }
+  }
+
+  static String button(int number) {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        const items = [
           '',
           'نقشه گردشگری',
-          'جاذبه‌های اطراف من',
+          'گردشگری سلامت',
           'جاذبه‌های گردشگری',
           'فیلم‌های گردشگری',
           'اقامتگاه',
@@ -199,14 +147,14 @@ class AppText {
           'درباره ما',
           'پشتیبانی و تماس',
           'علاقه‌مندی‌ها',
-        ][number];
-
+        ];
+        return items[number];
 
       case AppLanguage.english:
-        return [
+        const items = [
           '',
           'Tourism Map',
-          'Nearby Attractions',
+          'Health Tourism',
           'Tourist Attractions',
           'Tourism Videos',
           'Accommodation',
@@ -215,14 +163,14 @@ class AppText {
           'About Us',
           'Support & Contact',
           'Favorites',
-        ][number];
-
+        ];
+        return items[number];
 
       case AppLanguage.arabic:
-        return [
+        const items = [
           '',
           'خريطة السياحة',
-          'المعالم القريبة',
+          'السياحة العلاجية',
           'المعالم السياحية',
           'أفلام سياحية',
           'الإقامة',
@@ -231,1200 +179,922 @@ class AppText {
           'معلومات عنا',
           'الدعم والاتصال',
           'المفضلة',
-        ][number];
-
+        ];
+        return items[number];
     }
-
   }
-
-
 }
 
+// ============================================================
+// ICONS
+// ============================================================
+
+class AppIcons {
+  static IconData get(int number) {
+    switch (number) {
+      case 1:
+        return Icons.map_rounded;
+      case 2:
+        return Icons.health_and_safety_rounded;
+      case 3:
+        return Icons.location_on_rounded;
+      case 4:
+        return Icons.ondemand_video_rounded;
+      case 5:
+        return Icons.hotel_rounded;
+      case 6:
+        return Icons.explore_rounded;
+      case 7:
+        return Icons.language_rounded;
+      case 8:
+        return Icons.info_outline_rounded;
+      case 9:
+        return Icons.support_agent_rounded;
+      case 10:
+        return Icons.star_rounded;
+      default:
+        return Icons.apps_rounded;
+    }
+  }
+}
 
 // ============================================================
 // SPLASH
 // ============================================================
 
-
 class SplashPage extends StatefulWidget {
-
   const SplashPage({super.key});
 
-
   @override
-  State<SplashPage> createState() =>
-      _SplashPageState();
-
+  State<SplashPage> createState() => _SplashPageState();
 }
 
-
-
-class _SplashPageState
-    extends State<SplashPage>{
-
-
+class _SplashPageState extends State<SplashPage> {
   @override
-  void initState(){
-
+  void initState() {
     super.initState();
-
-
     _start();
-
   }
-
-
 
   Future<void> _start() async {
-
     await LanguageManager.load();
 
+    await Future.delayed(const Duration(seconds: 2));
 
-    Timer(
-      const Duration(seconds:2),
+    if (!mounted) return;
 
-      (){
-
-        if(!mounted)return;
-
-
-        Navigator.pushReplacement(
-          context,
-
-          MaterialPageRoute(
-            builder:(_)=>
-              const HomePage(),
-          ),
-        );
-
-      },
-
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const HomePage(),
+      ),
     );
-
   }
-
-
 
   @override
-  Widget build(BuildContext context){
-
+  Widget build(BuildContext context) {
     return Scaffold(
-
-      body:SizedBox.expand(
-
-        child:Image.asset(
-
+      backgroundColor: Colors.black,
+      body: SizedBox.expand(
+        child: Image.asset(
           'assets/images/splash.jpg',
-
-          fit:BoxFit.cover,
-
+          fit: BoxFit.cover,
         ),
-
       ),
-
     );
-
   }
-
 }
+
 // ============================================================
 // HOME PAGE
-// ORIGINAL IMAGE + TRANSPARENT TOUCH AREAS
 // ============================================================
 
 class HomePage extends StatefulWidget {
-
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() =>
-      _HomePageState();
-
+  State<HomePage> createState() => _HomePageState();
 }
-
-
 
 class _HomePageState extends State<HomePage> {
+  int _selectedButton = 0;
 
+  String get _homeImage {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'assets/images/home_fa.jpg';
 
+      case AppLanguage.english:
+        return 'assets/images/home_en.jpg';
 
-  void openLanguage(){
+      case AppLanguage.arabic:
+        return 'assets/images/home_ar.jpg';
+    }
+  }
 
-    showModalBottomSheet(
+  Future<void> openLanguage() async {
+    await showModalBottomSheet(
       context: context,
-
-      builder:(_){
-
+      backgroundColor: Colors.transparent,
+      builder: (_) {
         return Directionality(
-
           textDirection:
-          AppText.rtl
-              ? TextDirection.rtl
-              : TextDirection.ltr,
-
-          child: Column(
-
-            mainAxisSize:
-            MainAxisSize.min,
-
-            children:[
-
-
-              ListTile(
-
-                title:
-                const Text('پارسی'),
-
-                onTap:() async{
-
-                  await LanguageManager
-                      .setLanguage(
-                    AppLanguage.persian,
-                  );
-
-                  setState((){});
-
-                  Navigator.pop(context);
-
-                },
-
-              ),
-
-
-
-              ListTile(
-
-                title:
-                const Text('English'),
-
-                onTap:() async{
-
-                  await LanguageManager
-                      .setLanguage(
-                    AppLanguage.english,
-                  );
-
-                  setState((){});
-
-                  Navigator.pop(context);
-
-                },
-
-              ),
-
-
-
-              ListTile(
-
-                title:
-                const Text('العربية'),
-
-                onTap:() async{
-
-                  await LanguageManager
-                      .setLanguage(
-                    AppLanguage.arabic,
-                  );
-
-                  setState((){});
-
-                  Navigator.pop(context);
-
-                },
-
-              ),
-
-            ],
-
-          ),
-
-        );
-
-      },
-
-    );
-
-  }
-
-
-
-
-
-  void serviceTap(int number){
-
-    if(number == 1){
-
-      Navigator.push(
-
-        context,
-
-        MaterialPageRoute(
-
-          builder:(_)=>
-          const SmartMapPage(),
-
-        ),
-
-      );
-
-    }
-
-    else {
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-
-        SnackBar(
-
-          content:
-
-          Text(
-            'بخش $number در مرحله بعد فعال می‌شود',
-          ),
-
-        ),
-
-      );
-
-    }
-
-  }
-
-
-
-
-
-  Widget touchBox(
-      int number,
-      double left,
-      double top,
-      double width,
-      double height,
-      ){
-
-    return Align(
-
-      alignment: Alignment(
-        -1 + (left + width / 2) * 2,
-        -1 + (top + height / 2) * 2,
-      ),
-
-      child: FractionallySizedBox(
-
-        widthFactor: width,
-        heightFactor: height,
-
-        child: GestureDetector(
-
-          behavior: HitTestBehavior.translucent,
-
-          onTap:(){
-
-            serviceTap(number);
-
-          },
-
+              AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
           child: Container(
-            color: Colors.transparent,
-            alignment: Alignment.center,
-            child: Text(
-              AppText.button(number),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 10,
+            decoration: const BoxDecoration(
+              color: Color(0xff071722),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(28),
               ),
             ),
+            padding: const EdgeInsets.fromLTRB(15, 15, 15, 25),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 45,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.white30,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _languageItem(
+                  'پارسی',
+                  AppLanguage.persian,
+                  '🇮🇷',
+                ),
+                _languageItem(
+                  'English',
+                  AppLanguage.english,
+                  '🇬🇧',
+                ),
+                _languageItem(
+                  'العربية',
+                  AppLanguage.arabic,
+                  '🇸🇦',
+                ),
+              ],
+            ),
           ),
-
-        ),
-
-      ),
-
+        );
+      },
     );
 
+    if (mounted) {
+      setState(() {});
+    }
   }
 
+  Widget _languageItem(
+    String title,
+    AppLanguage language,
+    String flag,
+  ) {
+    return ListTile(
+      leading: Text(
+        flag,
+        style: const TextStyle(fontSize: 25),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      trailing: LanguageManager.current == language
+          ? const Icon(
+              Icons.check_circle,
+              color: Color(0xffffd36a),
+            )
+          : null,
+      onTap: () async {
+        await LanguageManager.setLanguage(language);
 
+        if (!mounted) return;
 
+        Navigator.pop(context);
+        setState(() {});
+      },
+    );
+  }
 
+  Future<void> serviceTap(int number) async {
+    setState(() {
+      _selectedButton = number;
+    });
 
+    await Future.delayed(const Duration(milliseconds: 180));
+
+    if (!mounted) return;
+
+    setState(() {
+      _selectedButton = 0;
+    });
+
+    switch (number) {
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const SmartMapPage(),
+          ),
+        );
+        break;
+
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 9:
+      case 10:
+        _showComingSoon(number);
+        break;
+    }
+  }
+
+  void _showComingSoon(int number) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xff0b506b),
+        content: Text(
+          AppText.button(number),
+          textAlign: AppText.rtl ? TextAlign.right : TextAlign.left,
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Widget serviceButton(
+    int number, {
+    required double width,
+    required double height,
+  }) {
+    final selected = _selectedButton == number;
+
+    return GestureDetector(
+      onTap: () => serviceTap(number),
+      child: AnimatedScale(
+        scale: selected ? 0.92 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: width,
+          height: height,
+          margin: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xffffd36a).withValues(
+                alpha: selected ? 0.95 : 0.55,
+              ),
+              width: 1.2,
+            ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(
+                  alpha: selected ? 0.28 : 0.18,
+                ),
+                const Color(0xff0b506b).withValues(
+                  alpha: selected ? 0.78 : 0.62,
+                ),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: selected ? 0.75 : 0.45,
+                ),
+                blurRadius: selected ? 5 : 10,
+                offset: Offset(
+                  0,
+                  selected ? 2 : 5,
+                ),
+              ),
+              BoxShadow(
+                color: const Color(0xffffd36a).withValues(
+                  alpha: selected ? 0.35 : 0.10,
+                ),
+                blurRadius: selected ? 12 : 4,
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: 2,
+                left: 8,
+                right: 8,
+                child: Container(
+                  height: 1.5,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.white.withValues(alpha: 0.75),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 3,
+                    vertical: 5,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        AppIcons.get(number),
+                        color: const Color(0xffffd36a),
+                        size: height * 0.28,
+                        shadows: const [
+                          Shadow(
+                            color: Colors.black87,
+                            blurRadius: 4,
+                            offset: Offset(1, 2),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        AppText.button(number),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: height < 70 ? 8.5 : 10,
+                          height: 1.05,
+                          fontWeight: FontWeight.w800,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 3,
+                              offset: Offset(1, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$number',
+                        style: TextStyle(
+                          color: const Color(0xffffd36a),
+                          fontSize: height < 70 ? 8 : 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildButtons(double width, double height) {
+    final buttonWidth = width / 5;
+
+    final buttonHeight = height * 0.105;
+
+    return Positioned(
+      left: 3,
+      right: 3,
+      bottom: height * 0.075,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              for (int i = 1; i <= 5; i++)
+                serviceButton(
+                  i,
+                  width: buttonWidth,
+                  height: buttonHeight,
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              for (int i = 6; i <= 10; i++)
+                serviceButton(
+                  i,
+                  width: buttonWidth,
+                  height: buttonHeight,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
-  Widget build(BuildContext context){
-
-
+  Widget build(BuildContext context) {
     return Directionality(
-
       textDirection:
-      AppText.rtl
-          ? TextDirection.rtl
-          : TextDirection.ltr,
+          AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final screenWidth = constraints.maxWidth;
+              final screenHeight = constraints.maxHeight;
 
+              double imageWidth = screenWidth;
+              double imageHeight = imageWidth * 16 / 9;
 
-      child:Scaffold(
+              if (imageHeight > screenHeight) {
+                imageHeight = screenHeight;
+                imageWidth = imageHeight * 9 / 16;
+              }
 
+              return Center(
+                child: SizedBox(
+                  width: imageWidth,
+                  height: imageHeight,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // ==================================================
+                      // LANGUAGE-SPECIFIC BACKGROUND
+                      // ==================================================
 
-        backgroundColor:
-        Colors.black,
-
-
-        body:SafeArea(
-
-
-          child:Center(
-
-
-            child:AspectRatio(
-
-
-              // نسبت عکس 9:16
-
-              aspectRatio:
-              9/16,
-
-
-              child:Stack(
-
-
-                fit:
-                StackFit.expand,
-
-
-                children:[
-
-
-
-                  Image.asset(
-
-                    'assets/images/home.jpg',
-
-                    fit:
-                    BoxFit.cover,
-
-                  ),
-
-
-
-
-
-                  // ------------------------------
-                  // LANGUAGE BUTTON
-                  // ------------------------------
-
-                  Positioned(
-
-                    left:18,
-
-                    top:18,
-
-
-                    child:
-                    GestureDetector(
-
-                      onTap:
-                      openLanguage,
-
-
-                      child:Container(
-
-                        padding:
-                        const EdgeInsets.symmetric(
-                          horizontal:12,
-                          vertical:8,
-                        ),
-
-
-                        decoration:
-                        BoxDecoration(
-
-                          color:
-                          const Color(0xff0b506b),
-
-
-                          borderRadius:
-                          BorderRadius.circular(18),
-
-
-                          boxShadow:[
-
-                            BoxShadow(
-
-                              color:
-                              Colors.black
-                                  .withValues(
-                                alpha:0.5,
-                              ),
-
-                              blurRadius:8,
-
-                              offset:
-                              const Offset(0,4),
-
-                            ),
-
-                          ],
-
-                        ),
-
-
-                        child:Text(
-
-                          AppText.languageName(),
-
-
-                          style:
-                          const TextStyle(
-
-                            color:
-                            Colors.white,
-
-                            fontWeight:
-                            FontWeight.bold,
-
-                          ),
-
-                        ),
-
+                      Image.asset(
+                        _homeImage,
+                        fit: BoxFit.cover,
                       ),
 
-                    ),
+                      // ==================================================
+                      // DARK VIGNETTE
+                      // ==================================================
 
+                      IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.08),
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.20),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // ==================================================
+                      // LANGUAGE BUTTON
+                      // ==================================================
+
+                      Positioned(
+                        top: 15,
+                        left: AppText.rtl ? null : 15,
+                        right: AppText.rtl ? 15 : null,
+                        child: GestureDetector(
+                          onTap: openLanguage,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff0b506b)
+                                  .withValues(alpha: 0.88),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: const Color(0xffffd36a)
+                                    .withValues(alpha: 0.75),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.55),
+                                  blurRadius: 9,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.language,
+                                  color: Color(0xffffd36a),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  AppText.languageName(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // ==================================================
+                      // TITLE
+                      // ==================================================
+
+                      Positioned(
+                        top: imageHeight * 0.12,
+                        left: 15,
+                        right: 15,
+                        child: IgnorePointer(
+                          child: Column(
+                            children: [
+                              Text(
+                                AppText.title(),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: imageWidth * 0.075,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing:
+                                      LanguageManager.current ==
+                                              AppLanguage.english
+                                          ? 1.5
+                                          : 0,
+                                  shadows: const [
+                                    Shadow(
+                                      color: Colors.black,
+                                      blurRadius: 8,
+                                      offset: Offset(2, 3),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // ==================================================
+                      // 10 REAL BUTTONS
+                      // ==================================================
+
+                      buildButtons(
+                        imageWidth,
+                        imageHeight,
+                      ),
+
+                      // ==================================================
+                      // FOOTER
+                      // ==================================================
+
+                      Positioned(
+                        left: 10,
+                        right: 10,
+                        bottom: 8,
+                        child: IgnorePointer(
+                          child: Text(
+                            LanguageManager.current ==
+                                    AppLanguage.persian
+                                ? 'همراه هوشمند سفر شما'
+                                : LanguageManager.current ==
+                                        AppLanguage.arabic
+                                    ? 'رفيقك الذكي في السفر'
+                                    : 'Your Smart Travel Companion',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: const Color(0xffffd36a),
+                              fontSize: imageWidth * 0.027,
+                              fontWeight: FontWeight.bold,
+                              shadows: const [
+                                Shadow(
+                                  color: Colors.black,
+                                  blurRadius: 5,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-
-
-
-
-
-                  // ==================================================
-                  // TOUCH AREAS
-                  // پایین عکس - ۱۰ کلید
-                  // ==================================================
-
-
-                  // ردیف اول
-
-                  touchBox(
-                    1,
-                    0,
-                    0.695,
-                    0.20,
-                    0.10,
-                  ),
-
-                  touchBox(
-                    2,
-                    0.20,
-                    0.695,
-                    0.20,
-                    0.10,
-                  ),
-
-                  touchBox(
-                    3,
-                    0.40,
-                    0.695,
-                    0.20,
-                    0.10,
-                  ),
-
-                  touchBox(
-                    4,
-                    0.60,
-                    0.695,
-                    0.20,
-                    0.10,
-                  ),
-
-                  touchBox(
-                    5,
-                    0.80,
-                    0.695,
-                    0.20,
-                    0.10,
-                  ),
-
-
-
-                  // ردیف دوم
-
-
-                  touchBox(
-                    6,
-                    0,
-                    0.805,
-                    0.20,
-                    0.10,
-                  ),
-
-                  touchBox(
-                    7,
-                    0.20,
-                    0.805,
-                    0.20,
-                    0.10,
-                  ),
-
-                  touchBox(
-                    8,
-                    0.40,
-                    0.805,
-                    0.20,
-                    0.10,
-                  ),
-
-                  touchBox(
-                    9,
-                    0.60,
-                    0.805,
-                    0.20,
-                    0.10,
-                  ),
-
-                  touchBox(
-                    10,
-                    0.80,
-                    0.805,
-                    0.20,
-                    0.10,
-                  ),
-
-
-                ],
-
-
-              ),
-
-
-            ),
-
-
+                ),
+              );
+            },
           ),
-
-
         ),
-
-
       ),
-
-
     );
-
   }
-
 }
+
 // ============================================================
 // SMART MAP PAGE
 // ============================================================
 
 class SmartMapPage extends StatefulWidget {
-
   const SmartMapPage({super.key});
 
-
   @override
-  State<SmartMapPage> createState() =>
-      _SmartMapPageState();
-
+  State<SmartMapPage> createState() => _SmartMapPageState();
 }
 
+class _SmartMapPageState extends State<SmartMapPage> {
+  final MapController mapController = MapController();
 
-
-
-class _SmartMapPageState
-    extends State<SmartMapPage>{
-
-
-  final MapController mapController =
-      MapController();
-
-
-
-  static const LatLng iranCenter =
-      LatLng(32.4279,53.6880);
-
-
+  static const LatLng iranCenter = LatLng(
+    32.4279,
+    53.6880,
+  );
 
   LatLng? userLocation;
 
-
-  bool loading=false;
-
-
+  bool loading = false;
 
   @override
-  void initState(){
-
+  void initState() {
     super.initState();
 
-
-    WidgetsBinding.instance
-        .addPostFrameCallback(
-            (_){
-
-          getLocation();
-
-        });
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      getLocation();
+    });
   }
 
+  Future<void> getLocation() async {
+    if (mounted) {
+      setState(() {
+        loading = true;
+      });
+    }
 
+    try {
+      final enabled =
+          await Geolocator.isLocationServiceEnabled();
 
-
-  Future<void> getLocation() async{
-
-
-    setState((){
-
-      loading=true;
-
-    });
-
-
-
-    try{
-
-
-      bool enabled =
-      await Geolocator
-          .isLocationServiceEnabled();
-
-
-
-      if(!enabled){
-
-        setState((){
-
-          loading=false;
-
-        });
-
+      if (!enabled) {
+        if (mounted) {
+          setState(() {
+            loading = false;
+          });
+        }
         return;
-
       }
-
-
-
 
       LocationPermission permission =
-      await Geolocator.checkPermission();
+          await Geolocator.checkPermission();
 
-
-
-      if(permission ==
-          LocationPermission.denied){
-
+      if (permission == LocationPermission.denied) {
         permission =
-        await Geolocator.requestPermission();
-
+            await Geolocator.requestPermission();
       }
 
-
-
-      if(permission ==
-          LocationPermission.deniedForever){
-
-        setState((){
-
-          loading=false;
-
-        });
-
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            loading = false;
+          });
+        }
         return;
-
       }
-
-
-
 
       final position =
-      await Geolocator
-          .getCurrentPosition();
+          await Geolocator.getCurrentPosition();
 
-
-
-      final point =
-      LatLng(
+      final point = LatLng(
         position.latitude,
         position.longitude,
       );
 
+      if (!mounted) return;
 
-
-      setState((){
-
-        userLocation=point;
-
-        loading=false;
-
+      setState(() {
+        userLocation = point;
+        loading = false;
       });
-
-
 
       mapController.move(
         point,
         13,
       );
-
-
-
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
-
-    catch(e){
-
-      setState((){
-
-        loading=false;
-
-      });
-
-    }
-
   }
 
+  List<Marker> markers() {
+    final list = <Marker>[];
 
-
-
-
-
-  List<Marker> markers(){
-
-
-    final list=<Marker>[];
-
-
-
-    if(userLocation!=null){
-
-
+    if (userLocation != null) {
       list.add(
-
         Marker(
-
-          point:userLocation!,
-
-
-          width:60,
-
-          height:60,
-
-
-          child:
-
-          Container(
-
-            decoration:
-            BoxDecoration(
-
-              color:
-              Colors.blue
-                  .withValues(
-                alpha:0.25,
-              ),
-
-              shape:
-              BoxShape.circle,
-
+          point: userLocation!,
+          width: 60,
+          height: 60,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.25),
+              shape: BoxShape.circle,
             ),
-
-
-            child:
-            const Icon(
-
+            child: const Icon(
               Icons.my_location,
-
-              color:
-              Colors.blue,
-
-              size:35,
-
+              color: Colors.blue,
+              size: 35,
             ),
-
           ),
-
         ),
-
-
       );
-
-
     }
-
-
-
 
     return list;
-
   }
-
-
-
-
 
   @override
-  Widget build(BuildContext context){
-
-
+  Widget build(BuildContext context) {
     return Directionality(
-
       textDirection:
-      AppText.rtl
-          ? TextDirection.rtl
-          : TextDirection.ltr,
-
-
-      child:Scaffold(
-
-
-        backgroundColor:
-        const Color(0xff071722),
-
-
-
-        appBar:AppBar(
-
-          backgroundColor:
-          const Color(0xff071722),
-
-
-          foregroundColor:
-          Colors.white,
-
-
-          title:
-          Text(
+          AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: const Color(0xff071722),
+        appBar: AppBar(
+          backgroundColor: const Color(0xff071722),
+          foregroundColor: Colors.white,
+          title: Text(
             AppText.map(),
-          ),
-
-          centerTitle:true,
-
-        ),
-
-
-
-
-        body:Column(
-
-
-          children:[
-
-
-
-            Expanded(
-
-
-              child:Stack(
-
-
-                children:[
-
-
-
-                  FlutterMap(
-
-
-                    mapController:
-                    mapController,
-
-
-                    options:
-                    const MapOptions(
-
-                      initialCenter:
-                      iranCenter,
-
-
-                      initialZoom:
-                      5,
-
-                    ),
-
-
-
-                    children:[
-
-
-
-                      TileLayer(
-
-                        urlTemplate:
-
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-
-                        userAgentPackageName:
-                        'cyrustourist.ir.app',
-
-                      ),
-
-
-
-                      MarkerLayer(
-
-                        markers:
-                        markers(),
-
-                      ),
-
-
-                    ],
-
-
-                  ),
-
-
-
-
-                  Positioned(
-
-                    right:15,
-
-                    bottom:15,
-
-
-                    child:
-
-                    FloatingActionButton(
-
-                      backgroundColor:
-                      Colors.white,
-
-
-                      onPressed:
-                      getLocation,
-
-
-                      child:
-
-                      loading
-
-                          ?
-
-                      const CircularProgressIndicator()
-
-                          :
-
-                      const Icon(
-                        Icons.my_location,
-                      ),
-
-
-                    ),
-
-                  ),
-
-
-
-                ],
-
-
-              ),
-
-
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
             ),
-
-
-
-
-            // ------------------------------
-            // SERVICES PANEL
-            // ------------------------------
-
-
+          ),
+          centerTitle: true,
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: mapController,
+                    options: const MapOptions(
+                      initialCenter: iranCenter,
+                      initialZoom: 5,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName:
+                            'cyrustourist.ir.app',
+                      ),
+                      MarkerLayer(
+                        markers: markers(),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    right: 15,
+                    bottom: 15,
+                    child: FloatingActionButton(
+                      backgroundColor: Colors.white,
+                      onPressed: getLocation,
+                      child: loading
+                          ? const SizedBox(
+                              width: 23,
+                              height: 23,
+                              child:
+                                  CircularProgressIndicator(),
+                            )
+                          : const Icon(
+                              Icons.my_location,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Container(
-
-              padding:
-              const EdgeInsets.all(10),
-
-
-              color:
-              const Color(0xff071722),
-
-
-              child:
-
-              Column(
-
-                children:[
-
-
-
+              padding: const EdgeInsets.all(10),
+              color: const Color(0xff071722),
+              child: Column(
+                children: [
                   Row(
-
-                    children:[
-
-
+                    children: [
                       serviceButton(
                         Icons.hotel,
-                        'اقامتگاه',
+                        LanguageManager.current ==
+                                AppLanguage.persian
+                            ? 'اقامتگاه'
+                            : LanguageManager.current ==
+                                    AppLanguage.arabic
+                                ? 'الإقامة'
+                                : 'Accommodation',
                       ),
-
-
-
                       serviceButton(
                         Icons.place,
-                        'جاذبه‌ها',
+                        LanguageManager.current ==
+                                AppLanguage.persian
+                            ? 'جاذبه‌ها'
+                            : LanguageManager.current ==
+                                    AppLanguage.arabic
+                                ? 'المعالم'
+                                : 'Attractions',
                       ),
-
-
-
                       serviceButton(
-                        Icons.favorite,
-                        'سلامت',
+                        Icons.health_and_safety,
+                        LanguageManager.current ==
+                                AppLanguage.persian
+                            ? 'سلامت'
+                            : LanguageManager.current ==
+                                    AppLanguage.arabic
+                                ? 'الصحة'
+                                : 'Health',
                       ),
-
-
-
                       serviceButton(
                         Icons.miscellaneous_services,
-                        'خدمات',
+                        LanguageManager.current ==
+                                AppLanguage.persian
+                            ? 'خدمات'
+                            : LanguageManager.current ==
+                                    AppLanguage.arabic
+                                ? 'الخدمات'
+                                : 'Services',
                       ),
-
-
                     ],
-
-
                   ),
-
-
-
-                  const SizedBox(height:10),
-
-
-
+                  const SizedBox(height: 10),
                   SizedBox(
-
-                    width:
-                    double.infinity,
-
-
-                    child:
-                    ElevatedButton(
-
-                      onPressed:(){
-
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
                         Navigator.pop(context);
-
                       },
-
-
-                      child:
-                      Text(
+                      child: Text(
                         AppText.title(),
                       ),
-
                     ),
-
                   ),
-
-
-
                 ],
-
-
               ),
-
-
             ),
-
-
-
           ],
-
-
         ),
-
-
       ),
-
-
     );
-
-
   }
-
-
-
-
 
   Widget serviceButton(
-      IconData icon,
-      String text,
-      ){
-
+    IconData icon,
+    String text,
+  ) {
     return Expanded(
-
-
-      child:
-
-      Container(
-
-        margin:
-        const EdgeInsets.all(4),
-
-
-        height:70,
-
-
-        decoration:
-        BoxDecoration(
-
-          color:
-          Colors.white,
-
-
-          borderRadius:
-          BorderRadius.circular(15),
-
-
+      child: Container(
+        margin: const EdgeInsets.all(4),
+        height: 70,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
         ),
-
-
-
-        child:
-        Column(
-
-          mainAxisAlignment:
-          MainAxisAlignment.center,
-
-
-          children:[
-
-
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             Icon(
               icon,
-              color:
-              const Color(0xff0b506b),
+              color: const Color(0xff0b506b),
             ),
-
-
-
             Text(
               text,
-
-              style:
-              const TextStyle(
-                fontSize:10,
-                fontWeight:
-                FontWeight.bold,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
               ),
-
             ),
-
-
           ],
-
         ),
-
-
       ),
-
-
     );
-
-
   }
-
-
-
 }
