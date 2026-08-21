@@ -25,7 +25,6 @@ class CyrusTouristApp extends StatelessWidget {
       title: 'Cyrus Tourist',
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'sans',
       ),
       home: const SplashPage(),
     );
@@ -56,7 +55,11 @@ class LanguageManager {
     } else if (saved == 'en') {
       current = AppLanguage.english;
     } else {
-      final code = WidgetsBinding.instance.platformDispatcher.locale.languageCode
+      final code = WidgetsBinding
+          .instance
+          .platformDispatcher
+          .locale
+          .languageCode
           .toLowerCase();
 
       if (code == 'fa') {
@@ -74,12 +77,18 @@ class LanguageManager {
 
     final pref = await SharedPreferences.getInstance();
 
-    if (lang == AppLanguage.persian) {
-      await pref.setString('language', 'fa');
-    } else if (lang == AppLanguage.arabic) {
-      await pref.setString('language', 'ar');
-    } else {
-      await pref.setString('language', 'en');
+    switch (lang) {
+      case AppLanguage.persian:
+        await pref.setString('language', 'fa');
+        break;
+
+      case AppLanguage.english:
+        await pref.setString('language', 'en');
+        break;
+
+      case AppLanguage.arabic:
+        await pref.setString('language', 'ar');
+        break;
     }
   }
 }
@@ -186,39 +195,6 @@ class AppText {
 }
 
 // ============================================================
-// ICONS
-// ============================================================
-
-class AppIcons {
-  static IconData get(int number) {
-    switch (number) {
-      case 1:
-        return Icons.map_rounded;
-      case 2:
-        return Icons.health_and_safety_rounded;
-      case 3:
-        return Icons.location_on_rounded;
-      case 4:
-        return Icons.ondemand_video_rounded;
-      case 5:
-        return Icons.hotel_rounded;
-      case 6:
-        return Icons.explore_rounded;
-      case 7:
-        return Icons.language_rounded;
-      case 8:
-        return Icons.info_outline_rounded;
-      case 9:
-        return Icons.support_agent_rounded;
-      case 10:
-        return Icons.star_rounded;
-      default:
-        return Icons.apps_rounded;
-    }
-  }
-}
-
-// ============================================================
 // SPLASH
 // ============================================================
 
@@ -239,7 +215,9 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _start() async {
     await LanguageManager.load();
 
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(
+      const Duration(seconds: 2),
+    );
 
     if (!mounted) return;
 
@@ -267,6 +245,8 @@ class _SplashPageState extends State<SplashPage> {
 
 // ============================================================
 // HOME PAGE
+// IMAGE CONTAINS ALL VISUAL TEXT AND BUTTONS
+// FLUTTER ONLY PROVIDES TRANSPARENT TOUCH AREAS
 // ============================================================
 
 class HomePage extends StatefulWidget {
@@ -277,9 +257,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedButton = 0;
+  int _pressedButton = 0;
 
-  String get _homeImage {
+  String get homeImage {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'assets/images/home_fa.jpg';
@@ -292,6 +272,10 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // ----------------------------------------------------------
+  // LANGUAGE
+  // ----------------------------------------------------------
+
   Future<void> openLanguage() async {
     await showModalBottomSheet(
       context: context,
@@ -299,15 +283,22 @@ class _HomePageState extends State<HomePage> {
       builder: (_) {
         return Directionality(
           textDirection:
-              AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
+              AppText.rtl
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
           child: Container(
+            padding: const EdgeInsets.fromLTRB(
+              15,
+              15,
+              15,
+              25,
+            ),
             decoration: const BoxDecoration(
               color: Color(0xff071722),
               borderRadius: BorderRadius.vertical(
                 top: Radius.circular(28),
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(15, 15, 15, 25),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -316,24 +307,28 @@ class _HomePageState extends State<HomePage> {
                   height: 5,
                   decoration: BoxDecoration(
                     color: Colors.white30,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius:
+                        BorderRadius.circular(10),
                   ),
                 ),
                 const SizedBox(height: 18),
+
                 _languageItem(
+                  '🇮🇷',
                   'پارسی',
                   AppLanguage.persian,
-                  '🇮🇷',
                 ),
+
                 _languageItem(
+                  '🇬🇧',
                   'English',
                   AppLanguage.english,
-                  '🇬🇧',
                 ),
+
                 _languageItem(
+                  '🇸🇦',
                   'العربية',
                   AppLanguage.arabic,
-                  '🇸🇦',
                 ),
               ],
             ),
@@ -348,14 +343,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _languageItem(
+    String flag,
     String title,
     AppLanguage language,
-    String flag,
   ) {
+    final selected =
+        LanguageManager.current == language;
+
     return ListTile(
       leading: Text(
         flag,
-        style: const TextStyle(fontSize: 25),
+        style: const TextStyle(
+          fontSize: 25,
+        ),
       ),
       title: Text(
         title,
@@ -364,34 +364,43 @@ class _HomePageState extends State<HomePage> {
           fontWeight: FontWeight.bold,
         ),
       ),
-      trailing: LanguageManager.current == language
+      trailing: selected
           ? const Icon(
               Icons.check_circle,
               color: Color(0xffffd36a),
             )
           : null,
       onTap: () async {
-        await LanguageManager.setLanguage(language);
+        await LanguageManager.setLanguage(
+          language,
+        );
 
         if (!mounted) return;
 
         Navigator.pop(context);
+
         setState(() {});
       },
     );
   }
 
+  // ----------------------------------------------------------
+  // BUTTON ACTION
+  // ----------------------------------------------------------
+
   Future<void> serviceTap(int number) async {
     setState(() {
-      _selectedButton = number;
+      _pressedButton = number;
     });
 
-    await Future.delayed(const Duration(milliseconds: 180));
+    await Future.delayed(
+      const Duration(milliseconds: 180),
+    );
 
     if (!mounted) return;
 
     setState(() {
-      _selectedButton = 0;
+      _pressedButton = 0;
     });
 
     switch (number) {
@@ -405,13 +414,37 @@ class _HomePageState extends State<HomePage> {
         break;
 
       case 2:
+        _showComingSoon(number);
+        break;
+
       case 3:
+        _showComingSoon(number);
+        break;
+
       case 4:
+        _showComingSoon(number);
+        break;
+
       case 5:
+        _showComingSoon(number);
+        break;
+
       case 6:
+        _showComingSoon(number);
+        break;
+
       case 7:
+        _showComingSoon(number);
+        break;
+
       case 8:
+        _showComingSoon(number);
+        break;
+
       case 9:
+        _showComingSoon(number);
+        break;
+
       case 10:
         _showComingSoon(number);
         break;
@@ -422,244 +455,132 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xff0b506b),
+        backgroundColor:
+            const Color(0xff0b506b),
         content: Text(
           AppText.button(number),
-          textAlign: AppText.rtl ? TextAlign.right : TextAlign.left,
+          textAlign:
+              AppText.rtl
+                  ? TextAlign.right
+                  : TextAlign.left,
         ),
-        duration: const Duration(seconds: 2),
+        duration:
+            const Duration(seconds: 2),
       ),
     );
   }
 
-  Widget serviceButton(
-    int number, {
+  // ----------------------------------------------------------
+  // TRANSPARENT TOUCH BUTTON
+  // ----------------------------------------------------------
+
+  Widget touchButton({
+    required int number,
+    required double left,
+    required double top,
     required double width,
     required double height,
   }) {
-    final selected = _selectedButton == number;
+    final selected =
+        _pressedButton == number;
 
-    return GestureDetector(
-      onTap: () => serviceTap(number),
-      child: AnimatedScale(
-        scale: selected ? 0.92 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          width: width,
-          height: height,
-          margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: const Color(0xffffd36a).withValues(
-                alpha: selected ? 0.95 : 0.55,
-              ),
-              width: 1.2,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(
-                  alpha: selected ? 0.28 : 0.18,
-                ),
-                const Color(0xff0b506b).withValues(
-                  alpha: selected ? 0.78 : 0.62,
-                ),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: selected ? 0.75 : 0.45,
-                ),
-                blurRadius: selected ? 5 : 10,
-                offset: Offset(
-                  0,
-                  selected ? 2 : 5,
-                ),
-              ),
-              BoxShadow(
-                color: const Color(0xffffd36a).withValues(
-                  alpha: selected ? 0.35 : 0.10,
-                ),
-                blurRadius: selected ? 12 : 4,
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: 2,
-                left: 8,
-                right: 8,
-                child: Container(
-                  height: 1.5,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        Colors.white.withValues(alpha: 0.75),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 3,
-                    vertical: 5,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        AppIcons.get(number),
-                        color: const Color(0xffffd36a),
-                        size: height * 0.28,
-                        shadows: const [
-                          Shadow(
-                            color: Colors.black87,
-                            blurRadius: 4,
-                            offset: Offset(1, 2),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        AppText.button(number),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: height < 70 ? 8.5 : 10,
-                          height: 1.05,
-                          fontWeight: FontWeight.w800,
-                          shadows: const [
-                            Shadow(
-                              color: Colors.black,
-                              blurRadius: 3,
-                              offset: Offset(1, 1),
-                            ),
-                          ],
+    return Positioned(
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      child: GestureDetector(
+        behavior:
+            HitTestBehavior.translucent,
+        onTap: () => serviceTap(number),
+        child: AnimatedScale(
+          scale: selected ? 0.94 : 1.0,
+          duration:
+              const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration:
+                const Duration(milliseconds: 100),
+            decoration: BoxDecoration(
+              color: selected
+                  ? Colors.white.withValues(
+                      alpha: 0.08,
+                    )
+                  : Colors.transparent,
+              borderRadius:
+                  BorderRadius.circular(18),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: const Color(
+                          0xffffd36a,
+                        ).withValues(
+                          alpha: 0.35,
                         ),
+                        blurRadius: 14,
+                        spreadRadius: 2,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$number',
-                        style: TextStyle(
-                          color: const Color(0xffffd36a),
-                          fontSize: height < 70 ? 8 : 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+                    ]
+                  : [],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget buildButtons(double width, double height) {
-    final buttonWidth = width / 5;
-
-    final buttonHeight = height * 0.105;
-
-    return Positioned(
-      left: 3,
-      right: 3,
-      bottom: height * 0.075,
-      child: Column(
-        children: [
-          Row(
-            children: [
-              for (int i = 1; i <= 5; i++)
-                serviceButton(
-                  i,
-                  width: buttonWidth,
-                  height: buttonHeight,
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              for (int i = 6; i <= 10; i++)
-                serviceButton(
-                  i,
-                  width: buttonWidth,
-                  height: buttonHeight,
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // ----------------------------------------------------------
+  // BUILD HOME
+  // ----------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection:
-          AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
+          AppText.rtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: SafeArea(
           child: LayoutBuilder(
-            builder: (context, constraints) {
-              final screenWidth = constraints.maxWidth;
-              final screenHeight = constraints.maxHeight;
+            builder:
+                (context, constraints) {
+              final screenWidth =
+                  constraints.maxWidth;
 
-              double imageWidth = screenWidth;
-              double imageHeight = imageWidth * 16 / 9;
+              final screenHeight =
+                  constraints.maxHeight;
 
-              if (imageHeight > screenHeight) {
-                imageHeight = screenHeight;
-                imageWidth = imageHeight * 9 / 16;
+              double width =
+                  screenWidth;
+
+              double height =
+                  width * 16 / 9;
+
+              if (height >
+                  screenHeight) {
+                height =
+                    screenHeight;
+
+                width =
+                    height * 9 / 16;
               }
 
               return Center(
                 child: SizedBox(
-                  width: imageWidth,
-                  height: imageHeight,
+                  width: width,
+                  height: height,
                   child: Stack(
-                    fit: StackFit.expand,
                     children: [
                       // ==================================================
-                      // LANGUAGE-SPECIFIC BACKGROUND
+                      // LANGUAGE-SPECIFIC IMAGE
                       // ==================================================
 
-                      Image.asset(
-                        _homeImage,
-                        fit: BoxFit.cover,
-                      ),
-
-                      // ==================================================
-                      // DARK VIGNETTE
-                      // ==================================================
-
-                      IgnorePointer(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.black.withValues(alpha: 0.08),
-                                Colors.transparent,
-                                Colors.black.withValues(alpha: 0.20),
-                              ],
-                            ),
-                          ),
+                      Positioned.fill(
+                        child: Image.asset(
+                          homeImage,
+                          fit: BoxFit.cover,
                         ),
                       ),
 
@@ -668,46 +589,91 @@ class _HomePageState extends State<HomePage> {
                       // ==================================================
 
                       Positioned(
-                        top: 15,
-                        left: AppText.rtl ? null : 15,
-                        right: AppText.rtl ? 15 : null,
-                        child: GestureDetector(
-                          onTap: openLanguage,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
+                        top: height * 0.025,
+                        left:
+                            AppText.rtl
+                                ? null
+                                : width * 0.035,
+                        right:
+                            AppText.rtl
+                                ? width * 0.035
+                                : null,
+                        child:
+                            GestureDetector(
+                          onTap:
+                              openLanguage,
+                          child:
+                              Container(
+                            padding:
+                                const EdgeInsets
+                                    .symmetric(
+                              horizontal: 11,
+                              vertical: 7,
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xff0b506b)
-                                  .withValues(alpha: 0.88),
-                              borderRadius: BorderRadius.circular(22),
-                              border: Border.all(
-                                color: const Color(0xffffd36a)
-                                    .withValues(alpha: 0.75),
+                            decoration:
+                                BoxDecoration(
+                              color:
+                                  const Color(
+                                0xff0b506b,
+                              ).withValues(
+                                alpha: 0.90,
+                              ),
+                              borderRadius:
+                                  BorderRadius
+                                      .circular(
+                                22,
+                              ),
+                              border:
+                                  Border.all(
+                                color:
+                                    const Color(
+                                  0xffffd36a,
+                                ).withValues(
+                                  alpha: 0.85,
+                                ),
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.55),
+                                  color: Colors
+                                      .black
+                                      .withValues(
+                                    alpha: 0.55,
+                                  ),
                                   blurRadius: 9,
-                                  offset: const Offset(0, 4),
+                                  offset:
+                                      const Offset(
+                                    0,
+                                    4,
+                                  ),
                                 ),
                               ],
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            child:
+                                Row(
+                              mainAxisSize:
+                                  MainAxisSize
+                                      .min,
                               children: [
                                 const Icon(
                                   Icons.language,
-                                  color: Color(0xffffd36a),
+                                  color:
+                                      Color(
+                                    0xffffd36a,
+                                  ),
                                   size: 18,
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(
+                                  width: 5,
+                                ),
                                 Text(
-                                  AppText.languageName(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                  AppText
+                                      .languageName(),
+                                  style:
+                                      const TextStyle(
+                                    color:
+                                        Colors.white,
+                                    fontWeight:
+                                        FontWeight.bold,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -718,81 +684,107 @@ class _HomePageState extends State<HomePage> {
                       ),
 
                       // ==================================================
-                      // TITLE
+                      // TOUCH AREAS
+                      //
+                      // 5 BUTTONS TOP ROW
+                      // 5 BUTTONS BOTTOM ROW
+                      //
+                      // Coordinates are relative to the 9:16 image.
                       // ==================================================
 
-                      Positioned(
-                        top: imageHeight * 0.12,
-                        left: 15,
-                        right: 15,
-                        child: IgnorePointer(
-                          child: Column(
-                            children: [
-                              Text(
-                                AppText.title(),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: imageWidth * 0.075,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing:
-                                      LanguageManager.current ==
-                                              AppLanguage.english
-                                          ? 1.5
-                                          : 0,
-                                  shadows: const [
-                                    Shadow(
-                                      color: Colors.black,
-                                      blurRadius: 8,
-                                      offset: Offset(2, 3),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      touchButton(
+                        number: 1,
+                        left: width * 0.00,
+                        top: height * 0.695,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 2,
+                        left: width * 0.20,
+                        top: height * 0.695,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 3,
+                        left: width * 0.40,
+                        top: height * 0.695,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 4,
+                        left: width * 0.60,
+                        top: height * 0.695,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 5,
+                        left: width * 0.80,
+                        top: height * 0.695,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 6,
+                        left: width * 0.00,
+                        top: height * 0.805,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 7,
+                        left: width * 0.20,
+                        top: height * 0.805,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 8,
+                        left: width * 0.40,
+                        top: height * 0.805,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 9,
+                        left: width * 0.60,
+                        top: height * 0.805,
+                        width: width * 0.20,
+                        height: height * 0.10,
+                      ),
+
+                      touchButton(
+                        number: 10,
+                        left: width * 0.80,
+                        top: height * 0.805,
+                        width: width * 0.20,
+                        height: height * 0.10,
                       ),
 
                       // ==================================================
-                      // 10 REAL BUTTONS
-                      // ==================================================
-
-                      buildButtons(
-                        imageWidth,
-                        imageHeight,
-                      ),
-
-                      // ==================================================
-                      // FOOTER
+                      // MAP SPECIAL LIGHT EFFECT
                       // ==================================================
 
                       Positioned(
-                        left: 10,
-                        right: 10,
-                        bottom: 8,
-                        child: IgnorePointer(
-                          child: Text(
-                            LanguageManager.current ==
-                                    AppLanguage.persian
-                                ? 'همراه هوشمند سفر شما'
-                                : LanguageManager.current ==
-                                        AppLanguage.arabic
-                                    ? 'رفيقك الذكي في السفر'
-                                    : 'Your Smart Travel Companion',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: const Color(0xffffd36a),
-                              fontSize: imageWidth * 0.027,
-                              fontWeight: FontWeight.bold,
-                              shadows: const [
-                                Shadow(
-                                  color: Colors.black,
-                                  blurRadius: 5,
-                                ),
-                              ],
-                            ),
-                          ),
+                        left: width * 0.01,
+                        top: height * 0.695,
+                        width: width * 0.18,
+                        height: height * 0.10,
+                        child:
+                            IgnorePointer(
+                          child:
+                              const _MapPulseEffect(),
                         ),
                       ),
                     ],
@@ -808,20 +800,91 @@ class _HomePageState extends State<HomePage> {
 }
 
 // ============================================================
+// MAP PULSE EFFECT
+// ============================================================
+
+class _MapPulseEffect extends StatefulWidget {
+  const _MapPulseEffect();
+
+  @override
+  State<_MapPulseEffect> createState() =>
+      _MapPulseEffectState();
+}
+
+class _MapPulseEffectState
+    extends State<_MapPulseEffect>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController
+      _controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller =
+        AnimationController(
+      vsync: this,
+      duration:
+          const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (_, child) {
+        final value =
+            _controller.value;
+
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(
+                0xffffd36a,
+              ).withValues(
+                alpha:
+                    0.08 +
+                    (value * 0.18),
+              ),
+              width: 1,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ============================================================
 // SMART MAP PAGE
 // ============================================================
 
-class SmartMapPage extends StatefulWidget {
+class SmartMapPage
+    extends StatefulWidget {
   const SmartMapPage({super.key});
 
   @override
-  State<SmartMapPage> createState() => _SmartMapPageState();
+  State<SmartMapPage> createState() =>
+      _SmartMapPageState();
 }
 
-class _SmartMapPageState extends State<SmartMapPage> {
-  final MapController mapController = MapController();
+class _SmartMapPageState
+    extends State<SmartMapPage> {
+  final MapController
+      mapController =
+      MapController();
 
-  static const LatLng iranCenter = LatLng(
+  static const LatLng iranCenter =
+      LatLng(
     32.4279,
     53.6880,
   );
@@ -834,9 +897,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      getLocation();
-    });
+    WidgetsBinding.instance
+        .addPostFrameCallback(
+      (_) {
+        getLocation();
+      },
+    );
   }
 
   Future<void> getLocation() async {
@@ -848,7 +914,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
     try {
       final enabled =
-          await Geolocator.isLocationServiceEnabled();
+          await Geolocator
+              .isLocationServiceEnabled();
 
       if (!enabled) {
         if (mounted) {
@@ -859,16 +926,25 @@ class _SmartMapPageState extends State<SmartMapPage> {
         return;
       }
 
-      LocationPermission permission =
-          await Geolocator.checkPermission();
+      LocationPermission
+          permission =
+          await Geolocator
+              .checkPermission();
 
-      if (permission == LocationPermission.denied) {
+      if (permission ==
+          LocationPermission
+              .denied) {
         permission =
-            await Geolocator.requestPermission();
+            await Geolocator
+                .requestPermission();
       }
 
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
+      if (permission ==
+              LocationPermission
+                  .denied ||
+          permission ==
+              LocationPermission
+                  .deniedForever) {
         if (mounted) {
           setState(() {
             loading = false;
@@ -878,7 +954,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
       }
 
       final position =
-          await Geolocator.getCurrentPosition();
+          await Geolocator
+              .getCurrentPosition();
 
       final point = LatLng(
         position.latitude,
@@ -906,22 +983,33 @@ class _SmartMapPageState extends State<SmartMapPage> {
   }
 
   List<Marker> markers() {
-    final list = <Marker>[];
+    final list =
+        <Marker>[];
 
-    if (userLocation != null) {
+    if (userLocation !=
+        null) {
       list.add(
         Marker(
-          point: userLocation!,
+          point:
+              userLocation!,
           width: 60,
           height: 60,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.25),
-              shape: BoxShape.circle,
+          child:
+              Container(
+            decoration:
+                BoxDecoration(
+              color: Colors.blue
+                  .withValues(
+                alpha: 0.25,
+              ),
+              shape:
+                  BoxShape.circle,
             ),
-            child: const Icon(
+            child:
+                const Icon(
               Icons.my_location,
-              color: Colors.blue,
+              color:
+                  Colors.blue,
               size: 35,
             ),
           ),
@@ -932,20 +1020,51 @@ class _SmartMapPageState extends State<SmartMapPage> {
     return list;
   }
 
+  String mapServiceText(
+    String fa,
+    String en,
+    String ar,
+  ) {
+    switch (
+        LanguageManager
+            .current) {
+      case AppLanguage.persian:
+        return fa;
+
+      case AppLanguage.english:
+        return en;
+
+      case AppLanguage.arabic:
+        return ar;
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context) {
     return Directionality(
       textDirection:
-          AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
+          AppText.rtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xff071722),
+        backgroundColor:
+            const Color(
+          0xff071722,
+        ),
         appBar: AppBar(
-          backgroundColor: const Color(0xff071722),
-          foregroundColor: Colors.white,
+          backgroundColor:
+              const Color(
+            0xff071722,
+          ),
+          foregroundColor:
+              Colors.white,
           title: Text(
             AppText.map(),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
+            style:
+                const TextStyle(
+              fontWeight:
+                  FontWeight.bold,
             ),
           ),
           centerTitle: true,
@@ -956,9 +1075,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
               child: Stack(
                 children: [
                   FlutterMap(
-                    mapController: mapController,
-                    options: const MapOptions(
-                      initialCenter: iranCenter,
+                    mapController:
+                        mapController,
+                    options:
+                        const MapOptions(
+                      initialCenter:
+                          iranCenter,
                       initialZoom: 5,
                     ),
                     children: [
@@ -969,16 +1091,21 @@ class _SmartMapPageState extends State<SmartMapPage> {
                             'cyrustourist.ir.app',
                       ),
                       MarkerLayer(
-                        markers: markers(),
+                        markers:
+                            markers(),
                       ),
                     ],
                   ),
+
                   Positioned(
                     right: 15,
                     bottom: 15,
-                    child: FloatingActionButton(
-                      backgroundColor: Colors.white,
-                      onPressed: getLocation,
+                    child:
+                        FloatingActionButton(
+                      backgroundColor:
+                          Colors.white,
+                      onPressed:
+                          getLocation,
                       child: loading
                           ? const SizedBox(
                               width: 23,
@@ -987,68 +1114,82 @@ class _SmartMapPageState extends State<SmartMapPage> {
                                   CircularProgressIndicator(),
                             )
                           : const Icon(
-                              Icons.my_location,
+                              Icons
+                                  .my_location,
                             ),
                     ),
                   ),
                 ],
               ),
             ),
+
+            // ==================================================
+            // MAP SERVICES
+            // ==================================================
+
             Container(
-              padding: const EdgeInsets.all(10),
-              color: const Color(0xff071722),
-              child: Column(
+              padding:
+                  const EdgeInsets.all(
+                10,
+              ),
+              color:
+                  const Color(
+                0xff071722,
+              ),
+              child:
+                  Column(
                 children: [
                   Row(
                     children: [
-                      serviceButton(
+                      mapServiceButton(
                         Icons.hotel,
-                        LanguageManager.current ==
-                                AppLanguage.persian
-                            ? 'اقامتگاه'
-                            : LanguageManager.current ==
-                                    AppLanguage.arabic
-                                ? 'الإقامة'
-                                : 'Accommodation',
+                        mapServiceText(
+                          'اقامتگاه',
+                          'Accommodation',
+                          'الإقامة',
+                        ),
                       ),
-                      serviceButton(
+                      mapServiceButton(
                         Icons.place,
-                        LanguageManager.current ==
-                                AppLanguage.persian
-                            ? 'جاذبه‌ها'
-                            : LanguageManager.current ==
-                                    AppLanguage.arabic
-                                ? 'المعالم'
-                                : 'Attractions',
+                        mapServiceText(
+                          'جاذبه‌ها',
+                          'Attractions',
+                          'المعالم',
+                        ),
                       ),
-                      serviceButton(
+                      mapServiceButton(
                         Icons.health_and_safety,
-                        LanguageManager.current ==
-                                AppLanguage.persian
-                            ? 'سلامت'
-                            : LanguageManager.current ==
-                                    AppLanguage.arabic
-                                ? 'الصحة'
-                                : 'Health',
+                        mapServiceText(
+                          'سلامت',
+                          'Health',
+                          'الصحة',
+                        ),
                       ),
-                      serviceButton(
-                        Icons.miscellaneous_services,
-                        LanguageManager.current ==
-                                AppLanguage.persian
-                            ? 'خدمات'
-                            : LanguageManager.current ==
-                                    AppLanguage.arabic
-                                ? 'الخدمات'
-                                : 'Services',
+                      mapServiceButton(
+                        Icons
+                            .miscellaneous_services,
+                        mapServiceText(
+                          'خدمات',
+                          'Services',
+                          'الخدمات',
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+
+                  const SizedBox(
+                    height: 10,
+                  ),
+
                   SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
+                    width:
+                        double.infinity,
+                    child:
+                        ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.pop(
+                          context,
+                        );
                       },
                       child: Text(
                         AppText.title(),
@@ -1064,32 +1205,48 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  Widget serviceButton(
+  Widget mapServiceButton(
     IconData icon,
     String text,
   ) {
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.all(4),
+        margin:
+            const EdgeInsets.all(
+          4,
+        ),
         height: 70,
-        decoration: BoxDecoration(
+        decoration:
+            BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius:
+              BorderRadius.circular(
+            15,
+          ),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+              MainAxisAlignment
+                  .center,
           children: [
             Icon(
               icon,
-              color: const Color(0xff0b506b),
+              color:
+                  const Color(
+                0xff0b506b,
+              ),
             ),
             Text(
               text,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              overflow:
+                  TextOverflow
+                      .ellipsis,
+              style:
+                  const TextStyle(
                 fontSize: 10,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
           ],
