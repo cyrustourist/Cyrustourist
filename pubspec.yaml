@@ -28,5 +28,7 @@ flutter:
 
   assets:
     - assets/images/splash.jpg
-    - assets/images/home.jpg
+    - assets/images/home_fa.jpg
+    - assets/images/home_en.jpg
+    - assets/images/home_ar.jpg
     - assets/images/logo-new.jpg
