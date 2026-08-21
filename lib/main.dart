@@ -408,8 +408,7 @@ class _HomePageState extends State<HomePage> {
 
                     Positioned(
                       top: 15,
-                      right: AppText.rtl ? 15 : null,
-                      left: AppText.rtl ? null : 15,
+                      left: 15,
                       child: GestureDetector(
                         onTap: openLanguage,
                         child: Container(
@@ -1427,7 +1426,7 @@ class _SmartMapPageState
 
                           child:
                               Text(
-                            AppText.title(),
+                            '↪️ ${AppText.title()}',
                           ),
                         ),
                       ),
