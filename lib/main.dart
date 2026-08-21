@@ -448,32 +448,32 @@ class _HomePageState extends State<HomePage> {
       double height,
       ){
 
-    return Positioned(
+    return Align(
 
-      left:left,
-      top:top,
+      alignment: Alignment(
+        -1 + (left + width / 2) * 2,
+        -1 + (top + height / 2) * 2,
+      ),
 
-      width:width,
-      height:height,
+      child: FractionallySizedBox(
 
+        widthFactor: width,
+        heightFactor: height,
 
-      child:GestureDetector(
+        child: GestureDetector(
 
-        behavior:
-        HitTestBehavior.translucent,
+          behavior: HitTestBehavior.translucent,
 
+          onTap:(){
 
-        onTap:(){
+            serviceTap(number);
 
-          serviceTap(number);
+          },
 
-        },
+          child: Container(
+            color: Colors.transparent,
+          ),
 
-
-        child:
-        Container(
-          color:
-          Colors.transparent,
         ),
 
       ),
