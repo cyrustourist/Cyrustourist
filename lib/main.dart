@@ -116,9 +116,6 @@ class LanguageManager {
     }
   }
 }
-
-
-
 class AppText {
 
 
@@ -181,6 +178,63 @@ class AppText {
         return 'English';
 
     }
+  }
+
+
+
+  static String button(int number){
+
+    switch(LanguageManager.current){
+
+      case AppLanguage.persian:
+        return [
+          '',
+          'نقشه گردشگری',
+          'جاذبه‌های اطراف من',
+          'جاذبه‌های گردشگری',
+          'فیلم‌های گردشگری',
+          'اقامتگاه',
+          'راهنمای سفر',
+          'شبکه‌های اجتماعی',
+          'درباره ما',
+          'پشتیبانی و تماس',
+          'علاقه‌مندی‌ها',
+        ][number];
+
+
+      case AppLanguage.english:
+        return [
+          '',
+          'Tourism Map',
+          'Nearby Attractions',
+          'Tourist Attractions',
+          'Tourism Videos',
+          'Accommodation',
+          'Travel Guide',
+          'Social Networks',
+          'About Us',
+          'Support & Contact',
+          'Favorites',
+        ][number];
+
+
+      case AppLanguage.arabic:
+        return [
+          '',
+          'خريطة السياحة',
+          'المعالم القريبة',
+          'المعالم السياحية',
+          'أفلام سياحية',
+          'الإقامة',
+          'دليل السفر',
+          'الشبكات الاجتماعية',
+          'معلومات عنا',
+          'الدعم والاتصال',
+          'المفضلة',
+        ][number];
+
+    }
+
   }
 
 
