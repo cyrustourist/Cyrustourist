@@ -27,12 +27,21 @@ android {
     buildTypes {
 
         release {
-            // فعلاً برای تست و جلوگیری از مشکل، همان امضای فعلی حفظ می‌شود
+
+            // حفظ امضای فعلی پروژه
             signingConfig = signingConfigs.getByName("debug")
 
-            // آماده‌سازی برای بهینه‌سازی نسخه نهایی
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // بهینه‌سازی حجم APK
+            isMinifyEnabled = true
+            isShrinkResources = true
+
+            // فشرده‌سازی و حذف کدهای غیرضروری
+            proguardFiles(
+                getDefaultProguardFile(
+                    "proguard-android-optimize.txt"
+                ),
+                "proguard-rules.pro"
+            )
         }
 
         debug {
