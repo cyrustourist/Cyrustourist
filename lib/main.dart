@@ -472,6 +472,16 @@ class _HomePageState extends State<HomePage> {
 
           child: Container(
             color: Colors.transparent,
+            alignment: Alignment.center,
+            child: Text(
+              AppText.button(number),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+            ),
           ),
 
         ),
