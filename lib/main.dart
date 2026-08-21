@@ -284,6 +284,7 @@ class _SplashPageState extends State<SplashPage> {
 // HOME PAGE
 // ============================================================
 
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -292,16 +293,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedButton = 0;
+  int selected = 0;
 
-  String get _homeImage {
+  String get homeImage {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'assets/images/home_fa.jpg';
-
       case AppLanguage.english:
         return 'assets/images/home_en.jpg';
-
       case AppLanguage.arabic:
         return 'assets/images/home_ar.jpg';
     }
@@ -310,807 +309,144 @@ class _HomePageState extends State<HomePage> {
   Future<void> openLanguage() async {
     await showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return Directionality(
-          textDirection:
-              AppText.rtl
-                  ? TextDirection.rtl
-                  : TextDirection.ltr,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xff071722),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(28),
-              ),
-            ),
-            padding: const EdgeInsets.fromLTRB(
-              15,
-              15,
-              15,
-              25,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 45,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.white30,
-                    borderRadius:
-                        BorderRadius.circular(10),
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                _languageItem(
-                  'پارسی',
-                  AppLanguage.persian,
-                  '🇮🇷',
-                ),
-
-                _languageItem(
-                  'English',
-                  AppLanguage.english,
-                  '🇬🇧',
-                ),
-
-                _languageItem(
-                  'العربية',
-                  AppLanguage.arabic,
-                  '🇸🇦',
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  Widget _languageItem(
-    String title,
-    AppLanguage language,
-    String flag,
-  ) {
-    return ListTile(
-      leading: Text(
-        flag,
-        style: const TextStyle(
-          fontSize: 25,
-        ),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      trailing:
-          LanguageManager.current == language
-              ? const Icon(
-                  Icons.check_circle,
-                  color: Color(0xffffd36a),
-                )
-              : null,
-      onTap: () async {
-        await LanguageManager.setLanguage(
-          language,
-        );
-
-        if (!mounted) return;
-
-        Navigator.pop(context);
-
-        setState(() {});
-      },
-    );
-  }
-
-  // ==========================================================
-  // BUTTON ACTION
-  // ==========================================================
-
-  Future<void> serviceTap(int number) async {
-    setState(() {
-      _selectedButton = number;
-    });
-
-    await Future.delayed(
-      const Duration(milliseconds: 180),
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _selectedButton = 0;
-    });
-
-    if (number == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const SmartMapPage(),
-        ),
-      );
-    } else {
-      _showComingSoon(number);
-    }
-  }
-
-  void _showComingSoon(int number) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior:
-            SnackBarBehavior.floating,
-        backgroundColor:
-            const Color(0xff0b506b),
-        content: Text(
-          AppText.button(number),
-          textAlign:
-              AppText.rtl
-                  ? TextAlign.right
-                  : TextAlign.left,
-        ),
-        duration:
-            const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // HOME BUTTON
-  // ==========================================================
-
-  Widget serviceButton(
-    int number, {
-    required double width,
-    required double height,
-  }) {
-    final selected =
-        _selectedButton == number;
-
-    return GestureDetector(
-      onTap: () => serviceTap(number),
-
-      child: AnimatedScale(
-        scale: selected ? 0.92 : 1.0,
-
-        duration:
-            const Duration(milliseconds: 100),
-
-        curve: Curves.easeOut,
-
-        child: AnimatedContainer(
-          duration:
-              const Duration(milliseconds: 120),
-
-          width: width,
-          height: height,
-
-          margin:
-              const EdgeInsets.all(4),
-
-          decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(18),
-
-            border: Border.all(
-              color:
-                  const Color(0xffffd36a)
-                      .withValues(
-                alpha:
-                    selected
-                        ? 0.95
-                        : 0.55,
-              ),
-              width: 1.2,
-            ),
-
-            gradient:
-                LinearGradient(
-              begin:
-                  Alignment.topLeft,
-              end:
-                  Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(
-                  alpha:
-                      selected
-                          ? 0.28
-                          : 0.18,
-                ),
-                const Color(0xff0b506b)
-                    .withValues(
-                  alpha:
-                      selected
-                          ? 0.78
-                          : 0.62,
-                ),
-              ],
-            ),
-
-            boxShadow: [
-              BoxShadow(
-                color:
-                    Colors.black.withValues(
-                  alpha:
-                      selected
-                          ? 0.75
-                          : 0.45,
-                ),
-                blurRadius:
-                    selected ? 5 : 10,
-                offset:
-                    Offset(
-                  0,
-                  selected ? 2 : 5,
-                ),
-              ),
-
-              BoxShadow(
-                color:
-                    const Color(0xffffd36a)
-                        .withValues(
-                  alpha:
-                      selected
-                          ? 0.35
-                          : 0.10,
-                ),
-                blurRadius:
-                    selected ? 12 : 4,
-              ),
-            ],
-          ),
-
-          child: Stack(
-            children: [
-              Positioned(
-                top: 2,
-                left: 8,
-                right: 8,
-                child: Container(
-                  height: 1.5,
-                  decoration:
-                      BoxDecoration(
-                    gradient:
-                        LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        Colors.white
-                            .withValues(
-                          alpha: 0.75,
-                        ),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              Center(
-                child: Padding(
-                  padding:
-                      const EdgeInsets
-                          .symmetric(
-                    horizontal: 3,
-                    vertical: 5,
-                  ),
-
-                  child: Column(
-                    mainAxisAlignment:
-                        MainAxisAlignment
-                            .center,
-
-                    children: [
-                      Icon(
-                        AppIcons.get(
-                          number,
-                        ),
-
-                        color:
-                            const Color(
-                          0xffffd36a,
-                        ),
-
-                        size:
-                            height * 0.28,
-
-                        shadows: const [
-                          Shadow(
-                            color:
-                                Colors.black87,
-                            blurRadius: 4,
-                            offset:
-                                Offset(1, 2),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(
-                        height: 3,
-                      ),
-
-                      Text(
-                        AppText.button(
-                          number,
-                        ),
-
-                        maxLines: 2,
-
-                        overflow:
-                            TextOverflow
-                                .ellipsis,
-
-                        textAlign:
-                            TextAlign.center,
-
-                        style: TextStyle(
-                          color:
-                              Colors.white,
-
-                          fontSize:
-                              height < 70
-                                  ? 8.5
-                                  : 10,
-
-                          height: 1.05,
-
-                          fontWeight:
-                              FontWeight.w800,
-
-                          shadows: const [
-                            Shadow(
-                              color:
-                                  Colors.black,
-                              blurRadius: 3,
-                              offset:
-                                  Offset(1, 1),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(
-                        height: 2,
-                      ),
-
-                      Text(
-                        '$number',
-
-                        style:
-                            TextStyle(
-                          color:
-                              const Color(
-                            0xffffd36a,
-                          ),
-
-                          fontSize:
-                              height < 70
-                                  ? 8
-                                  : 9,
-
-                          fontWeight:
-                              FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildButtons(
-    double width,
-    double height,
-  ) {
-    final buttonWidth =
-        width / 5;
-
-    final buttonHeight =
-        height * 0.105;
-
-    return Positioned(
-      left: 3,
-      right: 3,
-      bottom: height * 0.075,
-
-      child: Column(
+      backgroundColor: const Color(0xff071722),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              for (
-                int i = 1;
-                i <= 5;
-                i++
-              )
-                serviceButton(
-                  i,
-                  width:
-                      buttonWidth,
-                  height:
-                      buttonHeight,
-                ),
-            ],
-          ),
-
-          const SizedBox(
-            height: 4,
-          ),
-
-          Row(
-            children: [
-              for (
-                int i = 6;
-                i <= 10;
-                i++
-              )
-                serviceButton(
-                  i,
-                  width:
-                      buttonWidth,
-                  height:
-                      buttonHeight,
-                ),
-            ],
-          ),
+          _lang('پارسی', AppLanguage.persian),
+          _lang('English', AppLanguage.english),
+          _lang('العربية', AppLanguage.arabic),
         ],
       ),
     );
+    if (mounted) setState(() {});
   }
 
-  // ==========================================================
-  // HOME BUILD
-  // ==========================================================
+  Widget _lang(String text, AppLanguage lang) {
+    return ListTile(
+      title: Text(text, style: const TextStyle(color: Colors.white)),
+      onTap: () async {
+        await LanguageManager.setLanguage(lang);
+        if (mounted) {
+          Navigator.pop(context);
+          setState(() {});
+        }
+      },
+    );
+  }
+
+  Future<void> tap(int n) async {
+    setState(() => selected = n);
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+    setState(() => selected = 0);
+
+    if (n == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SmartMapPage()),
+      );
+    }
+  }
+
+  Widget area(int n, double l, double t, double w, double h,
+      double iw, double ih) {
+    return Positioned(
+      left: iw * l,
+      top: ih * t,
+      width: iw * w,
+      height: ih * h,
+      child: GestureDetector(
+        onTap: () => tap(n),
+        child: AnimatedScale(
+          scale: selected == n ? .92 : 1,
+          duration: const Duration(milliseconds: 120),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: selected == n
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xffffd36a)
+                            .withValues(alpha: .8),
+                        blurRadius: 25,
+                        spreadRadius: 5,
+                      )
+                    ]
+                  : [],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
-    return Directionality(
-      textDirection:
-          AppText.rtl
-              ? TextDirection.rtl
-              : TextDirection.ltr,
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, c) {
+            double w = c.maxWidth;
+            double h = w * 16 / 9;
 
-      child: Scaffold(
-        backgroundColor:
-            Colors.black,
+            if (h > c.maxHeight) {
+              h = c.maxHeight;
+              w = h * 9 / 16;
+            }
 
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder:
-                (
-              context,
-              constraints,
-            ) {
-              final screenWidth =
-                  constraints.maxWidth;
+            return Center(
+              child: SizedBox(
+                width: w,
+                height: h,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(homeImage, fit: BoxFit.cover),
 
-              final screenHeight =
-                  constraints.maxHeight;
-
-              double imageWidth =
-                  screenWidth;
-
-              double imageHeight =
-                  imageWidth * 16 / 9;
-
-              if (imageHeight >
-                  screenHeight) {
-                imageHeight =
-                    screenHeight;
-
-                imageWidth =
-                    imageHeight * 9 / 16;
-              }
-
-              return Center(
-                child: SizedBox(
-                  width:
-                      imageWidth,
-                  height:
-                      imageHeight,
-
-                  child: Stack(
-                    fit:
-                        StackFit.expand,
-
-                    children: [
-                      Image.asset(
-                        _homeImage,
-                        fit:
-                            BoxFit.cover,
-                      ),
-
-                      IgnorePointer(
-                        child:
-                            Container(
-                          decoration:
-                              BoxDecoration(
-                            gradient:
-                                LinearGradient(
-                              begin:
-                                  Alignment
-                                      .topCenter,
-                              end:
-                                  Alignment
-                                      .bottomCenter,
-                              colors: [
-                                Colors.black
-                                    .withValues(
-                                  alpha:
-                                      0.08,
-                                ),
-                                Colors
-                                    .transparent,
-                                Colors.black
-                                    .withValues(
-                                  alpha:
-                                      0.20,
-                                ),
-                              ],
+                    Positioned(
+                      top: 15,
+                      right: AppText.rtl ? 15 : null,
+                      left: AppText.rtl ? null : 15,
+                      child: GestureDetector(
+                        onTap: openLanguage,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xff0b506b),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(
+                              color: const Color(0xffffd36a),
                             ),
                           ),
-                        ),
-                      ),
-
-                      // ==================================================
-                      // LANGUAGE
-                      // ==================================================
-
-                      Positioned(
-                        top: 15,
-
-                        left:
-                            AppText.rtl
-                                ? null
-                                : 15,
-
-                        right:
-                            AppText.rtl
-                                ? 15
-                                : null,
-
-                        child:
-                            GestureDetector(
-                          onTap:
-                              openLanguage,
-
-                          child:
-                              Container(
-                            padding:
-                                const EdgeInsets
-                                    .symmetric(
-                              horizontal:
-                                  12,
-                              vertical:
-                                  8,
-                            ),
-
-                            decoration:
-                                BoxDecoration(
-                              color:
-                                  const Color(
-                                0xff0b506b,
-                              ).withValues(
-                                alpha: 0.88,
-                              ),
-
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                22,
-                              ),
-
-                              border:
-                                  Border.all(
-                                color:
-                                    const Color(
-                                  0xffffd36a,
-                                ).withValues(
-                                  alpha:
-                                      0.75,
-                                ),
-                              ),
-
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      Colors.black
-                                          .withValues(
-                                    alpha:
-                                        0.55,
-                                  ),
-                                  blurRadius:
-                                      9,
-                                  offset:
-                                      const Offset(
-                                    0,
-                                    4,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            child: Row(
-                              mainAxisSize:
-                                  MainAxisSize
-                                      .min,
-
-                              children: [
-                                const Icon(
-                                  Icons
-                                      .language,
-                                  color:
-                                      Color(
-                                    0xffffd36a,
-                                  ),
-                                  size: 18,
-                                ),
-
-                                const SizedBox(
-                                  width: 6,
-                                ),
-
-                                Text(
-                                  AppText
-                                      .languageName(),
-
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors
-                                            .white,
-                                    fontWeight:
-                                        FontWeight
-                                            .bold,
-                                    fontSize:
-                                        12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // ==================================================
-                      // TITLE
-                      // ==================================================
-
-                      Positioned(
-                        top:
-                            imageHeight *
-                                0.12,
-
-                        left: 15,
-                        right: 15,
-
-                        child:
-                            IgnorePointer(
                           child: Text(
-                            AppText
-                                .title(),
-
-                            textAlign:
-                                TextAlign
-                                    .center,
-
-                            style:
-                                TextStyle(
-                              color:
-                                  Colors.white,
-
-                              fontSize:
-                                  imageWidth *
-                                      0.075,
-
-                              fontWeight:
-                                  FontWeight
-                                      .w900,
-
-                              letterSpacing:
-                                  LanguageManager
-                                              .current ==
-                                          AppLanguage
-                                              .english
-                                      ? 1.5
-                                      : 0,
-
-                              shadows:
-                                  const [
-                                Shadow(
-                                  color:
-                                      Colors.black,
-                                  blurRadius:
-                                      8,
-                                  offset:
-                                      Offset(
-                                    2,
-                                    3,
-                                  ),
-                                ),
-                              ],
+                            AppText.languageName(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
+                    ),
 
-                      buildButtons(
-                        imageWidth,
-                        imageHeight,
-                      ),
-
-                      Positioned(
-                        left: 10,
-                        right: 10,
-                        bottom: 8,
-
-                        child:
-                            IgnorePointer(
-                          child: Text(
-                            LanguageManager
-                                        .current ==
-                                    AppLanguage
-                                        .persian
-                                ? 'همراه هوشمند سفر شما'
-                                : LanguageManager
-                                            .current ==
-                                        AppLanguage
-                                            .arabic
-                                    ? 'رفيقك الذكي في السفر'
-                                    : 'Your Smart Travel Companion',
-
-                            textAlign:
-                                TextAlign
-                                    .center,
-
-                            style:
-                                TextStyle(
-                              color:
-                                  const Color(
-                                0xffffd36a,
-                              ),
-
-                              fontSize:
-                                  imageWidth *
-                                      0.027,
-
-                              fontWeight:
-                                  FontWeight
-                                      .bold,
-
-                              shadows:
-                                  const [
-                                Shadow(
-                                  color:
-                                      Colors.black,
-                                  blurRadius:
-                                      5,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    area(1,.02,.62,.18,.10,w,h),
+                    area(2,.21,.62,.18,.10,w,h),
+                    area(3,.40,.62,.18,.10,w,h),
+                    area(4,.59,.62,.18,.10,w,h),
+                    area(5,.78,.62,.18,.10,w,h),
+                    area(6,.02,.73,.18,.10,w,h),
+                    area(7,.21,.73,.18,.10,w,h),
+                    area(8,.40,.73,.18,.10,w,h),
+                    area(9,.59,.73,.18,.10,w,h),
+                    area(10,.78,.73,.18,.10,w,h),
+                  ],
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
