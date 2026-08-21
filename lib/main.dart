@@ -481,6 +481,8 @@ class _SmartMapPageState
 
   bool loading = true;
   bool mapReady = false;
+  bool _locationRequestRunning = false;
+  String? locationWarning;
 
   late AnimationController
       _animationController;
@@ -572,23 +574,32 @@ class _SmartMapPageState
     if (!mounted) return;
 
     setState(() {
-      loading = true;
-      mapReady = false;
-    });
-
-    await Future.delayed(
-      const Duration(
-        milliseconds: 1800,
-      ),
-    );
-
-    if (!mounted) return;
-
-    setState(() {
+      loading = false;
       mapReady = true;
     });
 
+    await _loadLastLocation();
     await getLocation();
+  }
+
+  Future<void> _loadLastLocation() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final lat = prefs.getDouble('last_lat');
+      final lng = prefs.getDouble('last_lng');
+
+      if (lat == null || lng == null || !mounted) return;
+
+      final point = LatLng(lat, lng);
+
+      setState(() {
+        userLocation = point;
+        loading = false;
+      });
+
+      mapController.move(point, 13);
+    } catch (_) {}
   }
 
   // ==========================================================
@@ -596,81 +607,74 @@ class _SmartMapPageState
   // ==========================================================
 
   Future<void> getLocation() async {
-    if (mounted) {
-      setState(() {
-        loading = true;
-      });
-    }
+    if (_locationRequestRunning) return;
+
+    _locationRequestRunning = true;
 
     try {
       final enabled =
-          await Geolocator
-              .isLocationServiceEnabled();
+          await Geolocator.isLocationServiceEnabled();
 
       if (!enabled) {
         if (mounted) {
           setState(() {
             loading = false;
+            locationWarning = 'موقعیت‌یاب دستگاه خاموش است';
           });
         }
-
+        _locationRequestRunning = false;
         return;
       }
 
       LocationPermission permission =
-          await Geolocator
-              .checkPermission();
+          await Geolocator.checkPermission();
 
-      if (permission ==
-          LocationPermission.denied) {
-        permission =
-            await Geolocator
-                .requestPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
       }
 
-      if (permission ==
-              LocationPermission.denied ||
-          permission ==
-              LocationPermission
-                  .deniedForever) {
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         if (mounted) {
           setState(() {
             loading = false;
+            locationWarning = 'دسترسی موقعیت فعال نیست';
           });
         }
-
+        _locationRequestRunning = false;
         return;
       }
 
-      final position =
-          await Geolocator
-              .getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
-      final point =
-          LatLng(
+      final point = LatLng(
         position.latitude,
         position.longitude,
       );
 
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('last_lat', point.latitude);
+      await prefs.setDouble('last_lng', point.longitude);
+
       if (!mounted) return;
 
       setState(() {
-        userLocation =
-            point;
-
+        userLocation = point;
         loading = false;
+        locationWarning = null;
       });
 
-      mapController.move(
-        point,
-        13,
-      );
+      mapController.move(point, 15);
     } catch (_) {
       if (mounted) {
         setState(() {
           loading = false;
         });
       }
+    } finally {
+      _locationRequestRunning = false;
     }
   }
 
