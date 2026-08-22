@@ -1,17 +1,50 @@
-buildTypes {
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("dev.flutter.flutter-gradle-plugin")
+}
 
-    release {
+android {
+    namespace = "cyrustourist.ir.app"
 
-        // حفظ امضای فعلی برای تست و انتشار
-        signingConfig = signingConfigs.getByName("debug")
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
 
-        // فعلاً خاموش برای حفظ نقشه، Splash و منابع
-        isMinifyEnabled = false
-        isShrinkResources = false
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
-    debug {
-        isMinifyEnabled = false
-        isShrinkResources = false
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
+
+    defaultConfig {
+        applicationId = "cyrustourist.ir.app"
+
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("debug")
+
+            // فعلاً برای تست پایدار
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+    }
+}
+
+flutter {
+    source = "../.."
 }
