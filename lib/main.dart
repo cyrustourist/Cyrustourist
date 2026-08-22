@@ -232,25 +232,52 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      }
-    });
+
+    LanguageManager.load();
+
+    Future.delayed(
+      const Duration(seconds: 3),
+      () {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const HomePage(),
+            ),
+          );
+        }
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+
+      body: SizedBox.expand(
+
+        child: Image.asset(
+          'assets/images/splash.jpg',
+          fit: BoxFit.cover,
+
+          errorBuilder: (context, error, stackTrace) {
+            return const Center(
+              child: Text(
+                'Splash image not found',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
+          },
+        ),
+
       ),
+
     );
   }
 }
