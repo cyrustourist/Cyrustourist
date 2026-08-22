@@ -158,6 +158,17 @@ class LanguageManager {
 // ============================================================
 
 class AppText {
+  static String map() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'نقشه';
+      case AppLanguage.arabic:
+        return 'الخريطة';
+      case AppLanguage.english:
+        return 'Map';
+    }
+  }
+
 
 
   static bool get rtl =>
@@ -1464,6 +1475,8 @@ class _SmartMapPageState extends State<SmartMapPage>
 
   
   
+  }
+
   // ==========================================================
   // MAP PAGE BUILD
   // ==========================================================
