@@ -37,7 +37,7 @@ class CyrusTouristApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      home: const SplashPage(),
+      home: SplashPage(),
     );
   }
 }
@@ -1468,23 +1468,9 @@ class _SmartMapPageState extends State<SmartMapPage>
   // MAP PAGE BUILD
   // ==========================================================
 
-  @override
+  // ==========================================================
   // MAP TOOLS
   // ==========================================================
-
-  
-
-
-
-
-  // ==========================================================
-  // MAP SERVICE BUTTON
-  // ==========================================================
-
-  
-}
-
-
 
   Widget mapTools() {
 
@@ -2078,4 +2064,5 @@ Widget build(BuildContext context) {
 
   }
 
+}
 }
