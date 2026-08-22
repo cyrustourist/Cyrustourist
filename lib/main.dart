@@ -761,6 +761,7 @@ class _HomePageState
 // SMART MAP PAGE
 // ============================================================
 
+}
 class SmartMapPage extends StatefulWidget {
   const SmartMapPage({super.key});
 
@@ -2069,4 +2070,5 @@ class _SmartMapPageState extends State<SmartMapPage>
 
   }
 
+}
 }
