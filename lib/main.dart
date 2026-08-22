@@ -253,7 +253,7 @@ class _SplashPageState extends State<SplashPage> {
     await LanguageManager.load();
 
     await Future.delayed(
-      const Duration(seconds: 2),
+      const Duration(milliseconds: 600),
     );
 
     if (!mounted) return;
@@ -324,7 +324,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _lang(String text, AppLanguage lang) {
     return ListTile(
-      title: Text(text, style: const TextStyle(color: Colors.white)),
+      title: Text(text, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
       onTap: () async {
         await LanguageManager.setLanguage(lang);
         if (mounted) {
