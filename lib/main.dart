@@ -853,6 +853,9 @@ class _SmartMapPageState extends State<SmartMapPage>
 
   LatLng? userLocation;
 
+  final TextEditingController originController = TextEditingController(text: 'موقعیت فعلی من');
+  final TextEditingController destinationController = TextEditingController();
+
   bool loading = true;
   bool mapReady = false;
   bool locationLoading = false;
@@ -918,6 +921,8 @@ class _SmartMapPageState extends State<SmartMapPage>
   void dispose() {
 
     animationController.dispose();
+    originController.dispose();
+    destinationController.dispose();
 
     super.dispose();
   }
@@ -1544,6 +1549,50 @@ class _SmartMapPageState extends State<SmartMapPage>
   // ==========================================================
   // MAP TOOLS
   // ==========================================================
+
+  Widget mapSearchBox() {
+    return Positioned(
+      top: 12,
+      left: 12,
+      right: 12,
+      child: Column(
+        children: [
+          _searchField(originController, Icons.my_location, 'مبدا'),
+          const SizedBox(height: 8),
+          _searchField(destinationController, Icons.place, 'مقصد'),
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('مسیر‌یابی آماده اتصال به سرویس مسیر است')),
+              );
+            },
+            icon: const Icon(Icons.directions),
+            label: const Text('مسیریابی'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchField(TextEditingController controller, IconData icon, String hint) {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(18),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon),
+          hintText: hint,
+          filled: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget mapTools() {
 
