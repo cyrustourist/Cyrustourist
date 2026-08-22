@@ -1472,6 +1472,20 @@ class _SmartMapPageState extends State<SmartMapPage>
   // MAP TOOLS
   // ==========================================================
 
+  
+
+
+
+
+  // ==========================================================
+  // MAP SERVICE BUTTON
+  // ==========================================================
+
+  
+}
+
+
+
   Widget mapTools() {
 
     return Container(
@@ -1590,13 +1604,6 @@ class _SmartMapPageState extends State<SmartMapPage>
     );
 
   }
-
-
-
-
-  // ==========================================================
-  // MAP SERVICE BUTTON
-  // ==========================================================
 
   Widget mapServiceButton(
 
@@ -1723,7 +1730,6 @@ class _SmartMapPageState extends State<SmartMapPage>
     );
 
   }
-}
 
 Widget build(BuildContext context) {
 
