@@ -2,37 +2,50 @@ import 'package:flutter/foundation.dart';
 
 class MapStateService extends ChangeNotifier {
   bool _isLoading = false;
-  bool _mapReady = false;
-  String? _errorMessage;
+  bool _hasLocation = false;
+  bool _isGpsEnabled = false;
+  String _message = '';
 
   bool get isLoading => _isLoading;
-  bool get mapReady => _mapReady;
-  String? get errorMessage => _errorMessage;
+  bool get hasLocation => _hasLocation;
+  bool get isGpsEnabled => _isGpsEnabled;
+  String get message => _message;
 
-  void startLoading() {
+  Future<void> initialize() async {
     _isLoading = true;
-    _errorMessage = null;
+    _message = 'در حال بررسی وضعیت نقشه...';
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    _isGpsEnabled = true;
+    _hasLocation = true;
+    _isLoading = false;
+    _message = 'موقعیت شما آماده است';
+
     notifyListeners();
   }
 
-  void setMapReady() {
+  Future<void> refreshLocation() async {
+    _isLoading = true;
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    _hasLocation = true;
     _isLoading = false;
-    _mapReady = true;
-    _errorMessage = null;
+    _message = 'موقعیت به‌روزرسانی شد';
+
     notifyListeners();
   }
 
-  void setError(String message) {
-    _isLoading = false;
-    _mapReady = false;
-    _errorMessage = message;
+  void setLoading(bool value) {
+    _isLoading = value;
     notifyListeners();
   }
 
-  void reset() {
-    _isLoading = false;
-    _mapReady = false;
-    _errorMessage = null;
+  void updateMessage(String value) {
+    _message = value;
     notifyListeners();
   }
 }
