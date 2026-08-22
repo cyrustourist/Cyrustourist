@@ -756,7 +756,6 @@ class _HomePageState
       ),
     );
   }
-}
 
 // ============================================================
 // SMART MAP PAGE
@@ -2070,6 +2069,4 @@ class _SmartMapPageState extends State<SmartMapPage>
 
   }
 
-}
-}
 }
