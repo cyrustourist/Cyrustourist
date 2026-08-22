@@ -6,14 +6,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const CyrusTouristApp());
-}
+import 'package:cyrustourist/services/map_state_service.dart';
+import 'package:cyrustourist/providers/map_state_provider.dart';
 
 // ============================================================
 // APP
 // ============================================================
+class CyrusTouristApp extends StatelessWidget {
 
 class CyrusTouristApp extends StatelessWidget {
   const CyrusTouristApp({super.key});
