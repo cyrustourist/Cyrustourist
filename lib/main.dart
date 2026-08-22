@@ -2070,3 +2070,5 @@ class _SmartMapPageState extends State<SmartMapPage>
   }
 
 }
+}
+}
