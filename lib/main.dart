@@ -6,8 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:cyrustourist/services/map_state_service.dart';
-import 'package:cyrustourist/providers/map_state_provider.dart';
+import 'services/map_state_service.dart';
+import 'providers/map_state_provider.dart';
 
 
 // ============================================================
@@ -756,7 +756,9 @@ class _HomePageState
       ),
     );
   }
-  // ============================================================
+  }
+
+// ============================================================
 // SMART MAP PAGE
 // ============================================================
 
