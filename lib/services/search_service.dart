@@ -4,10 +4,9 @@ import '../models/tourism_item.dart';
 ///
 /// جستجو در تمام بخش‌های برنامه قابل استفاده است:
 /// جاذبه‌ها، اقامتگاه‌ها، مراکز سلامت، فیلم‌ها،
-— راهنماها و خدمات.
+/// راهنماها و خدمات.
 ///
-/// جستجو با عنوان، توضیحات، دسته‌بندی، آدرس و نوع محتوا
-/// انجام می‌شود و برای فارسی، English و العربية آماده است.
+/// برای فارسی، English و العربية آماده است.
 class SearchService {
   /// جستجوی عمومی در فهرست آیتم‌ها.
   ///
@@ -24,36 +23,22 @@ class SearchService {
     }
 
     return items.where((item) {
-      final title = _normalize(
-        item.titleForLanguage(languageCode),
+      final values = _searchableValues(
+        item,
+        languageCode,
       );
 
-      final description = _normalize(
-        item.descriptionForLanguage(languageCode),
+      return values.any(
+        (value) =>
+            _normalize(value).contains(normalizedQuery),
       );
-
-      final category = _normalize(
-        item.category ?? '',
-      );
-
-      final address = _normalize(
-        item.address ?? '',
-      );
-
-      final type = _normalize(item.type);
-
-      return title.contains(normalizedQuery) ||
-          description.contains(normalizedQuery) ||
-          category.contains(normalizedQuery) ||
-          address.contains(normalizedQuery) ||
-          type.contains(normalizedQuery);
     }).toList();
   }
 
   /// جستجو در تمام زبان‌های موجود.
   ///
-  /// زمانی مفید است که کاربر مثلاً در حالت فارسی،
-  /// نام انگلیسی یا عربی یک مکان را جستجو کند.
+  /// حتی اگر زبان فعلی فارسی باشد،
+  /// نام انگلیسی یا عربی نیز قابل جستجو است.
   List<TourismItem> searchAllLanguages({
     required List<TourismItem> items,
     required String query,
@@ -75,6 +60,8 @@ class SearchService {
         item.category ?? '',
         item.address ?? '',
         item.type,
+        item.accommodationType ?? '',
+        ...(item.amenities ?? <String>[]),
       ];
 
       return values.any(
@@ -92,16 +79,19 @@ class SearchService {
   /// accommodation
   /// video
   /// travelGuide
+  /// service
   List<TourismItem> searchByType({
     required List<TourismItem> items,
     required String type,
     String query = '',
     String languageCode = 'fa',
   }) {
+    final normalizedType = type.trim().toLowerCase();
+
     final typeItems = items.where(
       (item) =>
-          item.type.toLowerCase() ==
-          type.toLowerCase(),
+          item.type.trim().toLowerCase() ==
+          normalizedType,
     );
 
     return search(
@@ -119,14 +109,15 @@ class SearchService {
     String languageCode = 'fa',
   }) {
     final normalizedTypes = types
-        .map((type) => type.toLowerCase())
+        .map(
+          (type) => type.trim().toLowerCase(),
+        )
         .toSet();
 
     final filtered = items.where(
-      (item) =>
-          normalizedTypes.contains(
-            item.type.toLowerCase(),
-          ),
+      (item) => normalizedTypes.contains(
+        item.type.trim().toLowerCase(),
+      ),
     );
 
     return search(
@@ -149,40 +140,127 @@ class SearchService {
     }
 
     return items.where((item) {
-      final titles = <String>[
-        item.titleFa,
-        item.titleEn,
-        item.titleAr,
-      ];
+      final title = item.titleForLanguage(
+        languageCode,
+      );
 
-      if (languageCode == 'fa') {
-        return _normalize(item.titleFa)
-            .contains(normalizedQuery);
-      }
-
-      if (languageCode == 'en') {
-        return _normalize(item.titleEn)
-            .contains(normalizedQuery);
-      }
-
-      if (languageCode == 'ar') {
-        return _normalize(item.titleAr)
-            .contains(normalizedQuery);
-      }
-
-      return titles.any(
-        (title) =>
-            _normalize(title).contains(normalizedQuery),
+      return _normalize(title).contains(
+        normalizedQuery,
       );
     }).toList();
   }
 
+  /// جستجوی عنوان در تمام زبان‌ها.
+  List<TourismItem> searchTitlesAllLanguages({
+    required List<TourismItem> items,
+    required String query,
+  }) {
+    final normalizedQuery = _normalize(query);
+
+    if (normalizedQuery.isEmpty) {
+      return List<TourismItem>.from(items);
+    }
+
+    return items.where((item) {
+      return _normalize(item.titleFa)
+              .contains(normalizedQuery) ||
+          _normalize(item.titleEn)
+              .contains(normalizedQuery) ||
+          _normalize(item.titleAr)
+              .contains(normalizedQuery);
+    }).toList();
+  }
+
+  /// جستجوی فقط در یک دسته‌بندی.
+  List<TourismItem> searchByCategory({
+    required List<TourismItem> items,
+    required String category,
+    String query = '',
+    String languageCode = 'fa',
+  }) {
+    final normalizedCategory =
+        _normalize(category);
+
+    final filtered = items.where(
+      (item) =>
+          _normalize(item.category ?? '') ==
+          normalizedCategory,
+    );
+
+    return search(
+      items: filtered.toList(),
+      query: query,
+      languageCode: languageCode,
+    );
+  }
+
+  /// جستجو در آیتم‌هایی که موقعیت جغرافیایی دارند.
+  List<TourismItem> withLocation(
+    List<TourismItem> items,
+  ) {
+    return items
+        .where((item) => item.hasLocation)
+        .toList();
+  }
+
+  /// جستجو در آیتم‌هایی که ویدئو دارند.
+  List<TourismItem> withVideo(
+    List<TourismItem> items,
+  ) {
+    return items
+        .where((item) => item.hasVideo)
+        .toList();
+  }
+
+  /// جستجو در آیتم‌هایی که لینک رزرو دارند.
+  List<TourismItem> withBooking(
+    List<TourismItem> items,
+  ) {
+    return items
+        .where((item) => item.hasBooking)
+        .toList();
+  }
+
+  /// مقادیر قابل جستجوی یک آیتم.
+  List<String> _searchableValues(
+    TourismItem item,
+    String languageCode,
+  ) {
+    final values = <String>[
+      item.titleForLanguage(languageCode),
+      item.descriptionForLanguage(languageCode),
+      item.category ?? '',
+      item.address ?? '',
+      item.type,
+      item.accommodationType ?? '',
+      ...(item.amenities ?? <String>[]),
+    ];
+
+    // در حالت ناشناخته یا خالی، همه زبان‌ها بررسی شوند.
+    if (languageCode != 'fa' &&
+        languageCode != 'en' &&
+        languageCode != 'ar') {
+      values.addAll([
+        item.titleFa,
+        item.titleEn,
+        item.titleAr,
+        item.descriptionFa ?? '',
+        item.descriptionEn ?? '',
+        item.descriptionAr ?? '',
+      ]);
+    }
+
+    return values;
+  }
+
   /// نرمال‌سازی متن برای جستجوی بهتر.
   ///
-  /// تفاوت‌های رایج فارسی و عربی مانند:
+  /// تفاوت‌های رایج فارسی و عربی:
   /// ي → ی
+  /// ى → ی
   /// ك → ک
-  /// و فاصله‌های اضافی را مدیریت می‌کند.
+  /// ة → ه
+  /// همچنین فاصله‌های اضافی حذف می‌شوند.
   String _normalize(String value) {
     return value
         .trim()
