@@ -765,268 +765,10 @@ class _HomePageState
 class SmartMapPage extends StatefulWidget {
   const SmartMapPage({super.key});
 
-    // ==========================================================
-  // MAP TOOLS
-  // ==========================================================
-
-  Widget mapTools() {
-
-    return Container(
-
-      padding:
-          const EdgeInsets.all(10),
-
-
-      color:
-          const Color(0xff071722),
-
-
-      child: Column(
-
-        children: [
-
-
-          Row(
-
-            children: [
-
-
-              mapServiceButton(
-                Icons.hotel,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'اقامتگاه'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'الإقامة'
-                        : 'Accommodation',
-              ),
-
-
-
-              mapServiceButton(
-                Icons.place,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'جاذبه‌ها'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'المعالم'
-                        : 'Attractions',
-              ),
-
-
-
-              mapServiceButton(
-                Icons.health_and_safety,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'سلامت'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'الصحة'
-                        : 'Health',
-              ),
-
-
-
-              mapServiceButton(
-                Icons.miscellaneous_services,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'خدمات'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'الخدمات'
-                        : 'Services',
-              ),
-
-
-            ],
-
-          ),
-
-
-
-          const SizedBox(
-            height: 10,
-          ),
-
-
-
-          SizedBox(
-
-            width:
-                double.infinity,
-
-
-            child: ElevatedButton(
-
-              onPressed: () {
-
-                Navigator.pop(context);
-
-              },
-
-
-              child: Text(
-
-                '↪️ ${AppText.title()}',
-
-              ),
-
-            ),
-
-          ),
-
-
-        ],
-
-      ),
-
-    );
-
-  }
-
-
-
-
-  // ==========================================================
-  // MAP SERVICE BUTTON
-  // ==========================================================
-
-  Widget mapServiceButton(
-
-    IconData icon,
-
-    String text,
-
-  ) {
-
-
-    return Expanded(
-
-      child: Container(
-
-        margin:
-            const EdgeInsets.all(4),
-
-
-        height:
-            70,
-
-
-        decoration:
-            BoxDecoration(
-
-          color:
-              Colors.white,
-
-
-          borderRadius:
-              BorderRadius.circular(15),
-
-
-          boxShadow: [
-
-            BoxShadow(
-
-              color:
-                  Colors.black.withValues(
-                    alpha: .30,
-                  ),
-
-              blurRadius:
-                  8,
-
-
-              offset:
-                  const Offset(
-                    0,
-                    3,
-                  ),
-
-            ),
-
-          ],
-
-        ),
-
-
-
-        child: Column(
-
-          mainAxisAlignment:
-              MainAxisAlignment.center,
-
-
-          children: [
-
-
-            Icon(
-
-              icon,
-
-
-              color:
-                  const Color(0xff0b506b),
-
-            ),
-
-
-
-            const SizedBox(
-              height: 4,
-            ),
-
-
-
-            Text(
-
-              text,
-
-
-              maxLines:
-                  1,
-
-
-              overflow:
-                  TextOverflow.ellipsis,
-
-
-              style:
-                  const TextStyle(
-
-                fontSize:
-                    10,
-
-
-                fontWeight:
-                    FontWeight.bold,
-
-              ),
-
-            ),
-
-
-          ],
-
-
-        ),
-
-
-      ),
-
-    );
-
-  }
-
-}
-}
-
   @override
   State<SmartMapPage> createState() => _SmartMapPageState();
 }
+
 
 class _SmartMapPageState extends State<SmartMapPage>
     with SingleTickerProviderStateMixin {
@@ -1727,7 +1469,267 @@ class _SmartMapPageState extends State<SmartMapPage>
   // ==========================================================
 
   @override
-  Widget build(BuildContext context) {
+  // MAP TOOLS
+  // ==========================================================
+
+  Widget mapTools() {
+
+    return Container(
+
+      padding:
+          const EdgeInsets.all(10),
+
+
+      color:
+          const Color(0xff071722),
+
+
+      child: Column(
+
+        children: [
+
+
+          Row(
+
+            children: [
+
+
+              mapServiceButton(
+                Icons.hotel,
+                LanguageManager.current ==
+                        AppLanguage.persian
+                    ? 'اقامتگاه'
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
+                        ? 'الإقامة'
+                        : 'Accommodation',
+              ),
+
+
+
+              mapServiceButton(
+                Icons.place,
+                LanguageManager.current ==
+                        AppLanguage.persian
+                    ? 'جاذبه‌ها'
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
+                        ? 'المعالم'
+                        : 'Attractions',
+              ),
+
+
+
+              mapServiceButton(
+                Icons.health_and_safety,
+                LanguageManager.current ==
+                        AppLanguage.persian
+                    ? 'سلامت'
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
+                        ? 'الصحة'
+                        : 'Health',
+              ),
+
+
+
+              mapServiceButton(
+                Icons.miscellaneous_services,
+                LanguageManager.current ==
+                        AppLanguage.persian
+                    ? 'خدمات'
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
+                        ? 'الخدمات'
+                        : 'Services',
+              ),
+
+
+            ],
+
+          ),
+
+
+
+          const SizedBox(
+            height: 10,
+          ),
+
+
+
+          SizedBox(
+
+            width:
+                double.infinity,
+
+
+            child: ElevatedButton(
+
+              onPressed: () {
+
+                Navigator.pop(context);
+
+              },
+
+
+              child: Text(
+
+                '↪️ ${AppText.title()}',
+
+              ),
+
+            ),
+
+          ),
+
+
+        ],
+
+      ),
+
+    );
+
+  }
+
+
+
+
+  // ==========================================================
+  // MAP SERVICE BUTTON
+  // ==========================================================
+
+  Widget mapServiceButton(
+
+    IconData icon,
+
+    String text,
+
+  ) {
+
+
+    return Expanded(
+
+      child: Container(
+
+        margin:
+            const EdgeInsets.all(4),
+
+
+        height:
+            70,
+
+
+        decoration:
+            BoxDecoration(
+
+          color:
+              Colors.white,
+
+
+          borderRadius:
+              BorderRadius.circular(15),
+
+
+          boxShadow: [
+
+            BoxShadow(
+
+              color:
+                  Colors.black.withValues(
+                    alpha: .30,
+                  ),
+
+              blurRadius:
+                  8,
+
+
+              offset:
+                  const Offset(
+                    0,
+                    3,
+                  ),
+
+            ),
+
+          ],
+
+        ),
+
+
+
+        child: Column(
+
+          mainAxisAlignment:
+              MainAxisAlignment.center,
+
+
+          children: [
+
+
+            Icon(
+
+              icon,
+
+
+              color:
+                  const Color(0xff0b506b),
+
+            ),
+
+
+
+            const SizedBox(
+              height: 4,
+            ),
+
+
+
+            Text(
+
+              text,
+
+
+              maxLines:
+                  1,
+
+
+              overflow:
+                  TextOverflow.ellipsis,
+
+
+              style:
+                  const TextStyle(
+
+                fontSize:
+                    10,
+
+
+                fontWeight:
+                    FontWeight.bold,
+
+              ),
+
+            ),
+
+
+          ],
+
+
+        ),
+
+
+      ),
+
+    );
+
+  }
+
+}
+}
+
+  
+
+Widget build(BuildContext context) {
 
     return Directionality(
 
