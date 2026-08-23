@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../../map_place.dart';
 
@@ -9,7 +8,6 @@ import '../../services/map_smart_controller.dart';
 import '../../widgets/map_markers_layer.dart';
 import '../../widgets/map_search_bar.dart';
 import '../../widgets/map_place_bottom_sheet.dart';
-
 
 
 class SmartMapScreen extends StatefulWidget {
@@ -36,19 +34,8 @@ class _SmartMapScreenState
       MapController();
 
 
-
   final MapSmartController controller =
       MapSmartController();
-
-
-
-
-  LatLng defaultLocation =
-      const LatLng(
-        35.6892,
-        51.3890,
-      );
-
 
 
 
@@ -57,59 +44,28 @@ class _SmartMapScreenState
 
     super.initState();
 
-
-    controller.addListener(
-      _refresh,
-    );
-
-
-    controller.initializeLocation();
+    _initialize();
 
   }
 
 
 
+  Future<void> _initialize() async {
 
-
-  void _refresh() {
-
-
-    if(!mounted) return;
-
-
-    setState(() {});
+    await controller.initializeLocation();
 
 
     if(controller.userLocation != null){
 
       mapController.move(
-
         controller.userLocation!,
-
         14,
-
       );
 
     }
 
-  }
 
-
-
-
-
-  @override
-  void dispose() {
-
-    controller.removeListener(
-      _refresh,
-    );
-
-
-    controller.dispose();
-
-
-    super.dispose();
+    setState(() {});
 
   }
 
@@ -118,16 +74,13 @@ class _SmartMapScreenState
 
 
   Future<void> search(
-    String text,
+      String text,
   ) async {
 
 
     await controller.search(
-
       query: text,
-
     );
-
 
 
     if(controller.nearestPlace != null){
@@ -145,6 +98,8 @@ class _SmartMapScreenState
     }
 
 
+    setState(() {});
+
   }
 
 
@@ -152,7 +107,7 @@ class _SmartMapScreenState
 
 
   void showPlace(
-    MapPlace place,
+      MapPlace place,
   ){
 
 
@@ -160,22 +115,17 @@ class _SmartMapScreenState
 
       context: context,
 
-
       isScrollControlled: true,
-
 
       builder: (_) {
 
 
         return MapPlaceBottomSheet(
-
           place: place,
-
         );
 
 
       },
-
 
     );
 
@@ -186,18 +136,14 @@ class _SmartMapScreenState
 
 
 
-
-
   @override
   Widget build(
-    BuildContext context,
+      BuildContext context,
   ){
 
 
-    final center =
-        controller.userLocation ??
-        defaultLocation;
-
+    final userLocation =
+        controller.userLocation;
 
 
 
@@ -213,18 +159,20 @@ class _SmartMapScreenState
 
           FlutterMap(
 
-
             mapController:
                 mapController,
-
 
 
             options: MapOptions(
 
 
               initialCenter:
-                  center,
 
+              userLocation ??
+                  const LatLng(
+                    35.6892,
+                    51.3890,
+                  ),
 
 
               initialZoom:
@@ -235,47 +183,36 @@ class _SmartMapScreenState
 
 
 
-
             children: [
 
 
 
-
               TileLayer(
-
 
                 urlTemplate:
 
                 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 
 
-
                 userAgentPackageName:
 
                 'ir.cyrustourist.app',
-
-
 
               ),
 
 
 
 
-
               MapMarkersLayer(
-
 
                 places:
 
                 controller.visiblePlaces,
 
 
-
                 onTap:
 
                 showPlace,
-
-
 
               ),
 
@@ -284,9 +221,7 @@ class _SmartMapScreenState
             ],
 
 
-
           ),
-
 
 
 
@@ -295,36 +230,25 @@ class _SmartMapScreenState
 
           Positioned(
 
-
             top: 45,
 
-
             left: 15,
-
 
             right: 15,
 
 
-
             child:
 
-
             MapSearchBar(
-
 
               onSearch:
 
               search,
 
-
-
             ),
 
 
-
           ),
-
-
 
 
 
@@ -335,18 +259,13 @@ class _SmartMapScreenState
               controller.isLocationLoading)
 
 
-
             const Center(
-
 
               child:
 
-
               CircularProgressIndicator(),
 
-
             ),
-
 
 
 
@@ -358,56 +277,39 @@ class _SmartMapScreenState
 
             Positioned(
 
-
               top: 110,
 
-
               left: 20,
-
 
               right: 20,
 
 
-
               child:
-
 
               Card(
 
-
                 child:
-
 
                 Padding(
 
-
                   padding:
-                      const EdgeInsets.all(12),
-
+                  const EdgeInsets.all(12),
 
 
                   child:
-
 
                   Text(
 
                     controller.errorMessage!,
 
                     textAlign:
-                        TextAlign.center,
-
+                    TextAlign.center,
 
                   ),
 
-
-
                 ),
 
-
-
               ),
-
-
 
             ),
 
@@ -416,30 +318,22 @@ class _SmartMapScreenState
 
 
 
-
           Positioned(
 
-
             bottom: 25,
-
 
             right: 20,
 
 
-
             child:
-
 
             FloatingActionButton(
 
 
               child:
 
-
               const Icon(
-
                 Icons.my_location,
-
               ),
 
 
@@ -447,27 +341,19 @@ class _SmartMapScreenState
               onPressed: (){
 
 
-
                 if(controller.userLocation != null){
-
 
 
                   mapController.move(
 
-
                     controller.userLocation!,
 
-
                     15,
-
-
 
                   );
 
 
-
                 }
-
 
 
               },
@@ -481,7 +367,6 @@ class _SmartMapScreenState
 
 
 
-
         ],
 
 
@@ -491,7 +376,6 @@ class _SmartMapScreenState
     );
 
   }
-
 
 
 }
