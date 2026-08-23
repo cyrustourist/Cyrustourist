@@ -18,10 +18,7 @@ class SmartMapPage extends StatefulWidget {
 class _SmartMapPageState extends State<SmartMapPage> {
   final MapController mapController = MapController();
 
-  static const LatLng iranCenter = LatLng(
-    32.4279,
-    53.6880,
-  );
+  static const LatLng iranCenter = LatLng(32.4279, 53.6880);
 
   LatLng? userLocation;
   LatLng? originLocation;
@@ -39,10 +36,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
   double? routeDistanceKm;
   double? routeDurationMin;
   bool routingLoading = false;
-
-  // ----------------------------------------------------------
-  // LANGUAGE
-  // ----------------------------------------------------------
 
   bool get isRtl =>
       pageLanguage == MapLanguage.fa ||
@@ -73,7 +66,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get mapTitle =>
       tr('نقشه گردشگری', 'Tourism Map', 'الخريطة السياحية');
 
-  String get searchTitle => tr(
+  String get searchTitle =>
+      tr(
         'جستجوی مبدأ و مقصد',
         'Search origin & destination',
         'بحث عن البداية والوجهة',
@@ -85,14 +79,19 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get clearRouteTitle =>
       tr('پاک کردن مسیر', 'Clear route', 'مسح المسار');
 
-  String get gpsOffTitle => tr(
-        'GPS خاموش است — برای فعال‌سازی مکان‌یابی لمس کنید',
+  String get gpsOffTitle =>
+      tr(
+        'GPS خاموش است — برای فعال‌سازی مکان‌یابی ضربه بزنید',
         'GPS is off — tap to enable location',
         'GPS متوقف — اضغط لتفعيل الموقع',
       );
 
   String get locatingTitle =>
-      tr('در حال مکان‌یابی...', 'Locating...', 'جارٍ تحديد الموقع...');
+      tr(
+        'در حال مکان‌یابی...',
+        'Locating...',
+        'جارٍ تحديد الموقع...',
+      );
 
   String get currentLocationTitle =>
       tr('موقعیت من', 'My location', 'موقعي');
@@ -106,7 +105,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get zoomOutTitle =>
       tr('کوچک‌نمایی', 'Zoom out', 'تصغير');
 
-  String get backTitle => tr(
+  String get backTitle =>
+      tr(
         'بازگشت به سایروس توریست',
         'Back to Cyrus Tourist',
         'العودة إلى سايروس توريست',
@@ -121,21 +121,19 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get durationTitle =>
       tr('زمان تقریبی', 'ETA', 'الوقت التقريبي');
 
-  String get routingErrorTitle => tr(
+  String get routingErrorTitle =>
+      tr(
         'دریافت مسیر انجام نشد. اتصال اینترنت را بررسی کنید.',
         'Could not get the route. Check your internet connection.',
         'تعذر الحصول على المسار. تحقق من اتصال الإنترنت.',
       );
 
-  String get needPointsTitle => tr(
+  String get needPointsTitle =>
+      tr(
         'ابتدا مبدأ و مقصد را انتخاب کنید.',
         'Select an origin and destination first.',
         'اختر نقطة البداية والوجهة أولاً',
       );
-
-  // ----------------------------------------------------------
-  // INIT
-  // ----------------------------------------------------------
 
   @override
   void initState() {
@@ -146,9 +144,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     });
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // LOCATION
-  // ----------------------------------------------------------
+  // ============================================================
 
   Future<void> getLocation() async {
     if (!mounted) return;
@@ -199,7 +197,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
           tr(
             'دسترسی مکان فعال نیست',
             'Location permission is not enabled',
-            'إذن الموقع غير مفعل',
+            'لم يتم تفعيل إذن الموقع',
           ),
           Icons.location_off,
         );
@@ -235,10 +233,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
         }
       });
 
-      mapController.move(
-        point,
-        15,
-      );
+      mapController.move(point, 15);
     } catch (_) {
       if (!mounted) return;
 
@@ -249,17 +244,17 @@ class _SmartMapPageState extends State<SmartMapPage> {
       _showMessage(
         tr(
           'خطا در دریافت موقعیت',
-          'Error getting location',
-          'خطأ في الحصول على الموقع',
+          'Could not get current location',
+          'تعذر الحصول على الموقع الحالي',
         ),
         Icons.error_outline,
       );
     }
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // GPS WARNING
-  // ----------------------------------------------------------
+  // ============================================================
 
   void _showGpsWarning() {
     if (!mounted) return;
@@ -284,7 +279,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 tr(
                   'GPS خاموش است. لطفاً مکان‌یابی گوشی را فعال کنید.',
                   'GPS is off. Please enable location services.',
-                  'GPS متوقف. يرجى تفعيل خدمة الموقع.',
+                  'GPS متوقف. يرجى تفعيل خدمات الموقع.',
                 ),
                 style: const TextStyle(
                   color: Colors.white,
@@ -309,9 +304,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // MESSAGE
-  // ----------------------------------------------------------
+  // ============================================================
 
   void _showMessage(
     String text,
@@ -349,9 +344,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
-  // REAL OSM / NOMINATIM SEARCH
-  // ----------------------------------------------------------
+  // ============================================================
+  // NOMINATIM SEARCH
+  // ============================================================
 
   Future<List<Map<String, dynamic>>> searchPlaces(
     String query,
@@ -380,14 +375,16 @@ class _SmartMapPageState extends State<SmartMapPage> {
       client.userAgent =
           'CyrusTourist/1.0 (cyrustourist.ir)';
 
-      final request = await client.getUrl(uri);
+      final request =
+          await client.getUrl(uri);
 
       request.headers.set(
         HttpHeaders.acceptHeader,
         'application/json',
       );
 
-      final response = await request.close();
+      final response =
+          await request.close();
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -417,9 +414,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     }
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // SEARCH PANEL
-  // ----------------------------------------------------------
+  // ============================================================
 
   void openSearch() {
     showModalBottomSheet(
@@ -444,9 +441,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
-  // SELECT ORIGIN
-  // ----------------------------------------------------------
+  // ============================================================
+  // ORIGIN / DESTINATION
+  // ============================================================
 
   void _selectOrigin(
     LatLng point,
@@ -460,15 +457,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routeDurationMin = null;
     });
 
-    mapController.move(
-      point,
-      15,
-    );
+    mapController.move(point, 15);
   }
-
-  // ----------------------------------------------------------
-  // SELECT DESTINATION
-  // ----------------------------------------------------------
 
   void _selectDestination(
     LatLng point,
@@ -482,15 +472,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routeDurationMin = null;
     });
 
-    mapController.move(
-      point,
-      15,
-    );
+    mapController.move(point, 15);
   }
-
-  // ----------------------------------------------------------
-  // CURRENT LOCATION AS ORIGIN
-  // ----------------------------------------------------------
 
   void useCurrentLocationAsOrigin() {
     if (userLocation == null) {
@@ -510,15 +493,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routeDurationMin = null;
     });
 
-    mapController.move(
-      userLocation!,
-      15,
-    );
+    mapController.move(userLocation!, 15);
   }
-
-  // ----------------------------------------------------------
-  // CLEAR ORIGIN
-  // ----------------------------------------------------------
 
   void _clearOrigin() {
     setState(() {
@@ -530,10 +506,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
     });
   }
 
-  // ----------------------------------------------------------
-  // CLEAR DESTINATION
-  // ----------------------------------------------------------
-
   void _clearDestination() {
     setState(() {
       destinationLocation = null;
@@ -544,19 +516,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
     });
   }
 
-  // ----------------------------------------------------------
-  // SWAP
-  // ----------------------------------------------------------
-
   void _swapPlaces() {
     setState(() {
       final oldOrigin = originLocation;
-
       originLocation = destinationLocation;
       destinationLocation = oldOrigin;
 
       final oldOriginName = originName;
-
       originName = destinationName;
       destinationName = oldOriginName;
 
@@ -566,16 +532,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
     });
 
     if (originLocation != null) {
-      mapController.move(
-        originLocation!,
-        15,
-      );
+      mapController.move(originLocation!, 15);
     }
   }
 
-  // ----------------------------------------------------------
-  // ZOOM
-  // ----------------------------------------------------------
+  // ============================================================
+  // MAP CONTROLS
+  // ============================================================
 
   void zoomIn() {
     final zoom = mapController.camera.zoom;
@@ -595,10 +558,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
-  // NORTH
-  // ----------------------------------------------------------
-
   void goNorth() {
     mapController.rotate(0);
 
@@ -612,10 +571,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
-  // MY LOCATION
-  // ----------------------------------------------------------
-
   void goToMyLocation() {
     if (userLocation != null) {
       mapController.move(
@@ -627,9 +582,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     }
   }
 
-  // ----------------------------------------------------------
-  // REAL ROUTING - OSRM
-  // ----------------------------------------------------------
+  // ============================================================
+  // OSRM ROUTING
+  // ============================================================
 
   Future<void> openRouting() async {
     if (originLocation == null ||
@@ -638,7 +593,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
         needPointsTitle,
         Icons.alt_route,
       );
-
       openSearch();
       return;
     }
@@ -665,14 +619,16 @@ class _SmartMapPageState extends State<SmartMapPage> {
       client.userAgent =
           'CyrusTourist/1.0 (cyrustourist.ir)';
 
-      final request = await client.getUrl(uri);
+      final request =
+          await client.getUrl(uri);
 
       request.headers.set(
         HttpHeaders.acceptHeader,
         'application/json',
       );
 
-      final response = await request.close();
+      final response =
+          await request.close();
 
       final body =
           await response.transform(
@@ -782,10 +738,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
     }
   }
 
-  // ----------------------------------------------------------
-  // CLEAR ROUTE
-  // ----------------------------------------------------------
-
   void clearRoute() {
     setState(() {
       routePoints = [];
@@ -794,9 +746,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     });
   }
 
-  // ----------------------------------------------------------
-  // LANGUAGE PICKER
-  // ----------------------------------------------------------
+  // ============================================================
+  // LANGUAGE
+  // ============================================================
 
   void _showLanguagePicker() {
     showModalBottomSheet(
@@ -838,8 +790,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                for (final entry
-                    in options.entries)
+                for (final entry in options.entries)
                   Padding(
                     padding:
                         const EdgeInsets.only(
@@ -899,9 +850,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // ROUTE SUMMARY
-  // ----------------------------------------------------------
+  // ============================================================
 
   Widget _routeSummary() {
     final distance =
@@ -910,16 +861,14 @@ class _SmartMapPageState extends State<SmartMapPage> {
     final duration =
         routeDurationMin ?? 0;
 
-    final distanceText =
-        distance < 1
-            ? '${(distance * 1000).round()} m'
-            : '${distance.toStringAsFixed(1)} km';
+    final distanceText = distance < 1
+        ? '${(distance * 1000).round()} m'
+        : '${distance.toStringAsFixed(1)} km';
 
-    final durationText =
-        duration < 60
-            ? '${duration.round()} min'
-            : '${(duration / 60).floor()} h '
-                '${(duration % 60).round()} min';
+    final durationText = duration < 60
+        ? '${duration.round()} min'
+        : '${(duration / 60).floor()} h '
+            '${(duration % 60).round()} min';
 
     return Container(
       padding:
@@ -1010,12 +959,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // MARKERS
-  // ----------------------------------------------------------
+  // ============================================================
 
   List<Marker> markers() {
-    final List<Marker> result = [];
+    final result = <Marker>[];
 
     if (userLocation != null) {
       result.add(
@@ -1026,11 +975,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.blue.withValues(
+              color:
+                  Colors.blue.withValues(
                 alpha: 0.18,
               ),
               border: Border.all(
-                color: Colors.blue.withValues(
+                color:
+                    Colors.blue.withValues(
                   alpha: 0.35,
                 ),
                 width: 2,
@@ -1163,9 +1114,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
-  // 3D MAP BUTTON
-  // ----------------------------------------------------------
+  // ============================================================
+  // MAP BUTTON
+  // ============================================================
 
   Widget mapButton({
     required IconData icon,
@@ -1193,8 +1144,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
               borderRadius:
                   BorderRadius.circular(17),
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin:
+                    Alignment.topLeft,
+                end:
+                    Alignment.bottomRight,
                 colors: active
                     ? const [
                         Color(0xff24C6DC),
@@ -1238,9 +1191,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // LARGE MAP ACTION
-  // ----------------------------------------------------------
+  // ============================================================
 
   Widget largeMapAction({
     required IconData icon,
@@ -1264,8 +1217,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
             borderRadius:
                 BorderRadius.circular(20),
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin:
+                  Alignment.topLeft,
+              end:
+                  Alignment.bottomRight,
               colors: primary
                   ? const [
                       Color(0xff00B4DB),
@@ -1289,7 +1244,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
             ],
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize:
+                MainAxisSize.min,
             children: [
               Icon(
                 icon,
@@ -1321,9 +1277,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // BUILD
-  // ----------------------------------------------------------
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -1376,9 +1332,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
         body: Stack(
           children: [
             FlutterMap(
-              mapController: mapController,
+              mapController:
+                  mapController,
               options: const MapOptions(
-                initialCenter: iranCenter,
+                initialCenter:
+                    iranCenter,
                 initialZoom: 5,
               ),
               children: [
@@ -1408,10 +1366,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
               ],
             ),
 
-            // ------------------------------------------------
             // TOP SEARCH
-            // ------------------------------------------------
-
             Positioned(
               top: 16,
               left: 16,
@@ -1423,7 +1378,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
                       icon: Icons.search,
                       title: searchTitle,
                       primary: true,
-                      onPressed: openSearch,
+                      onPressed:
+                          openSearch,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1445,10 +1401,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
               ),
             ),
 
-            // ------------------------------------------------
             // GPS STATUS
-            // ------------------------------------------------
-
             if (!gpsEnabled)
               Positioned(
                 top: 88,
@@ -1516,10 +1469,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ),
 
-            // ------------------------------------------------
             // ROUTE SUMMARY
-            // ------------------------------------------------
-
             if (routePoints.length >= 2)
               Positioned(
                 left: 16,
@@ -1528,10 +1478,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 child: _routeSummary(),
               ),
 
-            // ------------------------------------------------
             // RIGHT CONTROLS
-            // ------------------------------------------------
-
             Positioned(
               right: 16,
               bottom: 24,
@@ -1568,17 +1515,17 @@ class _SmartMapPageState extends State<SmartMapPage> {
               ),
             ),
 
-            // ------------------------------------------------
             // ROUTING LOADING
-            // ------------------------------------------------
-
             if (routingLoading)
               Positioned.fill(
                 child: IgnorePointer(
                   child: Container(
-                    color: Colors.black
-                        .withValues(alpha: 0.10),
-                    alignment: Alignment.center,
+                    color:
+                        Colors.black.withValues(
+                      alpha: 0.10,
+                    ),
+                    alignment:
+                        Alignment.center,
                     child: Container(
                       padding:
                           const EdgeInsets
@@ -1593,10 +1540,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
                           0xff071722,
                         ),
                         borderRadius:
-                            BorderRadius.circular(
+                            BorderRadius
+                                .circular(
                           18,
                         ),
-                        boxShadow: const [
+                        boxShadow:
+                            const [
                           BoxShadow(
                             color:
                                 Colors.black54,
@@ -1644,10 +1593,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ),
 
-            // ------------------------------------------------
             // LOCATION LOADING
-            // ------------------------------------------------
-
             if (loading)
               Positioned(
                 bottom: 30,
@@ -1776,10 +1722,12 @@ class _SearchPanel extends StatefulWidget {
 
 class _SearchPanelState
     extends State<_SearchPanel> {
-  final TextEditingController originController =
+  final TextEditingController
+      originController =
       TextEditingController();
 
-  final TextEditingController destinationController =
+  final TextEditingController
+      destinationController =
       TextEditingController();
 
   bool originMode = true;
@@ -1787,17 +1735,9 @@ class _SearchPanelState
 
   List<Map<String, dynamic>> results = [];
 
-  // ----------------------------------------------------------
-  // LANGUAGE
-  // ----------------------------------------------------------
-
   bool get isRtl =>
       widget.language == MapLanguage.fa ||
       widget.language == MapLanguage.ar;
-
-  // ----------------------------------------------------------
-  // INIT
-  // ----------------------------------------------------------
 
   @override
   void initState() {
@@ -1817,9 +1757,9 @@ class _SearchPanelState
     super.dispose();
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // SEARCH
-  // ----------------------------------------------------------
+  // ============================================================
 
   Future<void> performSearch(
     String query,
@@ -1869,18 +1809,20 @@ class _SearchPanelState
     }
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // SELECT RESULT
-  // ----------------------------------------------------------
+  // ============================================================
 
   void selectResult(
     Map<String, dynamic> result,
   ) {
-    final lat = double.tryParse(
+    final lat =
+        double.tryParse(
       result['lat']?.toString() ?? '',
     );
 
-    final lon = double.tryParse(
+    final lon =
+        double.tryParse(
       result['lon']?.toString() ?? '',
     );
 
@@ -1897,10 +1839,7 @@ class _SearchPanelState
       return;
     }
 
-    final point = LatLng(
-      lat,
-      lon,
-    );
+    final point = LatLng(lat, lon);
 
     if (originMode) {
       widget.onOriginSelected(
@@ -1915,8 +1854,7 @@ class _SearchPanelState
         name,
       );
 
-      destinationController.text =
-          name;
+      destinationController.text = name;
     }
 
     setState(() {
@@ -1924,9 +1862,9 @@ class _SearchPanelState
     });
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // CURRENT LOCATION
-  // ----------------------------------------------------------
+  // ============================================================
 
   void useCurrentLocation() {
     if (widget.userLocation == null) {
@@ -1945,21 +1883,18 @@ class _SearchPanelState
       return;
     }
 
-    widget.onOriginSelected(
-      widget.userLocation!,
-      widget.tr(
-        'موقعیت فعلی من',
-        'My current location',
-        'موقعي الحالي',
-      ),
-    );
-
-    originController.text =
-        widget.tr(
+    final name = widget.tr(
       'موقعیت فعلی من',
       'My current location',
       'موقعي الحالي',
     );
+
+    widget.onOriginSelected(
+      widget.userLocation!,
+      name,
+    );
+
+    originController.text = name;
 
     setState(() {
       originMode = true;
@@ -1967,16 +1902,17 @@ class _SearchPanelState
     });
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // SEARCH FIELD
-  // ----------------------------------------------------------
+  // ============================================================
 
   Widget searchField({
     required bool origin,
   }) {
-    final controller = origin
-        ? originController
-        : destinationController;
+    final controller =
+        origin
+            ? originController
+            : destinationController;
 
     final color = origin
         ? const Color(0xff1976D2)
@@ -1997,6 +1933,9 @@ class _SearchPanelState
       ),
       child: TextField(
         controller: controller,
+        textDirection: isRtl
+            ? TextDirection.rtl
+            : TextDirection.ltr,
         textInputAction:
             TextInputAction.search,
         onTap: () {
@@ -2008,7 +1947,8 @@ class _SearchPanelState
         onChanged: (_) {
           setState(() {});
         },
-        decoration: InputDecoration(
+        decoration:
+            InputDecoration(
           prefixIcon: Icon(
             origin
                 ? Icons.trip_origin
@@ -2018,7 +1958,8 @@ class _SearchPanelState
           suffixIcon:
               controller.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(
+                      icon:
+                          const Icon(
                         Icons.clear,
                       ),
                       onPressed: () {
@@ -2060,9 +2001,9 @@ class _SearchPanelState
     );
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // RESULT ITEM
-  // ----------------------------------------------------------
+  // ============================================================
 
   Widget resultItem(
     Map<String, dynamic> result,
@@ -2104,8 +2045,12 @@ class _SearchPanelState
                     ? Icons.trip_origin
                     : Icons.location_on,
                 color: originMode
-                    ? const Color(0xff1976D2)
-                    : const Color(0xffE53935),
+                    ? const Color(
+                        0xff1976D2,
+                      )
+                    : const Color(
+                        0xffE53935,
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -2114,6 +2059,10 @@ class _SearchPanelState
                   maxLines: 3,
                   overflow:
                       TextOverflow.ellipsis,
+                  textDirection:
+                      isRtl
+                          ? TextDirection.rtl
+                          : TextDirection.ltr,
                   style:
                       const TextStyle(
                     fontSize: 13,
@@ -2131,9 +2080,9 @@ class _SearchPanelState
     );
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // BUILD
-  // ----------------------------------------------------------
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -2248,7 +2197,9 @@ class _SearchPanelState
                   ),
                   child: Align(
                     alignment:
-                        Alignment.centerRight,
+                        isRtl
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
                     child:
                         TextButton.icon(
                       onPressed:
@@ -2282,15 +2233,13 @@ class _SearchPanelState
                 IconButton(
                   onPressed: () {
                     final originText =
-                        originController
-                            .text;
+                        originController.text;
 
                     originController.text =
-                        destinationController
-                            .text;
+                        destinationController.text;
 
-                    destinationController
-                        .text = originText;
+                    destinationController.text =
+                        originText;
 
                     setState(() {
                       originMode = true;
@@ -2339,21 +2288,20 @@ class _SearchPanelState
                     height: 52,
                     child:
                         ElevatedButton.icon(
-                      onPressed:
-                          searching
-                              ? null
-                              : () {
-                                  final text =
-                                      originMode
-                                          ? originController
-                                              .text
-                                          : destinationController
-                                              .text;
+                      onPressed: searching
+                          ? null
+                          : () {
+                              final text =
+                                  originMode
+                                      ? originController
+                                          .text
+                                      : destinationController
+                                          .text;
 
-                                  performSearch(
-                                    text,
-                                  );
-                                },
+                              performSearch(
+                                text,
+                              );
+                            },
                       icon: searching
                           ? const SizedBox(
                               width: 21,
@@ -2389,8 +2337,7 @@ class _SearchPanelState
                         ),
                       ),
                       style:
-                          ElevatedButton
-                              .styleFrom(
+                          ElevatedButton.styleFrom(
                         backgroundColor:
                             const Color(
                           0xff0083B0,
@@ -2447,14 +2394,15 @@ class _SearchPanelState
                     child: Text(
                       widget.tr(
                         'برای جستجو، نام شهر، خیابان یا مکان را وارد کنید.',
-                        'Enter a city, street or place to search.',
+                        'Enter a city, street, or place to search.',
                         'أدخل اسم مدينة أو شارع أو مكان للبحث.',
                       ),
                       textAlign:
                           TextAlign.center,
                       style:
                           const TextStyle(
-                        color: Colors.white54,
+                        color:
+                            Colors.white54,
                         fontSize: 12,
                       ),
                     ),
