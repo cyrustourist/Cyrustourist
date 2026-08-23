@@ -2,103 +2,57 @@ import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../map_place.dart';
+
 import 'map_places_service.dart';
-import 'map_distance_filter.dart';
+import 'location_service.dart';
+import 'location_storage_service.dart';
 
 
 class MapSmartController extends ChangeNotifier {
+
 
   final MapPlacesService _placesService =
       MapPlacesService();
 
 
+
   LatLng? userLocation;
+
 
 
   List<MapPlace> places = [];
 
-
   List<MapPlace> visiblePlaces = [];
+
 
 
   PlaceCategory? activeCategory;
 
 
+
   double searchRadiusKm = 10;
 
 
+
   bool isLoading = false;
+
+
+  bool isLocationLoading = false;
 
 
   String? errorMessage;
 
 
 
-  /// تنظیم موقعیت کاربر
-  void setUserLocation(
-    LatLng location,
-  ) {
 
-    userLocation = location;
+  // ==========================
+  // دریافت موقعیت هوشمند
+  // ==========================
 
-    notifyListeners();
-
-  }
+  Future<void> initializeLocation() async {
 
 
-
-  /// تغییر فاصله جستجو
-  void setRadius(
-    double km,
-  ) {
-
-    searchRadiusKm = km;
-
-    _applyFilter();
-
-    notifyListeners();
-
-  }
-
-
-
-  /// انتخاب دسته بندی
-  void setCategory(
-    PlaceCategory? category,
-  ) {
-
-    activeCategory = category;
-
-    _applyFilter();
-
-    notifyListeners();
-
-  }
-
-
-
-  /// جستجوی مکان‌ها
-  Future<void> search({
-
-    required String query,
-
-  }) async {
-
-
-    if (userLocation == null) {
-
-      errorMessage =
-          'موقعیت کاربر مشخص نیست';
-
-      notifyListeners();
-
-      return;
-
-    }
-
-
-
-    isLoading = true;
+    isLocationLoading = true;
 
     errorMessage = null;
 
@@ -109,22 +63,69 @@ class MapSmartController extends ChangeNotifier {
     try {
 
 
-      places =
-          await _placesService.searchPlaces(
+      // مرحله اول:
+      // دریافت آخرین موقعیت ذخیره شده
 
-        query: query,
-
-        userLocation:
-            userLocation!,
-
-        category:
-            activeCategory,
-
-      );
+      final savedLocation =
+          await LocationStorageService
+              .loadLocation();
 
 
 
-      _applyFilter();
+      if (savedLocation != null) {
+
+
+        userLocation =
+            savedLocation;
+
+
+        notifyListeners();
+
+      }
+
+
+
+
+      // مرحله دوم:
+      // دریافت GPS واقعی
+
+
+      final position =
+          await LocationService
+              .getCurrentLocation();
+
+
+
+      if (position == null) {
+
+
+        errorMessage =
+            'موقعیت مکانی در دسترس نیست. لطفاً GPS و دسترسی مکان را بررسی کنید';
+
+
+      } else {
+
+
+        final location =
+            LatLng(
+              position.latitude,
+              position.longitude,
+            );
+
+
+
+        userLocation =
+            location;
+
+
+
+        await LocationStorageService
+            .saveLocation(
+              location,
+            );
+
+
+      }
 
 
 
@@ -132,14 +133,15 @@ class MapSmartController extends ChangeNotifier {
 
 
       errorMessage =
-          'خطا در دریافت مکان‌ها';
+          'خطا در دریافت موقعیت کاربر';
 
 
     }
 
 
 
-    isLoading = false;
+    isLocationLoading = false;
+
 
     notifyListeners();
 
@@ -149,13 +151,102 @@ class MapSmartController extends ChangeNotifier {
 
 
 
-  /// اعمال فیلتر فاصله و دسته
-  void _applyFilter() {
+  // ==========================
+  // تنظیم دستی موقعیت
+  // ==========================
+
+  void setUserLocation(
+    LatLng location,
+  ) {
+
+
+    userLocation =
+        location;
+
+
+    notifyListeners();
+
+
+  }
+
+
+
+
+
+
+  // ==========================
+  // تغییر فاصله جستجو
+  // ==========================
+
+  void setRadius(
+    double km,
+  ) {
+
+
+    searchRadiusKm =
+        km;
+
+
+    _applyFilter();
+
+
+    notifyListeners();
+
+
+  }
+
+
+
+
+
+
+  // ==========================
+  // انتخاب دسته بندی
+  // ==========================
+
+  void setCategory(
+    PlaceCategory? category,
+  ) {
+
+
+    activeCategory =
+        category;
+
+
+    _applyFilter();
+
+
+    notifyListeners();
+
+
+  }
+
+
+
+
+
+
+  // ==========================
+  // جستجوی مکان‌ها
+  // ==========================
+
+  Future<void> search({
+
+    required String query,
+
+  }) async {
+
 
 
     if (userLocation == null) {
 
-      visiblePlaces = [];
+
+      errorMessage =
+          'موقعیت کاربر مشخص نیست';
+
+
+      notifyListeners();
+
 
       return;
 
@@ -163,8 +254,109 @@ class MapSmartController extends ChangeNotifier {
 
 
 
+
+    if (query.trim().isEmpty) {
+
+
+      return;
+
+    }
+
+
+
+
+    isLoading = true;
+
+
+    errorMessage = null;
+
+
+    notifyListeners();
+
+
+
+
+    try {
+
+
+
+      places =
+          await _placesService.searchPlaces(
+
+
+        query: query,
+
+
+        userLocation:
+            userLocation!,
+
+
+        category:
+            activeCategory,
+
+
+      );
+
+
+
+      _applyFilter();
+
+
+
+
+    } catch (e) {
+
+
+
+      errorMessage =
+          'خطا در دریافت مکان‌ها';
+
+
+
+    }
+
+
+
+
+    isLoading = false;
+
+
+    notifyListeners();
+
+
+
+  }
+
+
+
+
+
+
+  // ==========================
+  // فیلتر فاصله و دسته
+  // ==========================
+
+  void _applyFilter() {
+
+
+
+    if (userLocation == null) {
+
+
+      visiblePlaces = [];
+
+
+      return;
+
+    }
+
+
+
+
+
     visiblePlaces =
         places.where((place) {
+
 
 
       final distance =
@@ -174,7 +366,8 @@ class MapSmartController extends ChangeNotifier {
 
       final inRadius =
           distance <=
-              (searchRadiusKm * 1000);
+          (searchRadiusKm * 1000);
+
 
 
 
@@ -185,15 +378,21 @@ class MapSmartController extends ChangeNotifier {
 
 
 
+
       return inRadius &&
           inCategory;
+
 
 
     }).toList();
 
 
 
+
+
+
     visiblePlaces.sort(
+
 
       (a,b) =>
 
@@ -201,6 +400,7 @@ class MapSmartController extends ChangeNotifier {
               .compareTo(
                 b.distanceMeters ?? 0,
               ),
+
 
     );
 
@@ -210,34 +410,55 @@ class MapSmartController extends ChangeNotifier {
 
 
 
-  /// پاک کردن نتایج
+
+
+
+  // ==========================
+  // پاک کردن نتایج
+  // ==========================
+
   void clear() {
 
 
     places.clear();
 
+
     visiblePlaces.clear();
 
+
     notifyListeners();
+
 
   }
 
 
 
-  /// نزدیک‌ترین مکان
+
+
+
+  // ==========================
+  // نزدیک ترین مکان
+  // ==========================
+
   MapPlace? get nearestPlace {
+
 
 
     if (visiblePlaces.isEmpty) {
 
+
       return null;
+
 
     }
 
 
+
     return visiblePlaces.first;
 
+
   }
+
 
 
 }
