@@ -8,6 +8,9 @@ import 'package:latlong2/latlong.dart';
 
 enum MapLanguage { fa, en, ar }
 
+/// Routing strategy kept extensible for a future traffic-aware provider.
+enum RouteStrategy { fastest, lowTrafficReady }
+
 class SmartMapPage extends StatefulWidget {
   const SmartMapPage({super.key});
 
@@ -30,6 +33,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
   bool loading = false;
   bool gpsEnabled = true;
   bool routingLoading = false;
+  int _routingRequestId = 0;
+
+  // OSRM currently provides road routing without live traffic. Keeping the
+  // strategy separate makes it possible to add a traffic-aware provider
+  // later without changing the map UI or origin/destination flow.
+  RouteStrategy routeStrategy = RouteStrategy.fastest;
 
   MapLanguage pageLanguage = MapLanguage.fa;
 
@@ -489,6 +498,24 @@ class _SmartMapPageState extends State<SmartMapPage> {
   // ROUTING
   // ============================================================
 
+  Uri _buildRoutingUri(LatLng origin, LatLng destination) {
+    // Keep this builder isolated so a future traffic-aware routing service
+    // can replace OSRM without changing the rest of the page.
+    switch (routeStrategy) {
+      case RouteStrategy.fastest:
+      case RouteStrategy.lowTrafficReady:
+        // OSRM public endpoint does not expose live-traffic routing.
+        break;
+    }
+
+    return Uri.parse(
+      'https://router.project-osrm.org/route/v1/driving/'
+      '${origin.longitude},${origin.latitude};'
+      '${destination.longitude},${destination.latitude}'
+      '?overview=full&geometries=geojson&steps=false',
+    );
+  }
+
   Future<void> openRouting() async {
     if (originLocation == null ||
         destinationLocation == null) {
@@ -506,20 +533,20 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
     if (routingLoading) return;
 
+    final requestId = ++_routingRequestId;
+
     setState(() {
       routingLoading = true;
+      // Do not leave an old route visible while a new route is calculated.
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
     });
 
     final origin = originLocation!;
     final destination = destinationLocation!;
 
-    final uri = Uri.parse(
-      'https://router.project-osrm.org/route/v1/driving/'
-      '${origin.longitude},${origin.latitude};'
-      '${destination.longitude},${destination.latitude}'
-      '?overview=full&geometries=geojson&steps=false',
-    );
-
+    final uri = _buildRoutingUri(origin, destination);
     final client = HttpClient();
 
     try {
@@ -597,7 +624,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
       final durationSeconds =
           (route['duration'] as num?)?.toDouble() ?? 0;
 
-      if (!mounted) return;
+      if (!mounted || requestId != _routingRequestId) return;
 
       setState(() {
         routePoints = points;
@@ -623,7 +650,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
         Icons.check_circle_outline,
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || requestId != _routingRequestId) return;
 
       setState(() {
         routingLoading = false;
@@ -1488,6 +1515,49 @@ class _SmartMapPageState extends State<SmartMapPage> {
   }
 }
 
+class _SearchPanel extends StatefulWidget {
+  const _SearchPanel({
+    required this.initialOrigin,
+    required this.initialDestination,
+    required this.userLocation,
+    required this.initialMode,
+    required this.onOriginSelected,
+    required this.onDestinationSelected,
+    required this.onClearOrigin,
+    required this.onClearDestination,
+    required this.onSwap,
+    required this.searchPlaces,
+    required this.language,
+    required this.tr,
+  });
+
+  final String? initialOrigin;
+  final String? initialDestination;
+  final LatLng? userLocation;
+  final bool initialMode;
+
+  final void Function(LatLng point, String name) onOriginSelected;
+  final void Function(LatLng point, String name) onDestinationSelected;
+  final VoidCallback onClearOrigin;
+  final VoidCallback onClearDestination;
+  final VoidCallback onSwap;
+
+  final Future<List<Map<String, dynamic>>> Function(String query)
+      searchPlaces;
+
+  final MapLanguage language;
+  final String Function(String fa, String en, String ar) tr;
+
+  String get searchPlaceTitle => tr(
+        'جستجوی هدف گردشگری',
+        'Search tourist destination',
+        'البحث عن هدف سياحي',
+      );
+
+  @override
+  State<_SearchPanel> createState() => _SearchPanelState();
+}
+
 class _SearchPanelState extends State<_SearchPanel> {
   final TextEditingController originController =
       TextEditingController();
@@ -1813,9 +1883,9 @@ class _SearchPanelState extends State<_SearchPanel> {
               // دکمه جستجوی مستقل برای هر فیلد
               IconButton(
                 tooltip: widget.tr(
-                  'جستجوی این مکان',
-                  'Search this place',
-                  'بحث عن هذا المكان',
+                  'جستجو',
+                  'Search',
+                  'بحث',
                 ),
                 icon: Icon(
                   Icons.search,
