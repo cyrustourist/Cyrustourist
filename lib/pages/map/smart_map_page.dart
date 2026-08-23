@@ -71,7 +71,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
       tr('جستجوی مبدأ و مقصد', 'Search origin & destination', 'بحث عن البداية والوجهة');
 
   String get searchPlaceTitle =>
-      tr('جستجوی مکان', 'Search place', 'بحث عن مكان');
+      tr('جستجوی هدف گردشگری', 'Search tourist destination', 'البحث عن هدف سياحي');
 
   String get routeTitle =>
       tr('مسیریابی', 'Route', 'المسار');
@@ -532,12 +532,16 @@ class _SmartMapPageState extends State<SmartMapPage> {
         'application/json',
       );
 
-      final response = await request.close();
+      final response = await request
+          .close()
+          .timeout(const Duration(seconds: 25));
 
-      final body =
-          await response.transform(utf8.decoder).join();
+      final body = await response
+          .transform(utf8.decoder)
+          .join()
+          .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != HttpStatus.ok) {
         throw Exception(
           'OSRM HTTP ${response.statusCode}',
         );
@@ -549,7 +553,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
           decoded['code'] != 'Ok' ||
           decoded['routes'] is! List ||
           (decoded['routes'] as List).isEmpty) {
-        throw Exception('OSRM route not found');
+        throw Exception(
+          decoded is Map
+              ? (decoded['message']?.toString() ?? 'OSRM route not found')
+              : 'OSRM route not found',
+        );
       }
 
       final route = (decoded['routes'] as List).first;
@@ -601,9 +609,18 @@ class _SmartMapPageState extends State<SmartMapPage> {
       mapController.fitCamera(
         CameraFit.bounds(
           bounds: LatLngBounds.fromPoints(points),
-          padding: const EdgeInsets.all(70),
+          padding: const EdgeInsets.fromLTRB(55, 55, 55, 150),
           maxZoom: 15,
         ),
+      );
+
+      _showMessage(
+        tr(
+          'مسیر واقعی آماده شد.',
+          'Real road route is ready.',
+          'تم تجهيز مسار الطريق الحقيقي.',
+        ),
+        Icons.check_circle_outline,
       );
     } catch (_) {
       if (!mounted) return;
@@ -681,7 +698,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         final options = <MapLanguage, String>{
-          MapLanguage.fa: 'فارسی',
+          MapLanguage.fa: 'پارسی',
           MapLanguage.en: 'English',
           MapLanguage.ar: 'العربية',
         };
@@ -1100,326 +1117,375 @@ class _SmartMapPageState extends State<SmartMapPage> {
           isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: const Color(0xff071722),
-        appBar: AppBar(
-          backgroundColor: const Color(0xff071722),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          leading: Padding(
-            padding: const EdgeInsets.all(8),
-            child: mapButton(
-              icon: Icons.arrow_back,
-              tooltip: backTitle,
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              size: 46,
-            ),
-          ),
-          title: Column(
+        body: SafeArea(
+          child: Column(
             children: [
-              Text(
-                mapTitle,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
+              // ======================================================
+              // MAP
+              // کلیدهای اصلی عمداً روی نقشه قرار نگرفته‌اند.
+              // ======================================================
+              Expanded(
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: mapController,
+                      options: const MapOptions(
+                        initialCenter: iranCenter,
+                        initialZoom: 5,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName:
+                              'cyrustourist.ir.app',
+                        ),
+                        if (routePoints.length >= 2)
+                          PolylineLayer(
+                            polylines: [
+                              Polyline(
+                                points: routePoints,
+                                strokeWidth: 6,
+                                color: const Color(0xff0083B0),
+                                borderStrokeWidth: 2,
+                                borderColor: Colors.white,
+                              ),
+                            ],
+                          ),
+                        MarkerLayer(
+                          markers: markers(),
+                        ),
+                      ],
+                    ),
+
+                    // عنوان کوچک و غیرقابل‌تعامل روی نقشه
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      right: 12,
+                      child: IgnorePointer(
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xff071722)
+                                  .withValues(alpha: 0.88),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: Colors.white24,
+                              ),
+                            ),
+                            child: Text(
+                              mapTitle,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // GPS WARNING
+                    if (!gpsEnabled)
+                      Positioned(
+                        top: 58,
+                        left: 16,
+                        right: 16,
+                        child: GestureDetector(
+                          onTap: () {
+                            Geolocator.openLocationSettings();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 11,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xffB3261E)
+                                  .withValues(alpha: 0.94),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.gps_off,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    gpsOffTitle,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Route loading overlay
+                    if (routingLoading)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            alignment: Alignment.center,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xff071722),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: const Color(0xff2D6678),
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black45,
+                                    blurRadius: 18,
+                                    offset: Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    tr(
+                                      'در حال دریافت مسیر...',
+                                      'Getting road route...',
+                                      'جارٍ الحصول على مسار الطريق...',
+                                    ),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const Text(
-                'Cyrus Tourist',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.white60,
-                  letterSpacing: 1,
-                ),
-              ),
+
+              // ======================================================
+              // BOTTOM TOURISM CONTROL PANEL
+              // ======================================================
+              _buildBottomControlPanel(context),
             ],
           ),
         ),
-        body: Stack(
+      ),
+    );
+  }
+
+  Widget _buildBottomControlPanel(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+      decoration: const BoxDecoration(
+        color: Color(0xff071722),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(26),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 18,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FlutterMap(
-              mapController: mapController,
-              options: const MapOptions(
-                initialCenter: iranCenter,
-                initialZoom: 5,
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white30,
+                borderRadius: BorderRadius.circular(10),
               ),
+            ),
+            const SizedBox(height: 8),
+
+            // Route summary belongs to the lower panel.
+            if (routePoints.length >= 2) ...[
+              _routeSummary(),
+              const SizedBox(height: 8),
+            ],
+
+            // Main actions.
+            Row(
               children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName:
-                      'cyrustourist.ir.app',
-                ),
-                if (routePoints.length >= 2)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: routePoints,
-                        strokeWidth: 6,
-                        color: const Color(0xff0083B0),
-                        borderStrokeWidth: 2,
-                        borderColor: Colors.white,
-                      ),
-                    ],
+                Expanded(
+                  flex: 2,
+                  child: largeMapAction(
+                    icon: Icons.travel_explore,
+                    title: searchPlaceTitle,
+                    primary: true,
+                    onPressed: () => openSearch(
+                      destination:
+                          originLocation != null &&
+                          destinationLocation == null,
+                    ),
                   ),
-                MarkerLayer(
-                  markers: markers(),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: largeMapAction(
+                    icon: Icons.alt_route,
+                    title: routeTitle,
+                    primary: routePoints.length >= 2,
+                    onPressed: openRouting,
+                  ),
                 ),
               ],
             ),
 
-            // TOP SEARCH
-            Positioned(
-              top: 16,
-              left: 16,
-              right: 16,
+            const SizedBox(height: 8),
+
+            // Compact map controls.
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: isRtl,
               child: Row(
-                children: [
-                  Expanded(
-                    child: largeMapAction(
-                      icon: Icons.search,
-                      title: searchTitle,
-                      primary: true,
-                      onPressed: () => openSearch(),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  mapButton(
-                    icon: Icons.language,
-                    tooltip: languageTitle,
-                    onPressed: _showLanguagePicker,
-                  ),
-                  const SizedBox(width: 8),
-                  mapButton(
-                    icon: Icons.alt_route,
-                    tooltip: routeTitle,
-                    active: routePoints.length >= 2,
-                    onPressed: openRouting,
-                  ),
-                ],
-              ),
-            ),
-
-            // GPS WARNING
-            if (!gpsEnabled)
-              Positioned(
-                top: 88,
-                left: 20,
-                right: 20,
-                child: GestureDetector(
-                  onTap: () {
-                    Geolocator.openLocationSettings();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xffB3261E)
-                          .withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.gps_off,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            gpsOffTitle,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-            // ROUTE SUMMARY
-            if (routePoints.length >= 2)
-              Positioned(
-                left: 16,
-                right: 82,
-                bottom: 24,
-                child: _routeSummary(),
-              ),
-
-            // CONTROLS
-            Positioned(
-              right: 16,
-              bottom: 24,
-              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   mapButton(
                     icon: Icons.add,
                     tooltip: zoomInTitle,
                     onPressed: zoomIn,
+                    size: 48,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(width: 7),
                   mapButton(
                     icon: Icons.remove,
                     tooltip: zoomOutTitle,
                     onPressed: zoomOut,
+                    size: 48,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(width: 7),
                   mapButton(
                     icon: Icons.explore,
                     tooltip: northTitle,
                     onPressed: goNorth,
+                    size: 48,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(width: 7),
                   mapButton(
                     icon: Icons.my_location,
                     tooltip: currentLocationTitle,
                     active: userLocation != null,
                     onPressed: goToMyLocation,
+                    size: 48,
                   ),
+                  const SizedBox(width: 7),
+                  mapButton(
+                    icon: Icons.language,
+                    tooltip: languageTitle,
+                    onPressed: _showLanguagePicker,
+                    size: 48,
+                  ),
+                  const SizedBox(width: 7),
+                  _backToCyrusButton(),
                 ],
               ),
             ),
-
-            if (routingLoading)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.10),
-                    alignment: Alignment.center,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xff071722),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            tr(
-                              'در حال محاسبه مسیر...',
-                              'Calculating route...',
-                              'جارٍ حساب المسار...',
-                            ),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-            if (loading)
-              Positioned(
-                bottom: 30,
-                left: 20,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff071722)
-                        .withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        locatingTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           ],
         ),
       ),
     );
   }
-}
 
-// =================================================================
-// SEARCH PANEL
-// =================================================================
-
-class _SearchPanel extends StatefulWidget {
-  final String? initialOrigin;
-  final String? initialDestination;
-  final LatLng? userLocation;
-
-  final bool initialMode;
-
-  final void Function(LatLng point, String name)
-      onOriginSelected;
-
-  final void Function(LatLng point, String name)
-      onDestinationSelected;
-
-  final VoidCallback onClearOrigin;
-  final VoidCallback onClearDestination;
-  final VoidCallback onSwap;
-
-  final Future<List<Map<String, dynamic>>> Function(String query)
-      searchPlaces;
-
-  final MapLanguage language;
-
-  final String Function(String, String, String) tr;
-
-  const _SearchPanel({
-    required this.initialOrigin,
-    required this.initialDestination,
-    required this.userLocation,
-    required this.initialMode,
-    required this.onOriginSelected,
-    required this.onDestinationSelected,
-    required this.onClearOrigin,
-    required this.onClearDestination,
-    required this.onSwap,
-    required this.searchPlaces,
-    required this.language,
-    required this.tr,
-  });
-
-  @override
-  State<_SearchPanel> createState() => _SearchPanelState();
+  Widget _backToCyrusButton() {
+    return Tooltip(
+      message: backTitle,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(17),
+          onTap: () {
+            Navigator.of(context).pop();
+          },
+          child: Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(17),
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xffD4AF37),
+                  Color(0xffA77B18),
+                ],
+              ),
+              border: Border.all(
+                color: Colors.white70,
+                width: 1.2,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black45,
+                  blurRadius: 10,
+                  offset: Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.reply,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  tr(
+                    '↪️ سایروس توریست',
+                    '↪️ Cyrus Tourist',
+                    '↪️ سايروس توريست',
+                  ),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SearchPanelState extends State<_SearchPanel> {
