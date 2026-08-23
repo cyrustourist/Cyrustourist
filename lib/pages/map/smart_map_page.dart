@@ -6,7 +6,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../core/language/app_text.dart';
+
+enum MapLanguage { fa, en, ar }
 
 class SmartMapPage extends StatefulWidget {
   const SmartMapPage({super.key});
@@ -32,10 +33,57 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
   bool loading = false;
   bool gpsEnabled = true;
+  MapLanguage pageLanguage = MapLanguage.fa;
+  List<LatLng> routePoints = [];
+  double? routeDistanceKm;
+  double? routeDurationMin;
+  bool routingLoading = false;
 
   // ----------------------------------------------------------
   // INIT
   // ----------------------------------------------------------
+
+  bool get isRtl =>
+      pageLanguage == MapLanguage.fa || pageLanguage == MapLanguage.ar;
+
+  String get _nominatimLanguage {
+    switch (pageLanguage) {
+      case MapLanguage.en:
+        return 'en';
+      case MapLanguage.ar:
+        return 'ar,en';
+      case MapLanguage.fa:
+        return 'fa,en';
+    }
+  }
+
+  String tr(String fa, String en, String ar) {
+    switch (pageLanguage) {
+      case MapLanguage.en:
+        return en;
+      case MapLanguage.ar:
+        return ar;
+      case MapLanguage.fa:
+        return fa;
+    }
+  }
+
+  String get mapTitle => tr('نقشه گردشگری', 'Tourism Map', 'الخريطة السياحية');
+  String get searchTitle => tr('جستجوی مبدأ و مقصد', 'Search origin & destination', 'بحث عن البداية والوجهة');
+  String get routeTitle => tr('مسیر‌یابی', 'Route', 'المسار');
+  String get clearRouteTitle => tr('پاک کردن مسیر', 'Clear route', 'مسح المسار');
+  String get gpsOffTitle => tr(gpsOffTitle, 'GPS is off — tap to enable location', 'GPS متوقف — اضغط لتفعيل الموقع');
+  String get locatingTitle => tr('در حال مکان‌یابی...', 'Locating...', 'جارٍ تحديد الموقع...');
+  String get currentLocationTitle => tr('موقعیت من', 'My location', 'موقعي');
+  String get northTitle => tr('بازگشت به شمال', 'North', 'الشمال');
+  String get zoomInTitle => tr('بزرگنمایی', 'Zoom in', 'تكبير');
+  String get zoomOutTitle => tr('کوچک‌نمایی', 'Zoom out', 'تصغير');
+  String get backTitle => tr('بازگشت به سایروس توریست', 'Back to Cyrus Tourist', 'العودة إلى سايروس توريست');
+  String get languageTitle => tr('زبان', 'Language', 'اللغة');
+  String get distanceTitle => tr('مسافت', 'Distance', 'المسافة');
+  String get durationTitle => tr('زمان تقریبی', 'ETA', 'الوقت التقريبي');
+  String get routingErrorTitle => tr('دریافت مسیر انجام نشد. اتصال اینترنت را بررسی کنید.', 'Could not get the route. Check your internet connection.', 'تعذر الحصول على المسار. تحقق من اتصال الإنترنت.');
+  String get needPointsTitle => tr('ابتدا مبدأ و مقصد را انتخاب کنید.', 'Select an origin and destination first.', 'اختر نقطة البداية والوجهة أولاً');
 
   @override
   void initState() {
@@ -122,6 +170,14 @@ class _SmartMapPageState extends State<SmartMapPage> {
       setState(() {
         userLocation = point;
         loading = false;
+        if (originLocation == null) {
+          originLocation = point;
+          originName = tr(
+            'موقعیت فعلی من',
+            'My current location',
+            'موقعي الحالي',
+          );
+        }
       });
 
       mapController.move(
@@ -251,8 +307,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
         'format': 'jsonv2',
         'limit': '6',
         'addressdetails': '1',
-        'accept-language':
-            AppText.rtl ? 'fa,en' : 'en,fa',
+        'accept-language': _nominatimLanguage,
       },
     );
 
@@ -333,6 +388,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
               _swapPlaces,
           searchPlaces:
               searchPlaces,
+          language: pageLanguage,
+          tr: tr,
         );
       },
     );
@@ -349,6 +406,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     setState(() {
       originLocation = point;
       originName = name;
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
     });
 
     mapController.move(
@@ -368,6 +428,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     setState(() {
       destinationLocation = point;
       destinationName = name;
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
     });
 
     mapController.move(
@@ -388,7 +451,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
     setState(() {
       originLocation = userLocation;
-      originName = 'موقعیت فعلی من';
+      originName = tr('موقعیت فعلی من', 'My current location', 'موقعي الحالي');
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
     });
 
     mapController.move(
@@ -405,6 +471,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     setState(() {
       originLocation = null;
       originName = null;
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
     });
   }
 
@@ -416,6 +485,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
     setState(() {
       destinationLocation = null;
       destinationName = null;
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
     });
   }
 
@@ -442,6 +514,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
       destinationName =
           oldOriginName;
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
     });
 
     if (originLocation != null) {
@@ -505,25 +580,247 @@ class _SmartMapPageState extends State<SmartMapPage> {
   }
 
   // ----------------------------------------------------------
-  // ROUTING PLACEHOLDER
+  // REAL ROUTING - OSRM
   // ----------------------------------------------------------
 
-  void openRouting() {
-    if (originLocation == null ||
-        destinationLocation == null) {
+  Future<void> openRouting() async {
+    if (originLocation == null || destinationLocation == null) {
+      _showMessage(needPointsTitle, Icons.alt_route);
       openSearch();
       return;
     }
+    if (routingLoading) return;
 
-    _showMessage(
-      'مبدأ و مقصد انتخاب شده‌اند؛ مسیر‌یابی واقعی در مرحله بعد فعال می‌شود.',
-      Icons.alt_route,
+    setState(() => routingLoading = true);
+
+    final origin = originLocation!;
+    final destination = destinationLocation!;
+    final uri = Uri.parse(
+      'https://router.project-osrm.org/route/v1/driving/'
+      '${origin.longitude},${origin.latitude};'
+      '${destination.longitude},${destination.latitude}'
+      '?overview=full&geometries=geojson&steps=false',
+    );
+
+    final client = HttpClient();
+    try {
+      client.userAgent = 'CyrusTourist/1.0 (cyrustourist.ir)';
+      final request = await client.getUrl(uri);
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+
+      if (response.statusCode != 200) {
+        throw Exception('OSRM HTTP ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(body);
+      if (decoded is! Map ||
+          decoded['code'] != 'Ok' ||
+          decoded['routes'] is! List ||
+          (decoded['routes'] as List).isEmpty) {
+        throw Exception('OSRM route not found');
+      }
+
+      final route = (decoded['routes'] as List).first;
+      final geometry = route['geometry'];
+      final coordinates = geometry is Map ? geometry['coordinates'] : null;
+      if (coordinates is! List || coordinates.isEmpty) {
+        throw Exception('OSRM geometry missing');
+      }
+
+      final points = <LatLng>[];
+      for (final item in coordinates) {
+        if (item is List && item.length >= 2) {
+          points.add(
+            LatLng(
+              (item[1] as num).toDouble(),
+              (item[0] as num).toDouble(),
+            ),
+          );
+        }
+      }
+      if (points.length < 2) throw Exception('OSRM route too short');
+
+      final distanceMeters = (route['distance'] as num?)?.toDouble() ?? 0;
+      final durationSeconds = (route['duration'] as num?)?.toDouble() ?? 0;
+
+      if (!mounted) return;
+      setState(() {
+        routePoints = points;
+        routeDistanceKm = distanceMeters / 1000;
+        routeDurationMin = durationSeconds / 60;
+        routingLoading = false;
+      });
+
+      mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints(points),
+          padding: const EdgeInsets.all(70),
+          maxZoom: 15,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        routingLoading = false;
+        routePoints = [];
+        routeDistanceKm = null;
+        routeDurationMin = null;
+      });
+      _showMessage(routingErrorTitle, Icons.error_outline);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  void clearRoute() {
+    setState(() {
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
+    });
+  }
+
+  void _showLanguagePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final options = <MapLanguage, String>{
+          MapLanguage.fa: 'فارسی',
+          MapLanguage.en: 'English',
+          MapLanguage.ar: 'العربية',
+        };
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xff071722),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 18,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  languageTitle,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (final entry in options.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      tileColor: entry.key == pageLanguage
+                          ? const Color(0xff0083B0)
+                          : Colors.white.withValues(alpha: 0.08),
+                      leading: Icon(
+                        entry.key == pageLanguage
+                            ? Icons.check_circle
+                            : Icons.language,
+                        color: Colors.white,
+                      ),
+                      title: Text(
+                        entry.value,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onTap: () {
+                        setState(() => pageLanguage = entry.key);
+                        Navigator.pop(sheetContext);
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  // ----------------------------------------------------------
-  // MARKERS
-  // ----------------------------------------------------------
+  Widget _routeSummary() {
+    final distance = routeDistanceKm ?? 0;
+    final duration = routeDurationMin ?? 0;
+    final distanceText = distance < 1
+        ? '${(distance * 1000).round()} m'
+        : '${distance.toStringAsFixed(1)} km';
+    final durationText = duration < 60
+        ? '${duration.round()} min'
+        : '${(duration / 60).floor()} h ${(duration % 60).round()} min';
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xff071722).withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xff2D6678)),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.alt_route, color: Colors.white, size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Wrap(
+              spacing: 18,
+              runSpacing: 4,
+              children: [
+                _routeMetric(Icons.straighten, distanceTitle, distanceText),
+                _routeMetric(Icons.schedule, durationTitle, durationText),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: clearRouteTitle,
+            onPressed: clearRoute,
+            icon: const Icon(Icons.close, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _routeMetric(IconData icon, String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: Colors.white70),
+        const SizedBox(width: 5),
+        Text(
+          '$label: $value',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
 
   List<Marker> markers() {
     final List<Marker> result = [];
@@ -847,7 +1144,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: AppText.rtl
+      textDirection: isRtl
           ? TextDirection.rtl
           : TextDirection.ltr,
       child: Scaffold(
@@ -864,8 +1161,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 const EdgeInsets.all(8),
             child: mapButton(
               icon: Icons.arrow_back,
-              tooltip:
-                  'بازگشت به سایروس توریست',
+              tooltip: backTitle,
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -875,7 +1171,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
           title: Column(
             children: [
               Text(
-                AppText.map(),
+                mapTitle,
                 style: const TextStyle(
                   fontWeight:
                       FontWeight.bold,
@@ -910,6 +1206,18 @@ class _SmartMapPageState extends State<SmartMapPage> {
                   userAgentPackageName:
                       'cyrustourist.ir.app',
                 ),
+                if (routePoints.length >= 2)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: routePoints,
+                        strokeWidth: 6,
+                        color: const Color(0xff0083B0),
+                        borderStrokeWidth: 2,
+                        borderColor: Colors.white,
+                      ),
+                    ],
+                  ),
                 MarkerLayer(
                   markers: markers(),
                 ),
@@ -937,12 +1245,16 @@ class _SmartMapPageState extends State<SmartMapPage> {
                     width: 10,
                   ),
                   mapButton(
-                    icon:
-                        Icons.alt_route,
-                    tooltip:
-                        'مسیر‌یابی',
-                    onPressed:
-                        openRouting,
+                    icon: Icons.language,
+                    tooltip: languageTitle,
+                    onPressed: _showLanguagePicker,
+                  ),
+                  const SizedBox(width: 8),
+                  mapButton(
+                    icon: Icons.alt_route,
+                    tooltip: routeTitle,
+                    active: routePoints.length >= 2,
+                    onPressed: openRouting,
                   ),
                 ],
               ),
@@ -1000,7 +1312,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                         ),
                         Expanded(
                           child: Text(
-                            'GPS خاموش است — برای مکان‌یابی لمس کنید',
+                            gpsOffTitle,
                             style:
                                 TextStyle(
                               color:
@@ -1016,6 +1328,14 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ),
 
+            if (routePoints.length >= 2)
+              Positioned(
+                left: 16,
+                right: 82,
+                bottom: 24,
+                child: _routeSummary(),
+              ),
+
             // RIGHT CONTROLS
             Positioned(
               right: 16,
@@ -1024,8 +1344,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 children: [
                   mapButton(
                     icon: Icons.add,
-                    tooltip:
-                        'بزرگنمایی',
+                    tooltip: zoomInTitle,
                     onPressed:
                         zoomIn,
                   ),
@@ -1035,8 +1354,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                   mapButton(
                     icon:
                         Icons.remove,
-                    tooltip:
-                        'کوچک‌نمایی',
+                    tooltip: zoomOutTitle,
                     onPressed:
                         zoomOut,
                   ),
@@ -1046,8 +1364,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                   mapButton(
                     icon:
                         Icons.explore,
-                    tooltip:
-                        'بازگشت به شمال',
+                    tooltip: northTitle,
                     onPressed:
                         goNorth,
                   ),
@@ -1057,8 +1374,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                   mapButton(
                     icon:
                         Icons.my_location,
-                    tooltip:
-                        'موقعیت من',
+                    tooltip: currentLocationTitle,
                     active:
                         userLocation !=
                             null,
@@ -1068,6 +1384,54 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ],
               ),
             ),
+
+            if (routingLoading)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    alignment: Alignment.center,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xff071722),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black54,
+                            blurRadius: 16,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            tr('در حال محاسبه مسیر...', 'Calculating route...', 'جارٍ حساب المسار...'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // LOADING
             if (loading)
@@ -1121,7 +1485,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                         width: 10,
                       ),
                       Text(
-                        'در حال مکان‌یابی...',
+                        locatingTitle,
                         style:
                             TextStyle(
                           color:
@@ -1168,6 +1532,8 @@ class _SearchPanel extends StatefulWidget {
   final Future<List<Map<String, dynamic>>> Function(
     String query,
   ) searchPlaces;
+  final MapLanguage language;
+  final String Function(String, String, String) tr;
 
   const _SearchPanel({
     required this.initialOrigin,
@@ -1179,6 +1545,8 @@ class _SearchPanel extends StatefulWidget {
     required this.onClearDestination,
     required this.onSwap,
     required this.searchPlaces,
+    required this.language,
+    required this.tr,
   });
 
   @override
@@ -1198,6 +1566,48 @@ class _SearchPanelState
   bool searching = false;
 
   List<Map<String, dynamic>> results = [];
+
+  bool get isRtl =>
+      pageLanguage == MapLanguage.fa || pageLanguage == MapLanguage.ar;
+
+  String get _nominatimLanguage {
+    switch (pageLanguage) {
+      case MapLanguage.en:
+        return 'en';
+      case MapLanguage.ar:
+        return 'ar,en';
+      case MapLanguage.fa:
+        return 'fa,en';
+    }
+  }
+
+  String tr(String fa, String en, String ar) {
+    switch (pageLanguage) {
+      case MapLanguage.en:
+        return en;
+      case MapLanguage.ar:
+        return ar;
+      case MapLanguage.fa:
+        return fa;
+    }
+  }
+
+  String get mapTitle => tr('نقشه گردشگری', 'Tourism Map', 'الخريطة السياحية');
+  String get searchTitle => tr('جستجوی مبدأ و مقصد', 'Search origin & destination', 'بحث عن البداية والوجهة');
+  String get routeTitle => tr('مسیر‌یابی', 'Route', 'المسار');
+  String get clearRouteTitle => tr('پاک کردن مسیر', 'Clear route', 'مسح المسار');
+  String get gpsOffTitle => tr(gpsOffTitle, 'GPS is off — tap to enable location', 'GPS متوقف — اضغط لتفعيل الموقع');
+  String get locatingTitle => tr('در حال مکان‌یابی...', 'Locating...', 'جارٍ تحديد الموقع...');
+  String get currentLocationTitle => tr('موقعیت من', 'My location', 'موقعي');
+  String get northTitle => tr('بازگشت به شمال', 'North', 'الشمال');
+  String get zoomInTitle => tr('بزرگنمایی', 'Zoom in', 'تكبير');
+  String get zoomOutTitle => tr('کوچک‌نمایی', 'Zoom out', 'تصغير');
+  String get backTitle => tr('بازگشت به سایروس توریست', 'Back to Cyrus Tourist', 'العودة إلى سايروس توريست');
+  String get languageTitle => tr('زبان', 'Language', 'اللغة');
+  String get distanceTitle => tr('مسافت', 'Distance', 'المسافة');
+  String get durationTitle => tr('زمان تقریبی', 'ETA', 'الوقت التقريبي');
+  String get routingErrorTitle => tr('دریافت مسیر انجام نشد. اتصال اینترنت را بررسی کنید.', 'Could not get the route. Check your internet connection.', 'تعذر الحصول على المسار. تحقق من اتصال الإنترنت.');
+  String get needPointsTitle => tr('ابتدا مبدأ و مقصد را انتخاب کنید.', 'Select an origin and destination first.', 'اختر نقطة البداية والوجهة أولاً');
 
   @override
   void initState() {
@@ -1258,9 +1668,13 @@ class _SearchPanelState
 
       ScaffoldMessenger.of(context)
           .showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'جستجوی مکان انجام نشد. اتصال اینترنت را بررسی کنید.',
+            widget.tr(
+              'جستجوی مکان انجام نشد. اتصال اینترنت را بررسی کنید.',
+              'Place search failed. Check your internet connection.',
+              'فشل البحث عن المكان. تحقق من اتصال الإنترنت.',
+            ),
           ),
         ),
       );
@@ -1327,9 +1741,13 @@ class _SearchPanelState
     if (widget.userLocation == null) {
       ScaffoldMessenger.of(context)
           .showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'ابتدا باید موقعیت فعلی دریافت شود.',
+            widget.tr(
+              'ابتدا باید موقعیت فعلی دریافت شود.',
+              'Get your current location first.',
+              'احصل على موقعك الحالي أولاً.',
+            ),
           ),
         ),
       );
@@ -1390,6 +1808,9 @@ class _SearchPanelState
         },
         onSubmitted:
             performSearch,
+        onChanged: (_) {
+          setState(() {});
+        },
         decoration:
             InputDecoration(
           prefixIcon: Icon(
@@ -1423,8 +1844,8 @@ class _SearchPanelState
                 )
               : null,
           hintText: origin
-              ? 'جستجوی مبدأ...'
-              : 'جستجوی مقصد...',
+              ? widget.tr('جستجوی مبدأ...', 'Search origin...', 'بحث عن البداية...')
+              : widget.tr('جستجوی مقصد...', 'Search destination...', 'بحث عن الوجهة...'),
           border: InputBorder.none,
           contentPadding:
               const EdgeInsets.symmetric(
@@ -1584,7 +2005,11 @@ class _SearchPanelState
                       width: 10,
                     ),
                     Text(
-                      'جستجوی مبدأ و مقصد',
+                      widget.tr(
+                        'جستجوی مبدأ و مقصد',
+                        'Search origin & destination',
+                        'بحث عن البداية والوجهة',
+                      ),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 19,
@@ -1634,8 +2059,12 @@ class _SearchPanelState
                       color:
                           Color(0xff29B6F6),
                     ),
-                    label: const Text(
-                      'استفاده از موقعیت فعلی من',
+                    label: Text(
+                      widget.tr(
+                        'استفاده از موقعیت فعلی من',
+                        'Use my current location',
+                        'استخدام موقعي الحالي',
+                      ),
                       style: TextStyle(
                         color:
                             Color(0xffB9E9FF),
@@ -1653,10 +2082,21 @@ class _SearchPanelState
 
               // SWAP
               IconButton(
-                onPressed:
-                    widget.onSwap,
-                tooltip:
-                    'تعویض مبدأ و مقصد',
+                onPressed: () {
+                  final originText = originController.text;
+                  originController.text = destinationController.text;
+                  destinationController.text = originText;
+                  setState(() {
+                    originMode = true;
+                    results = [];
+                  });
+                  widget.onSwap();
+                },
+                tooltip: widget.tr(
+                  'تعویض مبدأ و مقصد',
+                  'Swap origin & destination',
+                  'تبديل البداية والوجهة',
+                ),
                 icon: const Icon(
                   Icons.swap_vert_circle,
                   color: Colors.white,
@@ -1727,8 +2167,8 @@ class _SearchPanelState
                           ),
                     label: Text(
                       searching
-                          ? 'در حال جستجو...'
-                          : 'جستجوی مکان واقعی',
+                          ? widget.tr('در حال جستجو...', 'Searching...', 'جارٍ البحث...')
+                          : widget.tr('جستجوی مکان واقعی', 'Search places', 'بحث عن مكان'),
                       style:
                           const TextStyle(
                         fontWeight:
