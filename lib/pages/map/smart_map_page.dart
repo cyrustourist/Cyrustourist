@@ -33,8 +33,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
   MapLanguage pageLanguage = MapLanguage.fa;
 
   List<LatLng> routePoints = [];
+
   double? routeDistanceKm;
   double? routeDurationMin;
+
   bool routingLoading = false;
 
   bool get isRtl =>
@@ -66,8 +68,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get mapTitle =>
       tr('نقشه گردشگری', 'Tourism Map', 'الخريطة السياحية');
 
-  String get searchTitle =>
-      tr(
+  String get searchTitle => tr(
         'جستجوی مبدأ و مقصد',
         'Search origin & destination',
         'بحث عن البداية والوجهة',
@@ -79,19 +80,14 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get clearRouteTitle =>
       tr('پاک کردن مسیر', 'Clear route', 'مسح المسار');
 
-  String get gpsOffTitle =>
-      tr(
+  String get gpsOffTitle => tr(
         'GPS خاموش است — برای فعال‌سازی مکان‌یابی ضربه بزنید',
         'GPS is off — tap to enable location',
         'GPS متوقف — اضغط لتفعيل الموقع',
       );
 
   String get locatingTitle =>
-      tr(
-        'در حال مکان‌یابی...',
-        'Locating...',
-        'جارٍ تحديد الموقع...',
-      );
+      tr('در حال مکان‌یابی...', 'Locating...', 'جارٍ تحديد الموقع...');
 
   String get currentLocationTitle =>
       tr('موقعیت من', 'My location', 'موقعي');
@@ -105,8 +101,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get zoomOutTitle =>
       tr('کوچک‌نمایی', 'Zoom out', 'تصغير');
 
-  String get backTitle =>
-      tr(
+  String get backTitle => tr(
         'بازگشت به سایروس توریست',
         'Back to Cyrus Tourist',
         'العودة إلى سايروس توريست',
@@ -121,15 +116,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get durationTitle =>
       tr('زمان تقریبی', 'ETA', 'الوقت التقريبي');
 
-  String get routingErrorTitle =>
-      tr(
+  String get routingErrorTitle => tr(
         'دریافت مسیر انجام نشد. اتصال اینترنت را بررسی کنید.',
         'Could not get the route. Check your internet connection.',
         'تعذر الحصول على المسار. تحقق من اتصال الإنترنت.',
       );
 
-  String get needPointsTitle =>
-      tr(
+  String get needPointsTitle => tr(
         'ابتدا مبدأ و مقصد را انتخاب کنید.',
         'Select an origin and destination first.',
         'اختر نقطة البداية والوجهة أولاً',
@@ -593,6 +586,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
         needPointsTitle,
         Icons.alt_route,
       );
+
       openSearch();
       return;
     }
@@ -674,10 +668,16 @@ class _SmartMapPageState extends State<SmartMapPage> {
       for (final item in coordinates) {
         if (item is List &&
             item.length >= 2) {
+          final longitude =
+              (item[0] as num).toDouble();
+
+          final latitude =
+              (item[1] as num).toDouble();
+
           points.add(
             LatLng(
-              (item[1] as num).toDouble(),
-              (item[0] as num).toDouble(),
+              latitude,
+              longitude,
             ),
           );
         }
@@ -1366,7 +1366,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
               ],
             ),
 
+            // ====================================================
             // TOP SEARCH
+            // ====================================================
+
             Positioned(
               top: 16,
               left: 16,
@@ -1401,7 +1404,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
               ),
             ),
 
+            // ====================================================
             // GPS STATUS
+            // ====================================================
+
             if (!gpsEnabled)
               Positioned(
                 top: 88,
@@ -1469,7 +1475,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ),
 
+            // ====================================================
             // ROUTE SUMMARY
+            // ====================================================
+
             if (routePoints.length >= 2)
               Positioned(
                 left: 16,
@@ -1478,7 +1487,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 child: _routeSummary(),
               ),
 
+            // ====================================================
             // RIGHT CONTROLS
+            // ====================================================
+
             Positioned(
               right: 16,
               bottom: 24,
@@ -1515,7 +1527,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
               ),
             ),
 
+            // ====================================================
             // ROUTING LOADING
+            // ====================================================
+
             if (routingLoading)
               Positioned.fill(
                 child: IgnorePointer(
@@ -1593,7 +1608,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ),
 
+            // ====================================================
             // LOCATION LOADING
+            // ====================================================
+
             if (loading)
               Positioned(
                 bottom: 30,
@@ -1665,9 +1683,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
   }
 }
 
-// ============================================================
+// ================================================================
 // SEARCH PANEL
-// ============================================================
+// ================================================================
 
 class _SearchPanel extends StatefulWidget {
   final String? initialOrigin;
@@ -2119,7 +2137,6 @@ class _SearchPanelState
               children: [
                 const SizedBox(height: 10),
 
-                // HANDLE
                 Container(
                   width: 45,
                   height: 5,
@@ -2135,7 +2152,6 @@ class _SearchPanelState
 
                 const SizedBox(height: 14),
 
-                // TITLE
                 Padding(
                   padding:
                       const EdgeInsets
@@ -2174,7 +2190,6 @@ class _SearchPanelState
 
                 const SizedBox(height: 16),
 
-                // ORIGIN
                 Padding(
                   padding:
                       const EdgeInsets
@@ -2188,7 +2203,6 @@ class _SearchPanelState
 
                 const SizedBox(height: 8),
 
-                // CURRENT LOCATION
                 Padding(
                   padding:
                       const EdgeInsets
@@ -2229,7 +2243,6 @@ class _SearchPanelState
 
                 const SizedBox(height: 4),
 
-                // SWAP
                 IconButton(
                   onPressed: () {
                     final originText =
@@ -2262,7 +2275,6 @@ class _SearchPanelState
 
                 const SizedBox(height: 4),
 
-                // DESTINATION
                 Padding(
                   padding:
                       const EdgeInsets
@@ -2276,7 +2288,6 @@ class _SearchPanelState
 
                 const SizedBox(height: 14),
 
-                // SEARCH BUTTON
                 Padding(
                   padding:
                       const EdgeInsets
@@ -2362,7 +2373,6 @@ class _SearchPanelState
 
                 const SizedBox(height: 14),
 
-                // RESULTS
                 if (results.isNotEmpty)
                   Flexible(
                     child:
