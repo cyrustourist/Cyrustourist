@@ -3,12 +3,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../map_place.dart';
-import '../../services/location_service.dart';
-import '../../services/map_places_service.dart';
+
+import '../../services/map_smart_controller.dart';
 
 import '../../widgets/map_markers_layer.dart';
 import '../../widgets/map_search_bar.dart';
 import '../../widgets/map_place_bottom_sheet.dart';
+
 
 
 class SmartMapScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class SmartMapScreen extends StatefulWidget {
 
 
 
+
 class _SmartMapScreenState
     extends State<SmartMapScreen> {
 
@@ -34,21 +36,19 @@ class _SmartMapScreenState
       MapController();
 
 
-  final MapPlacesService placesService =
-      MapPlacesService();
+
+  final MapSmartController controller =
+      MapSmartController();
 
 
-  LatLng userLocation =
+
+
+  LatLng defaultLocation =
       const LatLng(
         35.6892,
         51.3890,
       );
 
-
-  List<MapPlace> places = [];
-
-
-  bool loading = false;
 
 
 
@@ -57,116 +57,40 @@ class _SmartMapScreenState
 
     super.initState();
 
-    _loadLocation();
+
+    controller.addListener(
+      _refresh,
+    );
+
+
+    controller.initializeLocation();
 
   }
 
 
 
 
-  Future<void> _loadLocation() async {
 
-    final location =
-        await LocationService()
-            .getCurrentLocation();
+  void _refresh() {
 
 
-    if(location != null){
+    if(!mounted) return;
 
-      setState(() {
 
-        userLocation = location;
+    setState(() {});
 
-      });
 
+    if(controller.userLocation != null){
 
       mapController.move(
-        location,
+
+        controller.userLocation!,
+
         14,
+
       );
 
     }
-
-  }
-
-
-
-
-  Future<void> search(
-      String text,
-  ) async {
-
-
-    if(text.trim().isEmpty){
-      return;
-    }
-
-
-    setState(() {
-
-      loading = true;
-
-    });
-
-
-
-    final result =
-        await placesService.searchPlaces(
-
-      query: text,
-
-      userLocation:
-          userLocation,
-
-    );
-
-
-
-    setState(() {
-
-      places = result;
-
-      loading = false;
-
-    });
-
-
-    if(result.isNotEmpty){
-
-      mapController.move(
-        result.first.location,
-        15,
-      );
-
-    }
-
-  }
-
-
-
-
-
-  void showPlace(
-      MapPlace place,
-  ){
-
-
-    showModalBottomSheet(
-
-      context: context,
-
-      isScrollControlled: true,
-
-      builder: (_) {
-
-        return MapPlaceBottomSheet(
-          place: place,
-        );
-
-      },
-
-    );
-
 
   }
 
@@ -175,9 +99,106 @@ class _SmartMapScreenState
 
 
   @override
-  Widget build(
-      BuildContext context,
+  void dispose() {
+
+    controller.removeListener(
+      _refresh,
+    );
+
+
+    controller.dispose();
+
+
+    super.dispose();
+
+  }
+
+
+
+
+
+  Future<void> search(
+    String text,
+  ) async {
+
+
+    await controller.search(
+
+      query: text,
+
+    );
+
+
+
+    if(controller.nearestPlace != null){
+
+
+      mapController.move(
+
+        controller.nearestPlace!.location,
+
+        15,
+
+      );
+
+
+    }
+
+
+  }
+
+
+
+
+
+  void showPlace(
+    MapPlace place,
   ){
+
+
+    showModalBottomSheet(
+
+      context: context,
+
+
+      isScrollControlled: true,
+
+
+      builder: (_) {
+
+
+        return MapPlaceBottomSheet(
+
+          place: place,
+
+        );
+
+
+      },
+
+
+    );
+
+
+  }
+
+
+
+
+
+
+
+  @override
+  Widget build(
+    BuildContext context,
+  ){
+
+
+    final center =
+        controller.userLocation ??
+        defaultLocation;
+
+
 
 
     return Scaffold(
@@ -189,54 +210,84 @@ class _SmartMapScreenState
         children: [
 
 
+
           FlutterMap(
+
 
             mapController:
                 mapController,
 
 
+
             options: MapOptions(
 
+
               initialCenter:
-                  userLocation,
+                  center,
+
 
 
               initialZoom:
                   13,
 
+
             ),
+
+
 
 
             children: [
 
 
+
+
               TileLayer(
 
+
                 urlTemplate:
+
                 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 
+
+
                 userAgentPackageName:
+
                 'ir.cyrustourist.app',
 
+
+
               ),
+
+
 
 
 
               MapMarkersLayer(
 
+
                 places:
-                    places,
+
+                controller.visiblePlaces,
+
 
 
                 onTap:
-                    showPlace,
+
+                showPlace,
+
+
 
               ),
+
 
 
             ],
 
+
+
           ),
+
+
 
 
 
@@ -244,75 +295,190 @@ class _SmartMapScreenState
 
           Positioned(
 
+
             top: 45,
 
+
             left: 15,
+
 
             right: 15,
 
 
+
             child:
+
 
             MapSearchBar(
 
+
               onSearch:
-                  search,
+
+              search,
+
+
 
             ),
+
+
 
           ),
 
 
 
 
-          if(loading)
+
+
+
+
+          if(controller.isLoading ||
+              controller.isLocationLoading)
+
+
 
             const Center(
 
+
               child:
 
+
               CircularProgressIndicator(),
+
 
             ),
 
 
 
 
+
+
+
+          if(controller.errorMessage != null)
+
+
+            Positioned(
+
+
+              top: 110,
+
+
+              left: 20,
+
+
+              right: 20,
+
+
+
+              child:
+
+
+              Card(
+
+
+                child:
+
+
+                Padding(
+
+
+                  padding:
+                      const EdgeInsets.all(12),
+
+
+
+                  child:
+
+
+                  Text(
+
+                    controller.errorMessage!,
+
+                    textAlign:
+                        TextAlign.center,
+
+
+                  ),
+
+
+
+                ),
+
+
+
+              ),
+
+
+
+            ),
+
+
+
+
+
+
+
           Positioned(
 
+
             bottom: 25,
+
 
             right: 20,
 
 
+
             child:
+
 
             FloatingActionButton(
 
+
               child:
 
+
               const Icon(
+
                 Icons.my_location,
+
               ),
+
 
 
               onPressed: (){
 
 
-                mapController.move(
 
-                  userLocation,
+                if(controller.userLocation != null){
 
-                  15,
 
-                );
+
+                  mapController.move(
+
+
+                    controller.userLocation!,
+
+
+                    15,
+
+
+
+                  );
+
+
+
+                }
+
 
 
               },
 
+
             ),
 
+
+
           ),
+
 
 
 
@@ -325,6 +491,7 @@ class _SmartMapScreenState
     );
 
   }
+
 
 
 }
