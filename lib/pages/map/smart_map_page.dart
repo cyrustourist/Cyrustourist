@@ -36,8 +36,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
   bool routingLoading = false;
   int _routingRequestId = 0;
 
-  bool destinationConfirmation = false;
-
   RouteStrategy routeStrategy = RouteStrategy.fastest;
 
   MapLanguage pageLanguage = MapLanguage.fa;
@@ -457,7 +455,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
-      destinationConfirmation = false;
     });
 
     mapController.move(point, 15);
@@ -473,7 +470,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
-      destinationConfirmation = true;
     });
 
     mapController.move(point, 15);
@@ -512,7 +508,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
-      destinationConfirmation = false;
     });
   }
 
@@ -539,173 +534,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
         15,
       );
     }
-  }
-
-  // ============================================================
-  // DESTINATION CONFIRMATION
-  // ============================================================
-
-  void _confirmDestinationAndRoute() {
-    if (originLocation == null || destinationLocation == null) {
-      _showMessage(needPointsTitle, Icons.alt_route);
-      openSearch(
-        destination: originLocation != null &&
-            destinationLocation == null,
-      );
-      return;
-    }
-
-    setState(() {
-      destinationConfirmation = false;
-    });
-
-    openRouting();
-  }
-
-  void _backFromDestinationConfirmation() {
-    setState(() {
-      destinationConfirmation = false;
-    });
-
-    openSearch(destination: true);
-  }
-
-  Widget _destinationConfirmationPanel() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      decoration: const BoxDecoration(
-        color: Color(0xff071722),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black54,
-            blurRadius: 18,
-            offset: Offset(0, -6),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 45,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.white38,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  width: 62,
-                  height: 62,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xff24C6DC),
-                        Color(0xff0083B0),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black38,
-                        blurRadius: 14,
-                        offset: Offset(0, 7),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.location_on,
-                    color: Colors.white,
-                    size: 34,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    tr(
-                      'هدف گردشگری انتخاب شد',
-                      'Tourist destination selected',
-                      'تم اختيار الهدف السياحي',
-                    ),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(17),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.place,
-                    color: Color(0xffFF6B6B),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      destinationName ??
-                          tr(
-                            'مکان انتخاب‌شده',
-                            'Selected place',
-                            'المكان المحدد',
-                          ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: largeMapAction(
-                    icon: Icons.arrow_back,
-                    title: tr('بازگشت', 'Back', 'رجوع'),
-                    onPressed: _backFromDestinationConfirmation,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: largeMapAction(
-                    icon: Icons.directions_car,
-                    title: tr('بزن بریم', 'Let’s go', 'انطلق'),
-                    primary: true,
-                    onPressed: _confirmDestinationAndRoute,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   // ============================================================
@@ -1723,11 +1551,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ),
 
-              destinationConfirmation
-                  ? _destinationConfirmationPanel()
-                  : _buildBottomControlPanel(
-                      context,
-                    ),
+              _buildBottomControlPanel(
+                context,
+              ),
             ],
           ),
         ),
@@ -1800,12 +1626,14 @@ class _SmartMapPageState extends State<SmartMapPage> {
                     title:
                         searchPlaceTitle,
                     primary: true,
-                    onPressed: () {
-                      // Always enter the tourist-destination search flow.
-                      // After a destination is selected, _selectDestination
-                      // opens the confirmation page automatically.
-                      openSearch(destination: true);
-                    },
+                    onPressed: () =>
+                        openSearch(
+                      destination:
+                          originLocation !=
+                                  null &&
+                              destinationLocation ==
+                                  null,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 7),
