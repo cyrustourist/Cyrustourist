@@ -1561,6 +1561,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
       ),
       decoration: const BoxDecoration(
         color: Color(0xff071722),
+        gradient: const LinearGradient(
+          colors: [Color(0xff102936), Color(0xff071722)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
         borderRadius:
             BorderRadius.vertical(
           top: Radius.circular(26),
@@ -1743,9 +1748,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 const SizedBox(width: 6),
                 Text(
                   tr(
-                    '↪️ سایروس توریست',
-                    '↪️ Cyrus Tourist',
-                    '↪️ سايروس توريست',
+                    'سایروس توریست',
+                    'Cyrus Tourist',
+                    'سايروس توريست',
                   ),
                   style:
                       const TextStyle(
@@ -2588,7 +2593,8 @@ class _SearchPanelState
                         ),
                         foregroundColor:
                             Colors.white,
-                        elevation: 8,
+                        elevation: 12,
+                        shadowColor: Colors.black54,
                         shape:
                             RoundedRectangleBorder(
                           borderRadius:
