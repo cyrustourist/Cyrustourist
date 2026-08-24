@@ -28,33 +28,26 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // فقط معماری گوشی‌های جدید
+        // فقط معماری 64 بیتی گوشی‌های جدید
         ndk {
-            abiFilters += listOf("arm64-v8a")
-        }
-    }
-
-    // کاهش حجم خروجی
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a")
-            isUniversalApk = false
+            abiFilters += "arm64-v8a"
         }
     }
 
     buildTypes {
 
         release {
+            // موقتاً برای تست Build
             signingConfig = signingConfigs.getByName("debug")
 
-            // حذف کدها و منابع اضافی
+            // بهینه‌سازی حجم APK
             isMinifyEnabled = true
             isShrinkResources = true
 
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
+                getDefaultProguardFile(
+                    "proguard-android-optimize.txt"
+                ),
                 "proguard-rules.pro"
             )
         }
