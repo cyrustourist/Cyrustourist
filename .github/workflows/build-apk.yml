@@ -1,150 +1,37 @@
 name: Build CyrusTourist APK
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build-apk:
-
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
-
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: 'stable'
 
-
-      - name: Flutter version
-        run: flutter --version
-
-
-      - name: Generate Android project
-        run: flutter create --platforms=android .
-
-
-      - name: Remove default test
-        run: rm -f test/widget_test.dart
-
-
-      - name: Configure Android package
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          files = [
-              Path("android/app/build.gradle"),
-              Path("android/app/build.gradle.kts")
-          ]
-
-          for file in files:
-
-              if not file.exists():
-                  continue
-
-              text = file.read_text()
-
-              if file.name.endswith(".kts"):
-
-                  text = re.sub(
-                      r'namespace\s*=\s*".*?"',
-                      'namespace = "cyrustourist.ir.app"',
-                      text
-                  )
-
-                  text = re.sub(
-                      r'applicationId\s*=\s*".*?"',
-                      'applicationId = "cyrustourist.ir.app"',
-                      text
-                  )
-
-              else:
-
-                  text = re.sub(
-                      r'namespace\s+".*?"',
-                      'namespace "cyrustourist.ir.app"',
-                      text
-                  )
-
-                  text = re.sub(
-                      r'applicationId\s+".*?"',
-                      'applicationId "cyrustourist.ir.app"',
-                      text
-                  )
-
-              file.write_text(text)
-
-          PY
-
-
-      - name: Add Location permissions
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          manifest = Path(
-              "android/app/src/main/AndroidManifest.xml"
-          )
-
-          text = manifest.read_text()
-
-          if "ACCESS_FINE_LOCATION" not in text:
-
-              permissions = (
-                  '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n'
-                  '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n'
-              )
-
-              text = text.replace(
-                  "<application",
-                  permissions + "<application",
-                  1
-              )
-
-          manifest.write_text(text)
-
-          PY
-
-
-      - name: Check CyrusTourist logo
-        run: |
-          if [ -f logo-new.jpg ]; then
-            echo "logo-new.jpg found"
-          else
-            echo "logo-new.jpg not found - continue"
-          fi
-
-
-      - name: Get dependencies
+      - name: Flutter pub get
         run: flutter pub get
 
+      - name: Build APK arm64
+        run: flutter build apk --release --split-per-abi
 
-      - name: Analyze
-        run: flutter analyze || true
-
-
-      - name: Build APK
-        run: flutter build apk --release
-
-
-      - name: Rename APK
+      - name: Prepare APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk \
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
           build/app/outputs/flutter-apk/Cyrustourist.ir.apk
-
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Cyrustourist.ir
           path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
-          if-no-files-found: error
