@@ -436,6 +436,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
           onClearOrigin: _clearOrigin,
           onClearDestination: _clearDestination,
           onSwap: _swapPlaces,
+          onRoute: openRouting,
           searchPlaces: searchPlaces,
           language: pageLanguage,
           tr: tr,
@@ -1803,6 +1804,7 @@ class _SearchPanel extends StatefulWidget {
     required this.onClearOrigin,
     required this.onClearDestination,
     required this.onSwap,
+    required this.onRoute,
     required this.searchPlaces,
     required this.language,
     required this.tr,
@@ -1826,6 +1828,7 @@ class _SearchPanel extends StatefulWidget {
   final VoidCallback onClearOrigin;
   final VoidCallback onClearDestination;
   final VoidCallback onSwap;
+  final VoidCallback onRoute;
 
   final Future<List<Map<String, dynamic>>>
       Function(String query) searchPlaces;
@@ -1938,7 +1941,7 @@ class _SearchPanelState
           if (mounted) {
             Navigator.pop(context);
             // مسیر‌یابی پس از انتخاب مبدأ و مقصد
-            openRouting();
+            widget.onRoute();
           }
         },
       );
