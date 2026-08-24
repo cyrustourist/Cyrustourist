@@ -555,6 +555,452 @@ class _SmartMapPageState extends State<SmartMapPage> {
   }
 
   // ============================================================
+  // DESTINATION CONFIRMATION
+  // ============================================================
+
+  void _confirmDestinationAndRoute() {
+    if (originLocation == null || destinationLocation == null) {
+      setState(() {
+        destinationConfirmation = false;
+      });
+
+      _showMessage(
+        needPointsTitle,
+        Icons.alt_route,
+      );
+
+      openSearch(destination: true);
+      return;
+    }
+
+    setState(() {
+      destinationConfirmation = false;
+    });
+
+    openRouting();
+  }
+
+  void _backFromDestinationConfirmation() {
+    setState(() {
+      destinationConfirmation = false;
+    });
+
+    // Return to the destination search without changing the existing
+    // origin, and without triggering routing automatically.
+    openSearch(destination: true);
+  }
+
+  Widget _destinationConfirmationPanel() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      decoration: const BoxDecoration(
+        color: Color(0xff071722),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 18,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 46,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.white38,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            Row(
+              children: [
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xff24C6DC),
+                        Color(0xff0083B0),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: 14,
+                        offset: Offset(0, 7),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.location_on,
+                    color: Colors.white,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    destinationSelectedTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.place,
+                    color: Color(0xffFF6B6B),
+                    size: 26,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      destinationName ??
+                          tr(
+                            'مکان انتخاب‌شده',
+                            'Selected place',
+                            'المكان المحدد',
+                          ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            Row(
+              children: [
+                Expanded(
+                  child: largeMapAction(
+                    icon: Icons.arrow_back,
+                    title: backToSearchTitle,
+                    onPressed: _backFromDestinationConfirmation,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: largeMapAction(
+                    icon: Icons.directions_car,
+                    title: letsGoTitle,
+                    primary: true,
+                    onPressed: _confirmDestinationAndRoute,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // CURRENT LOCATION
+  // ============================================================
+
+  void useCurrentLocation() {
+    if (widget.userLocation == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.tr(
+              'ابتدا باید موقعیت فعلی دریافت شود.',
+              'Get your current location first.',
+              'احصل على موقعك الحالي أولاً.',
+            ),
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    final name = widget.tr(
+      'موقعیت فعلی من',
+      'My current location',
+      'موقعي الحالي',
+    );
+
+    widget.onOriginSelected(
+      widget.userLocation!,
+      name,
+    );
+
+    originController.text =
+        name;
+
+    setState(() {
+      originMode = false;
+      results = [];
+    });
+  }
+
+  // ============================================================
+  // FIELD
+  // ============================================================
+
+  Widget searchField({
+    required bool origin,
+  }) {
+    final controller = origin
+        ? originController
+        : destinationController;
+
+    final color = origin
+        ? const Color(0xff1976D2)
+        : const Color(0xffE53935);
+
+    final selected =
+        originMode == origin;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius:
+            BorderRadius.circular(18),
+        border: Border.all(
+          color: selected
+              ? color
+              : Colors.transparent,
+          width: 2,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: autoCompleteSearch,
+        textDirection: isRtl
+            ? TextDirection.rtl
+            : TextDirection.ltr,
+        textInputAction:
+            TextInputAction.search,
+        onTap: () {
+          setState(() {
+            originMode = origin;
+            results = [];
+          });
+        },
+        onSubmitted: (_) {
+          setState(() {
+            originMode = origin;
+          });
+
+          searchCurrentField();
+        },
+        decoration:
+            InputDecoration(
+          prefixIcon: Icon(
+            origin
+                ? Icons.trip_origin
+                : Icons.location_on,
+            color: color,
+          ),
+          suffixIcon: Row(
+            mainAxisSize:
+                MainAxisSize.min,
+            children: [
+              if (controller.text
+                  .isNotEmpty)
+                IconButton(
+                  tooltip: widget.tr(
+                    'پاک کردن',
+                    'Clear',
+                    'مسح',
+                  ),
+                  icon: const Icon(
+                    Icons.clear,
+                  ),
+                  onPressed: () {
+                    controller.clear();
+
+                    if (origin) {
+                      widget
+                          .onClearOrigin();
+                    } else {
+                      widget
+                          .onClearDestination();
+                    }
+
+                    setState(() {
+                      results = [];
+                    });
+                  },
+                ),
+              IconButton(
+                tooltip: widget.tr(
+                  'جستجو',
+                  'Search',
+                  'بحث',
+                ),
+                icon: Icon(
+                  Icons.search,
+                  color: color,
+                ),
+                onPressed: searching
+                    ? null
+                    : () {
+                        setState(() {
+                          originMode =
+                              origin;
+                        });
+
+                        searchCurrentField();
+                      },
+              ),
+            ],
+          ),
+          hintText: origin
+              ? widget.tr(
+                  'جستجوی مبدأ...',
+                  'Search origin...',
+                  'بحث عن البداية...',
+                )
+              : widget.tr(
+                  'جستجوی مقصد...',
+                  'Search destination...',
+                  'بحث عن الوجهة...',
+                ),
+          border:
+              InputBorder.none,
+          contentPadding:
+              const EdgeInsets
+                  .symmetric(
+            horizontal: 12,
+            vertical: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // RESULT
+  // ============================================================
+
+  Widget resultItem(
+    Map<String, dynamic> result,
+  ) {
+    final name =
+        result['display_name']
+                ?.toString() ??
+            '';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius:
+            BorderRadius.circular(15),
+        onTap: () =>
+            selectResult(result),
+        child: Container(
+          margin:
+              const EdgeInsets.only(
+            bottom: 8,
+          ),
+          padding:
+              const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color:
+                const Color(0xffF4F8FA),
+            borderRadius:
+                BorderRadius.circular(15),
+            border: Border.all(
+              color:
+                  Colors.blueGrey.shade100,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                originMode
+                    ? Icons.trip_origin
+                    : Icons.location_on,
+                color: originMode
+                    ? const Color(
+                        0xff1976D2,
+                      )
+                    : const Color(
+                        0xffE53935,
+                      ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 3,
+                  overflow:
+                      TextOverflow.ellipsis,
+                  textDirection: isRtl
+                      ? TextDirection.rtl
+                      : TextDirection.ltr,
+                  style:
+                      const TextStyle(
+                    fontSize: 13,
+                    fontWeight:
+                        FontWeight.w600,
+                    color:
+                        Color(0xff18343F),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
+
+  @override
+
   // ROUTING
   // ============================================================
 
@@ -1907,6 +2353,7 @@ class _SearchPanelState
 
   @override
   void dispose() {
+    searchTimer?.cancel();
     originController.dispose();
     destinationController.dispose();
     super.dispose();
@@ -2101,451 +2548,6 @@ class _SearchPanelState
   }
 
   // ============================================================
-  // DESTINATION CONFIRMATION
-  // ============================================================
-
-  void _confirmDestinationAndRoute() {
-    if (originLocation == null || destinationLocation == null) {
-      setState(() {
-        destinationConfirmation = false;
-      });
-
-      _showMessage(
-        needPointsTitle,
-        Icons.alt_route,
-      );
-
-      openSearch(destination: true);
-      return;
-    }
-
-    setState(() {
-      destinationConfirmation = false;
-    });
-
-    openRouting();
-  }
-
-  void _backFromDestinationConfirmation() {
-    setState(() {
-      destinationConfirmation = false;
-    });
-
-    // Return to the destination search without changing the existing
-    // origin, and without triggering routing automatically.
-    openSearch(destination: true);
-  }
-
-  Widget _destinationConfirmationPanel() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      decoration: const BoxDecoration(
-        color: Color(0xff071722),
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black54,
-            blurRadius: 18,
-            offset: Offset(0, -6),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 46,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.white38,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            Row(
-              children: [
-                Container(
-                  width: 62,
-                  height: 62,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xff24C6DC),
-                        Color(0xff0083B0),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black38,
-                        blurRadius: 14,
-                        offset: Offset(0, 7),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.location_on,
-                    color: Colors.white,
-                    size: 34,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    destinationSelectedTitle,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.place,
-                    color: Color(0xffFF6B6B),
-                    size: 26,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      destinationName ??
-                          tr(
-                            'مکان انتخاب‌شده',
-                            'Selected place',
-                            'المكان المحدد',
-                          ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            Row(
-              children: [
-                Expanded(
-                  child: largeMapAction(
-                    icon: Icons.arrow_back,
-                    title: backToSearchTitle,
-                    onPressed: _backFromDestinationConfirmation,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: largeMapAction(
-                    icon: Icons.directions_car,
-                    title: letsGoTitle,
-                    primary: true,
-                    onPressed: _confirmDestinationAndRoute,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // CURRENT LOCATION
-  // ============================================================
-
-  void useCurrentLocation() {
-    if (widget.userLocation == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'ابتدا باید موقعیت فعلی دریافت شود.',
-              'Get your current location first.',
-              'احصل على موقعك الحالي أولاً.',
-            ),
-          ),
-        ),
-      );
-
-      return;
-    }
-
-    final name = widget.tr(
-      'موقعیت فعلی من',
-      'My current location',
-      'موقعي الحالي',
-    );
-
-    widget.onOriginSelected(
-      widget.userLocation!,
-      name,
-    );
-
-    originController.text =
-        name;
-
-    setState(() {
-      originMode = false;
-      results = [];
-    });
-  }
-
-  // ============================================================
-  // FIELD
-  // ============================================================
-
-  Widget searchField({
-    required bool origin,
-  }) {
-    final controller = origin
-        ? originController
-        : destinationController;
-
-    final color = origin
-        ? const Color(0xff1976D2)
-        : const Color(0xffE53935);
-
-    final selected =
-        originMode == origin;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.circular(18),
-        border: Border.all(
-          color: selected
-              ? color
-              : Colors.transparent,
-          width: 2,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        onChanged: autoCompleteSearch,
-        textDirection: isRtl
-            ? TextDirection.rtl
-            : TextDirection.ltr,
-        textInputAction:
-            TextInputAction.search,
-        onTap: () {
-          setState(() {
-            originMode = origin;
-            results = [];
-          });
-        },
-        onSubmitted: (_) {
-          setState(() {
-            originMode = origin;
-          });
-
-          searchCurrentField();
-        },
-        decoration:
-            InputDecoration(
-          prefixIcon: Icon(
-            origin
-                ? Icons.trip_origin
-                : Icons.location_on,
-            color: color,
-          ),
-          suffixIcon: Row(
-            mainAxisSize:
-                MainAxisSize.min,
-            children: [
-              if (controller.text
-                  .isNotEmpty)
-                IconButton(
-                  tooltip: widget.tr(
-                    'پاک کردن',
-                    'Clear',
-                    'مسح',
-                  ),
-                  icon: const Icon(
-                    Icons.clear,
-                  ),
-                  onPressed: () {
-                    controller.clear();
-
-                    if (origin) {
-                      widget
-                          .onClearOrigin();
-                    } else {
-                      widget
-                          .onClearDestination();
-                    }
-
-                    setState(() {
-                      results = [];
-                    });
-                  },
-                ),
-              IconButton(
-                tooltip: widget.tr(
-                  'جستجو',
-                  'Search',
-                  'بحث',
-                ),
-                icon: Icon(
-                  Icons.search,
-                  color: color,
-                ),
-                onPressed: searching
-                    ? null
-                    : () {
-                        setState(() {
-                          originMode =
-                              origin;
-                        });
-
-                        searchCurrentField();
-                      },
-              ),
-            ],
-          ),
-          hintText: origin
-              ? widget.tr(
-                  'جستجوی مبدأ...',
-                  'Search origin...',
-                  'بحث عن البداية...',
-                )
-              : widget.tr(
-                  'جستجوی مقصد...',
-                  'Search destination...',
-                  'بحث عن الوجهة...',
-                ),
-          border:
-              InputBorder.none,
-          contentPadding:
-              const EdgeInsets
-                  .symmetric(
-            horizontal: 12,
-            vertical: 15,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // RESULT
-  // ============================================================
-
-  Widget resultItem(
-    Map<String, dynamic> result,
-  ) {
-    final name =
-        result['display_name']
-                ?.toString() ??
-            '';
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius:
-            BorderRadius.circular(15),
-        onTap: () =>
-            selectResult(result),
-        child: Container(
-          margin:
-              const EdgeInsets.only(
-            bottom: 8,
-          ),
-          padding:
-              const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color:
-                const Color(0xffF4F8FA),
-            borderRadius:
-                BorderRadius.circular(15),
-            border: Border.all(
-              color:
-                  Colors.blueGrey.shade100,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                originMode
-                    ? Icons.trip_origin
-                    : Icons.location_on,
-                color: originMode
-                    ? const Color(
-                        0xff1976D2,
-                      )
-                    : const Color(
-                        0xffE53935,
-                      ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  name,
-                  maxLines: 3,
-                  overflow:
-                      TextOverflow.ellipsis,
-                  textDirection: isRtl
-                      ? TextDirection.rtl
-                      : TextDirection.ltr,
-                  style:
-                      const TextStyle(
-                    fontSize: 13,
-                    fontWeight:
-                        FontWeight.w600,
-                    color:
-                        Color(0xff18343F),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // BUILD
-  // ============================================================
-
-  @override
   Widget build(BuildContext context) {
     final bottom =
         MediaQuery.of(context)
