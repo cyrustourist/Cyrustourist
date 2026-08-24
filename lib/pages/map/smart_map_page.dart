@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -1182,9 +1183,15 @@ class _SmartMapPageState extends State<SmartMapPage> {
               ),
               boxShadow: const [
                 BoxShadow(
-                  color: Colors.black45,
-                  blurRadius: 10,
-                  offset: Offset(0, 5),
+                  color: Colors.black54,
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                  offset: Offset(0, 7),
+                ),
+                BoxShadow(
+                  color: Colors.white24,
+                  blurRadius: 4,
+                  offset: Offset(0, -2),
                 ),
               ],
             ),
@@ -1239,9 +1246,15 @@ class _SmartMapPageState extends State<SmartMapPage> {
             ),
             boxShadow: const [
               BoxShadow(
-                color: Colors.black45,
-                blurRadius: 12,
-                offset: Offset(0, 6),
+                color: Colors.black54,
+                blurRadius: 16,
+                spreadRadius: 1,
+                offset: Offset(0, 8),
+              ),
+              BoxShadow(
+                color: Colors.white24,
+                blurRadius: 5,
+                offset: Offset(0, -2),
               ),
             ],
           ),
@@ -1730,9 +1743,15 @@ class _SmartMapPageState extends State<SmartMapPage> {
               ),
               boxShadow: const [
                 BoxShadow(
-                  color: Colors.black45,
-                  blurRadius: 10,
-                  offset: Offset(0, 5),
+                  color: Colors.black54,
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                  offset: Offset(0, 7),
+                ),
+                BoxShadow(
+                  color: Colors.white24,
+                  blurRadius: 4,
+                  offset: Offset(0, -2),
                 ),
               ],
             ),
@@ -1842,6 +1861,7 @@ class _SearchPanelState
 
   bool originMode = true;
   bool searching = false;
+  Timer? searchTimer;
 
   List<Map<String, dynamic>> results =
       [];
@@ -1887,6 +1907,20 @@ class _SearchPanelState
     );
   }
 
+
+  void autoCompleteSearch(String value) {
+    searchTimer?.cancel();
+
+    searchTimer = Timer(
+      const Duration(milliseconds: 500),
+      () {
+        if (value.trim().length >= 2) {
+          performSearch(value);
+        }
+      },
+    );
+  }
+
   Future<void> performSearch(
     String query,
   ) async {
@@ -1897,6 +1931,17 @@ class _SearchPanelState
       setState(() {
         results = [];
       });
+
+      Future.delayed(
+        const Duration(milliseconds: 500),
+        () {
+          if (mounted) {
+            Navigator.pop(context);
+            // مسیر‌یابی پس از انتخاب مبدأ و مقصد
+            openRouting();
+          }
+        },
+      );
 
       ScaffoldMessenger.of(context)
           .showSnackBar(
@@ -2137,6 +2182,7 @@ class _SearchPanelState
       ),
       child: TextField(
         controller: controller,
+        onChanged: autoCompleteSearch,
         textDirection: isRtl
             ? TextDirection.rtl
             : TextDirection.ltr,
