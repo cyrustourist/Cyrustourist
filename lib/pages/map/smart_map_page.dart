@@ -601,12 +601,34 @@ class _SmartMapPageState extends State<SmartMapPage> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(
-                  Icons.location_on,
-                  color: Color(0xffE53935),
-                  size: 30,
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xff24C6DC),
+                        Color(0xff0083B0),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: 14,
+                        offset: Offset(0, 7),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.location_on,
+                    color: Colors.white,
+                    size: 34,
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     tr(
@@ -1778,14 +1800,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
                     title:
                         searchPlaceTitle,
                     primary: true,
-                    onPressed: () =>
-                        openSearch(
-                      destination:
-                          originLocation !=
-                                  null &&
-                              destinationLocation ==
-                                  null,
-                    ),
+                    onPressed: () {
+                      // Always enter the tourist-destination search flow.
+                      // After a destination is selected, _selectDestination
+                      // opens the confirmation page automatically.
+                      openSearch(destination: true);
+                    },
                   ),
                 ),
                 const SizedBox(width: 7),
