@@ -12,26 +12,27 @@ enum MapLanguage { fa, en, ar }
 /// Routing strategy kept extensible for a future traffic-aware provider.
 enum RouteStrategy { fastest, lowTrafficReady }
 
-
-String _defaultTr(String fa, String en, String ar) => fa;
-
 class SmartMapPage extends StatefulWidget {
   const SmartMapPage({
     super.key,
+    this.userLocation,
+    this.onOriginSelected,
+    this.onClearOrigin,
+    this.onClearDestination,
     this.onSwap,
     this.tr = _defaultTr,
     this.searchPlaceTitle,
   });
 
+  final LatLng? userLocation;
+  final void Function(LatLng, String)? onOriginSelected;
+  final VoidCallback? onClearOrigin;
+  final VoidCallback? onClearDestination;
   final VoidCallback? onSwap;
-
-  final String Function(
-    String fa,
-    String en,
-    String ar,
-  ) tr;
-
+  final String Function(String, String, String) tr;
   final String? searchPlaceTitle;
+
+  static String _defaultTr(String fa, String en, String ar) => fa;
 
   @override
   State<SmartMapPage> createState() => _SmartMapPageState();
@@ -54,16 +55,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
   bool routingLoading = false;
   int _routingRequestId = 0;
 
-  // Prevent duplicate search/navigation taps. The lock is activated
-  // immediately on the first destination-search tap.
-  bool _searchSheetOpen = false;
-
-  // Live navigation state.
-  bool navigationActive = false;
-  bool navigationRecalculating = false;
-  double? navigationRemainingKm;
-  double? navigationRemainingMin;
-  StreamSubscription<Position>? _navigationPositionSubscription;
+  bool destinationConfirmation = false;
 
   RouteStrategy routeStrategy = RouteStrategy.fastest;
 
@@ -73,10 +65,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
   double? routeDistanceKm;
   double? routeDurationMin;
-
-  // After selecting a tourist destination, show a dedicated
-  // confirmation page instead of returning to the search panel.
-  bool destinationConfirmation = false;
 
   bool get isRtl =>
       pageLanguage == MapLanguage.fa ||
@@ -123,42 +111,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
   String get routeTitle =>
       tr('مسیریابی', 'Route', 'المسار');
-
-  String get startNavigationTitle =>
-      tr('آغاز مسیر', 'Start navigation', 'بدء الملاحة');
-
-  String get stopNavigationTitle =>
-      tr('پایان مسیر', 'End navigation', 'إنهاء الملاحة');
-
-  String get recalculatingTitle =>
-      tr(
-        'در حال به‌روزرسانی مسیر...',
-        'Recalculating route...',
-        'جارٍ إعادة حساب المسار...',
-      );
-
-  String get arrivedTitle =>
-      tr(
-        'به مقصد رسیدید.',
-        'You arrived at the destination.',
-        'لقد وصلت إلى الوجهة.',
-      );
-
-  String get routeTitleActive =>
-      navigationActive ? stopNavigationTitle : startNavigationTitle;
-
-  String get destinationSelectedTitle =>
-      tr(
-        'هدف گردشگری انتخاب شد',
-        'Tourist destination selected',
-        'تم اختيار الهدف السياحي',
-      );
-
-  String get backToSearchTitle =>
-      tr('بازگشت', 'Back', 'رجوع');
-
-  String get letsGoTitle =>
-      tr('بزن بریم', 'Let’s go', 'انطلق');
 
   String get clearRouteTitle =>
       tr('پاک کردن مسیر', 'Clear route', 'مسح المسار');
@@ -490,9 +442,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
   void openSearch({
     bool destination = false,
   }) {
-    if (_searchSheetOpen) return;
-    _searchSheetOpen = true;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -508,14 +457,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
           onClearOrigin: _clearOrigin,
           onClearDestination: _clearDestination,
           onSwap: _swapPlaces,
+          onRoute: openRouting,
           searchPlaces: searchPlaces,
           language: pageLanguage,
           tr: tr,
         );
       },
-    ).whenComplete(() {
-      _searchSheetOpen = false;
-    });
+    );
   }
 
   void _selectOrigin(
@@ -528,6 +476,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
+      destinationConfirmation = false;
     });
 
     mapController.move(point, 15);
@@ -576,7 +525,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
   }
 
   void _clearDestination() {
-    stopNavigation(showMessage: false);
     setState(() {
       destinationLocation = null;
       destinationName = null;
@@ -618,25 +566,16 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
   void _confirmDestinationAndRoute() {
     if (originLocation == null || destinationLocation == null) {
-      setState(() {
-        destinationConfirmation = false;
-      });
-
-      _showMessage(
-        needPointsTitle,
-        Icons.alt_route,
+      _showMessage(needPointsTitle, Icons.alt_route);
+      openSearch(
+        destination: originLocation != null &&
+            destinationLocation == null,
       );
-
-      openSearch(destination: true);
       return;
     }
 
     setState(() {
       destinationConfirmation = false;
-      navigationActive = false;
-      navigationRecalculating = false;
-      navigationRemainingKm = null;
-      navigationRemainingMin = null;
     });
 
     openRouting();
@@ -647,8 +586,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
       destinationConfirmation = false;
     });
 
-    // Return to the destination search without changing the existing
-    // origin, and without triggering routing automatically.
     openSearch(destination: true);
   }
 
@@ -658,9 +595,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       decoration: const BoxDecoration(
         color: Color(0xff071722),
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(28),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
             color: Colors.black54,
@@ -675,15 +610,14 @@ class _SmartMapPageState extends State<SmartMapPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 46,
+              width: 45,
               height: 5,
               decoration: BoxDecoration(
                 color: Colors.white38,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            const SizedBox(height: 14),
-
+            const SizedBox(height: 12),
             Row(
               children: [
                 Container(
@@ -716,7 +650,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    destinationSelectedTitle,
+                    tr(
+                      'هدف گردشگری انتخاب شد',
+                      'Tourist destination selected',
+                      'تم اختيار الهدف السياحي',
+                    ),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -726,15 +664,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ],
             ),
-
-            const SizedBox(height: 12),
-
+            const SizedBox(height: 10),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(17),
                 border: Border.all(color: Colors.white24),
               ),
               child: Row(
@@ -742,7 +678,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
                   const Icon(
                     Icons.place,
                     color: Color(0xffFF6B6B),
-                    size: 26,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -765,15 +700,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ],
               ),
             ),
-
-            const SizedBox(height: 14),
-
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: largeMapAction(
                     icon: Icons.arrow_back,
-                    title: backToSearchTitle,
+                    title: tr('بازگشت', 'Back', 'رجوع'),
                     onPressed: _backFromDestinationConfirmation,
                   ),
                 ),
@@ -781,7 +714,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 Expanded(
                   child: largeMapAction(
                     icon: Icons.directions_car,
-                    title: letsGoTitle,
+                    title: tr('بزن بریم', 'Let’s go', 'انطلق'),
                     primary: true,
                     onPressed: _confirmDestinationAndRoute,
                   ),
@@ -795,11 +728,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
   }
 
   // ============================================================
-  // BUILD
-  // ============================================================
-
-  @override
-
   // ROUTING
   // ============================================================
 
@@ -1013,342 +941,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
     }
   }
 
-  Future<void> stopNavigation({bool showMessage = true}) async {
-    await _navigationPositionSubscription?.cancel();
-    _navigationPositionSubscription = null;
-
-    if (!mounted) return;
-
-    setState(() {
-      navigationActive = false;
-      navigationRecalculating = false;
-      navigationRemainingKm = null;
-      navigationRemainingMin = null;
-    });
-
-    if (showMessage) {
-      _showMessage(
-        tr(
-          'مسیریابی پایان یافت.',
-          'Navigation ended.',
-          'انتهت الملاحة.',
-        ),
-        Icons.stop_circle_outlined,
-      );
-    }
-  }
-
-  Future<void> startNavigation() async {
-    if (navigationActive || navigationRecalculating) return;
-
-    if (originLocation == null ||
-        destinationLocation == null ||
-        routePoints.length < 2) {
-      _showMessage(needPointsTitle, Icons.alt_route);
-      return;
-    }
-
-    try {
-      final serviceEnabled =
-          await Geolocator.isLocationServiceEnabled();
-
-      if (!serviceEnabled) {
-        _showGpsWarning();
-        return;
-      }
-
-      var permission = await Geolocator.checkPermission();
-
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        _showMessage(
-          tr(
-            'برای آغاز مسیر، دسترسی موقعیت مکانی لازم است.',
-            'Location permission is required to start navigation.',
-            'يلزم إذن الموقع لبدء الملاحة.',
-          ),
-          Icons.location_off,
-        );
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-        ),
-      );
-
-      if (!mounted) return;
-
-      final current = LatLng(
-        position.latitude,
-        position.longitude,
-      );
-
-      userLocation = current;
-
-      final distanceFromOrigin = Geolocator.distanceBetween(
-        current.latitude,
-        current.longitude,
-        originLocation!.latitude,
-        originLocation!.longitude,
-      );
-
-      if (distanceFromOrigin > 250) {
-        setState(() {
-          originLocation = current;
-          originName = tr(
-            'موقعیت فعلی من',
-            'My current location',
-            'موقعي الحالي',
-          );
-          navigationRecalculating = true;
-        });
-
-        await openRouting();
-
-        if (!mounted || routePoints.length < 2) {
-          if (mounted) {
-            setState(() {
-              navigationRecalculating = false;
-            });
-          }
-          return;
-        }
-      }
-
-      await _navigationPositionSubscription?.cancel();
-
-      setState(() {
-        navigationActive = true;
-        navigationRecalculating = false;
-        navigationRemainingKm = routeDistanceKm;
-        navigationRemainingMin = routeDurationMin;
-      });
-
-      _updateNavigationFromPosition(position);
-
-      _navigationPositionSubscription =
-          Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 8,
-        ),
-      ).listen(
-        _updateNavigationFromPosition,
-        onError: (_) {
-          if (!mounted) return;
-          _showMessage(
-            tr(
-              'دریافت موقعیت زنده متوقف شد.',
-              'Live location updates stopped.',
-              'توقفت تحديثات الموقع المباشر.',
-            ),
-            Icons.location_off,
-          );
-        },
-      );
-
-      _showMessage(
-        tr(
-          'مسیریابی فعال شد.',
-          'Navigation started.',
-          'بدأت الملاحة.',
-        ),
-        Icons.navigation,
-      );
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        navigationRecalculating = false;
-        navigationActive = false;
-      });
-
-      _showMessage(
-        tr(
-          'آغاز مسیریابی انجام نشد. GPS و اینترنت را بررسی کنید.',
-          'Navigation could not start. Check GPS and internet.',
-          'تعذر بدء الملاحة. تحقق من GPS والإنترنت.',
-        ),
-        Icons.error_outline,
-      );
-    }
-  }
-
-  void _updateNavigationFromPosition(Position position) {
-    if (!mounted ||
-        !navigationActive ||
-        routePoints.length < 2 ||
-        destinationLocation == null) {
-      return;
-    }
-
-    final current = LatLng(
-      position.latitude,
-      position.longitude,
-    );
-
-    final remainingKm = _remainingRouteDistanceKm(current);
-
-    double? remainingMin;
-
-    if (routeDistanceKm != null &&
-        routeDistanceKm! > 0 &&
-        routeDurationMin != null) {
-      remainingMin =
-          routeDurationMin! * (remainingKm / routeDistanceKm!);
-    }
-
-    setState(() {
-      userLocation = current;
-      navigationRemainingKm = remainingKm;
-      navigationRemainingMin = remainingMin;
-    });
-
-    final zoom = mapController.camera.zoom < 15
-        ? 15.0
-        : mapController.camera.zoom;
-
-    mapController.move(current, zoom);
-
-    final destinationDistance = Geolocator.distanceBetween(
-      current.latitude,
-      current.longitude,
-      destinationLocation!.latitude,
-      destinationLocation!.longitude,
-    );
-
-    if (destinationDistance <= 50) {
-      stopNavigation(showMessage: false);
-      _showMessage(arrivedTitle, Icons.flag_circle);
-      return;
-    }
-
-    if (_distanceToNearestRoutePoint(current) > 150 &&
-        !navigationRecalculating) {
-      _recalculateFromCurrent(current);
-    }
-  }
-
-  double _remainingRouteDistanceKm(LatLng current) {
-    if (routePoints.length < 2) {
-      return routeDistanceKm ?? 0;
-    }
-
-    const distance = Distance();
-    var nearestIndex = 0;
-    var nearestDistance = double.infinity;
-
-    for (var i = 0; i < routePoints.length; i++) {
-      final meters = distance.as(
-        LengthUnit.Meter,
-        current,
-        routePoints[i],
-      );
-
-      if (meters < nearestDistance) {
-        nearestDistance = meters;
-        nearestIndex = i;
-      }
-    }
-
-    var remainingMeters = nearestDistance;
-
-    for (var i = nearestIndex;
-        i < routePoints.length - 1;
-        i++) {
-      remainingMeters += distance.as(
-        LengthUnit.Meter,
-        routePoints[i],
-        routePoints[i + 1],
-      );
-    }
-
-    return remainingMeters / 1000;
-  }
-
-  double _distanceToNearestRoutePoint(LatLng current) {
-    if (routePoints.isEmpty) return double.infinity;
-
-    const distance = Distance();
-    var nearest = double.infinity;
-
-    for (final point in routePoints) {
-      final meters = distance.as(
-        LengthUnit.Meter,
-        current,
-        point,
-      );
-
-      if (meters < nearest) nearest = meters;
-    }
-
-    return nearest;
-  }
-
-  Future<void> _recalculateFromCurrent(
-    LatLng current,
-  ) async {
-    if (destinationLocation == null ||
-        navigationRecalculating) {
-      return;
-    }
-
-    setState(() {
-      navigationRecalculating = true;
-    });
-
-    _showMessage(
-      tr(
-        'از مسیر خارج شدید؛ مسیر در حال به‌روزرسانی است.',
-        'You are off route; recalculating.',
-        'خرجت عن المسار؛ جارٍ إعادة الحساب.',
-      ),
-      Icons.alt_route,
-    );
-
-    final previousOrigin = originLocation;
-    final previousOriginName = originName;
-
-    originLocation = current;
-    originName = tr(
-      'موقعیت فعلی من',
-      'My current location',
-      'موقعي الحالي',
-    );
-
-    try {
-      await openRouting();
-
-      if (!mounted) return;
-
-      if (routePoints.length < 2) {
-        originLocation = previousOrigin;
-        originName = previousOriginName;
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          navigationRecalculating = false;
-        });
-      }
-    }
-  }
-
   void clearRoute() {
-    stopNavigation(showMessage: false);
-
     setState(() {
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
-      navigationRemainingKm = null;
-      navigationRemainingMin = null;
     });
   }
 
@@ -2157,59 +1754,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  Widget _navigationStatusPanel() {
-    final km = navigationRemainingKm;
-    final min = navigationRemainingMin;
-
-    String remaining = '';
-
-    if (km != null) {
-      remaining = '${km.toStringAsFixed(km < 10 ? 1 : 0)} km';
-      if (min != null) {
-        remaining +=
-            '  •  ${min.toStringAsFixed(0)} ${tr('دقیقه', 'min', 'دقيقة')}';
-      }
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 11,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white24),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            navigationRecalculating
-                ? Icons.sync
-                : Icons.navigation,
-            color: Colors.white,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              navigationRecalculating
-                  ? recalculatingTitle
-                  : '${tr('مسیریابی فعال است', 'Navigation is active', 'الملاحة نشطة')}${remaining.isEmpty ? '' : '  •  $remaining'}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                height: 1.25,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomControlPanel(
     BuildContext context,
   ) {
@@ -2262,10 +1806,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
             if (routePoints.length >= 2) ...[
               _routeSummary(),
-              if (navigationActive || navigationRecalculating) ...[
-                const SizedBox(height: 8),
-                _navigationStatusPanel(),
-              ],
               const SizedBox(height: 8),
             ],
 
@@ -2280,9 +1820,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
                         searchPlaceTitle,
                     primary: true,
                     onPressed: () {
-                      // Always open the tourist-destination search.
-                      // The selected result will close this sheet and
-                      // show the confirmation page.
+                      // Always enter the tourist-destination search flow.
+                      // After a destination is selected, _selectDestination
+                      // opens the confirmation page automatically.
                       openSearch(destination: true);
                     },
                   ),
@@ -2290,18 +1830,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 const SizedBox(width: 7),
                 Expanded(
                   child: largeMapAction(
-                    icon: navigationActive
-                        ? Icons.stop_circle_outlined
-                        : Icons.navigation,
-                    title: routePoints.length >= 2
-                        ? routeTitleActive
-                        : routeTitle,
-                    primary: routePoints.length >= 2,
-                    onPressed: routePoints.length < 2
-                        ? openRouting
-                        : navigationActive
-                            ? stopNavigation
-                            : startNavigation,
+                    icon: Icons.alt_route,
+                    title: routeTitle,
+                    primary:
+                        routePoints.length >=
+                            2,
+                    onPressed: openRouting,
                   ),
                 ),
               ],
@@ -2443,11 +1977,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
         ),
       ),
     );
-  @override
-  void dispose() {
-    _positionSubscription?.cancel();
-    _navigationPositionSubscription?.cancel();
-    super.dispose();
   }
 }
 
@@ -2466,6 +1995,7 @@ class _SearchPanel extends StatefulWidget {
     required this.onClearOrigin,
     required this.onClearDestination,
     required this.onSwap,
+    required this.onRoute,
     required this.searchPlaces,
     required this.language,
     required this.tr,
@@ -2489,6 +2019,7 @@ class _SearchPanel extends StatefulWidget {
   final VoidCallback onClearOrigin;
   final VoidCallback onClearDestination;
   final VoidCallback onSwap;
+  final VoidCallback onRoute;
 
   final Future<List<Map<String, dynamic>>>
       Function(String query) searchPlaces;
@@ -2524,8 +2055,6 @@ class _SearchPanelState
 
   bool originMode = true;
   bool searching = false;
-  bool _searchActionLocked = false;
-  bool _selectingResult = false;
   Timer? searchTimer;
 
   List<Map<String, dynamic>> results =
@@ -2553,7 +2082,6 @@ class _SearchPanelState
 
   @override
   void dispose() {
-    searchTimer?.cancel();
     originController.dispose();
     destinationController.dispose();
     super.dispose();
@@ -2564,21 +2092,12 @@ class _SearchPanelState
   // ============================================================
 
   Future<void> searchCurrentField() async {
-    if (_searchActionLocked) return;
-
-    searchTimer?.cancel();
-
-    setState(() {
-      _searchActionLocked = true;
-    });
-
     final controller = originMode
         ? originController
         : destinationController;
 
     await performSearch(
       controller.text,
-      explicitButtonSearch: true,
     );
   }
 
@@ -2597,19 +2116,26 @@ class _SearchPanelState
   }
 
   Future<void> performSearch(
-    String query, {
-    bool explicitButtonSearch = false,
-  }) async {
+    String query,
+  ) async {
     final cleanQuery =
         query.trim();
 
     if (cleanQuery.length < 2) {
       setState(() {
         results = [];
-        if (explicitButtonSearch) {
-          _searchActionLocked = false;
-        }
       });
+
+      Future.delayed(
+        const Duration(milliseconds: 500),
+        () {
+          if (mounted) {
+            Navigator.pop(context);
+            // مسیر‌یابی پس از انتخاب مبدأ و مقصد
+            widget.onRoute();
+          }
+        },
+      );
 
       ScaffoldMessenger.of(context)
           .showSnackBar(
@@ -2648,12 +2174,6 @@ class _SearchPanelState
       });
 
       if (data.isEmpty) {
-        if (explicitButtonSearch && mounted) {
-          setState(() {
-            _searchActionLocked = false;
-          });
-        }
-
         ScaffoldMessenger.of(context)
             .showSnackBar(
           SnackBar(
@@ -2666,43 +2186,6 @@ class _SearchPanelState
             ),
           ),
         );
-        return;
-      }
-
-      // Explicit destination-button search immediately accepts the
-      // first result with valid geographic coordinates.
-      if (!originMode && explicitButtonSearch) {
-        Map<String, dynamic>? bestResult;
-
-        for (final item in data) {
-          final lat = double.tryParse(
-            item['lat']?.toString() ?? '',
-          );
-          final lon = double.tryParse(
-            item['lon']?.toString() ?? '',
-          );
-
-          if (lat != null &&
-              lon != null &&
-              lat >= -90 &&
-              lat <= 90 &&
-              lon >= -180 &&
-              lon <= 180) {
-            bestResult = item;
-            break;
-          }
-        }
-
-        if (bestResult != null) {
-          selectResult(bestResult);
-          return;
-        }
-
-        if (mounted) {
-          setState(() {
-            _searchActionLocked = false;
-          });
-        }
       }
     } catch (_) {
       if (!mounted) return;
@@ -2710,7 +2193,6 @@ class _SearchPanelState
       setState(() {
         searching = false;
         results = [];
-        _searchActionLocked = false;
       });
 
       ScaffoldMessenger.of(context)
@@ -2735,11 +2217,6 @@ class _SearchPanelState
   void selectResult(
     Map<String, dynamic> result,
   ) {
-    if (_selectingResult) return;
-
-    _selectingResult = true;
-    searchTimer?.cancel();
-
     final lat = double.tryParse(
       result['lat']?.toString() ?? '',
     );
@@ -2776,8 +2253,6 @@ class _SearchPanelState
       setState(() {
         originMode = false;
         results = [];
-        _selectingResult = false;
-        _searchActionLocked = false;
       });
 
       ScaffoldMessenger.of(context)
@@ -2805,13 +2280,21 @@ class _SearchPanelState
         results = [];
       });
 
-      // Close the search sheet first. The parent page has already
-      // switched to destinationConfirmation in _selectDestination.
-      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.tr(
+              'مقصد انتخاب شد؛ برای مسیریابی دکمه مسیریابی را بزنید.',
+              'Destination selected; press Route to calculate the route.',
+              'تم اختيار الوجهة؛ اضغط على المسار لحساب الطريق.',
+            ),
+          ),
+        ),
+      );
     }
   }
 
-  // ============================================================
   // ============================================================
   // CURRENT LOCATION
   // ============================================================
@@ -3075,8 +2558,11 @@ class _SearchPanelState
     );
   }
 
+  // ============================================================
+  // BUILD
+  // ============================================================
 
-
+  @override
   Widget build(BuildContext context) {
     final bottom =
         MediaQuery.of(context)
@@ -3297,10 +2783,9 @@ class _SearchPanelState
                     child:
                         ElevatedButton
                             .icon(
-                      onPressed:
-                          searching || _searchActionLocked
-                              ? null
-                              : searchCurrentField,
+                      onPressed: searching
+                          ? null
+                          : searchCurrentField,
                       icon: searching
                           ? const SizedBox(
                               width: 21,
