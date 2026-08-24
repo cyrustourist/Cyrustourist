@@ -13,7 +13,22 @@ enum MapLanguage { fa, en, ar }
 enum RouteStrategy { fastest, lowTrafficReady }
 
 class SmartMapPage extends StatefulWidget {
-  const SmartMapPage({super.key});
+  const SmartMapPage({
+    super.key,
+    this.onSwap,
+    this.tr,
+    this.searchPlaceTitle,
+  });
+
+  final VoidCallback? onSwap;
+
+  final String Function(
+    String fa,
+    String en,
+    String ar,
+  )? tr;
+
+  final String? searchPlaceTitle;
 
   @override
   State<SmartMapPage> createState() => _SmartMapPageState();
