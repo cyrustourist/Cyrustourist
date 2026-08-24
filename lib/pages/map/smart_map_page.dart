@@ -45,6 +45,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
   double? routeDistanceKm;
   double? routeDurationMin;
 
+  // After selecting a tourist destination, show a dedicated
+  // confirmation page instead of returning to the search panel.
+  bool destinationConfirmation = false;
+
   bool get isRtl =>
       pageLanguage == MapLanguage.fa ||
       pageLanguage == MapLanguage.ar;
@@ -90,6 +94,19 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
   String get routeTitle =>
       tr('مسیریابی', 'Route', 'المسار');
+
+  String get destinationSelectedTitle =>
+      tr(
+        'هدف گردشگری انتخاب شد',
+        'Tourist destination selected',
+        'تم اختيار الهدف السياحي',
+      );
+
+  String get backToSearchTitle =>
+      tr('بازگشت', 'Back', 'رجوع');
+
+  String get letsGoTitle =>
+      tr('بزن بریم', 'Let’s go', 'انطلق');
 
   String get clearRouteTitle =>
       tr('پاک کردن مسیر', 'Clear route', 'مسح المسار');
@@ -436,7 +453,6 @@ class _SmartMapPageState extends State<SmartMapPage> {
           onClearOrigin: _clearOrigin,
           onClearDestination: _clearDestination,
           onSwap: _swapPlaces,
-          onRoute: openRouting,
           searchPlaces: searchPlaces,
           language: pageLanguage,
           tr: tr,
@@ -470,6 +486,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
+      destinationConfirmation = true;
     });
 
     mapController.move(point, 15);
@@ -508,6 +525,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
+      destinationConfirmation = false;
     });
   }
 
@@ -1551,9 +1569,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ),
 
-              _buildBottomControlPanel(
-                context,
-              ),
+              destinationConfirmation
+                  ? _destinationConfirmationPanel()
+                  : _buildBottomControlPanel(
+                      context,
+                    ),
             ],
           ),
         ),
@@ -1626,14 +1646,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
                     title:
                         searchPlaceTitle,
                     primary: true,
-                    onPressed: () =>
-                        openSearch(
-                      destination:
-                          originLocation !=
-                                  null &&
-                              destinationLocation ==
-                                  null,
-                    ),
+                    onPressed: () {
+                      // Always open the tourist-destination search.
+                      // The selected result will close this sheet and
+                      // show the confirmation page.
+                      openSearch(destination: true);
+                    },
                   ),
                 ),
                 const SizedBox(width: 7),
@@ -1804,7 +1822,6 @@ class _SearchPanel extends StatefulWidget {
     required this.onClearOrigin,
     required this.onClearDestination,
     required this.onSwap,
-    required this.onRoute,
     required this.searchPlaces,
     required this.language,
     required this.tr,
@@ -1828,7 +1845,6 @@ class _SearchPanel extends StatefulWidget {
   final VoidCallback onClearOrigin;
   final VoidCallback onClearDestination;
   final VoidCallback onSwap;
-  final VoidCallback onRoute;
 
   final Future<List<Map<String, dynamic>>>
       Function(String query) searchPlaces;
@@ -1934,17 +1950,6 @@ class _SearchPanelState
       setState(() {
         results = [];
       });
-
-      Future.delayed(
-        const Duration(milliseconds: 500),
-        () {
-          if (mounted) {
-            Navigator.pop(context);
-            // مسیر‌یابی پس از انتخاب مبدأ و مقصد
-            widget.onRoute();
-          }
-        },
-      );
 
       ScaffoldMessenger.of(context)
           .showSnackBar(
@@ -2089,19 +2094,188 @@ class _SearchPanelState
         results = [];
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'مقصد انتخاب شد؛ برای مسیریابی دکمه مسیریابی را بزنید.',
-              'Destination selected; press Route to calculate the route.',
-              'تم اختيار الوجهة؛ اضغط على المسار لحساب الطريق.',
-            ),
-          ),
-        ),
-      );
+      // Close the search sheet first. The parent page has already
+      // switched to destinationConfirmation in _selectDestination.
+      Navigator.of(context).pop();
     }
+  }
+
+  // ============================================================
+  // DESTINATION CONFIRMATION
+  // ============================================================
+
+  void _confirmDestinationAndRoute() {
+    if (originLocation == null || destinationLocation == null) {
+      setState(() {
+        destinationConfirmation = false;
+      });
+
+      _showMessage(
+        needPointsTitle,
+        Icons.alt_route,
+      );
+
+      openSearch(destination: true);
+      return;
+    }
+
+    setState(() {
+      destinationConfirmation = false;
+    });
+
+    openRouting();
+  }
+
+  void _backFromDestinationConfirmation() {
+    setState(() {
+      destinationConfirmation = false;
+    });
+
+    // Return to the destination search without changing the existing
+    // origin, and without triggering routing automatically.
+    openSearch(destination: true);
+  }
+
+  Widget _destinationConfirmationPanel() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      decoration: const BoxDecoration(
+        color: Color(0xff071722),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 18,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 46,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.white38,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            Row(
+              children: [
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xff24C6DC),
+                        Color(0xff0083B0),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: 14,
+                        offset: Offset(0, 7),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.location_on,
+                    color: Colors.white,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    destinationSelectedTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.place,
+                    color: Color(0xffFF6B6B),
+                    size: 26,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      destinationName ??
+                          tr(
+                            'مکان انتخاب‌شده',
+                            'Selected place',
+                            'المكان المحدد',
+                          ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            Row(
+              children: [
+                Expanded(
+                  child: largeMapAction(
+                    icon: Icons.arrow_back,
+                    title: backToSearchTitle,
+                    onPressed: _backFromDestinationConfirmation,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: largeMapAction(
+                    icon: Icons.directions_car,
+                    title: letsGoTitle,
+                    primary: true,
+                    onPressed: _confirmDestinationAndRoute,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ============================================================
