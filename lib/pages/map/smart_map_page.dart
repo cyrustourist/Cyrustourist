@@ -86,6 +86,18 @@ class _SmartMapPageState extends State<SmartMapPage> {
     }
   }
 
+  void _onSwap() {
+    if (originLocation != null || destinationLocation != null) {
+      final oldOrigin = originLocation;
+      originLocation = destinationLocation;
+      destinationLocation = oldOrigin;
+
+      final oldName = originName;
+      originName = destinationName;
+      destinationName = oldName;
+    }
+  }
+
   String get mapTitle =>
       tr('نقشه گردشگری', 'Tourism Map', 'الخريطة السياحية');
 
@@ -2597,7 +2609,7 @@ class _SearchPanelState
           .showSnackBar(
         SnackBar(
           content: Text(
-            widget.tr(
+            tr(
               'حداقل دو حرف وارد کنید.',
               'Enter at least two characters.',
               'أدخل حرفين على الأقل.',
@@ -2640,7 +2652,7 @@ class _SearchPanelState
             .showSnackBar(
           SnackBar(
             content: Text(
-              widget.tr(
+              tr(
                 'مکانی پیدا نشد.',
                 'No places found.',
                 'لم يتم العثور على أماكن.',
@@ -2699,7 +2711,7 @@ class _SearchPanelState
           .showSnackBar(
         SnackBar(
           content: Text(
-            widget.tr(
+            tr(
               'جستجو انجام نشد. اینترنت را بررسی کنید.',
               'Search failed. Check your internet connection.',
               'فشل البحث. تحقق من اتصال الإنترنت.',
@@ -2737,7 +2749,7 @@ class _SearchPanelState
     final name =
         result['display_name']
                 ?.toString() ??
-            widget.tr(
+            tr(
               'مکان انتخاب‌شده',
               'Selected place',
               'المكان المحدد',
@@ -2766,7 +2778,7 @@ class _SearchPanelState
           .showSnackBar(
         SnackBar(
           content: Text(
-            widget.tr(
+            tr(
               'مبدأ انتخاب شد؛ حالا مقصد را جستجو کنید.',
               'Origin selected; now search for the destination.',
               'تم اختيار البداية؛ ابحث الآن عن الوجهة.',
@@ -2804,7 +2816,7 @@ class _SearchPanelState
           .showSnackBar(
         SnackBar(
           content: Text(
-            widget.tr(
+            tr(
               'ابتدا باید موقعیت فعلی دریافت شود.',
               'Get your current location first.',
               'احصل على موقعك الحالي أولاً.',
@@ -2816,7 +2828,7 @@ class _SearchPanelState
       return;
     }
 
-    final name = widget.tr(
+    final name = tr(
       'موقعیت فعلی من',
       'My current location',
       'موقعي الحالي',
@@ -2909,7 +2921,7 @@ class _SearchPanelState
               if (controller.text
                   .isNotEmpty)
                 IconButton(
-                  tooltip: widget.tr(
+                  tooltip: tr(
                     'پاک کردن',
                     'Clear',
                     'مسح',
@@ -2934,7 +2946,7 @@ class _SearchPanelState
                   },
                 ),
               IconButton(
-                tooltip: widget.tr(
+                tooltip: tr(
                   'جستجو',
                   'Search',
                   'بحث',
@@ -2957,12 +2969,12 @@ class _SearchPanelState
             ],
           ),
           hintText: origin
-              ? widget.tr(
+              ? tr(
                   'جستجوی مبدأ...',
                   'Search origin...',
                   'بحث عن البداية...',
                 )
-              : widget.tr(
+              : tr(
                   'جستجوی مقصد...',
                   'Search destination...',
                   'بحث عن الوجهة...',
@@ -3133,7 +3145,7 @@ class _SearchPanelState
                           width: 10),
                       Expanded(
                         child: Text(
-                          widget.tr(
+                          tr(
                             'جستجوی مبدأ و مقصد',
                             'Search origin & destination',
                             'بحث عن البداية والوجهة',
@@ -3194,7 +3206,7 @@ class _SearchPanelState
                             Color(0xff29B6F6),
                       ),
                       label: Text(
-                        widget.tr(
+                        tr(
                           'استفاده از موقعیت فعلی من',
                           'Use my current location',
                           'استخدام موقعي الحالي',
@@ -3233,9 +3245,9 @@ class _SearchPanelState
                       results = [];
                     });
 
-                    widget.onSwap();
+                     _onSwap();
                   },
-                  tooltip: widget.tr(
+                  tooltip: tr(
                     'تعویض مبدأ و مقصد',
                     'Swap origin & destination',
                     'تبديل البداية والوجهة',
@@ -3306,12 +3318,12 @@ class _SearchPanelState
                       // ====================================================
                       label: Text(
                         searching
-                            ? widget.tr(
+                            ? tr(
                                 'در حال جستجو...',
                                 'Searching...',
                                 'جارٍ البحث...',
                               )
-                            : widget.searchPlaceTitle,
+                            : searchPlaceTitle,
                         style:
                             const TextStyle(
                           fontWeight:
@@ -3379,7 +3391,7 @@ class _SearchPanelState
                       bottom: 18,
                     ),
                     child: Text(
-                      widget.tr(
+                      tr(
                         'نام شهر، خیابان یا مکان را وارد و روی جستجو بزنید.',
                         'Enter a city, street, or place and press Search.',
                         'أدخل مدينة أو شارعًا أو مكانًا واضغط بحث.',
