@@ -12,11 +12,14 @@ enum MapLanguage { fa, en, ar }
 /// Routing strategy kept extensible for a future traffic-aware provider.
 enum RouteStrategy { fastest, lowTrafficReady }
 
+
+String _defaultTr(String fa, String en, String ar) => fa;
+
 class SmartMapPage extends StatefulWidget {
   const SmartMapPage({
     super.key,
     this.onSwap,
-    this.tr,
+    this.tr = _defaultTr,
     this.searchPlaceTitle,
   });
 
@@ -26,7 +29,7 @@ class SmartMapPage extends StatefulWidget {
     String fa,
     String en,
     String ar,
-  )? tr;
+  ) tr;
 
   final String? searchPlaceTitle;
 
