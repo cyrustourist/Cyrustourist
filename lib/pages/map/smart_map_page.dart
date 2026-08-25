@@ -67,15 +67,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get mapTitle =>
       tr('نقشه گردشگری', 'Tourism Map', 'الخريطة السياحية');
 
-  String get searchTitle =>
-      tr(
+  String get searchTitle => tr(
         'جستجوی مبدأ و مقصد',
         'Search origin & destination',
         'بحث عن البداية والوجهة',
       );
 
-  String get searchPlaceTitle =>
-      tr(
+  String get searchPlaceTitle => tr(
         'جستجوی هدف گردشگری',
         'Search tourist destination',
         'البحث عن هدف سياحي',
@@ -108,8 +106,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
   String get zoomOutTitle =>
       tr('کوچک‌نمایی', 'Zoom out', 'تصغير');
 
-  String get backTitle =>
-      tr(
+  String get backTitle => tr(
         'بازگشت به سایروس توریست',
         'Back to Cyrus Tourist',
         'العودة إلى سايروس توريست',
@@ -157,7 +154,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
     });
 
     try {
-      final enabled = await Geolocator.isLocationServiceEnabled();
+      final enabled =
+          await Geolocator.isLocationServiceEnabled();
 
       if (!enabled) {
         if (!mounted) return;
@@ -181,11 +179,13 @@ class _SmartMapPageState extends State<SmartMapPage> {
           await Geolocator.checkPermission();
 
       if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+        permission =
+            await Geolocator.requestPermission();
       }
 
       if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
+          permission ==
+              LocationPermission.deniedForever) {
         if (!mounted) return;
 
         setState(() {
@@ -203,8 +203,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
+      final position =
+          await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
       );
@@ -259,14 +261,19 @@ class _SmartMapPageState extends State<SmartMapPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xffB3261E),
+        backgroundColor:
+            const Color(0xffB3261E),
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius:
+              BorderRadius.circular(16),
         ),
         content: Row(
           children: [
-            const Icon(Icons.gps_off, color: Colors.white),
+            const Icon(
+              Icons.gps_off,
+              color: Colors.white,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -277,14 +284,19 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w600,
+                  fontWeight:
+                      FontWeight.w600,
                 ),
               ),
             ),
           ],
         ),
         action: SnackBarAction(
-          label: tr('تنظیمات', 'Settings', 'الإعدادات'),
+          label: tr(
+            'تنظیمات',
+            'Settings',
+            'الإعدادات',
+          ),
           textColor: Colors.white,
           onPressed: () {
             Geolocator.openLocationSettings();
@@ -294,27 +306,40 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  void _showMessage(String text, IconData icon) {
+  void _showMessage(
+    String text,
+    IconData icon,
+  ) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xff102A38),
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+        behavior:
+            SnackBarBehavior.floating,
+        backgroundColor:
+            const Color(0xff102A38),
+        margin:
+            const EdgeInsets.all(16),
+        shape:
+            RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.circular(16),
         ),
         content: Row(
           children: [
-            Icon(icon, color: Colors.white),
+            Icon(
+              icon,
+              color: Colors.white,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 text,
-                style: const TextStyle(
+                style:
+                    const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w600,
+                  fontWeight:
+                      FontWeight.w600,
                 ),
               ),
             ),
@@ -331,7 +356,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
   Future<List<Map<String, dynamic>>> searchPlaces(
     String query,
   ) async {
-    final cleanQuery = query.trim();
+    final cleanQuery =
+        query.trim();
 
     if (cleanQuery.length < 2) {
       return [];
@@ -345,23 +371,27 @@ class _SmartMapPageState extends State<SmartMapPage> {
         'format': 'jsonv2',
         'limit': '8',
         'addressdetails': '1',
-        'accept-language': _nominatimLanguage,
+        'accept-language':
+            _nominatimLanguage,
       },
     );
 
     final client = HttpClient();
 
     try {
-      client.userAgent = 'CyrusTourist/1.0 (cyrustourist.ir)';
+      client.userAgent =
+          'CyrusTourist/1.0 (cyrustourist.ir)';
 
-      final request = await client.getUrl(uri);
+      final request =
+          await client.getUrl(uri);
 
       request.headers.set(
         HttpHeaders.acceptHeader,
         'application/json',
       );
 
-      final response = await request.close();
+      final response =
+          await request.close();
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -370,9 +400,14 @@ class _SmartMapPageState extends State<SmartMapPage> {
       }
 
       final body =
-          await response.transform(utf8.decoder).join();
+          await response
+              .transform(
+                utf8.decoder,
+              )
+              .join();
 
-      final decoded = jsonDecode(body);
+      final decoded =
+          jsonDecode(body);
 
       if (decoded is! List) {
         return [];
@@ -381,7 +416,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
       return decoded
           .whereType<Map>()
           .map(
-            (item) => Map<String, dynamic>.from(item),
+            (item) =>
+                Map<String, dynamic>.from(
+              item,
+            ),
           )
           .toList();
     } finally {
@@ -393,31 +431,45 @@ class _SmartMapPageState extends State<SmartMapPage> {
   // SEARCH PANEL
   // ============================================================
 
-  void openSearch({bool destination = false}) {
+  void openSearch({
+    bool destination = false,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor:
+          Colors.transparent,
       builder: (_) {
         return _SearchPanel(
           initialOrigin: originName,
-          initialDestination: destinationName,
+          initialDestination:
+              destinationName,
           userLocation: userLocation,
-          initialMode: destination ? false : true,
-          onOriginSelected: _selectOrigin,
-          onDestinationSelected: _selectDestination,
-          onClearOrigin: _clearOrigin,
-          onClearDestination: _clearDestination,
+          initialMode:
+              destination ? false : true,
+          onOriginSelected:
+              _selectOrigin,
+          onDestinationSelected:
+              _selectDestination,
+          onClearOrigin:
+              _clearOrigin,
+          onClearDestination:
+              _clearDestination,
           onSwap: _swapPlaces,
-          searchPlaces: searchPlaces,
-          language: pageLanguage,
+          searchPlaces:
+              searchPlaces,
+          language:
+              pageLanguage,
           tr: tr,
         );
       },
     );
   }
 
-  void _selectOrigin(LatLng point, String name) {
+  void _selectOrigin(
+    LatLng point,
+    String name,
+  ) {
     setState(() {
       originLocation = point;
       originName = name;
@@ -426,10 +478,16 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routeDurationMin = null;
     });
 
-    mapController.move(point, 15);
+    mapController.move(
+      point,
+      15,
+    );
   }
 
-  void _selectDestination(LatLng point, String name) {
+  void _selectDestination(
+    LatLng point,
+    String name,
+  ) {
     setState(() {
       destinationLocation = point;
       destinationName = name;
@@ -438,7 +496,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routeDurationMin = null;
     });
 
-    mapController.move(point, 15);
+    mapController.move(
+      point,
+      15,
+    );
   }
 
   void useCurrentLocationAsOrigin() {
@@ -479,13 +540,23 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
   void _swapPlaces() {
     setState(() {
-      final oldOrigin = originLocation;
-      originLocation = destinationLocation;
-      destinationLocation = oldOrigin;
+      final oldOrigin =
+          originLocation;
 
-      final oldOriginName = originName;
-      originName = destinationName;
-      destinationName = oldOriginName;
+      originLocation =
+          destinationLocation;
+
+      destinationLocation =
+          oldOrigin;
+
+      final oldOriginName =
+          originName;
+
+      originName =
+          destinationName;
+
+      destinationName =
+          oldOriginName;
 
       routePoints = [];
       routeDistanceKm = null;
@@ -493,7 +564,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
     });
 
     if (originLocation != null) {
-      mapController.move(originLocation!, 15);
+      mapController.move(
+        originLocation!,
+        15,
+      );
     }
   }
 
@@ -510,7 +584,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
       );
 
       openSearch(
-        destination: originLocation != null &&
+        destination:
+            originLocation != null &&
             destinationLocation == null,
       );
       return;
@@ -522,8 +597,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
       routingLoading = true;
     });
 
-    final origin = originLocation!;
-    final destination = destinationLocation!;
+    final origin =
+        originLocation!;
+
+    final destination =
+        destinationLocation!;
 
     final uri = Uri.parse(
       'https://router.project-osrm.org/route/v1/driving/'
@@ -535,94 +613,143 @@ class _SmartMapPageState extends State<SmartMapPage> {
     final client = HttpClient();
 
     try {
-      client.userAgent = 'CyrusTourist/1.0 (cyrustourist.ir)';
+      client.userAgent =
+          'CyrusTourist/1.0 (cyrustourist.ir)';
 
-      final request = await client.getUrl(uri);
+      final request =
+          await client.getUrl(uri);
 
       request.headers.set(
         HttpHeaders.acceptHeader,
         'application/json',
       );
 
-      final response = await request
-          .close()
-          .timeout(const Duration(seconds: 25));
+      final response =
+          await request
+              .close()
+              .timeout(
+                const Duration(
+                  seconds: 25,
+                ),
+              );
 
-      final body = await response
-          .transform(utf8.decoder)
-          .join()
-          .timeout(const Duration(seconds: 10));
+      final body =
+          await response
+              .transform(
+                utf8.decoder,
+              )
+              .join()
+              .timeout(
+                const Duration(
+                  seconds: 10,
+                ),
+              );
 
-      if (response.statusCode != HttpStatus.ok) {
+      if (response.statusCode !=
+          HttpStatus.ok) {
         throw Exception(
           'OSRM HTTP ${response.statusCode}',
         );
       }
 
-      final decoded = jsonDecode(body);
+      final decoded =
+          jsonDecode(body);
 
       if (decoded is! Map ||
           decoded['code'] != 'Ok' ||
           decoded['routes'] is! List ||
-          (decoded['routes'] as List).isEmpty) {
+          (decoded['routes'] as List)
+              .isEmpty) {
         throw Exception(
           decoded is Map
-              ? (decoded['message']?.toString() ??
+              ? (decoded['message']
+                      ?.toString() ??
                   'OSRM route not found')
               : 'OSRM route not found',
         );
       }
 
-      final route = (decoded['routes'] as List).first;
+      final route =
+          (decoded['routes']
+                  as List)
+              .first;
 
-      final geometry = route['geometry'];
+      final geometry =
+          route['geometry'];
 
       final coordinates =
-          geometry is Map ? geometry['coordinates'] : null;
+          geometry is Map
+              ? geometry['coordinates']
+              : null;
 
-      if (coordinates is! List || coordinates.isEmpty) {
-        throw Exception('OSRM geometry missing');
+      if (coordinates is! List ||
+          coordinates.isEmpty) {
+        throw Exception(
+          'OSRM geometry missing',
+        );
       }
 
-      final points = <LatLng>[];
+      final points =
+          <LatLng>[];
 
-      for (final item in coordinates) {
-        if (item is List && item.length >= 2) {
+      for (final item
+          in coordinates) {
+        if (item is List &&
+            item.length >= 2) {
           final longitude =
-              (item[0] as num).toDouble();
+              (item[0] as num)
+                  .toDouble();
 
           final latitude =
-              (item[1] as num).toDouble();
+              (item[1] as num)
+                  .toDouble();
 
           points.add(
-            LatLng(latitude, longitude),
+            LatLng(
+              latitude,
+              longitude,
+            ),
           );
         }
       }
 
       if (points.length < 2) {
-        throw Exception('OSRM route too short');
+        throw Exception(
+          'OSRM route too short',
+        );
       }
 
       final distanceMeters =
-          (route['distance'] as num?)?.toDouble() ?? 0;
+          (route['distance']
+                      as num?)
+                  ?.toDouble() ??
+              0;
 
       final durationSeconds =
-          (route['duration'] as num?)?.toDouble() ?? 0;
+          (route['duration']
+                      as num?)
+                  ?.toDouble() ??
+              0;
 
       if (!mounted) return;
 
       setState(() {
         routePoints = points;
-        routeDistanceKm = distanceMeters / 1000;
-        routeDurationMin = durationSeconds / 60;
+        routeDistanceKm =
+            distanceMeters / 1000;
+        routeDurationMin =
+            durationSeconds / 60;
         routingLoading = false;
       });
 
       mapController.fitCamera(
         CameraFit.bounds(
-          bounds: LatLngBounds.fromPoints(points),
-          padding: const EdgeInsets.fromLTRB(
+          bounds:
+              LatLngBounds.fromPoints(
+            points,
+          ),
+          padding:
+              const EdgeInsets.fromLTRB(
             55,
             55,
             55,
@@ -655,7 +782,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
         Icons.error_outline,
       );
     } finally {
-      client.close(force: true);
+      client.close(
+        force: true,
+      );
     }
   }
 
@@ -700,7 +829,10 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
   void goToMyLocation() {
     if (userLocation != null) {
-      mapController.move(userLocation!, 15);
+      mapController.move(
+        userLocation!,
+        15,
+      );
     } else {
       getLocation();
     }
@@ -713,9 +845,11 @@ class _SmartMapPageState extends State<SmartMapPage> {
   void _showLanguagePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor:
+          Colors.transparent,
       builder: (sheetContext) {
-        final options = <MapLanguage, String>{
+        final options =
+            <MapLanguage, String>{
           MapLanguage.fa: 'پارسی',
           MapLanguage.en: 'English',
           MapLanguage.ar: 'العربية',
@@ -723,56 +857,90 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
         return SafeArea(
           child: Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xff071722),
-              borderRadius: BorderRadius.circular(24),
+            margin:
+                const EdgeInsets.all(12),
+            padding:
+                const EdgeInsets.all(16),
+            decoration:
+                BoxDecoration(
+              color:
+                  const Color(0xff071722),
+              borderRadius:
+                  BorderRadius.circular(
+                24,
+              ),
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize:
+                  MainAxisSize.min,
               children: [
                 Text(
                   languageTitle,
-                  style: const TextStyle(
+                  style:
+                      const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
-                for (final entry in options.entries)
+                const SizedBox(
+                  height: 12,
+                ),
+                for (final entry
+                    in options.entries)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding:
+                        const EdgeInsets.only(
+                      bottom: 8,
+                    ),
                     child: ListTile(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                      shape:
+                          RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius
+                                .circular(
+                          16,
+                        ),
                       ),
                       tileColor:
-                          entry.key == pageLanguage
-                              ? const Color(0xff0083B0)
-                              : Colors.white.withValues(
+                          entry.key ==
+                                  pageLanguage
+                              ? const Color(
+                                  0xff0083B0,
+                                )
+                              : Colors.white
+                                  .withValues(
                                   alpha: 0.08,
                                 ),
                       leading: Icon(
-                        entry.key == pageLanguage
-                            ? Icons.check_circle
+                        entry.key ==
+                                pageLanguage
+                            ? Icons
+                                .check_circle
                             : Icons.language,
-                        color: Colors.white,
+                        color:
+                            Colors.white,
                       ),
                       title: Text(
                         entry.value,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
+                        style:
+                            const TextStyle(
+                          color:
+                              Colors.white,
+                          fontWeight:
+                              FontWeight.w700,
                         ),
                       ),
                       onTap: () {
                         setState(() {
-                          pageLanguage = entry.key;
+                          pageLanguage =
+                              entry.key;
                         });
 
-                        Navigator.pop(sheetContext);
+                        Navigator.pop(
+                          sheetContext,
+                        );
                       },
                     ),
                   ),
@@ -789,32 +957,45 @@ class _SmartMapPageState extends State<SmartMapPage> {
   // ============================================================
 
   Widget _routeSummary() {
-    final distance = routeDistanceKm ?? 0;
-    final duration = routeDurationMin ?? 0;
+    final distance =
+        routeDistanceKm ?? 0;
 
-    final distanceText = distance < 1
-        ? '${(distance * 1000).round()} m'
-        : '${distance.toStringAsFixed(1)} km';
+    final duration =
+        routeDurationMin ?? 0;
 
-    final durationText = duration < 60
-        ? '${duration.round()} min'
-        : '${(duration / 60).floor()} h '
-            '${(duration % 60).round()} min';
+    final distanceText =
+        distance < 1
+            ? '${(distance * 1000).round()} m'
+            : '${distance.toStringAsFixed(1)} km';
+
+    final durationText =
+        duration < 60
+            ? '${duration.round()} min'
+            : '${(duration / 60).floor()} h '
+                '${(duration % 60).round()} min';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+          const EdgeInsets.fromLTRB(
         14,
         12,
         8,
         12,
       ),
-      decoration: BoxDecoration(
-        color: const Color(0xff071722).withValues(
+      decoration:
+          BoxDecoration(
+        color:
+            const Color(0xff071722)
+                .withValues(
           alpha: 0.95,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius:
+            BorderRadius.circular(
+          20,
+        ),
         border: Border.all(
-          color: const Color(0xff2D6678),
+          color:
+              const Color(0xff2D6678),
         ),
       ),
       child: Row(
@@ -824,7 +1005,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
             color: Colors.white,
             size: 28,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(
+            width: 10,
+          ),
           Expanded(
             child: Wrap(
               spacing: 18,
@@ -844,9 +1027,12 @@ class _SmartMapPageState extends State<SmartMapPage> {
             ),
           ),
           IconButton(
-            tooltip: clearRouteTitle,
-            onPressed: clearRoute,
-            icon: const Icon(
+            tooltip:
+                clearRouteTitle,
+            onPressed:
+                clearRoute,
+            icon:
+                const Icon(
               Icons.close,
               color: Colors.white,
             ),
@@ -862,19 +1048,24 @@ class _SmartMapPageState extends State<SmartMapPage> {
     String value,
   ) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize:
+          MainAxisSize.min,
       children: [
         Icon(
           icon,
           size: 18,
           color: Colors.white70,
         ),
-        const SizedBox(width: 5),
+        const SizedBox(
+          width: 5,
+        ),
         Text(
           '$label: $value',
-          style: const TextStyle(
+          style:
+              const TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.w700,
+            fontWeight:
+                FontWeight.w700,
           ),
         ),
       ],
@@ -886,36 +1077,56 @@ class _SmartMapPageState extends State<SmartMapPage> {
   // ============================================================
 
   List<Marker> markers() {
-    final result = <Marker>[];
+    final result =
+        <Marker>[];
 
     if (userLocation != null) {
       result.add(
         Marker(
-          point: userLocation!,
+          point:
+              userLocation!,
           width: 70,
           height: 70,
           child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blue.withValues(alpha: 0.18),
-              border: Border.all(
-                color: Colors.blue.withValues(alpha: 0.35),
+            decoration:
+                BoxDecoration(
+              shape:
+                  BoxShape.circle,
+              color: Colors.blue
+                  .withValues(
+                alpha: 0.18,
+              ),
+              border:
+                  Border.all(
+                color: Colors.blue
+                    .withValues(
+                  alpha: 0.35,
+                ),
                 width: 2,
               ),
             ),
             child: Container(
-              margin: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
+              margin:
+                  const EdgeInsets.all(
+                12,
+              ),
+              decoration:
+                  BoxDecoration(
+                shape:
+                    BoxShape.circle,
                 color: Colors.blue,
-                border: Border.all(
-                  color: Colors.white,
+                border:
+                    Border.all(
+                  color:
+                      Colors.white,
                   width: 3,
                 ),
               ),
-              child: const Icon(
+              child:
+                  const Icon(
                 Icons.navigation,
-                color: Colors.white,
+                color:
+                    Colors.white,
                 size: 25,
               ),
             ),
@@ -927,12 +1138,18 @@ class _SmartMapPageState extends State<SmartMapPage> {
     if (originLocation != null) {
       result.add(
         Marker(
-          point: originLocation!,
+          point:
+              originLocation!,
           width: 58,
           height: 70,
-          child: _placeMarker(
-            color: const Color(0xff1976D2),
-            icon: Icons.trip_origin,
+          child:
+              _placeMarker(
+            color:
+                const Color(
+              0xff1976D2,
+            ),
+            icon:
+                Icons.trip_origin,
             label: tr(
               'مبدأ',
               'Origin',
@@ -943,15 +1160,22 @@ class _SmartMapPageState extends State<SmartMapPage> {
       );
     }
 
-    if (destinationLocation != null) {
+    if (destinationLocation !=
+        null) {
       result.add(
         Marker(
-          point: destinationLocation!,
+          point:
+              destinationLocation!,
           width: 58,
           height: 70,
-          child: _placeMarker(
-            color: const Color(0xffE53935),
-            icon: Icons.location_on,
+          child:
+              _placeMarker(
+            color:
+                const Color(
+              0xffE53935,
+            ),
+            icon:
+                Icons.location_on,
             label: tr(
               'مقصد',
               'Destination',
@@ -975,36 +1199,55 @@ class _SmartMapPageState extends State<SmartMapPage> {
         Container(
           width: 46,
           height: 46,
-          decoration: BoxDecoration(
+          decoration:
+              BoxDecoration(
             color: color,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white,
+            shape:
+                BoxShape.circle,
+            border:
+                Border.all(
+              color:
+                  Colors.white,
               width: 3,
             ),
           ),
-          child: Icon(
+          child:
+              Icon(
             icon,
-            color: Colors.white,
+            color:
+                Colors.white,
             size: 25,
           ),
         ),
         Container(
-          margin: const EdgeInsets.only(top: 2),
-          padding: const EdgeInsets.symmetric(
+          margin:
+              const EdgeInsets.only(
+            top: 2,
+          ),
+          padding:
+              const EdgeInsets
+                  .symmetric(
             horizontal: 7,
             vertical: 2,
           ),
-          decoration: BoxDecoration(
+          decoration:
+              BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius:
+                BorderRadius.circular(
+              8,
+            ),
           ),
-          child: Text(
+          child:
+              Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
+            style:
+                const TextStyle(
+              color:
+                  Colors.white,
               fontSize: 9,
-              fontWeight: FontWeight.bold,
+              fontWeight:
+                  FontWeight.bold,
             ),
           ),
         ),
@@ -1024,46 +1267,76 @@ class _SmartMapPageState extends State<SmartMapPage> {
     bool active = false,
   }) {
     return Tooltip(
-      message: tooltip ?? '',
+      message:
+          tooltip ?? '',
       child: Material(
-        color: Colors.transparent,
+        color:
+            Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(17),
-          onTap: onPressed,
-          child: Container(
+          borderRadius:
+              BorderRadius.circular(
+            17,
+          ),
+          onTap:
+              onPressed,
+          child:
+              Container(
             width: size,
             height: size,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(17),
-              gradient: LinearGradient(
+            decoration:
+                BoxDecoration(
+              borderRadius:
+                  BorderRadius.circular(
+                17,
+              ),
+              gradient:
+                  LinearGradient(
                 colors: active
                     ? const [
-                        Color(0xff24C6DC),
-                        Color(0xff1976D2),
+                        Color(
+                          0xff24C6DC,
+                        ),
+                        Color(
+                          0xff1976D2,
+                        ),
                       ]
                     : const [
                         Colors.white,
-                        Color(0xffDCEAF0),
+                        Color(
+                          0xffDCEAF0,
+                        ),
                       ],
               ),
-              border: Border.all(
-                color: Colors.white,
+              border:
+                  Border.all(
+                color:
+                    Colors.white,
                 width: 1.2,
               ),
-              boxShadow: const [
+              boxShadow:
+                  const [
                 BoxShadow(
-                  color: Colors.black45,
-                  blurRadius: 10,
-                  offset: Offset(0, 5),
+                  color:
+                      Colors.black45,
+                  blurRadius:
+                      10,
+                  offset:
+                      Offset(
+                    0,
+                    5,
+                  ),
                 ),
               ],
             ),
-            child: Icon(
+            child:
+                Icon(
               icon,
               size: 26,
               color: active
                   ? Colors.white
-                  : const Color(0xff123746),
+                  : const Color(
+                      0xff123746,
+                    ),
             ),
           ),
         ),
@@ -1078,61 +1351,101 @@ class _SmartMapPageState extends State<SmartMapPage> {
     bool primary = false,
   }) {
     return Material(
-      color: Colors.transparent,
+      color:
+          Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onPressed,
-        child: Container(
+        borderRadius:
+            BorderRadius.circular(
+          20,
+        ),
+        onTap:
+            onPressed,
+        child:
+            Container(
           height: 56,
-          padding: const EdgeInsets.symmetric(
+          padding:
+              const EdgeInsets
+                  .symmetric(
             horizontal: 16,
           ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
+          decoration:
+              BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(
+              20,
+            ),
+            gradient:
+                LinearGradient(
               colors: primary
                   ? const [
-                      Color(0xff00B4DB),
-                      Color(0xff0083B0),
+                      Color(
+                        0xff00B4DB,
+                      ),
+                      Color(
+                        0xff0083B0,
+                      ),
                     ]
                   : const [
                       Colors.white,
-                      Color(0xffE4EEF2),
+                      Color(
+                        0xffE4EEF2,
+                      ),
                     ],
             ),
-            border: Border.all(
-              color: Colors.white70,
+            border:
+                Border.all(
+              color:
+                  Colors.white70,
               width: 1.2,
             ),
-            boxShadow: const [
+            boxShadow:
+                const [
               BoxShadow(
-                color: Colors.black45,
-                blurRadius: 12,
-                offset: Offset(0, 6),
+                color:
+                    Colors.black45,
+                blurRadius:
+                    12,
+                offset:
+                    Offset(
+                  0,
+                  6,
+                ),
               ),
             ],
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize:
+                MainAxisSize.min,
             children: [
               Icon(
                 icon,
                 color: primary
                     ? Colors.white
-                    : const Color(0xff123746),
+                    : const Color(
+                        0xff123746,
+                      ),
                 size: 27,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(
+                width: 10,
+              ),
               Flexible(
-                child: Text(
+                child:
+                    Text(
                   title,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  overflow:
+                      TextOverflow
+                          .ellipsis,
+                  style:
+                      TextStyle(
                     color: primary
                         ? Colors.white
-                        : const Color(0xff123746),
+                        : const Color(
+                            0xff123746,
+                          ),
                     fontSize: 15,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
               ),
@@ -1146,7 +1459,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
   void _openTouristDestinationSearch() {
     if (!mounted) return;
 
-    FocusScope.of(context).unfocus();
+    FocusScope.of(context)
+        .unfocus();
 
     openSearch(
       destination:
@@ -1160,25 +1474,32 @@ class _SmartMapPageState extends State<SmartMapPage> {
   // ============================================================
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Directionality(
       textDirection:
-          isRtl ? TextDirection.rtl : TextDirection.ltr,
+          isRtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: const Color(0xff071722),
+        backgroundColor:
+            const Color(
+          0xff071722,
+        ),
         body: SafeArea(
           child: Column(
             children: [
-              // ======================================================
-              // MAP
-              // ======================================================
               Expanded(
                 child: Stack(
                   children: [
                     FlutterMap(
-                      mapController: mapController,
-                      options: const MapOptions(
-                        initialCenter: iranCenter,
+                      mapController:
+                          mapController,
+                      options:
+                          const MapOptions(
+                        initialCenter:
+                            iranCenter,
                         initialZoom: 5,
                       ),
                       children: [
@@ -1188,20 +1509,30 @@ class _SmartMapPageState extends State<SmartMapPage> {
                           userAgentPackageName:
                               'cyrustourist.ir.app',
                         ),
-                        if (routePoints.length >= 2)
+                        if (routePoints
+                                .length >=
+                            2)
                           PolylineLayer(
                             polylines: [
                               Polyline(
-                                points: routePoints,
-                                strokeWidth: 6,
-                                color: const Color(0xff0083B0),
-                                borderStrokeWidth: 2,
-                                borderColor: Colors.white,
+                                points:
+                                    routePoints,
+                                strokeWidth:
+                                    6,
+                                color:
+                                    const Color(
+                                  0xff0083B0,
+                                ),
+                                borderStrokeWidth:
+                                    2,
+                                borderColor:
+                                    Colors.white,
                               ),
                             ],
                           ),
                         MarkerLayer(
-                          markers: markers(),
+                          markers:
+                              markers(),
                         ),
                       ],
                     ),
@@ -1210,29 +1541,51 @@ class _SmartMapPageState extends State<SmartMapPage> {
                       top: 12,
                       left: 12,
                       right: 12,
-                      child: IgnorePointer(
-                        child: Center(
-                          child: Container(
+                      child:
+                          IgnorePointer(
+                        child:
+                            Center(
+                          child:
+                              Container(
                             padding:
-                                const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 7,
+                                const EdgeInsets
+                                    .symmetric(
+                              horizontal:
+                                  14,
+                              vertical:
+                                  7,
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xff071722)
-                                  .withValues(alpha: 0.88),
+                            decoration:
+                                BoxDecoration(
+                              color:
+                                  const Color(
+                                0xff071722,
+                              ).withValues(
+                                alpha:
+                                    0.88,
+                              ),
                               borderRadius:
-                                  BorderRadius.circular(18),
-                              border: Border.all(
-                                color: Colors.white24,
+                                  BorderRadius
+                                      .circular(
+                                18,
+                              ),
+                              border:
+                                  Border.all(
+                                color:
+                                    Colors.white24,
                               ),
                             ),
-                            child: Text(
+                            child:
+                                Text(
                               mapTitle,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                              style:
+                                  const TextStyle(
+                                color:
+                                    Colors.white,
+                                fontSize:
+                                    14,
+                                fontWeight:
+                                    FontWeight.bold,
                               ),
                             ),
                           ),
@@ -1245,37 +1598,61 @@ class _SmartMapPageState extends State<SmartMapPage> {
                         top: 58,
                         left: 16,
                         right: 16,
-                        child: GestureDetector(
+                        child:
+                            GestureDetector(
                           onTap: () {
-                            Geolocator.openLocationSettings();
+                            Geolocator
+                                .openLocationSettings();
                           },
-                          child: Container(
+                          child:
+                              Container(
                             padding:
-                                const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 11,
+                                const EdgeInsets
+                                    .symmetric(
+                              horizontal:
+                                  14,
+                              vertical:
+                                  11,
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xffB3261E)
-                                  .withValues(alpha: 0.94),
+                            decoration:
+                                BoxDecoration(
+                              color:
+                                  const Color(
+                                0xffB3261E,
+                              ).withValues(
+                                alpha:
+                                    0.94,
+                              ),
                               borderRadius:
-                                  BorderRadius.circular(16),
+                                  BorderRadius
+                                      .circular(
+                                16,
+                              ),
                             ),
-                            child: Row(
+                            child:
+                                Row(
                               children: [
                                 const Icon(
-                                  Icons.gps_off,
-                                  color: Colors.white,
+                                  Icons
+                                      .gps_off,
+                                  color:
+                                      Colors.white,
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(
+                                  width: 10,
+                                ),
                                 Expanded(
-                                  child: Text(
+                                  child:
+                                      Text(
                                     gpsOffTitle,
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style:
+                                        const TextStyle(
+                                      color:
+                                          Colors.white,
                                       fontWeight:
                                           FontWeight.bold,
-                                      fontSize: 12,
+                                      fontSize:
+                                          12,
                                     ),
                                   ),
                                 ),
@@ -1287,50 +1664,85 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
                     if (routingLoading)
                       Positioned.fill(
-                        child: IgnorePointer(
-                          child: Container(
-                            color:
-                                Colors.black.withValues(
-                              alpha: 0.12,
+                        child:
+                            IgnorePointer(
+                          child:
+                              Container(
+                            color: Colors
+                                .black
+                                .withValues(
+                              alpha:
+                                  0.12,
                             ),
-                            alignment: Alignment.center,
-                            child: Container(
+                            alignment:
+                                Alignment
+                                    .center,
+                            child:
+                                Container(
                               padding:
-                                  const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
+                                  const EdgeInsets
+                                      .symmetric(
+                                horizontal:
+                                    20,
+                                vertical:
+                                    16,
                               ),
-                              decoration: BoxDecoration(
+                              decoration:
+                                  BoxDecoration(
                                 color:
-                                    const Color(0xff071722),
-                                borderRadius:
-                                    BorderRadius.circular(18),
-                                border: Border.all(
-                                  color:
-                                      const Color(0xff2D6678),
+                                    const Color(
+                                  0xff071722,
                                 ),
-                                boxShadow: const [
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                  18,
+                                ),
+                                border:
+                                    Border.all(
+                                  color:
+                                      const Color(
+                                    0xff2D6678,
+                                  ),
+                                ),
+                                boxShadow:
+                                    const [
                                   BoxShadow(
-                                    color: Colors.black45,
-                                    blurRadius: 18,
-                                    offset: Offset(0, 8),
+                                    color:
+                                        Colors.black45,
+                                    blurRadius:
+                                        18,
+                                    offset:
+                                        Offset(
+                                      0,
+                                      8,
+                                    ),
                                   ),
                                 ],
                               ),
-                              child: Row(
+                              child:
+                                  Row(
                                 mainAxisSize:
-                                    MainAxisSize.min,
+                                    MainAxisSize
+                                        .min,
                                 children: [
                                   const SizedBox(
-                                    width: 22,
-                                    height: 22,
+                                    width:
+                                        22,
+                                    height:
+                                        22,
                                     child:
                                         CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
+                                      strokeWidth:
+                                          2.5,
+                                      color:
+                                          Colors.white,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  const SizedBox(
+                                    width:
+                                        12,
+                                  ),
                                   Text(
                                     tr(
                                       'در حال دریافت مسیر...',
@@ -1339,7 +1751,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
                                     ),
                                     style:
                                         const TextStyle(
-                                      color: Colors.white,
+                                      color:
+                                          Colors.white,
                                       fontWeight:
                                           FontWeight.bold,
                                     ),
@@ -1354,7 +1767,9 @@ class _SmartMapPageState extends State<SmartMapPage> {
                 ),
               ),
 
-              _buildBottomControlPanel(context),
+              _buildBottomControlPanel(
+                context,
+              ),
             ],
           ),
         ),
@@ -1366,120 +1781,187 @@ class _SmartMapPageState extends State<SmartMapPage> {
     BuildContext context,
   ) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
+      width:
+          double.infinity,
+      padding:
+          const EdgeInsets.fromLTRB(
         10,
         10,
         10,
         10,
       ),
-      decoration: const BoxDecoration(
-        color: Color(0xff071722),
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(26),
+      decoration:
+          const BoxDecoration(
+        color:
+            Color(0xff071722),
+        borderRadius:
+            BorderRadius.vertical(
+          top:
+              Radius.circular(
+            26,
+          ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black54,
-            blurRadius: 18,
-            offset: Offset(0, -6),
+            color:
+                Colors.black54,
+            blurRadius:
+                18,
+            offset:
+                Offset(
+              0,
+              -6,
+            ),
           ),
         ],
       ),
-      child: SafeArea(
+      child:
+          SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child:
+            Column(
+          mainAxisSize:
+              MainAxisSize.min,
           children: [
             Container(
               width: 42,
               height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white30,
+              decoration:
+                  BoxDecoration(
+                color:
+                    Colors.white30,
                 borderRadius:
-                    BorderRadius.circular(10),
+                    BorderRadius.circular(
+                  10,
+                ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(
+              height: 8,
+            ),
 
-            if (routePoints.length >= 2) ...[
+            if (routePoints.length >=
+                2) ...[
               _routeSummary(),
-              const SizedBox(height: 8),
+              const SizedBox(
+                height: 8,
+              ),
             ],
 
             Row(
               children: [
                 Expanded(
                   flex: 2,
-                  child: largeMapAction(
-                    icon: Icons.travel_explore,
-                    title: searchPlaceTitle,
-                    primary: true,
+                  child:
+                      largeMapAction(
+                    icon:
+                        Icons.travel_explore,
+                    title:
+                        searchPlaceTitle,
+                    primary:
+                        true,
                     onPressed:
                         _openTouristDestinationSearch,
                   ),
                 ),
-                const SizedBox(width: 7),
+                const SizedBox(
+                  width: 7,
+                ),
                 Expanded(
-                  child: largeMapAction(
-                    icon: Icons.alt_route,
-                    title: routeTitle,
+                  child:
+                      largeMapAction(
+                    icon:
+                        Icons.alt_route,
+                    title:
+                        routeTitle,
                     primary:
-                        routePoints.length >= 2,
-                    onPressed: openRouting,
+                        routePoints
+                                .length >=
+                            2,
+                    onPressed:
+                        openRouting,
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(
+              height: 8,
+            ),
 
             SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              reverse: isRtl,
+              scrollDirection:
+                  Axis.horizontal,
+              reverse:
+                  isRtl,
               child: Row(
                 mainAxisAlignment:
-                    MainAxisAlignment.center,
+                    MainAxisAlignment
+                        .center,
                 children: [
                   mapButton(
-                    icon: Icons.add,
-                    tooltip: zoomInTitle,
-                    onPressed: zoomIn,
+                    icon:
+                        Icons.add,
+                    tooltip:
+                        zoomInTitle,
+                    onPressed:
+                        zoomIn,
                     size: 48,
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(
+                    width: 7,
+                  ),
                   mapButton(
-                    icon: Icons.remove,
-                    tooltip: zoomOutTitle,
-                    onPressed: zoomOut,
+                    icon:
+                        Icons.remove,
+                    tooltip:
+                        zoomOutTitle,
+                    onPressed:
+                        zoomOut,
                     size: 48,
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(
+                    width: 7,
+                  ),
                   mapButton(
-                    icon: Icons.explore,
-                    tooltip: northTitle,
-                    onPressed: goNorth,
+                    icon:
+                        Icons.explore,
+                    tooltip:
+                        northTitle,
+                    onPressed:
+                        goNorth,
                     size: 48,
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(
+                    width: 7,
+                  ),
                   mapButton(
-                    icon: Icons.my_location,
-                    tooltip: currentLocationTitle,
+                    icon:
+                        Icons.my_location,
+                    tooltip:
+                        currentLocationTitle,
                     active:
-                        userLocation != null,
+                        userLocation !=
+                            null,
                     onPressed:
                         goToMyLocation,
                     size: 48,
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(
+                    width: 7,
+                  ),
                   mapButton(
-                    icon: Icons.language,
-                    tooltip: languageTitle,
+                    icon:
+                        Icons.language,
+                    tooltip:
+                        languageTitle,
                     onPressed:
                         _showLanguagePicker,
                     size: 48,
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(
+                    width: 7,
+                  ),
                   _backToCyrusButton(),
                 ],
               ),
@@ -1492,61 +1974,99 @@ class _SmartMapPageState extends State<SmartMapPage> {
 
   Widget _backToCyrusButton() {
     return Tooltip(
-      message: backTitle,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+      message:
+          backTitle,
+      child:
+          Material(
+        color:
+            Colors.transparent,
+        child:
+            InkWell(
           borderRadius:
-              BorderRadius.circular(17),
+              BorderRadius.circular(
+            17,
+          ),
           onTap: () {
-            Navigator.of(context).pop();
+            Navigator.of(
+              context,
+            ).pop();
           },
-          child: Container(
+          child:
+              Container(
             height: 48,
             padding:
-                const EdgeInsets.symmetric(
-              horizontal: 14,
+                const EdgeInsets
+                    .symmetric(
+              horizontal:
+                  14,
             ),
-            decoration: BoxDecoration(
+            decoration:
+                BoxDecoration(
               borderRadius:
-                  BorderRadius.circular(17),
-              gradient: const LinearGradient(
+                  BorderRadius.circular(
+                17,
+              ),
+              gradient:
+                  const LinearGradient(
                 colors: [
-                  Color(0xffD4AF37),
-                  Color(0xffA77B18),
+                  Color(
+                    0xffD4AF37,
+                  ),
+                  Color(
+                    0xffA77B18,
+                  ),
                 ],
               ),
-              border: Border.all(
-                color: Colors.white70,
+              border:
+                  Border.all(
+                color:
+                    Colors.white70,
                 width: 1.2,
               ),
-              boxShadow: const [
+              boxShadow:
+                  const [
                 BoxShadow(
-                  color: Colors.black45,
-                  blurRadius: 10,
-                  offset: Offset(0, 5),
+                  color:
+                      Colors.black45,
+                  blurRadius:
+                      10,
+                  offset:
+                      Offset(
+                    0,
+                    5,
+                  ),
                 ),
               ],
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child:
+                Row(
+              mainAxisSize:
+                  MainAxisSize
+                      .min,
               children: [
                 const Icon(
                   Icons.reply,
-                  color: Colors.white,
+                  color:
+                      Colors.white,
                   size: 22,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(
+                  width: 6,
+                ),
                 Text(
                   tr(
                     '↪️ سایروس توریست',
                     '↪️ Cyrus Tourist',
                     '↪️ سايروس توريست',
                   ),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
+                  style:
+                      const TextStyle(
+                    color:
+                        Colors.white,
+                    fontSize:
+                        12,
+                    fontWeight:
+                        FontWeight.w800,
                   ),
                 ),
               ],
@@ -1562,7 +2082,8 @@ class _SmartMapPageState extends State<SmartMapPage> {
 // SEARCH PANEL
 // ================================================================
 
-class _SearchPanel extends StatefulWidget {
+class _SearchPanel
+    extends StatefulWidget {
   final String? initialOrigin;
   final String? initialDestination;
   final LatLng? userLocation;
@@ -1582,7 +2103,8 @@ class _SearchPanel extends StatefulWidget {
   final VoidCallback onClearDestination;
   final VoidCallback onSwap;
 
-  final Future<List<Map<String, dynamic>>> Function(
+  final Future<
+      List<Map<String, dynamic>>> Function(
     String query,
   ) searchPlaces;
 
@@ -1616,32 +2138,40 @@ class _SearchPanel extends StatefulWidget {
 
 class _SearchPanelState
     extends State<_SearchPanel> {
-  final TextEditingController originController =
+  final TextEditingController
+      originController =
       TextEditingController();
 
-  final TextEditingController destinationController =
+  final TextEditingController
+      destinationController =
       TextEditingController();
 
   bool originMode = true;
   bool searching = false;
 
-  List<Map<String, dynamic>> results = [];
+  List<Map<String, dynamic>>
+      results = [];
 
   bool get isRtl =>
-      widget.language == MapLanguage.fa ||
-      widget.language == MapLanguage.ar;
+      widget.language ==
+          MapLanguage.fa ||
+      widget.language ==
+          MapLanguage.ar;
 
   @override
   void initState() {
     super.initState();
 
-    originMode = widget.initialMode;
+    originMode =
+        widget.initialMode;
 
     originController.text =
-        widget.initialOrigin ?? '';
+        widget.initialOrigin ??
+            '';
 
     destinationController.text =
-        widget.initialDestination ?? '';
+        widget.initialDestination ??
+            '';
   }
 
   @override
@@ -1655,25 +2185,31 @@ class _SearchPanelState
   // SEARCH CURRENT FIELD
   // ============================================================
 
-  Future<void> searchCurrentField() async {
-    final controller = originMode
-        ? originController
-        : destinationController;
+  Future<void>
+      searchCurrentField() async {
+    final controller =
+        originMode
+            ? originController
+            : destinationController;
 
-    await performSearch(controller.text);
+    await performSearch(
+      controller.text,
+    );
   }
 
   Future<void> performSearch(
     String query,
   ) async {
-    final cleanQuery = query.trim();
+    final cleanQuery =
+        query.trim();
 
     if (cleanQuery.length < 2) {
       setState(() {
         results = [];
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
         SnackBar(
           content: Text(
             widget.tr(
@@ -1684,10 +2220,12 @@ class _SearchPanelState
           ),
         ),
       );
+
       return;
     }
 
-    FocusScope.of(context).unfocus();
+    FocusScope.of(context)
+        .unfocus();
 
     setState(() {
       searching = true;
@@ -1708,8 +2246,9 @@ class _SearchPanelState
       });
 
       if (data.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(
           SnackBar(
             content: Text(
               widget.tr(
@@ -1729,8 +2268,9 @@ class _SearchPanelState
         results = [];
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
         SnackBar(
           content: Text(
             widget.tr(
@@ -1752,26 +2292,31 @@ class _SearchPanelState
     Map<String, dynamic> result,
   ) {
     final lat = double.tryParse(
-      result['lat']?.toString() ?? '',
+      result['lat']?.toString() ??
+          '',
     );
 
     final lon = double.tryParse(
-      result['lon']?.toString() ?? '',
+      result['lon']?.toString() ??
+          '',
     );
 
-    if (lat == null || lon == null) {
+    if (lat == null ||
+        lon == null) {
       return;
     }
 
     final name =
-        result['display_name']?.toString() ??
+        result['display_name']
+                ?.toString() ??
             widget.tr(
               'مکان انتخاب‌شده',
               'Selected place',
               'المكان المحدد',
             );
 
-    final point = LatLng(
+    final point =
+        LatLng(
       lat,
       lon,
     );
@@ -1782,15 +2327,17 @@ class _SearchPanelState
         name,
       );
 
-      originController.text = name;
+      originController.text =
+          name;
 
       setState(() {
         originMode = false;
         results = [];
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
         SnackBar(
           content: Text(
             widget.tr(
@@ -1807,14 +2354,16 @@ class _SearchPanelState
         name,
       );
 
-      destinationController.text = name;
+      destinationController.text =
+          name;
 
       setState(() {
         results = [];
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
         SnackBar(
           content: Text(
             widget.tr(
@@ -1833,9 +2382,11 @@ class _SearchPanelState
   // ============================================================
 
   void useCurrentLocation() {
-    if (widget.userLocation == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+    if (widget.userLocation ==
+        null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
         SnackBar(
           content: Text(
             widget.tr(
@@ -1846,10 +2397,12 @@ class _SearchPanelState
           ),
         ),
       );
+
       return;
     }
 
-    final name = widget.tr(
+    final name =
+        widget.tr(
       'موقعیت فعلی من',
       'My current location',
       'موقعي الحالي',
@@ -1860,7 +2413,8 @@ class _SearchPanelState
       name,
     );
 
-    originController.text = name;
+    originController.text =
+        name;
 
     setState(() {
       originMode = false;
@@ -1875,83 +2429,111 @@ class _SearchPanelState
   Widget searchField({
     required bool origin,
   }) {
-    final controller = origin
-        ? originController
-        : destinationController;
+    final controller =
+        origin
+            ? originController
+            : destinationController;
 
     final color = origin
-        ? const Color(0xff1976D2)
-        : const Color(0xffE53935);
+        ? const Color(
+            0xff1976D2,
+          )
+        : const Color(
+            0xffE53935,
+          );
 
     final selected =
         originMode == origin;
 
     return Container(
-      decoration: BoxDecoration(
+      decoration:
+          BoxDecoration(
         color: Colors.white,
         borderRadius:
-            BorderRadius.circular(18),
-        border: Border.all(
+            BorderRadius.circular(
+          18,
+        ),
+        border:
+            Border.all(
           color: selected
               ? color
               : Colors.transparent,
           width: 2,
         ),
-        boxShadow: const [
+        boxShadow:
+            const [
           BoxShadow(
-            color: Colors.black26,
-            blurRadius: 8,
-            offset: Offset(0, 3),
+            color:
+                Colors.black26,
+            blurRadius:
+                8,
+            offset:
+                Offset(
+              0,
+              3,
+            ),
           ),
         ],
       ),
       child: TextField(
-        controller: controller,
+        controller:
+            controller,
         textDirection:
             isRtl
                 ? TextDirection.rtl
                 : TextDirection.ltr,
         textInputAction:
             TextInputAction.search,
-
         onTap: () {
           setState(() {
-            originMode = origin;
+            originMode =
+                origin;
             results = [];
           });
         },
-
         onSubmitted: (_) {
           setState(() {
-            originMode = origin;
+            originMode =
+                origin;
           });
 
           searchCurrentField();
         },
-
-        decoration: InputDecoration(
-          prefixIcon: Icon(
+        decoration:
+            InputDecoration(
+          prefixIcon:
+              Icon(
             origin
-                ? Icons.trip_origin
-                : Icons.location_on,
-            color: color,
+                ? Icons
+                    .trip_origin
+                : Icons
+                    .location_on,
+            color:
+                color,
           ),
-
-          suffixIcon: Row(
+          suffixIcon:
+              Row(
             mainAxisSize:
                 MainAxisSize.min,
             children: [
-              if (controller.text.isNotEmpty)
+              if (controller
+                  .text
+                  .isNotEmpty)
                 IconButton(
-                  tooltip: widget.tr(
+                  tooltip:
+                      widget.tr(
                     'پاک کردن',
                     'Clear',
                     'مسح',
                   ),
                   icon:
-                      const Icon(Icons.clear),
-                  onPressed: () {
-                    controller.clear();
+                      const Icon(
+                    Icons.clear,
+                  ),
+                  onPressed:
+                      () {
+                    controller
+                        .clear();
 
                     if (origin) {
                       widget
@@ -1966,31 +2548,35 @@ class _SearchPanelState
                     });
                   },
                 ),
-
               IconButton(
-                tooltip: widget.tr(
+                tooltip:
+                    widget.tr(
                   'جستجوی این مکان',
                   'Search this place',
                   'بحث عن هذا المكان',
                 ),
-                icon: Icon(
+                icon:
+                    Icon(
                   Icons.search,
-                  color: color,
+                  color:
+                      color,
                 ),
-                onPressed: searching
-                    ? null
-                    : () {
-                        setState(() {
-                          originMode =
-                              origin;
-                        });
+                onPressed:
+                    searching
+                        ? null
+                        : () {
+                            setState(
+                              () {
+                                originMode =
+                                    origin;
+                              },
+                            );
 
-                        searchCurrentField();
-                      },
+                            searchCurrentField();
+                          },
               ),
             ],
           ),
-
           hintText: origin
               ? widget.tr(
                   'جستجوی مبدأ...',
@@ -2002,14 +2588,15 @@ class _SearchPanelState
                   'Search destination...',
                   'بحث عن الوجهة...',
                 ),
-
           border:
               InputBorder.none,
-
           contentPadding:
-              const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 15,
+              const EdgeInsets
+                  .symmetric(
+            horizontal:
+                12,
+            vertical:
+                15,
           ),
         ),
       ),
@@ -2029,60 +2616,92 @@ class _SearchPanelState
             '';
 
     return Material(
-      color: Colors.transparent,
+      color:
+          Colors.transparent,
       child: InkWell(
         borderRadius:
-            BorderRadius.circular(15),
+            BorderRadius.circular(
+          15,
+        ),
         onTap: () =>
-            selectResult(result),
-        child: Container(
+            selectResult(
+          result,
+        ),
+        child:
+            Container(
           margin:
-              const EdgeInsets.only(
+              const EdgeInsets
+                  .only(
             bottom: 8,
           ),
           padding:
-              const EdgeInsets.all(12),
-          decoration: BoxDecoration(
+              const EdgeInsets
+                  .all(
+            12,
+          ),
+          decoration:
+              BoxDecoration(
             color:
-                const Color(0xffF4F8FA),
+                const Color(
+              0xffF4F8FA,
+            ),
             borderRadius:
-                BorderRadius.circular(15),
-            border: Border.all(
+                BorderRadius.circular(
+              15,
+            ),
+            border:
+                Border.all(
               color:
-                  Colors.blueGrey.shade100,
+                  Colors.blueGrey
+                      .shade100,
             ),
           ),
-          child: Row(
+          child:
+              Row(
             children: [
               Icon(
                 originMode
-                    ? Icons.trip_origin
-                    : Icons.location_on,
-                color: originMode
-                    ? const Color(
-                        0xff1976D2,
-                      )
-                    : const Color(
-                        0xffE53935,
-                      ),
+                    ? Icons
+                        .trip_origin
+                    : Icons
+                        .location_on,
+                color:
+                    originMode
+                        ? const Color(
+                            0xff1976D2,
+                          )
+                        : const Color(
+                            0xffE53935,
+                          ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(
+                width: 10,
+              ),
               Expanded(
-                child: Text(
+                child:
+                    Text(
                   name,
                   maxLines: 3,
                   overflow:
-                      TextOverflow.ellipsis,
-                  textDirection: isRtl
-                      ? TextDirection.rtl
-                      : TextDirection.ltr,
+                      TextOverflow
+                          .ellipsis,
+                  textDirection:
+                      isRtl
+                          ? TextDirection
+                              .rtl
+                          : TextDirection
+                              .ltr,
                   style:
                       const TextStyle(
-                    fontSize: 13,
+                    fontSize:
+                        13,
                     fontWeight:
-                        FontWeight.w600,
+                        FontWeight
+                            .w600,
                     color:
-                        Color(0xff18343F),
+                        Color(
+                      0xff18343F,
+                    ),
                   ),
                 ),
               ),
@@ -2102,23 +2721,27 @@ class _SearchPanelState
     BuildContext context,
   ) {
     final bottom =
-        MediaQuery.of(context)
-            .viewInsets
-            .bottom;
+        MediaQuery.of(
+          context,
+        ).viewInsets.bottom;
 
     return Directionality(
-      textDirection: isRtl
-          ? TextDirection.rtl
-          : TextDirection.ltr,
+      textDirection:
+          isRtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
       child: Padding(
         padding:
             EdgeInsets.only(
-          bottom: bottom,
+          bottom:
+              bottom,
         ),
-        child: Container(
+        child:
+            Container(
           constraints:
               const BoxConstraints(
-            maxHeight: 680,
+            maxHeight:
+                680,
           ),
           decoration:
               const BoxDecoration(
@@ -2127,12 +2750,16 @@ class _SearchPanelState
             borderRadius:
                 BorderRadius.vertical(
               top:
-                  Radius.circular(28),
+                  Radius.circular(
+                28,
+              ),
             ),
           ),
-          child: SafeArea(
+          child:
+              SafeArea(
             top: false,
-            child: Column(
+            child:
+                Column(
               mainAxisSize:
                   MainAxisSize.min,
               children: [
@@ -2160,10 +2787,13 @@ class _SearchPanelState
 
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 20,
+                      const EdgeInsets
+                          .symmetric(
+                    horizontal:
+                        20,
                   ),
-                  child: Row(
+                  child:
+                      Row(
                     children: [
                       const Icon(
                         Icons.search,
@@ -2175,7 +2805,8 @@ class _SearchPanelState
                         width: 10,
                       ),
                       Expanded(
-                        child: Text(
+                        child:
+                            Text(
                           widget.tr(
                             'جستجوی مبدأ و مقصد',
                             'Search origin & destination',
@@ -2185,7 +2816,8 @@ class _SearchPanelState
                               const TextStyle(
                             color:
                                 Colors.white,
-                            fontSize: 19,
+                            fontSize:
+                                19,
                             fontWeight:
                                 FontWeight.bold,
                           ),
@@ -2201,12 +2833,15 @@ class _SearchPanelState
 
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 16,
+                      const EdgeInsets
+                          .symmetric(
+                    horizontal:
+                        16,
                   ),
                   child:
                       searchField(
-                    origin: true,
+                    origin:
+                        true,
                   ),
                 ),
 
@@ -2215,25 +2850,36 @@ class _SearchPanelState
                 ),
 
                 Align(
-                  alignment: isRtl
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Padding(
+                  alignment:
+                      isRtl
+                          ? Alignment
+                              .centerRight
+                          : Alignment
+                              .centerLeft,
+                  child:
+                      Padding(
                     padding:
-                        const EdgeInsets.symmetric(
-                      horizontal: 16,
+                        const EdgeInsets
+                            .symmetric(
+                      horizontal:
+                          16,
                     ),
                     child:
-                        TextButton.icon(
+                        TextButton
+                            .icon(
                       onPressed:
                           useCurrentLocation,
                       icon:
                           const Icon(
-                        Icons.my_location,
+                        Icons
+                            .my_location,
                         color:
-                            Color(0xff29B6F6),
+                            Color(
+                          0xff29B6F6,
+                        ),
                       ),
-                      label: Text(
+                      label:
+                          Text(
                         widget.tr(
                           'استفاده از موقعیت فعلی من',
                           'Use my current location',
@@ -2242,9 +2888,12 @@ class _SearchPanelState
                         style:
                             const TextStyle(
                           color:
-                              Color(0xffB9E9FF),
+                              Color(
+                            0xffB9E9FF,
+                          ),
                           fontWeight:
-                              FontWeight.bold,
+                              FontWeight
+                                  .bold,
                         ),
                       ),
                     ),
@@ -2252,7 +2901,8 @@ class _SearchPanelState
                 ),
 
                 IconButton(
-                  onPressed: () {
+                  onPressed:
+                      () {
                     final originText =
                         originController
                             .text;
@@ -2272,9 +2922,11 @@ class _SearchPanelState
                       results = [];
                     });
 
-                    widget.onSwap();
+                    widget
+                        .onSwap();
                   },
-                  tooltip: widget.tr(
+                  tooltip:
+                      widget.tr(
                     'تعویض مبدأ و مقصد',
                     'Swap origin & destination',
                     'تبديل البداية والوجهة',
@@ -2295,12 +2947,15 @@ class _SearchPanelState
 
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 16,
+                      const EdgeInsets
+                          .symmetric(
+                    horizontal:
+                        16,
                   ),
                   child:
                       searchField(
-                    origin: false,
+                    origin:
+                        false,
                   ),
                 ),
 
@@ -2310,35 +2965,44 @@ class _SearchPanelState
 
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 16,
+                      const EdgeInsets
+                          .symmetric(
+                    horizontal:
+                        16,
                   ),
-                  child: SizedBox(
+                  child:
+                      SizedBox(
                     width:
                         double.infinity,
                     height: 52,
                     child:
-                        ElevatedButton.icon(
+                        ElevatedButton
+                            .icon(
                       onPressed:
                           searching
                               ? null
                               : searchCurrentField,
-                      icon: searching
-                          ? const SizedBox(
-                              width: 21,
-                              height: 21,
-                              child:
-                                  CircularProgressIndicator(
-                                strokeWidth:
-                                    2.5,
-                                color:
-                                    Colors.white,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.search,
-                            ),
-                      label: Text(
+                      icon:
+                          searching
+                              ? const SizedBox(
+                                  width:
+                                      21,
+                                  height:
+                                      21,
+                                  child:
+                                      CircularProgressIndicator(
+                                    strokeWidth:
+                                        2.5,
+                                    color:
+                                        Colors.white,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons
+                                      .search,
+                                ),
+                      label:
+                          Text(
                         searching
                             ? widget.tr(
                                 'در حال جستجو...',
@@ -2353,8 +3017,10 @@ class _SearchPanelState
                         style:
                             const TextStyle(
                           fontWeight:
-                              FontWeight.bold,
-                          fontSize: 15,
+                              FontWeight
+                                  .bold,
+                          fontSize:
+                              15,
                         ),
                       ),
                       style:
@@ -2366,11 +3032,13 @@ class _SearchPanelState
                         ),
                         foregroundColor:
                             Colors.white,
-                        elevation: 8,
+                        elevation:
+                            8,
                         shape:
                             RoundedRectangleBorder(
                           borderRadius:
-                              BorderRadius.circular(
+                              BorderRadius
+                                  .circular(
                             17,
                           ),
                         ),
@@ -2383,47 +3051,60 @@ class _SearchPanelState
                   height: 14,
                 ),
 
-                if (results.isNotEmpty)
+                if (results
+                    .isNotEmpty)
                   Flexible(
                     child:
                         ListView.builder(
-                      shrinkWrap: true,
+                      shrinkWrap:
+                          true,
                       padding:
                           const EdgeInsets
                               .symmetric(
-                        horizontal: 16,
+                        horizontal:
+                            16,
                       ),
                       itemCount:
                           results.length,
                       itemBuilder:
-                          (context, index) {
+                          (
+                        context,
+                        index,
+                      ) {
                         return resultItem(
-                          results[index],
+                          results[
+                              index],
                         );
                       },
                     ),
                   ),
 
-                if (results.isEmpty &&
+                if (results
+                        .isEmpty &&
                     !searching)
                   Padding(
                     padding:
-                        const EdgeInsets.only(
-                      bottom: 18,
+                        const EdgeInsets
+                            .only(
+                      bottom:
+                          18,
                     ),
-                    child: Text(
+                    child:
+                        Text(
                       widget.tr(
                         'نام شهر، خیابان یا مکان را وارد و روی جستجو بزنید.',
                         'Enter a city, street, or place and press Search.',
                         'أدخل مدينة أو شارعًا أو مكانًا واضغط بحث.',
                       ),
                       textAlign:
-                          TextAlign.center,
+                          TextAlign
+                              .center,
                       style:
                           const TextStyle(
                         color:
                             Colors.white54,
-                        fontSize: 12,
+                        fontSize:
+                            12,
                       ),
                     ),
                   ),
