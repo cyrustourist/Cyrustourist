@@ -2853,19 +2853,18 @@ class _SearchPanelState
                 ),
 
                 if (results.isNotEmpty)
-                  Flexible(
-                    child:
-                        ListView.builder(
+                  Container(
+                    constraints: const BoxConstraints(
+                      maxHeight: 220,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                    ),
+                    child: ListView.builder(
                       shrinkWrap: true,
-                      padding:
-                          const EdgeInsets
-                              .symmetric(
-                        horizontal: 16,
-                      ),
-                      itemCount:
-                          results.length,
-                      itemBuilder:
-                          (context, index) {
+                      physics: const ClampingScrollPhysics(),
+                      itemCount: results.length,
+                      itemBuilder: (context, index) {
                         return resultItem(
                           results[index],
                         );
