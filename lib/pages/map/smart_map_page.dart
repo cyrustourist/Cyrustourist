@@ -3,476 +3,219 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
-enum MapLanguage { fa, en, ar }
+import '../../map_place.dart';
+import '../../services/map_smart_controller.dart';
 
-class SmartMapPage extends StatefulWidget {
-  const SmartMapPage({super.key});
+import '../../widgets/map_markers_layer.dart';
+import '../../widgets/map_search_bar.dart';
+import '../../widgets/map_place_bottom_sheet.dart';
+
+class SmartMapScreen extends StatefulWidget {
+  const SmartMapScreen({
+    super.key,
+  });
 
   @override
-  State<SmartMapPage> createState() => _SmartMapPageState();
+  State<SmartMapScreen> createState() => _SmartMapScreenState();
 }
 
-class _SmartMapPageState extends State<SmartMapPage> {
+class _SmartMapScreenState extends State<SmartMapScreen> {
   final MapController mapController = MapController();
 
-  static const LatLng iranCenter = LatLng(32.4279, 53.6880);
+  final TextEditingController searchTextController =
+      TextEditingController();
 
-  LatLng? userLocation;
-  LatLng? originLocation;
-  LatLng? destinationLocation;
+  late final MapSmartController controller;
 
-  String? originName;
-  String? destinationName;
-
-  bool loading = false;
-  bool gpsEnabled = true;
-  bool routingLoading = false;
-
-  MapLanguage pageLanguage = MapLanguage.fa;
+  // ------------------------------------------------------------
+  // MAP / ROUTE
+  // ------------------------------------------------------------
 
   List<LatLng> routePoints = [];
+
+  MapPlace? selectedDestination;
+
+  LatLng? originLocation;
+  String? originName;
+
+  LatLng? destinationLocation;
+  String? destinationName;
+
+  bool originMode = false;
+  bool routeLoading = false;
+  bool searching = false;
 
   double? routeDistanceKm;
   double? routeDurationMin;
 
-  bool get isRtl =>
-      pageLanguage == MapLanguage.fa ||
-      pageLanguage == MapLanguage.ar;
+  String selectedLanguage = 'fa';
 
-  String get _nominatimLanguage {
-    switch (pageLanguage) {
-      case MapLanguage.en:
-        return 'en';
-      case MapLanguage.ar:
-        return 'ar,en';
-      case MapLanguage.fa:
-        return 'fa,en';
-    }
-  }
-
-  String tr(String fa, String en, String ar) {
-    switch (pageLanguage) {
-      case MapLanguage.en:
-        return en;
-      case MapLanguage.ar:
-        return ar;
-      case MapLanguage.fa:
-        return fa;
-    }
-  }
-
-  String get mapTitle =>
-      tr('نقشه گردشگری', 'Tourism Map', 'الخريطة السياحية');
-
-  String get searchTitle => tr(
-        'جستجوی مبدأ و مقصد',
-        'Search origin & destination',
-        'بحث عن البداية والوجهة',
-      );
-
-  String get searchPlaceTitle => tr(
-        'جستجوی هدف گردشگری',
-        'Search tourist destination',
-        'البحث عن هدف سياحي',
-      );
-
-  String get routeTitle =>
-      tr('مسیریابی', 'Route', 'المسار');
-
-  String get clearRouteTitle =>
-      tr('پاک کردن مسیر', 'Clear route', 'مسح المسار');
-
-  String get gpsOffTitle => tr(
-        'GPS خاموش است — برای فعال‌سازی مکان‌یابی ضربه بزنید',
-        'GPS is off — tap to enable location',
-        'GPS متوقف — اضغط لتفعيل الموقع',
-      );
-
-  String get locatingTitle =>
-      tr('در حال مکان‌یابی...', 'Locating...', 'جارٍ تحديد الموقع...');
-
-  String get currentLocationTitle =>
-      tr('موقعیت من', 'My location', 'موقعي');
-
-  String get northTitle =>
-      tr('بازگشت به شمال', 'North', 'الشمال');
-
-  String get zoomInTitle =>
-      tr('بزرگنمایی', 'Zoom in', 'تكبير');
-
-  String get zoomOutTitle =>
-      tr('کوچک‌نمایی', 'Zoom out', 'تصغير');
-
-  String get backTitle => tr(
-        'بازگشت به سایروس توریست',
-        'Back to Cyrus Tourist',
-        'العودة إلى سايروس توريست',
-      );
-
-  String get languageTitle =>
-      tr('زبان', 'Language', 'اللغة');
-
-  String get distanceTitle =>
-      tr('مسافت', 'Distance', 'المسافة');
-
-  String get durationTitle =>
-      tr('زمان تقریبی', 'ETA', 'الوقت التقريبي');
-
-  String get routingErrorTitle => tr(
-        'دریافت مسیر انجام نشد. اتصال اینترنت را بررسی کنید.',
-        'Could not get the route. Check your internet connection.',
-        'تعذر الحصول على المسار. تحقق من اتصال الإنترنت.',
-      );
-
-  String get needPointsTitle => tr(
-        'ابتدا مبدأ و مقصد را انتخاب کنید.',
-        'Select an origin and destination first.',
-        'اختر نقطة البداية والوجهة أولاً.',
-      );
+  // ------------------------------------------------------------
+  // INIT
+  // ------------------------------------------------------------
 
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      getLocation();
-    });
+    controller = MapSmartController();
+
+    _detectDeviceLanguage();
+    _initialize();
   }
 
-  // ============================================================
-  // LOCATION
-  // ============================================================
+  void _detectDeviceLanguage() {
+    final language =
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode;
 
-  Future<void> getLocation() async {
+    if (language == 'en') {
+      selectedLanguage = 'en';
+    } else if (language == 'ar') {
+      selectedLanguage = 'ar';
+    } else {
+      selectedLanguage = 'fa';
+    }
+  }
+
+  Future<void> _initialize() async {
+    await controller.initializeLocation();
+
     if (!mounted) return;
 
+    final location = controller.userLocation;
+
+    if (location != null) {
+      originLocation = location;
+      originName = _text(
+        'موقعیت فعلی من',
+        'My current location',
+        'موقعي الحالي',
+      );
+
+      mapController.move(
+        location,
+        14,
+      );
+    }
+
+    setState(() {});
+  }
+
+  // ------------------------------------------------------------
+  // TRANSLATION
+  // ------------------------------------------------------------
+
+  String _text(
+    String fa,
+    String en,
+    String ar,
+  ) {
+    switch (selectedLanguage) {
+      case 'en':
+        return en;
+      case 'ar':
+        return ar;
+      default:
+        return fa;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // SEARCH
+  // ------------------------------------------------------------
+
+  Future<void> search(String text) async {
+    final query = text.trim();
+
+    if (query.length < 2) {
+      _showMessage(
+        _text(
+          'حداقل دو حرف وارد کنید.',
+          'Enter at least two characters.',
+          'أدخل حرفين على الأقل.',
+        ),
+      );
+      return;
+    }
+
+    if (searching) return;
+
     setState(() {
-      loading = true;
+      searching = true;
     });
 
     try {
-      final enabled =
-          await Geolocator.isLocationServiceEnabled();
-
-      if (!enabled) {
-        if (!mounted) return;
-
-        setState(() {
-          loading = false;
-          gpsEnabled = false;
-        });
-
-        _showGpsWarning();
-        return;
-      }
-
-      if (mounted) {
-        setState(() {
-          gpsEnabled = true;
-        });
-      }
-
-      LocationPermission permission =
-          await Geolocator.checkPermission();
-
-      if (permission == LocationPermission.denied) {
-        permission =
-            await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied ||
-          permission ==
-              LocationPermission.deniedForever) {
-        if (!mounted) return;
-
-        setState(() {
-          loading = false;
-        });
-
-        _showMessage(
-          tr(
-            'دسترسی مکان فعال نیست',
-            'Location permission is not enabled',
-            'لم يتم تفعيل إذن الموقع',
-          ),
-          Icons.location_off,
-        );
-        return;
-      }
-
-      final position =
-          await Geolocator.getCurrentPosition(
-        locationSettings:
-            const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-
-      final point = LatLng(
-        position.latitude,
-        position.longitude,
+      await controller.search(
+        query: query,
       );
 
       if (!mounted) return;
 
+      final place = controller.nearestPlace;
+
+      if (place == null) {
+        setState(() {
+          searching = false;
+        });
+
+        _showMessage(
+          _text(
+            'مکانی پیدا نشد.',
+            'No place was found.',
+            'لم يتم العثور على المكان.',
+          ),
+        );
+
+        return;
+      }
+
+      if (originMode) {
+        _setOrigin(
+          place.location,
+          place.name,
+        );
+      } else {
+        _setDestination(
+          place.location,
+          place.name,
+          place,
+        );
+      }
+
       setState(() {
-        userLocation = point;
-        loading = false;
-
-        if (originLocation == null) {
-          originLocation = point;
-          originName = tr(
-            'موقعیت فعلی من',
-            'My current location',
-            'موقعي الحالي',
-          );
-        }
+        searching = false;
       });
-
-      mapController.move(point, 15);
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        loading = false;
+        searching = false;
       });
 
       _showMessage(
-        tr(
-          'خطا در دریافت موقعیت',
-          'Could not get current location',
-          'تعذر الحصول على الموقع الحالي',
+        _text(
+          'جستجو انجام نشد. اتصال اینترنت را بررسی کنید.',
+          'Search failed. Check your internet connection.',
+          'فشل البحث. تحقق من اتصال الإنترنت.',
         ),
-        Icons.error_outline,
       );
     }
   }
 
-  // ============================================================
-  // MESSAGES
-  // ============================================================
+  // ------------------------------------------------------------
+  // ORIGIN
+  // ------------------------------------------------------------
 
-  void _showGpsWarning() {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor:
-            const Color(0xffB3261E),
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.circular(16),
-        ),
-        content: Row(
-          children: [
-            const Icon(
-              Icons.gps_off,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                tr(
-                  'GPS خاموش است. لطفاً مکان‌یابی گوشی را فعال کنید.',
-                  'GPS is off. Please enable location services.',
-                  'GPS متوقف. يرجى تفعيل خدمات الموقع.',
-                ),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight:
-                      FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        action: SnackBarAction(
-          label: tr(
-            'تنظیمات',
-            'Settings',
-            'الإعدادات',
-          ),
-          textColor: Colors.white,
-          onPressed: () {
-            Geolocator.openLocationSettings();
-          },
-        ),
-      ),
-    );
-  }
-
-  void _showMessage(
-    String text,
-    IconData icon,
-  ) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior:
-            SnackBarBehavior.floating,
-        backgroundColor:
-            const Color(0xff102A38),
-        margin:
-            const EdgeInsets.all(16),
-        shape:
-            RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.circular(16),
-        ),
-        content: Row(
-          children: [
-            Icon(
-              icon,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                text,
-                style:
-                    const TextStyle(
-                  color: Colors.white,
-                  fontWeight:
-                      FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // SEARCH
-  // ============================================================
-
-  Future<List<Map<String, dynamic>>> searchPlaces(
-    String query,
-  ) async {
-    final cleanQuery =
-        query.trim();
-
-    if (cleanQuery.length < 2) {
-      return [];
-    }
-
-    final uri = Uri.https(
-      'nominatim.openstreetmap.org',
-      '/search',
-      {
-        'q': cleanQuery,
-        'format': 'jsonv2',
-        'limit': '8',
-        'addressdetails': '1',
-        'accept-language':
-            _nominatimLanguage,
-      },
-    );
-
-    final client = HttpClient();
-
-    try {
-      client.userAgent =
-          'CyrusTourist/1.0 (cyrustourist.ir)';
-
-      final request =
-          await client.getUrl(uri);
-
-      request.headers.set(
-        HttpHeaders.acceptHeader,
-        'application/json',
-      );
-
-      final response =
-          await request.close();
-
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Nominatim HTTP ${response.statusCode}',
-        );
-      }
-
-      final body =
-          await response
-              .transform(
-                utf8.decoder,
-              )
-              .join();
-
-      final decoded =
-          jsonDecode(body);
-
-      if (decoded is! List) {
-        return [];
-      }
-
-      return decoded
-          .whereType<Map>()
-          .map(
-            (item) =>
-                Map<String, dynamic>.from(
-              item,
-            ),
-          )
-          .toList();
-    } finally {
-      client.close(force: true);
-    }
-  }
-
-  // ============================================================
-  // SEARCH PANEL
-  // ============================================================
-
-  void openSearch({
-    bool destination = false,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor:
-          Colors.transparent,
-      builder: (_) {
-        return _SearchPanel(
-          initialOrigin: originName,
-          initialDestination:
-              destinationName,
-          userLocation: userLocation,
-          initialMode:
-              destination ? false : true,
-          onOriginSelected:
-              _selectOrigin,
-          onDestinationSelected:
-              _selectDestination,
-          onClearOrigin:
-              _clearOrigin,
-          onClearDestination:
-              _clearDestination,
-          onSwap: _swapPlaces,
-          searchPlaces:
-              searchPlaces,
-          language:
-              pageLanguage,
-          tr: tr,
-        );
-      },
-    );
-  }
-
-  void _selectOrigin(
+  void _setOrigin(
     LatLng point,
     String name,
   ) {
     setState(() {
       originLocation = point;
       originName = name;
+
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
@@ -482,35 +225,27 @@ class _SmartMapPageState extends State<SmartMapPage> {
       point,
       15,
     );
-  }
 
-  void _selectDestination(
-    LatLng point,
-    String name,
-  ) {
-    setState(() {
-      destinationLocation = point;
-      destinationName = name;
-      routePoints = [];
-      routeDistanceKm = null;
-      routeDurationMin = null;
-    });
-
-    mapController.move(
-      point,
-      15,
+    _showMessage(
+      _text(
+        'مبدأ انتخاب شد.',
+        'Origin selected.',
+        'تم اختيار نقطة البداية.',
+      ),
     );
   }
 
   void useCurrentLocationAsOrigin() {
-    if (userLocation == null) {
-      getLocation();
+    final location = controller.userLocation;
+
+    if (location == null) {
+      _initialize();
       return;
     }
 
-    _selectOrigin(
-      userLocation!,
-      tr(
+    _setOrigin(
+      location,
+      _text(
         'موقعیت فعلی من',
         'My current location',
         'موقعي الحالي',
@@ -518,45 +253,53 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  void _clearOrigin() {
+  // ------------------------------------------------------------
+  // DESTINATION
+  // ------------------------------------------------------------
+
+  void _setDestination(
+    LatLng point,
+    String name,
+    MapPlace place,
+  ) {
     setState(() {
-      originLocation = null;
-      originName = null;
+      destinationLocation = point;
+      destinationName = name;
+      selectedDestination = place;
+
       routePoints = [];
       routeDistanceKm = null;
       routeDurationMin = null;
     });
+
+    mapController.move(
+      point,
+      15,
+    );
+
+    _showMessage(
+      _text(
+        'مقصد انتخاب شد؛ حالا مسیریابی را بزنید.',
+        'Destination selected; press Route to navigate.',
+        'تم اختيار الوجهة؛ اضغط على المسار.',
+      ),
+    );
   }
 
-  void _clearDestination() {
-    setState(() {
-      destinationLocation = null;
-      destinationName = null;
-      routePoints = [];
-      routeDistanceKm = null;
-      routeDurationMin = null;
-    });
-  }
+  // ------------------------------------------------------------
+  // SWAP
+  // ------------------------------------------------------------
 
   void _swapPlaces() {
+    final oldOrigin = originLocation;
+    final oldOriginName = originName;
+
     setState(() {
-      final oldOrigin =
-          originLocation;
+      originLocation = destinationLocation;
+      originName = destinationName;
 
-      originLocation =
-          destinationLocation;
-
-      destinationLocation =
-          oldOrigin;
-
-      final oldOriginName =
-          originName;
-
-      originName =
-          destinationName;
-
-      destinationName =
-          oldOriginName;
+      destinationLocation = oldOrigin;
+      destinationName = oldOriginName;
 
       routePoints = [];
       routeDistanceKm = null;
@@ -569,43 +312,60 @@ class _SmartMapPageState extends State<SmartMapPage> {
         15,
       );
     }
+
+    _showMessage(
+      _text(
+        'مبدأ و مقصد تعویض شدند.',
+        'Origin and destination swapped.',
+        'تم تبديل البداية والوجهة.',
+      ),
+    );
   }
 
-  // ============================================================
+  // ------------------------------------------------------------
   // ROUTING
-  // ============================================================
+  // ------------------------------------------------------------
 
-  Future<void> openRouting() async {
-    if (originLocation == null ||
-        destinationLocation == null) {
+  Future<void> buildRoute() async {
+    if (originLocation == null) {
+      useCurrentLocationAsOrigin();
+
+      if (originLocation == null) {
+        _showMessage(
+          _text(
+            'ابتدا مبدأ را مشخص کنید.',
+            'Please select an origin first.',
+            'حدد نقطة البداية أولاً.',
+          ),
+        );
+        return;
+      }
+    }
+
+    if (destinationLocation == null) {
       _showMessage(
-        needPointsTitle,
-        Icons.alt_route,
+        _text(
+          'ابتدا مقصد را انتخاب کنید.',
+          'Please select a destination first.',
+          'حدد الوجهة أولاً.',
+        ),
       );
 
-      openSearch(
-        destination:
-            originLocation != null &&
-            destinationLocation == null,
-      );
       return;
     }
 
-    if (routingLoading) return;
+    if (routeLoading) return;
 
     setState(() {
-      routingLoading = true;
+      routeLoading = true;
     });
 
-    final origin =
-        originLocation!;
-
-    final destination =
-        destinationLocation!;
+    final start = originLocation!;
+    final destination = destinationLocation!;
 
     final uri = Uri.parse(
       'https://router.project-osrm.org/route/v1/driving/'
-      '${origin.longitude},${origin.latitude};'
+      '${start.longitude},${start.latitude};'
       '${destination.longitude},${destination.latitude}'
       '?overview=full&geometries=geojson&steps=false',
     );
@@ -616,118 +376,92 @@ class _SmartMapPageState extends State<SmartMapPage> {
       client.userAgent =
           'CyrusTourist/1.0 (cyrustourist.ir)';
 
-      final request =
-          await client.getUrl(uri);
+      final request = await client.getUrl(uri);
 
       request.headers.set(
         HttpHeaders.acceptHeader,
         'application/json',
       );
 
-      final response =
-          await request
-              .close()
-              .timeout(
-                const Duration(
-                  seconds: 25,
-                ),
-              );
+      final response = await request.close();
 
       final body =
-          await response
-              .transform(
-                utf8.decoder,
-              )
-              .join()
-              .timeout(
-                const Duration(
-                  seconds: 10,
-                ),
-              );
+          await response.transform(utf8.decoder).join();
 
-      if (response.statusCode !=
-          HttpStatus.ok) {
+      if (response.statusCode != 200) {
         throw Exception(
           'OSRM HTTP ${response.statusCode}',
         );
       }
 
-      final decoded =
-          jsonDecode(body);
+      final data = jsonDecode(body);
 
-      if (decoded is! Map ||
-          decoded['code'] != 'Ok' ||
-          decoded['routes'] is! List ||
-          (decoded['routes'] as List)
-              .isEmpty) {
-        throw Exception(
-          decoded is Map
-              ? (decoded['message']
-                      ?.toString() ??
-                  'OSRM route not found')
-              : 'OSRM route not found',
-        );
+      if (data is! Map ||
+          data['code'] != 'Ok' ||
+          data['routes'] is! List ||
+          (data['routes'] as List).isEmpty) {
+        throw Exception('No route');
       }
 
       final route =
-          (decoded['routes']
-                  as List)
-              .first;
+          (data['routes'] as List).first;
 
-      final geometry =
-          route['geometry'];
+      final geometry = route['geometry'];
 
-      final coordinates =
-          geometry is Map
-              ? geometry['coordinates']
-              : null;
-
-      if (coordinates is! List ||
-          coordinates.isEmpty) {
+      if (geometry is! Map ||
+          geometry['coordinates'] is! List) {
         throw Exception(
-          'OSRM geometry missing',
+          'Invalid route geometry',
         );
       }
 
-      final points =
-          <LatLng>[];
+      final coordinates =
+          geometry['coordinates'] as List;
 
-      for (final item
-          in coordinates) {
-        if (item is List &&
-            item.length >= 2) {
-          final longitude =
-              (item[0] as num)
-                  .toDouble();
+      final points = <LatLng>[];
 
-          final latitude =
-              (item[1] as num)
-                  .toDouble();
-
-          points.add(
-            LatLng(
-              latitude,
-              longitude,
-            ),
-          );
+      for (final coordinate in coordinates) {
+        if (coordinate is! List ||
+            coordinate.length < 2) {
+          continue;
         }
+
+        final longitude =
+            double.tryParse(
+          coordinate[0].toString(),
+        );
+
+        final latitude =
+            double.tryParse(
+          coordinate[1].toString(),
+        );
+
+        if (latitude == null ||
+            longitude == null) {
+          continue;
+        }
+
+        points.add(
+          LatLng(
+            latitude,
+            longitude,
+          ),
+        );
       }
 
       if (points.length < 2) {
         throw Exception(
-          'OSRM route too short',
+          'Route geometry is empty',
         );
       }
 
       final distanceMeters =
-          (route['distance']
-                      as num?)
+          (route['distance'] as num?)
                   ?.toDouble() ??
               0;
 
       final durationSeconds =
-          (route['duration']
-                      as num?)
+          (route['duration'] as num?)
                   ?.toDouble() ??
               0;
 
@@ -739,47 +473,26 @@ class _SmartMapPageState extends State<SmartMapPage> {
             distanceMeters / 1000;
         routeDurationMin =
             durationSeconds / 60;
-        routingLoading = false;
+        routeLoading = false;
       });
 
-      mapController.fitCamera(
-        CameraFit.bounds(
-          bounds:
-              LatLngBounds.fromPoints(
-            points,
-          ),
-          padding:
-              const EdgeInsets.fromLTRB(
-            55,
-            55,
-            55,
-            150,
-          ),
-          maxZoom: 15,
-        ),
-      );
-
-      _showMessage(
-        tr(
-          'مسیر واقعی آماده شد.',
-          'Real road route is ready.',
-          'تم تجهيز مسار الطريق الحقيقي.',
-        ),
-        Icons.check_circle_outline,
-      );
+      _fitRoute(points);
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        routingLoading = false;
+        routeLoading = false;
         routePoints = [];
         routeDistanceKm = null;
         routeDurationMin = null;
       });
 
       _showMessage(
-        routingErrorTitle,
-        Icons.error_outline,
+        _text(
+          'مسیریابی انجام نشد. اتصال اینترنت را بررسی کنید.',
+          'Route could not be calculated. Check your internet connection.',
+          'تعذر حساب المسار. تحقق من اتصال الإنترنت.',
+        ),
       );
     } finally {
       client.close(
@@ -787,6 +500,56 @@ class _SmartMapPageState extends State<SmartMapPage> {
       );
     }
   }
+
+  // ------------------------------------------------------------
+  // FIT ROUTE
+  // ------------------------------------------------------------
+
+  void _fitRoute(
+    List<LatLng> points,
+  ) {
+    if (points.length < 2) return;
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final point in points) {
+      if (point.latitude < minLat) {
+        minLat = point.latitude;
+      }
+
+      if (point.latitude > maxLat) {
+        maxLat = point.latitude;
+      }
+
+      if (point.longitude < minLng) {
+        minLng = point.longitude;
+      }
+
+      if (point.longitude > maxLng) {
+        maxLng = point.longitude;
+      }
+    }
+
+    final bounds = LatLngBounds(
+      LatLng(minLat, minLng),
+      LatLng(maxLat, maxLng),
+    );
+
+    mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: bounds,
+        padding: const EdgeInsets.all(80),
+        maxZoom: 15,
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // CLEAR ROUTE
+  // ------------------------------------------------------------
 
   void clearRoute() {
     setState(() {
@@ -796,864 +559,420 @@ class _SmartMapPageState extends State<SmartMapPage> {
     });
   }
 
-  // ============================================================
-  // MAP CONTROLS
-  // ============================================================
+  // ------------------------------------------------------------
+  // PLACE
+  // ------------------------------------------------------------
 
-  void zoomIn() {
-    mapController.move(
-      mapController.camera.center,
-      mapController.camera.zoom + 1,
-    );
-  }
+  void showPlace(
+    MapPlace place,
+  ) {
+    setState(() {
+      selectedDestination = place;
+      destinationLocation = place.location;
+      destinationName = place.name;
+    });
 
-  void zoomOut() {
-    mapController.move(
-      mapController.camera.center,
-      mapController.camera.zoom - 1,
-    );
-  }
-
-  void goNorth() {
-    mapController.rotate(0);
-
-    _showMessage(
-      tr(
-        'نقشه به سمت شمال برگشت',
-        'Map returned to north',
-        'عادت الخريطة إلى الشمال',
-      ),
-      Icons.explore,
-    );
-  }
-
-  void goToMyLocation() {
-    if (userLocation != null) {
-      mapController.move(
-        userLocation!,
-        15,
-      );
-    } else {
-      getLocation();
-    }
-  }
-
-  // ============================================================
-  // LANGUAGE
-  // ============================================================
-
-  void _showLanguagePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor:
-          Colors.transparent,
-      builder: (sheetContext) {
-        final options =
-            <MapLanguage, String>{
-          MapLanguage.fa: 'پارسی',
-          MapLanguage.en: 'English',
-          MapLanguage.ar: 'العربية',
-        };
-
-        return SafeArea(
-          child: Container(
-            margin:
-                const EdgeInsets.all(12),
-            padding:
-                const EdgeInsets.all(16),
-            decoration:
-                BoxDecoration(
-              color:
-                  const Color(0xff071722),
-              borderRadius:
-                  BorderRadius.circular(
-                24,
-              ),
-            ),
-            child: Column(
-              mainAxisSize:
-                  MainAxisSize.min,
-              children: [
-                Text(
-                  languageTitle,
-                  style:
-                      const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(
-                  height: 12,
-                ),
-                for (final entry
-                    in options.entries)
-                  Padding(
-                    padding:
-                        const EdgeInsets.only(
-                      bottom: 8,
-                    ),
-                    child: ListTile(
-                      shape:
-                          RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius
-                                .circular(
-                          16,
-                        ),
-                      ),
-                      tileColor:
-                          entry.key ==
-                                  pageLanguage
-                              ? const Color(
-                                  0xff0083B0,
-                                )
-                              : Colors.white
-                                  .withValues(
-                                  alpha: 0.08,
-                                ),
-                      leading: Icon(
-                        entry.key ==
-                                pageLanguage
-                            ? Icons
-                                .check_circle
-                            : Icons.language,
-                        color:
-                            Colors.white,
-                      ),
-                      title: Text(
-                        entry.value,
-                        style:
-                            const TextStyle(
-                          color:
-                              Colors.white,
-                          fontWeight:
-                              FontWeight.w700,
-                        ),
-                      ),
-                      onTap: () {
-                        setState(() {
-                          pageLanguage =
-                              entry.key;
-                        });
-
-                        Navigator.pop(
-                          sheetContext,
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
+      isScrollControlled: true,
+      builder: (_) {
+        return MapPlaceBottomSheet(
+          place: place,
         );
       },
     );
   }
 
-  // ============================================================
-  // ROUTE SUMMARY
-  // ============================================================
+  // ------------------------------------------------------------
+  // SEARCH MODE
+  // ------------------------------------------------------------
 
-  Widget _routeSummary() {
-    final distance =
-        routeDistanceKm ?? 0;
-
-    final duration =
-        routeDurationMin ?? 0;
-
-    final distanceText =
-        distance < 1
-            ? '${(distance * 1000).round()} m'
-            : '${distance.toStringAsFixed(1)} km';
-
-    final durationText =
-        duration < 60
-            ? '${duration.round()} min'
-            : '${(duration / 60).floor()} h '
-                '${(duration % 60).round()} min';
-
-    return Container(
-      padding:
-          const EdgeInsets.fromLTRB(
-        14,
-        12,
-        8,
-        12,
-      ),
-      decoration:
-          BoxDecoration(
-        color:
-            const Color(0xff071722)
-                .withValues(
-          alpha: 0.95,
-        ),
-        borderRadius:
-            BorderRadius.circular(
-          20,
-        ),
-        border: Border.all(
-          color:
-              const Color(0xff2D6678),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.alt_route,
-            color: Colors.white,
-            size: 28,
-          ),
-          const SizedBox(
-            width: 10,
-          ),
-          Expanded(
-            child: Wrap(
-              spacing: 18,
-              runSpacing: 4,
-              children: [
-                _routeMetric(
-                  Icons.straighten,
-                  distanceTitle,
-                  distanceText,
-                ),
-                _routeMetric(
-                  Icons.schedule,
-                  durationTitle,
-                  durationText,
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip:
-                clearRouteTitle,
-            onPressed:
-                clearRoute,
-            icon:
-                const Icon(
-              Icons.close,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _routeMetric(
-    IconData icon,
-    String label,
-    String value,
+  void _setSearchMode(
+    bool origin,
   ) {
-    return Row(
-      mainAxisSize:
-          MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 18,
-          color: Colors.white70,
-        ),
-        const SizedBox(
-          width: 5,
-        ),
-        Text(
-          '$label: $value',
-          style:
-              const TextStyle(
-            color: Colors.white,
-            fontWeight:
-                FontWeight.w700,
-          ),
-        ),
-      ],
+    setState(() {
+      originMode = origin;
+    });
+
+    _showMessage(
+      origin
+          ? _text(
+              'اکنون مبدأ را جستجو کنید.',
+              'Now search for the origin.',
+              'ابحث الآن عن نقطة البداية.',
+            )
+          : _text(
+              'اکنون هدف سفر را جستجو کنید.',
+              'Now search for the travel destination.',
+              'ابحث الآن عن هدف السفر.',
+            ),
     );
   }
 
-  // ============================================================
-  // MARKERS
-  // ============================================================
+  // ------------------------------------------------------------
+  // LANGUAGE
+  // ------------------------------------------------------------
 
-  List<Marker> markers() {
-    final result =
-        <Marker>[];
-
-    if (userLocation != null) {
-      result.add(
-        Marker(
-          point:
-              userLocation!,
-          width: 70,
-          height: 70,
-          child: Container(
-            decoration:
-                BoxDecoration(
-              shape:
-                  BoxShape.circle,
-              color: Colors.blue
-                  .withValues(
-                alpha: 0.18,
-              ),
-              border:
-                  Border.all(
-                color: Colors.blue
-                    .withValues(
-                  alpha: 0.35,
-                ),
-                width: 2,
-              ),
-            ),
-            child: Container(
-              margin:
-                  const EdgeInsets.all(
-                12,
-              ),
-              decoration:
-                  BoxDecoration(
-                shape:
-                    BoxShape.circle,
-                color: Colors.blue,
-                border:
-                    Border.all(
-                  color:
-                      Colors.white,
-                  width: 3,
-                ),
-              ),
-              child:
-                  const Icon(
-                Icons.navigation,
-                color:
-                    Colors.white,
-                size: 25,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (originLocation != null) {
-      result.add(
-        Marker(
-          point:
-              originLocation!,
-          width: 58,
-          height: 70,
-          child:
-              _placeMarker(
-            color:
-                const Color(
-              0xff1976D2,
-            ),
-            icon:
-                Icons.trip_origin,
-            label: tr(
-              'مبدأ',
-              'Origin',
-              'البداية',
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (destinationLocation !=
-        null) {
-      result.add(
-        Marker(
-          point:
-              destinationLocation!,
-          width: 58,
-          height: 70,
-          child:
-              _placeMarker(
-            color:
-                const Color(
-              0xffE53935,
-            ),
-            icon:
-                Icons.location_on,
-            label: tr(
-              'مقصد',
-              'Destination',
-              'الوجهة',
-            ),
-          ),
-        ),
-      );
-    }
-
-    return result;
+  void _changeLanguage(
+    String language,
+  ) {
+    setState(() {
+      selectedLanguage = language;
+    });
   }
 
-  Widget _placeMarker({
-    required Color color,
-    required IconData icon,
-    required String label,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration:
-              BoxDecoration(
-            color: color,
-            shape:
-                BoxShape.circle,
-            border:
-                Border.all(
-              color:
-                  Colors.white,
-              width: 3,
-            ),
-          ),
-          child:
-              Icon(
-            icon,
-            color:
-                Colors.white,
-            size: 25,
-          ),
-        ),
-        Container(
-          margin:
-              const EdgeInsets.only(
-            top: 2,
-          ),
-          padding:
-              const EdgeInsets
-                  .symmetric(
-            horizontal: 7,
-            vertical: 2,
-          ),
-          decoration:
-              BoxDecoration(
-            color: color,
-            borderRadius:
-                BorderRadius.circular(
-              8,
-            ),
-          ),
-          child:
-              Text(
-            label,
-            style:
-                const TextStyle(
-              color:
-                  Colors.white,
-              fontSize: 9,
-              fontWeight:
-                  FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // ------------------------------------------------------------
+  // MESSAGE
+  // ------------------------------------------------------------
 
-  // ============================================================
-  // BUTTONS
-  // ============================================================
-
-  Widget mapButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-    String? tooltip,
-    double size = 52,
-    bool active = false,
-  }) {
-    return Tooltip(
-      message:
-          tooltip ?? '',
-      child: Material(
-        color:
-            Colors.transparent,
-        child: InkWell(
-          borderRadius:
-              BorderRadius.circular(
-            17,
-          ),
-          onTap:
-              onPressed,
-          child:
-              Container(
-            width: size,
-            height: size,
-            decoration:
-                BoxDecoration(
-              borderRadius:
-                  BorderRadius.circular(
-                17,
-              ),
-              gradient:
-                  LinearGradient(
-                colors: active
-                    ? const [
-                        Color(
-                          0xff24C6DC,
-                        ),
-                        Color(
-                          0xff1976D2,
-                        ),
-                      ]
-                    : const [
-                        Colors.white,
-                        Color(
-                          0xffDCEAF0,
-                        ),
-                      ],
-              ),
-              border:
-                  Border.all(
-                color:
-                    Colors.white,
-                width: 1.2,
-              ),
-              boxShadow:
-                  const [
-                BoxShadow(
-                  color:
-                      Colors.black45,
-                  blurRadius:
-                      10,
-                  offset:
-                      Offset(
-                    0,
-                    5,
-                  ),
-                ),
-              ],
-            ),
-            child:
-                Icon(
-              icon,
-              size: 26,
-              color: active
-                  ? Colors.white
-                  : const Color(
-                      0xff123746,
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget largeMapAction({
-    required IconData icon,
-    required String title,
-    required VoidCallback onPressed,
-    bool primary = false,
-  }) {
-    return Material(
-      color:
-          Colors.transparent,
-      child: InkWell(
-        borderRadius:
-            BorderRadius.circular(
-          20,
-        ),
-        onTap:
-            onPressed,
-        child:
-            Container(
-          height: 56,
-          padding:
-              const EdgeInsets
-                  .symmetric(
-            horizontal: 16,
-          ),
-          decoration:
-              BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(
-              20,
-            ),
-            gradient:
-                LinearGradient(
-              colors: primary
-                  ? const [
-                      Color(
-                        0xff00B4DB,
-                      ),
-                      Color(
-                        0xff0083B0,
-                      ),
-                    ]
-                  : const [
-                      Colors.white,
-                      Color(
-                        0xffE4EEF2,
-                      ),
-                    ],
-            ),
-            border:
-                Border.all(
-              color:
-                  Colors.white70,
-              width: 1.2,
-            ),
-            boxShadow:
-                const [
-              BoxShadow(
-                color:
-                    Colors.black45,
-                blurRadius:
-                    12,
-                offset:
-                    Offset(
-                  0,
-                  6,
-                ),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize:
-                MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: primary
-                    ? Colors.white
-                    : const Color(
-                        0xff123746,
-                      ),
-                size: 27,
-              ),
-              const SizedBox(
-                width: 10,
-              ),
-              Flexible(
-                child:
-                    Text(
-                  title,
-                  overflow:
-                      TextOverflow
-                          .ellipsis,
-                  style:
-                      TextStyle(
-                    color: primary
-                        ? Colors.white
-                        : const Color(
-                            0xff123746,
-                          ),
-                    fontSize: 15,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openTouristDestinationSearch() {
+  void _showMessage(
+    String message,
+  ) {
     if (!mounted) return;
 
-    FocusScope.of(context)
-        .unfocus();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            message,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+  }
 
-    openSearch(
-      destination:
-          originLocation != null &&
-          destinationLocation == null,
+  // ------------------------------------------------------------
+  // BACK
+  // ------------------------------------------------------------
+
+  void _goBackToCyrusTourist() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  // ------------------------------------------------------------
+  // ROUTE INFO
+  // ------------------------------------------------------------
+
+  String _distanceText() {
+    final distance = routeDistanceKm;
+
+    if (distance == null) {
+      return '';
+    }
+
+    if (distance < 1) {
+      return '${(distance * 1000).round()} m';
+    }
+
+    return '${distance.toStringAsFixed(1)} km';
+  }
+
+  String _durationText() {
+    final duration = routeDurationMin;
+
+    if (duration == null) {
+      return '';
+    }
+
+    if (duration < 60) {
+      return '${duration.round()} min';
+    }
+
+    final hours = duration ~/ 60;
+    final minutes =
+        (duration % 60).round();
+
+    return '$hours h $minutes min';
+  }
+
+  // ------------------------------------------------------------
+  // SEARCH HEADER
+  // ------------------------------------------------------------
+
+  Widget _searchModeButton({
+    required bool origin,
+  }) {
+    final active = originMode == origin;
+
+    return Expanded(
+      child: Material(
+        color: active
+            ? const Color(0xff0083B0)
+            : Colors.white,
+        borderRadius:
+            BorderRadius.circular(14),
+        elevation: 4,
+        child: InkWell(
+          borderRadius:
+              BorderRadius.circular(14),
+          onTap: () {
+            _setSearchMode(origin);
+          },
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 10,
+            ),
+            child: Row(
+              mainAxisAlignment:
+                  MainAxisAlignment.center,
+              children: [
+                Icon(
+                  origin
+                      ? Icons.trip_origin
+                      : Icons.location_on,
+                  size: 19,
+                  color: active
+                      ? Colors.white
+                      : origin
+                          ? const Color(
+                              0xff1976D2,
+                            )
+                          : const Color(
+                              0xffE53935,
+                            ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    origin
+                        ? _text(
+                            'جستجوی مبدأ',
+                            'Search origin',
+                            'بحث عن البداية',
+                          )
+                        : _text(
+                            'جستجوی هدف سفر',
+                            'Search destination',
+                            'بحث عن الوجهة',
+                          ),
+                    overflow:
+                        TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: active
+                          ? Colors.white
+                          : const Color(
+                              0xff18343F,
+                            ),
+                      fontWeight:
+                          FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  // ============================================================
+  // ------------------------------------------------------------
+  // ROUTE SUMMARY
+  // ------------------------------------------------------------
+
+  Widget _routeSummary() {
+    if (routePoints.length < 2) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned(
+      left: 16,
+      right: 16,
+      bottom: 24,
+      child: Card(
+        elevation: 10,
+        color: const Color(0xff071722),
+        shape: RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding:
+              const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.alt_route,
+                color: Colors.white,
+                size: 30,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Wrap(
+                  spacing: 18,
+                  runSpacing: 5,
+                  children: [
+                    Text(
+                      '${_text('مسافت', 'Distance', 'المسافة')}: '
+                      '${_distanceText()}',
+                      style:
+                          const TextStyle(
+                        color: Colors.white,
+                        fontWeight:
+                            FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${_text('زمان', 'Time', 'الوقت')}: '
+                      '${_durationText()}',
+                      style:
+                          const TextStyle(
+                        color: Colors.white,
+                        fontWeight:
+                            FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: clearRoute,
+                icon: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
   // BUILD
-  // ============================================================
+  // ------------------------------------------------------------
 
   @override
   Widget build(
     BuildContext context,
   ) {
+    final userLocation =
+        controller.userLocation;
+
+    final isRtl =
+        selectedLanguage == 'fa' ||
+        selectedLanguage == 'ar';
+
     return Directionality(
-      textDirection:
-          isRtl
-              ? TextDirection.rtl
-              : TextDirection.ltr,
+      textDirection: isRtl
+          ? TextDirection.rtl
+          : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor:
-            const Color(
-          0xff071722,
-        ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    FlutterMap(
-                      mapController:
-                          mapController,
-                      options:
-                          const MapOptions(
-                        initialCenter:
-                            iranCenter,
-                        initialZoom: 5,
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName:
-                              'cyrustourist.ir.app',
-                        ),
-                        if (routePoints
-                                .length >=
-                            2)
-                          PolylineLayer(
-                            polylines: [
-                              Polyline(
-                                points:
-                                    routePoints,
-                                strokeWidth:
-                                    6,
-                                color:
-                                    const Color(
-                                  0xff0083B0,
-                                ),
-                                borderStrokeWidth:
-                                    2,
-                                borderColor:
-                                    Colors.white,
-                              ),
-                            ],
-                          ),
-                        MarkerLayer(
-                          markers:
-                              markers(),
-                        ),
-                      ],
-                    ),
+        body: Stack(
+          children: [
+            // --------------------------------------------------
+            // MAP
+            // --------------------------------------------------
 
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      right: 12,
-                      child:
-                          IgnorePointer(
-                        child:
-                            Center(
-                          child:
-                              Container(
+            FlutterMap(
+              mapController:
+                  mapController,
+              options: MapOptions(
+                initialCenter:
+                    userLocation ??
+                    const LatLng(
+                      35.6892,
+                      51.3890,
+                    ),
+                initialZoom: 13,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName:
+                      'ir.cyrustourist.app',
+                ),
+
+                if (routePoints.length >= 2)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: routePoints,
+                        strokeWidth: 6,
+                        color:
+                            const Color(
+                          0xff0083B0,
+                        ),
+                        borderStrokeWidth:
+                            2,
+                        borderColor:
+                            Colors.white,
+                      ),
+                    ],
+                  ),
+
+                MapMarkersLayer(
+                  places:
+                      controller.visiblePlaces,
+                  onTap: showPlace,
+                ),
+              ],
+            ),
+
+            // --------------------------------------------------
+            // TOP PANEL
+            // --------------------------------------------------
+
+            Positioned(
+              top: 42,
+              left: 12,
+              right: 12,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Material(
+                        elevation: 6,
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(
+                          14,
+                        ),
+                        child: InkWell(
+                          borderRadius:
+                              BorderRadius.circular(
+                            14,
+                          ),
+                          onTap:
+                              _goBackToCyrusTourist,
+                          child: Padding(
                             padding:
                                 const EdgeInsets
                                     .symmetric(
-                              horizontal:
-                                  14,
-                              vertical:
-                                  7,
+                              horizontal: 12,
+                              vertical: 10,
                             ),
-                            decoration:
-                                BoxDecoration(
-                              color:
-                                  const Color(
-                                0xff071722,
-                              ).withValues(
-                                alpha:
-                                    0.88,
-                              ),
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                18,
-                              ),
-                              border:
-                                  Border.all(
-                                color:
-                                    Colors.white24,
-                              ),
-                            ),
-                            child:
-                                Text(
-                              mapTitle,
-                              style:
-                                  const TextStyle(
-                                color:
-                                    Colors.white,
-                                fontSize:
-                                    14,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    if (!gpsEnabled)
-                      Positioned(
-                        top: 58,
-                        left: 16,
-                        right: 16,
-                        child:
-                            GestureDetector(
-                          onTap: () {
-                            Geolocator
-                                .openLocationSettings();
-                          },
-                          child:
-                              Container(
-                            padding:
-                                const EdgeInsets
-                                    .symmetric(
-                              horizontal:
-                                  14,
-                              vertical:
-                                  11,
-                            ),
-                            decoration:
-                                BoxDecoration(
-                              color:
-                                  const Color(
-                                0xffB3261E,
-                              ).withValues(
-                                alpha:
-                                    0.94,
-                              ),
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                16,
-                              ),
-                            ),
-                            child:
-                                Row(
+                            child: Row(
+                              mainAxisSize:
+                                  MainAxisSize.min,
                               children: [
                                 const Icon(
                                   Icons
-                                      .gps_off,
-                                  color:
-                                      Colors.white,
+                                      .arrow_back,
+                                  size: 20,
                                 ),
                                 const SizedBox(
-                                  width: 10,
+                                  width: 5,
                                 ),
-                                Expanded(
-                                  child:
-                                      Text(
-                                    gpsOffTitle,
-                                    style:
-                                        const TextStyle(
-                                      color:
-                                          Colors.white,
-                                      fontWeight:
-                                          FontWeight.bold,
-                                      fontSize:
-                                          12,
-                                    ),
+                                Text(
+                                  _text(
+                                    'سایروس توریست',
+                                    'Cyrus Tourist',
+                                    'سايروس توريست',
+                                  ),
+                                  style:
+                                      const TextStyle(
+                                    fontWeight:
+                                        FontWeight
+                                            .bold,
                                   ),
                                 ),
                               ],
@@ -1662,308 +981,446 @@ class _SmartMapPageState extends State<SmartMapPage> {
                         ),
                       ),
 
-                    if (routingLoading)
-                      Positioned.fill(
-                        child:
-                            IgnorePointer(
-                          child:
-                              Container(
-                            color: Colors
-                                .black
-                                .withValues(
-                              alpha:
-                                  0.12,
-                            ),
-                            alignment:
-                                Alignment
-                                    .center,
+                      const SizedBox(width: 8),
+
+                      Expanded(
+                        child: MapSearchBar(
+                          controller: searchTextController,
+                          onSearch: () => search(
+                            searchTextController.text,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Row(
+                    children: [
+                      _searchModeButton(
+                        origin: true,
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      _searchModeButton(
+                        origin: false,
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+
+                      PopupMenuButton<
+                          String>(
+                        initialValue:
+                            selectedLanguage,
+                        onSelected:
+                            _changeLanguage,
+                        itemBuilder:
+                            (_) => const [
+                          PopupMenuItem(
+                            value: 'fa',
                             child:
-                                Container(
-                              padding:
-                                  const EdgeInsets
-                                      .symmetric(
-                                horizontal:
-                                    20,
-                                vertical:
-                                    16,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                color:
-                                    const Color(
-                                  0xff071722,
-                                ),
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  18,
-                                ),
-                                border:
-                                    Border.all(
-                                  color:
-                                      const Color(
-                                    0xff2D6678,
-                                  ),
-                                ),
-                                boxShadow:
-                                    const [
-                                  BoxShadow(
-                                    color:
-                                        Colors.black45,
-                                    blurRadius:
-                                        18,
-                                    offset:
-                                        Offset(
-                                      0,
-                                      8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              child:
-                                  Row(
-                                mainAxisSize:
-                                    MainAxisSize
-                                        .min,
-                                children: [
-                                  const SizedBox(
-                                    width:
-                                        22,
-                                    height:
-                                        22,
-                                    child:
-                                        CircularProgressIndicator(
-                                      strokeWidth:
-                                          2.5,
-                                      color:
-                                          Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                    width:
-                                        12,
-                                  ),
-                                  Text(
-                                    tr(
-                                      'در حال دریافت مسیر...',
-                                      'Getting road route...',
-                                      'جارٍ الحصول على مسار الطريق...',
-                                    ),
-                                    style:
-                                        const TextStyle(
-                                      color:
-                                          Colors.white,
-                                      fontWeight:
-                                          FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                Text(
+                              'پارسی',
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'en',
+                            child:
+                                Text(
+                              'English',
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'ar',
+                            child:
+                                Text(
+                              'العربية',
+                            ),
+                          ),
+                        ],
+                        child: Material(
+                          elevation: 5,
+                          color:
+                              Colors.white,
+                          borderRadius:
+                              BorderRadius
+                                  .circular(
+                            12,
+                          ),
+                          child:
+                              const Padding(
+                            padding:
+                                EdgeInsets.all(
+                              10,
+                            ),
+                            child: Icon(
+                              Icons.language,
                             ),
                           ),
                         ),
                       ),
-                  ],
-                ),
-              ),
+                    ],
+                  ),
 
-              _buildBottomControlPanel(
-                context,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+                  const SizedBox(height: 8),
 
-  Widget _buildBottomControlPanel(
-    BuildContext context,
-  ) {
-    return Container(
-      width:
-          double.infinity,
-      padding:
-          const EdgeInsets.fromLTRB(
-        10,
-        10,
-        10,
-        10,
-      ),
-      decoration:
-          const BoxDecoration(
-        color:
-            Color(0xff071722),
-        borderRadius:
-            BorderRadius.vertical(
-          top:
-              Radius.circular(
-            26,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Colors.black54,
-            blurRadius:
-                18,
-            offset:
-                Offset(
-              0,
-              -6,
-            ),
-          ),
-        ],
-      ),
-      child:
-          SafeArea(
-        top: false,
-        child:
-            Column(
-          mainAxisSize:
-              MainAxisSize.min,
-          children: [
-            Container(
-              width: 42,
-              height: 4,
-              decoration:
-                  BoxDecoration(
-                color:
-                    Colors.white30,
-                borderRadius:
-                    BorderRadius.circular(
-                  10,
-                ),
-              ),
-            ),
-            const SizedBox(
-              height: 8,
-            ),
+                  // CURRENT ROUTE FIELDS
+                  Material(
+                    elevation: 5,
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.circular(
+                      15,
+                    ),
+                    child: Padding(
+                      padding:
+                          const EdgeInsets
+                              .symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons
+                                    .trip_origin,
+                                color:
+                                    Color(
+                                  0xff1976D2,
+                                ),
+                                size: 20,
+                              ),
+                              const SizedBox(
+                                width: 8,
+                              ),
+                              Expanded(
+                                child: Text(
+                                  originName ??
+                                      _text(
+                                        'مبدأ: موقعیت من',
+                                        'Origin: My location',
+                                        'البداية: موقعي',
+                                      ),
+                                  maxLines: 1,
+                                  overflow:
+                                      TextOverflow
+                                          .ellipsis,
+                                  style:
+                                      const TextStyle(
+                                    fontWeight:
+                                        FontWeight
+                                            .w600,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip:
+                                    _text(
+                                  'موقعیت من',
+                                  'My location',
+                                  'موقعي',
+                                ),
+                                onPressed:
+                                    useCurrentLocationAsOrigin,
+                                icon:
+                                    const Icon(
+                                  Icons
+                                      .my_location,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
 
-            if (routePoints.length >=
-                2) ...[
-              _routeSummary(),
-              const SizedBox(
-                height: 8,
-              ),
-            ],
+                          const Divider(
+                            height: 8,
+                          ),
 
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child:
-                      largeMapAction(
-                    icon:
-                        Icons.travel_explore,
-                    title:
-                        searchPlaceTitle,
-                    primary:
-                        true,
-                    onPressed:
-                        _openTouristDestinationSearch,
-                  ),
-                ),
-                const SizedBox(
-                  width: 7,
-                ),
-                Expanded(
-                  child:
-                      largeMapAction(
-                    icon:
-                        Icons.alt_route,
-                    title:
-                        routeTitle,
-                    primary:
-                        routePoints
-                                .length >=
-                            2,
-                    onPressed:
-                        openRouting,
-                  ),
-                ),
-              ],
-            ),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons
+                                    .location_on,
+                                color:
+                                    Color(
+                                  0xffE53935,
+                                ),
+                                size: 22,
+                              ),
+                              const SizedBox(
+                                width: 8,
+                              ),
+                              Expanded(
+                                child: Text(
+                                  destinationName ??
+                                      _text(
+                                        'مقصد: هنوز انتخاب نشده',
+                                        'Destination: Not selected',
+                                        'الوجهة: لم يتم اختيارها',
+                                      ),
+                                  maxLines: 1,
+                                  overflow:
+                                      TextOverflow
+                                          .ellipsis,
+                                  style:
+                                      const TextStyle(
+                                    fontWeight:
+                                        FontWeight
+                                            .w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
 
-            const SizedBox(
-              height: 8,
-            ),
+                          const SizedBox(
+                            height: 8,
+                          ),
 
-            SingleChildScrollView(
-              scrollDirection:
-                  Axis.horizontal,
-              reverse:
-                  isRtl,
-              child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment
-                        .center,
-                children: [
-                  mapButton(
-                    icon:
-                        Icons.add,
-                    tooltip:
-                        zoomInTitle,
-                    onPressed:
-                        zoomIn,
-                    size: 48,
+                          Row(
+                            children: [
+                              Expanded(
+                                child:
+                                    ElevatedButton
+                                        .icon(
+                                  onPressed:
+                                      _swapPlaces,
+                                  icon:
+                                      const Icon(
+                                    Icons
+                                        .swap_vert,
+                                  ),
+                                  label:
+                                      Text(
+                                    _text(
+                                      'تعویض',
+                                      'Swap',
+                                      'تبديل',
+                                    ),
+                                  ),
+                                  style:
+                                      ElevatedButton
+                                          .styleFrom(
+                                    backgroundColor:
+                                        const Color(
+                                      0xffEAF3F7,
+                                    ),
+                                    foregroundColor:
+                                        const Color(
+                                      0xff123746,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(
+                                width: 8,
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child:
+                                    ElevatedButton
+                                        .icon(
+                                  onPressed:
+                                      routeLoading
+                                          ? null
+                                          : buildRoute,
+                                  icon:
+                                      const Icon(
+                                    Icons
+                                        .directions,
+                                  ),
+                                  label:
+                                      Text(
+                                    _text(
+                                      'مسیریابی',
+                                      'Route',
+                                      'المسار',
+                                    ),
+                                  ),
+                                  style:
+                                      ElevatedButton
+                                          .styleFrom(
+                                    backgroundColor:
+                                        const Color(
+                                      0xff0083B0,
+                                    ),
+                                    foregroundColor:
+                                        Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(
-                    width: 7,
-                  ),
-                  mapButton(
-                    icon:
-                        Icons.remove,
-                    tooltip:
-                        zoomOutTitle,
-                    onPressed:
-                        zoomOut,
-                    size: 48,
-                  ),
-                  const SizedBox(
-                    width: 7,
-                  ),
-                  mapButton(
-                    icon:
-                        Icons.explore,
-                    tooltip:
-                        northTitle,
-                    onPressed:
-                        goNorth,
-                    size: 48,
-                  ),
-                  const SizedBox(
-                    width: 7,
-                  ),
-                  mapButton(
-                    icon:
-                        Icons.my_location,
-                    tooltip:
-                        currentLocationTitle,
-                    active:
-                        userLocation !=
-                            null,
-                    onPressed:
-                        goToMyLocation,
-                    size: 48,
-                  ),
-                  const SizedBox(
-                    width: 7,
-                  ),
-                  mapButton(
-                    icon:
-                        Icons.language,
-                    tooltip:
-                        languageTitle,
-                    onPressed:
-                        _showLanguagePicker,
-                    size: 48,
-                  ),
-                  const SizedBox(
-                    width: 7,
-                  ),
-                  _backToCyrusButton(),
                 ],
+              ),
+            ),
+
+            // --------------------------------------------------
+            // LOADING SEARCH / LOCATION
+            // --------------------------------------------------
+
+            if (controller.isLoading ||
+                controller.isLocationLoading ||
+                searching)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    color: Colors.black
+                        .withValues(
+                      alpha: 0.08,
+                    ),
+                    alignment:
+                        Alignment.center,
+                    child: Card(
+                      elevation: 8,
+                      child: Padding(
+                        padding:
+                            const EdgeInsets
+                                .all(18),
+                        child: Column(
+                          mainAxisSize:
+                              MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(
+                              height: 12,
+                            ),
+                            Text(
+                              searching
+                                  ? _text(
+                                      'در حال جستجوی هدف سفر...',
+                                      'Searching for travel destination...',
+                                      'جارٍ البحث عن هدف السفر...',
+                                    )
+                                  : _text(
+                                      'در حال دریافت موقعیت...',
+                                      'Getting your location...',
+                                      'جارٍ تحديد موقعك...',
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // --------------------------------------------------
+            // ROUTING LOADING
+            // --------------------------------------------------
+
+            if (routeLoading)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    color: Colors.black
+                        .withValues(
+                      alpha: 0.10,
+                    ),
+                    alignment:
+                        Alignment.center,
+                    child: Card(
+                      elevation: 8,
+                      child: Padding(
+                        padding:
+                            const EdgeInsets
+                                .all(20),
+                        child: Column(
+                          mainAxisSize:
+                              MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(
+                              height: 12,
+                            ),
+                            Text(
+                              _text(
+                                'در حال محاسبه مسیر...',
+                                'Calculating route...',
+                                'جارٍ حساب المسار...',
+                              ),
+                              style:
+                                  const TextStyle(
+                                fontWeight:
+                                    FontWeight
+                                        .bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // --------------------------------------------------
+            // ERROR
+            // --------------------------------------------------
+
+            if (controller.errorMessage !=
+                null)
+              Positioned(
+                top: 210,
+                left: 20,
+                right: 20,
+                child: Card(
+                  elevation: 7,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets
+                            .all(12),
+                    child: Text(
+                      controller.errorMessage!,
+                      textAlign:
+                          TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+
+            // --------------------------------------------------
+            // ROUTE SUMMARY
+            // --------------------------------------------------
+
+            if (routePoints.length >= 2)
+              _routeSummary(),
+
+            // --------------------------------------------------
+            // MY LOCATION
+            // --------------------------------------------------
+
+            Positioned(
+              bottom:
+                  routePoints.length >= 2
+                      ? 105
+                      : 25,
+              right: 20,
+              child:
+                  FloatingActionButton(
+                heroTag:
+                    'my_location_smart_map',
+                backgroundColor:
+                    Colors.white,
+                foregroundColor:
+                    const Color(
+                  0xff123746,
+                ),
+                onPressed:
+                    useCurrentLocationAsOrigin,
+                child: const Icon(
+                  Icons.my_location,
+                ),
               ),
             ),
           ],
@@ -1972,1147 +1429,14 @@ class _SmartMapPageState extends State<SmartMapPage> {
     );
   }
 
-  Widget _backToCyrusButton() {
-    return Tooltip(
-      message:
-          backTitle,
-      child:
-          Material(
-        color:
-            Colors.transparent,
-        child:
-            InkWell(
-          borderRadius:
-              BorderRadius.circular(
-            17,
-          ),
-          onTap: () {
-            Navigator.of(
-              context,
-            ).pop();
-          },
-          child:
-              Container(
-            height: 48,
-            padding:
-                const EdgeInsets
-                    .symmetric(
-              horizontal:
-                  14,
-            ),
-            decoration:
-                BoxDecoration(
-              borderRadius:
-                  BorderRadius.circular(
-                17,
-              ),
-              gradient:
-                  const LinearGradient(
-                colors: [
-                  Color(
-                    0xffD4AF37,
-                  ),
-                  Color(
-                    0xffA77B18,
-                  ),
-                ],
-              ),
-              border:
-                  Border.all(
-                color:
-                    Colors.white70,
-                width: 1.2,
-              ),
-              boxShadow:
-                  const [
-                BoxShadow(
-                  color:
-                      Colors.black45,
-                  blurRadius:
-                      10,
-                  offset:
-                      Offset(
-                    0,
-                    5,
-                  ),
-                ),
-              ],
-            ),
-            child:
-                Row(
-              mainAxisSize:
-                  MainAxisSize
-                      .min,
-              children: [
-                const Icon(
-                  Icons.reply,
-                  color:
-                      Colors.white,
-                  size: 22,
-                ),
-                const SizedBox(
-                  width: 6,
-                ),
-                Text(
-                  tr(
-                    '↪️ سایروس توریست',
-                    '↪️ Cyrus Tourist',
-                    '↪️ سايروس توريست',
-                  ),
-                  style:
-                      const TextStyle(
-                    color:
-                        Colors.white,
-                    fontSize:
-                        12,
-                    fontWeight:
-                        FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ================================================================
-// SEARCH PANEL
-// ================================================================
-
-class _SearchPanel
-    extends StatefulWidget {
-  final String? initialOrigin;
-  final String? initialDestination;
-  final LatLng? userLocation;
-  final bool initialMode;
-
-  final void Function(
-    LatLng point,
-    String name,
-  ) onOriginSelected;
-
-  final void Function(
-    LatLng point,
-    String name,
-  ) onDestinationSelected;
-
-  final VoidCallback onClearOrigin;
-  final VoidCallback onClearDestination;
-  final VoidCallback onSwap;
-
-  final Future<
-      List<Map<String, dynamic>>> Function(
-    String query,
-  ) searchPlaces;
-
-  final MapLanguage language;
-
-  final String Function(
-    String fa,
-    String en,
-    String ar,
-  ) tr;
-
-  const _SearchPanel({
-    required this.initialOrigin,
-    required this.initialDestination,
-    required this.userLocation,
-    required this.initialMode,
-    required this.onOriginSelected,
-    required this.onDestinationSelected,
-    required this.onClearOrigin,
-    required this.onClearDestination,
-    required this.onSwap,
-    required this.searchPlaces,
-    required this.language,
-    required this.tr,
-  });
-
-  @override
-  State<_SearchPanel> createState() =>
-      _SearchPanelState();
-}
-
-class _SearchPanelState
-    extends State<_SearchPanel> {
-  final TextEditingController
-      originController =
-      TextEditingController();
-
-  final TextEditingController
-      destinationController =
-      TextEditingController();
-
-  bool originMode = true;
-  bool searching = false;
-
-  List<Map<String, dynamic>>
-      results = [];
-
-  bool get isRtl =>
-      widget.language ==
-          MapLanguage.fa ||
-      widget.language ==
-          MapLanguage.ar;
-
-  @override
-  void initState() {
-    super.initState();
-
-    originMode =
-        widget.initialMode;
-
-    originController.text =
-        widget.initialOrigin ??
-            '';
-
-    destinationController.text =
-        widget.initialDestination ??
-            '';
-  }
+  // ------------------------------------------------------------
+  // DISPOSE
+  // ------------------------------------------------------------
 
   @override
   void dispose() {
-    originController.dispose();
-    destinationController.dispose();
+    controller.dispose();
+    searchTextController.dispose();
     super.dispose();
-  }
-
-  // ============================================================
-  // SEARCH CURRENT FIELD
-  // ============================================================
-
-  Future<void>
-      searchCurrentField() async {
-    final controller =
-        originMode
-            ? originController
-            : destinationController;
-
-    await performSearch(
-      controller.text,
-    );
-  }
-
-  Future<void> performSearch(
-    String query,
-  ) async {
-    final cleanQuery =
-        query.trim();
-
-    if (cleanQuery.length < 2) {
-      setState(() {
-        results = [];
-      });
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'حداقل دو حرف وارد کنید.',
-              'Enter at least two characters.',
-              'أدخل حرفين على الأقل.',
-            ),
-          ),
-        ),
-      );
-
-      return;
-    }
-
-    FocusScope.of(context)
-        .unfocus();
-
-    setState(() {
-      searching = true;
-      results = [];
-    });
-
-    try {
-      final data =
-          await widget.searchPlaces(
-        cleanQuery,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        results = data;
-        searching = false;
-      });
-
-      if (data.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.tr(
-                'مکانی پیدا نشد.',
-                'No places found.',
-                'لم يتم العثور على أماكن.',
-              ),
-            ),
-          ),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        searching = false;
-        results = [];
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'جستجو انجام نشد. اینترنت را بررسی کنید.',
-              'Search failed. Check your internet connection.',
-              'فشل البحث. تحقق من اتصال الإنترنت.',
-            ),
-          ),
-        ),
-      );
-    }
-  }
-
-  // ============================================================
-  // SELECT RESULT
-  // ============================================================
-
-  void selectResult(
-    Map<String, dynamic> result,
-  ) {
-    final lat = double.tryParse(
-      result['lat']?.toString() ??
-          '',
-    );
-
-    final lon = double.tryParse(
-      result['lon']?.toString() ??
-          '',
-    );
-
-    if (lat == null ||
-        lon == null) {
-      return;
-    }
-
-    final name =
-        result['display_name']
-                ?.toString() ??
-            widget.tr(
-              'مکان انتخاب‌شده',
-              'Selected place',
-              'المكان المحدد',
-            );
-
-    final point =
-        LatLng(
-      lat,
-      lon,
-    );
-
-    if (originMode) {
-      widget.onOriginSelected(
-        point,
-        name,
-      );
-
-      originController.text =
-          name;
-
-      setState(() {
-        originMode = false;
-        results = [];
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'مبدأ انتخاب شد؛ حالا مقصد را جستجو کنید.',
-              'Origin selected; now search for the destination.',
-              'تم اختيار البداية؛ ابحث الآن عن الوجهة.',
-            ),
-          ),
-        ),
-      );
-    } else {
-      widget.onDestinationSelected(
-        point,
-        name,
-      );
-
-      destinationController.text =
-          name;
-
-      setState(() {
-        results = [];
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'مقصد انتخاب شد؛ برای مسیریابی دکمه مسیریابی را بزنید.',
-              'Destination selected; press Route to calculate the route.',
-              'تم اختيار الوجهة؛ اضغط على المسار لحساب الطريق.',
-            ),
-          ),
-        ),
-      );
-    }
-  }
-
-  // ============================================================
-  // CURRENT LOCATION
-  // ============================================================
-
-  void useCurrentLocation() {
-    if (widget.userLocation ==
-        null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'ابتدا باید موقعیت فعلی دریافت شود.',
-              'Get your current location first.',
-              'احصل على موقعك الحالي أولاً.',
-            ),
-          ),
-        ),
-      );
-
-      return;
-    }
-
-    final name =
-        widget.tr(
-      'موقعیت فعلی من',
-      'My current location',
-      'موقعي الحالي',
-    );
-
-    widget.onOriginSelected(
-      widget.userLocation!,
-      name,
-    );
-
-    originController.text =
-        name;
-
-    setState(() {
-      originMode = false;
-      results = [];
-    });
-  }
-
-  // ============================================================
-  // FIELD
-  // ============================================================
-
-  Widget searchField({
-    required bool origin,
-  }) {
-    final controller =
-        origin
-            ? originController
-            : destinationController;
-
-    final color = origin
-        ? const Color(
-            0xff1976D2,
-          )
-        : const Color(
-            0xffE53935,
-          );
-
-    final selected =
-        originMode == origin;
-
-    return Container(
-      decoration:
-          BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.circular(
-          18,
-        ),
-        border:
-            Border.all(
-          color: selected
-              ? color
-              : Colors.transparent,
-          width: 2,
-        ),
-        boxShadow:
-            const [
-          BoxShadow(
-            color:
-                Colors.black26,
-            blurRadius:
-                8,
-            offset:
-                Offset(
-              0,
-              3,
-            ),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller:
-            controller,
-        textDirection:
-            isRtl
-                ? TextDirection.rtl
-                : TextDirection.ltr,
-        textInputAction:
-            TextInputAction.search,
-        onTap: () {
-          setState(() {
-            originMode =
-                origin;
-            results = [];
-          });
-        },
-        onSubmitted: (_) {
-          setState(() {
-            originMode =
-                origin;
-          });
-
-          searchCurrentField();
-        },
-        decoration:
-            InputDecoration(
-          prefixIcon:
-              Icon(
-            origin
-                ? Icons
-                    .trip_origin
-                : Icons
-                    .location_on,
-            color:
-                color,
-          ),
-          suffixIcon:
-              Row(
-            mainAxisSize:
-                MainAxisSize.min,
-            children: [
-              if (controller
-                  .text
-                  .isNotEmpty)
-                IconButton(
-                  tooltip:
-                      widget.tr(
-                    'پاک کردن',
-                    'Clear',
-                    'مسح',
-                  ),
-                  icon:
-                      const Icon(
-                    Icons.clear,
-                  ),
-                  onPressed:
-                      () {
-                    controller
-                        .clear();
-
-                    if (origin) {
-                      widget
-                          .onClearOrigin();
-                    } else {
-                      widget
-                          .onClearDestination();
-                    }
-
-                    setState(() {
-                      results = [];
-                    });
-                  },
-                ),
-              IconButton(
-                tooltip:
-                    widget.tr(
-                  'جستجوی این مکان',
-                  'Search this place',
-                  'بحث عن هذا المكان',
-                ),
-                icon:
-                    Icon(
-                  Icons.search,
-                  color:
-                      color,
-                ),
-                onPressed:
-                    searching
-                        ? null
-                        : () {
-                            setState(
-                              () {
-                                originMode =
-                                    origin;
-                              },
-                            );
-
-                            searchCurrentField();
-                          },
-              ),
-            ],
-          ),
-          hintText: origin
-              ? widget.tr(
-                  'جستجوی مبدأ...',
-                  'Search origin...',
-                  'بحث عن البداية...',
-                )
-              : widget.tr(
-                  'جستجوی مقصد...',
-                  'Search destination...',
-                  'بحث عن الوجهة...',
-                ),
-          border:
-              InputBorder.none,
-          contentPadding:
-              const EdgeInsets
-                  .symmetric(
-            horizontal:
-                12,
-            vertical:
-                15,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // RESULT
-  // ============================================================
-
-  Widget resultItem(
-    Map<String, dynamic> result,
-  ) {
-    final name =
-        result['display_name']
-                ?.toString() ??
-            '';
-
-    return Material(
-      color:
-          Colors.transparent,
-      child: InkWell(
-        borderRadius:
-            BorderRadius.circular(
-          15,
-        ),
-        onTap: () =>
-            selectResult(
-          result,
-        ),
-        child:
-            Container(
-          margin:
-              const EdgeInsets
-                  .only(
-            bottom: 8,
-          ),
-          padding:
-              const EdgeInsets
-                  .all(
-            12,
-          ),
-          decoration:
-              BoxDecoration(
-            color:
-                const Color(
-              0xffF4F8FA,
-            ),
-            borderRadius:
-                BorderRadius.circular(
-              15,
-            ),
-            border:
-                Border.all(
-              color:
-                  Colors.blueGrey
-                      .shade100,
-            ),
-          ),
-          child:
-              Row(
-            children: [
-              Icon(
-                originMode
-                    ? Icons
-                        .trip_origin
-                    : Icons
-                        .location_on,
-                color:
-                    originMode
-                        ? const Color(
-                            0xff1976D2,
-                          )
-                        : const Color(
-                            0xffE53935,
-                          ),
-              ),
-              const SizedBox(
-                width: 10,
-              ),
-              Expanded(
-                child:
-                    Text(
-                  name,
-                  maxLines: 3,
-                  overflow:
-                      TextOverflow
-                          .ellipsis,
-                  textDirection:
-                      isRtl
-                          ? TextDirection
-                              .rtl
-                          : TextDirection
-                              .ltr,
-                  style:
-                      const TextStyle(
-                    fontSize:
-                        13,
-                    fontWeight:
-                        FontWeight
-                            .w600,
-                    color:
-                        Color(
-                      0xff18343F,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // BUILD
-  // ============================================================
-
-  @override
-  Widget build(
-    BuildContext context,
-  ) {
-    final bottom =
-        MediaQuery.of(
-          context,
-        ).viewInsets.bottom;
-
-    return Directionality(
-      textDirection:
-          isRtl
-              ? TextDirection.rtl
-              : TextDirection.ltr,
-      child: Padding(
-        padding:
-            EdgeInsets.only(
-          bottom:
-              bottom,
-        ),
-        child:
-            Container(
-          constraints:
-              const BoxConstraints(
-            maxHeight:
-                680,
-          ),
-          decoration:
-              const BoxDecoration(
-            color:
-                Color(0xff071722),
-            borderRadius:
-                BorderRadius.vertical(
-              top:
-                  Radius.circular(
-                28,
-              ),
-            ),
-          ),
-          child:
-              SafeArea(
-            top: false,
-            child:
-                Column(
-              mainAxisSize:
-                  MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  height: 10,
-                ),
-
-                Container(
-                  width: 45,
-                  height: 5,
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        Colors.white38,
-                    borderRadius:
-                        BorderRadius.circular(
-                      10,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 14,
-                ),
-
-                Padding(
-                  padding:
-                      const EdgeInsets
-                          .symmetric(
-                    horizontal:
-                        20,
-                  ),
-                  child:
-                      Row(
-                    children: [
-                      const Icon(
-                        Icons.search,
-                        color:
-                            Colors.white,
-                        size: 27,
-                      ),
-                      const SizedBox(
-                        width: 10,
-                      ),
-                      Expanded(
-                        child:
-                            Text(
-                          widget.tr(
-                            'جستجوی مبدأ و مقصد',
-                            'Search origin & destination',
-                            'بحث عن البداية والوجهة',
-                          ),
-                          style:
-                              const TextStyle(
-                            color:
-                                Colors.white,
-                            fontSize:
-                                19,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 16,
-                ),
-
-                Padding(
-                  padding:
-                      const EdgeInsets
-                          .symmetric(
-                    horizontal:
-                        16,
-                  ),
-                  child:
-                      searchField(
-                    origin:
-                        true,
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 4,
-                ),
-
-                Align(
-                  alignment:
-                      isRtl
-                          ? Alignment
-                              .centerRight
-                          : Alignment
-                              .centerLeft,
-                  child:
-                      Padding(
-                    padding:
-                        const EdgeInsets
-                            .symmetric(
-                      horizontal:
-                          16,
-                    ),
-                    child:
-                        TextButton
-                            .icon(
-                      onPressed:
-                          useCurrentLocation,
-                      icon:
-                          const Icon(
-                        Icons
-                            .my_location,
-                        color:
-                            Color(
-                          0xff29B6F6,
-                        ),
-                      ),
-                      label:
-                          Text(
-                        widget.tr(
-                          'استفاده از موقعیت فعلی من',
-                          'Use my current location',
-                          'استخدام موقعي الحالي',
-                        ),
-                        style:
-                            const TextStyle(
-                          color:
-                              Color(
-                            0xffB9E9FF,
-                          ),
-                          fontWeight:
-                              FontWeight
-                                  .bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                IconButton(
-                  onPressed:
-                      () {
-                    final originText =
-                        originController
-                            .text;
-
-                    originController
-                            .text =
-                        destinationController
-                            .text;
-
-                    destinationController
-                            .text =
-                        originText;
-
-                    setState(() {
-                      originMode =
-                          false;
-                      results = [];
-                    });
-
-                    widget
-                        .onSwap();
-                  },
-                  tooltip:
-                      widget.tr(
-                    'تعویض مبدأ و مقصد',
-                    'Swap origin & destination',
-                    'تبديل البداية والوجهة',
-                  ),
-                  icon:
-                      const Icon(
-                    Icons
-                        .swap_vert_circle,
-                    color:
-                        Colors.white,
-                    size: 35,
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 4,
-                ),
-
-                Padding(
-                  padding:
-                      const EdgeInsets
-                          .symmetric(
-                    horizontal:
-                        16,
-                  ),
-                  child:
-                      searchField(
-                    origin:
-                        false,
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 14,
-                ),
-
-                Padding(
-                  padding:
-                      const EdgeInsets
-                          .symmetric(
-                    horizontal:
-                        16,
-                  ),
-                  child:
-                      SizedBox(
-                    width:
-                        double.infinity,
-                    height: 52,
-                    child:
-                        ElevatedButton
-                            .icon(
-                      onPressed:
-                          searching
-                              ? null
-                              : searchCurrentField,
-                      icon:
-                          searching
-                              ? const SizedBox(
-                                  width:
-                                      21,
-                                  height:
-                                      21,
-                                  child:
-                                      CircularProgressIndicator(
-                                    strokeWidth:
-                                        2.5,
-                                    color:
-                                        Colors.white,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons
-                                      .search,
-                                ),
-                      label:
-                          Text(
-                        searching
-                            ? widget.tr(
-                                'در حال جستجو...',
-                                'Searching...',
-                                'جارٍ البحث...',
-                              )
-                            : widget.tr(
-                                'جستجوی هدف گردشگری',
-                                'Search tourist destination',
-                                'البحث عن هدف سياحي',
-                              ),
-                        style:
-                            const TextStyle(
-                          fontWeight:
-                              FontWeight
-                                  .bold,
-                          fontSize:
-                              15,
-                        ),
-                      ),
-                      style:
-                          ElevatedButton
-                              .styleFrom(
-                        backgroundColor:
-                            const Color(
-                          0xff0083B0,
-                        ),
-                        foregroundColor:
-                            Colors.white,
-                        elevation:
-                            8,
-                        shape:
-                            RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius
-                                  .circular(
-                            17,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(
-                  height: 14,
-                ),
-
-                if (results
-                    .isNotEmpty)
-                  Flexible(
-                    child:
-                        ListView.builder(
-                      shrinkWrap:
-                          true,
-                      padding:
-                          const EdgeInsets
-                              .symmetric(
-                        horizontal:
-                            16,
-                      ),
-                      itemCount:
-                          results.length,
-                      itemBuilder:
-                          (
-                        context,
-                        index,
-                      ) {
-                        return resultItem(
-                          results[
-                              index],
-                        );
-                      },
-                    ),
-                  ),
-
-                if (results
-                        .isEmpty &&
-                    !searching)
-                  Padding(
-                    padding:
-                        const EdgeInsets
-                            .only(
-                      bottom:
-                          18,
-                    ),
-                    child:
-                        Text(
-                      widget.tr(
-                        'نام شهر، خیابان یا مکان را وارد و روی جستجو بزنید.',
-                        'Enter a city, street, or place and press Search.',
-                        'أدخل مدينة أو شارعًا أو مكانًا واضغط بحث.',
-                      ),
-                      textAlign:
-                          TextAlign
-                              .center,
-                      style:
-                          const TextStyle(
-                        color:
-                            Colors.white54,
-                        fontSize:
-                            12,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
