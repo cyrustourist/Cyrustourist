@@ -10,20 +10,11 @@ import 'services/map_state_service.dart';
 import 'providers/map_state_provider.dart';
 import 'pages/map/smart_map_page.dart';
 
-
-// ============================================================
-// MAIN
-// ============================================================
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const CyrusTouristApp());
 }
 
-
-// ============================================================
-// APP
-// ============================================================
 
 class CyrusTouristApp extends StatelessWidget {
   const CyrusTouristApp({super.key});
@@ -33,20 +24,15 @@ class CyrusTouristApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Cyrus Tourist',
-
       theme: ThemeData(
         useMaterial3: true,
       ),
-
-      home: SplashPage(),
+      home: const SplashPage(),
     );
   }
 }
 
 
-// ============================================================
-// LANGUAGE
-// ============================================================
 
 enum AppLanguage {
   persian,
@@ -66,27 +52,23 @@ class LanguageManager {
     final pref =
         await SharedPreferences.getInstance();
 
-
     final saved =
         pref.getString('language');
 
 
-    if (saved == 'fa') {
+    if(saved == 'fa') {
+      current = AppLanguage.persian;
+    }
 
-      current =
-          AppLanguage.persian;
+    else if(saved == 'ar') {
+      current = AppLanguage.arabic;
+    }
 
-    } else if (saved == 'ar') {
+    else if(saved == 'en') {
+      current = AppLanguage.english;
+    }
 
-      current =
-          AppLanguage.arabic;
-
-    } else if (saved == 'en') {
-
-      current =
-          AppLanguage.english;
-
-    } else {
+    else {
 
       final code =
           WidgetsBinding
@@ -97,21 +79,16 @@ class LanguageManager {
               .toLowerCase();
 
 
-      if (code == 'fa') {
+      if(code == 'fa') {
+        current = AppLanguage.persian;
+      }
 
-        current =
-            AppLanguage.persian;
+      else if(code == 'ar') {
+        current = AppLanguage.arabic;
+      }
 
-      } else if (code == 'ar') {
-
-        current =
-            AppLanguage.arabic;
-
-      } else {
-
-        current =
-            AppLanguage.english;
-
+      else {
+        current = AppLanguage.english;
       }
     }
   }
@@ -123,7 +100,6 @@ class LanguageManager {
 
     current = lang;
 
-
     final pref =
         await SharedPreferences.getInstance();
 
@@ -131,70 +107,23 @@ class LanguageManager {
     switch(lang) {
 
       case AppLanguage.persian:
-        await pref.setString(
-            'language',
-            'fa');
+        await pref.setString('language','fa');
         break;
-
 
       case AppLanguage.arabic:
-        await pref.setString(
-            'language',
-            'ar');
+        await pref.setString('language','ar');
         break;
 
-
       case AppLanguage.english:
-        await pref.setString(
-            'language',
-            'en');
+        await pref.setString('language','en');
         break;
     }
   }
 }
 
 
-// ============================================================
-// TEXT
-// ============================================================
 
 class AppText {
-  static String map() {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'نقشه';
-      case AppLanguage.arabic:
-        return 'الخريطة';
-      case AppLanguage.english:
-        return 'Map';
-    }
-  }
-
-
-
-  static bool get rtl =>
-      LanguageManager.current !=
-      AppLanguage.english;
-
-
-
-  static String title() {
-
-    switch(LanguageManager.current) {
-
-      case AppLanguage.persian:
-        return 'سایروس توریست';
-
-
-      case AppLanguage.english:
-        return 'Cyrus Tourist';
-
-
-      case AppLanguage.arabic:
-        return 'سايروس توريست';
-    }
-  }
-
 
 
   static String languageName() {
@@ -204,10 +133,8 @@ class AppText {
       case AppLanguage.persian:
         return 'پارسی';
 
-
       case AppLanguage.english:
         return 'English';
-
 
       case AppLanguage.arabic:
         return 'العربية';
@@ -215,85 +142,133 @@ class AppText {
   }
 
 
+  static bool get rtl =>
+      LanguageManager.current != AppLanguage.english;
+
+
+  static String title() {
+
+    switch(LanguageManager.current) {
+
+      case AppLanguage.persian:
+        return 'سایروس توریست';
+
+      case AppLanguage.english:
+        return 'Cyrus Tourist';
+
+      case AppLanguage.arabic:
+        return 'سايروس توريست';
+    }
+  }
+
 
 }
-
-// ============================================================
-// HOME PAGE
-// ============================================================
-
-
-
-// Splash screen
 class SplashPage extends StatefulWidget {
+
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  State<SplashPage> createState() =>
+      _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+
+
+class _SplashPageState
+    extends State<SplashPage> {
+
 
   @override
   void initState() {
+
     super.initState();
 
+
     LanguageManager.load();
+
 
     Future.delayed(
       const Duration(seconds: 3),
       () {
-        if (mounted) {
+
+        if(mounted) {
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => const HomePage(),
+              builder: (_) =>
+                  const HomePage(),
             ),
           );
+
         }
+
       },
     );
   }
+
+
 
   @override
   Widget build(BuildContext context) {
 
     return Scaffold(
-      backgroundColor: Colors.black,
 
-      body: SizedBox.expand(
+      backgroundColor:
+          Colors.black,
 
-        child: Image.asset(
+
+      body:
+          SizedBox.expand(
+
+        child:
+            Image.asset(
+
           'assets/images/splash.jpg',
-          fit: BoxFit.cover,
 
-          errorBuilder: (context, error, stackTrace) {
+          fit:
+              BoxFit.cover,
+
+
+          errorBuilder:
+              (context,error,stack) {
+
             return const Center(
-              child: Text(
+
+              child:
+                  Text(
                 'Splash image not found',
-                style: TextStyle(color: Colors.white),
+                style:
+                    TextStyle(
+                  color:
+                      Colors.white,
+                ),
               ),
             );
+
           },
+
         ),
 
       ),
-
     );
   }
 }
 
+
+
+
 class HomePage extends StatefulWidget {
 
-  const HomePage({
-    super.key,
-  });
+  const HomePage({super.key});
 
 
   @override
   State<HomePage> createState() =>
       _HomePageState();
+
 }
+
 
 
 
@@ -319,112 +294,10 @@ class _HomePageState
 
       case AppLanguage.arabic:
         return 'assets/images/home_ar.jpg';
+
     }
+
   }
-
-
-
-  Future<void> openLanguage() async {
-
-
-    await showModalBottomSheet(
-
-      context: context,
-
-
-      backgroundColor:
-          const Color(0xff071722),
-
-
-      builder: (_) {
-
-
-        return Column(
-
-          mainAxisSize:
-              MainAxisSize.min,
-
-
-          children: [
-
-            languageItem(
-              'پارسی',
-              AppLanguage.persian,
-            ),
-
-
-            languageItem(
-              'English',
-              AppLanguage.english,
-            ),
-
-
-            languageItem(
-              'العربية',
-              AppLanguage.arabic,
-            ),
-          ],
-        );
-      },
-    );
-
-
-    if(mounted) {
-
-      setState(() {});
-    }
-  }
-
-
-
-
-
-  Widget languageItem(
-      String text,
-      AppLanguage lang) {
-
-
-    return ListTile(
-
-      title: Text(
-
-        text,
-
-        style:
-            const TextStyle(
-
-          color:
-              Colors.white,
-
-          fontSize:
-              20,
-
-          fontWeight:
-              FontWeight.bold,
-        ),
-      ),
-
-
-      onTap: () async {
-
-
-        await LanguageManager
-            .setLanguage(lang);
-
-
-
-        if(mounted) {
-
-
-          Navigator.pop(context);
-
-
-          setState(() {});
-        }
-      },
-    );
-  }
-
 
 
 
@@ -439,19 +312,12 @@ class _HomePageState
     });
 
 
-
     await Future.delayed(
-
-      const Duration(
-        milliseconds: 150,
-      ),
-
+      const Duration(milliseconds:150),
     );
 
 
-
     if(!mounted) return;
-
 
 
     setState(() {
@@ -462,15 +328,12 @@ class _HomePageState
 
 
 
-    // نقشه گردشگری
-
     if(number == 1) {
 
 
       Navigator.push(
 
         context,
-
 
         MaterialPageRoute(
 
@@ -480,10 +343,21 @@ class _HomePageState
         ),
 
       );
+
     }
+
+
+    // کلید ۹ بعداً اینجا وصل می‌شود
+
+    if(number == 9) {
+
+
+      // TODO: صفحه Me
+
+
+    }
+
   }
-
-
 
 
 
@@ -526,19 +400,20 @@ class _HomePageState
           imageHeight * height,
 
 
-
       child:
           GestureDetector(
 
+        behavior:
+            HitTestBehavior.opaque,
 
-        onTap: () =>
-            tap(number),
+
+        onTap:
+            () => tap(number),
 
 
 
         child:
             AnimatedScale(
-
 
           scale:
               selected == number
@@ -548,124 +423,69 @@ class _HomePageState
 
           duration:
               const Duration(
-                milliseconds: 120,
+                milliseconds:120,
               ),
 
 
 
           child:
-              AnimatedContainer(
+              Container(),
 
-
-            duration:
-                const Duration(
-                  milliseconds: 120,
-                ),
-
-
-
-            decoration:
-                BoxDecoration(
-
-
-              borderRadius:
-                  BorderRadius.circular(
-                    18,
-                  ),
-
-
-
-              boxShadow:
-
-                  selected == number
-
-                  ? [
-
-                    BoxShadow(
-
-                      color:
-                          const Color(
-                            0xffffd36a,
-                          )
-                          .withValues(
-                            alpha: 0.8,
-                          ),
-
-
-                      blurRadius:
-                          25,
-
-
-                      spreadRadius:
-                          5,
-
-                    ),
-
-                  ]
-
-                  : [],
-
-            ),
-          ),
         ),
+
       ),
+
     );
+
   }
-
-
-
-
-
-
-
-  @override
+    @override
   Widget build(BuildContext context) {
 
-
     return Scaffold(
-
 
       backgroundColor:
           Colors.black,
 
 
-
       body:
-          SafeArea(
 
+      SafeArea(
 
         child:
-            LayoutBuilder(
 
+        LayoutBuilder(
 
           builder:
-              (context, constraints) {
+              (context,constraints) {
 
 
-
-            double width =
+            final screenW =
                 constraints.maxWidth;
 
 
-
-            double height =
-                width * 16 / 9;
-
+            final screenH =
+                constraints.maxHeight;
 
 
-            if(height >
-                constraints.maxHeight) {
+
+            double imageW =
+                screenW;
 
 
-              height =
-                  constraints.maxHeight;
+            double imageH =
+                screenW * 16 / 9;
 
 
-              width =
-                  height * 9 / 16;
+
+            if(imageH > screenH) {
+
+              imageH =
+                  screenH;
+
+              imageW =
+                  screenH * 9 / 16;
+
             }
-
-
 
 
 
@@ -673,107 +493,381 @@ class _HomePageState
 
 
               child:
-                  SizedBox(
 
+              SizedBox(
 
                 width:
-                    width,
-
+                    screenW,
 
                 height:
-                    height,
-
+                    screenH,
 
 
                 child:
-                    Stack(
 
-
-                  fit:
-                      StackFit.expand,
-
-
+                Stack(
 
                   children: [
 
 
 
-                    Image.asset(
-  homeImage,
-  fit: BoxFit.contain,
-),
+                    // تصویر اصلی
+
+                    Center(
+
+                      child:
+
+                      SizedBox(
+
+                        width:
+                            imageW,
+
+                        height:
+                            imageH,
+
+
+                        child:
+
+                        Stack(
+
+                          fit:
+                              StackFit.expand,
+
+
+                          children: [
+
+
+                            Image.asset(
+
+                              homeImage,
+
+                              fit:
+                                  BoxFit.fill,
+
+                            ),
 
 
 
+                            // کلیدها روی خود عکس
+
+                            area(
+                              1,
+                              .02,
+                              .62,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+                            area(
+                              2,
+                              .21,
+                              .62,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+                            area(
+                              3,
+                              .40,
+                              .62,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+                            area(
+                              4,
+                              .59,
+                              .62,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+                            area(
+                              5,
+                              .78,
+                              .62,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+
+                            area(
+                              6,
+                              .02,
+                              .73,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+                            area(
+                              7,
+                              .21,
+                              .73,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+                            area(
+                              8,
+                              .40,
+                              .73,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+                            area(
+                              9,
+                              .59,
+                              .73,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+                            area(
+                              10,
+                              .78,
+                              .73,
+                              .18,
+                              .10,
+                              imageW,
+                              imageH,
+                            ),
+
+
+
+                          ],
+
+                        ),
+
+                      ),
+
+                    ),
+
+
+
+
+
+                    // دکمه زبان
 
                     Positioned(
 
-
                       top:
                           15,
-
 
                       left:
                           15,
 
 
-
                       child:
-                          GestureDetector(
 
+                      GestureDetector(
 
                         onTap:
-                            openLanguage,
+                            () async {
+
+                          await showModalBottomSheet(
+
+                            context:
+                                context,
+
+
+                            backgroundColor:
+                                const Color(
+                                  0xff071722,
+                                ),
+
+
+                            builder:
+                                (_) {
+
+
+                              return Column(
+
+                                mainAxisSize:
+                                    MainAxisSize.min,
+
+
+                                children: [
+
+
+                                  ListTile(
+
+                                    title:
+                                        const Text(
+                                      'پارسی',
+                                      style:
+                                      TextStyle(
+                                        color:
+                                            Colors.white,
+                                      ),
+                                    ),
+
+
+                                    onTap:
+                                        () async {
+
+                                      await LanguageManager
+                                          .setLanguage(
+                                          AppLanguage.persian
+                                      );
+
+                                      if(mounted){
+
+                                        Navigator.pop(context);
+
+                                        setState((){});
+
+                                      }
+
+                                    },
+
+                                  ),
+
+
+
+                                  ListTile(
+
+                                    title:
+                                        const Text(
+                                      'English',
+                                      style:
+                                      TextStyle(
+                                        color:
+                                            Colors.white,
+                                      ),
+                                    ),
+
+
+                                    onTap:
+                                        () async {
+
+                                      await LanguageManager
+                                          .setLanguage(
+                                          AppLanguage.english
+                                      );
+
+                                      if(mounted){
+
+                                        Navigator.pop(context);
+
+                                        setState((){});
+
+                                      }
+
+                                    },
+
+                                  ),
+
+
+
+                                  ListTile(
+
+                                    title:
+                                        const Text(
+                                      'العربية',
+                                      style:
+                                      TextStyle(
+                                        color:
+                                            Colors.white,
+                                      ),
+                                    ),
+
+
+                                    onTap:
+                                        () async {
+
+                                      await LanguageManager
+                                          .setLanguage(
+                                          AppLanguage.arabic
+                                      );
+
+                                      if(mounted){
+
+                                        Navigator.pop(context);
+
+                                        setState((){});
+
+                                      }
+
+                                    },
+
+                                  ),
+
+
+                                ],
+
+                              );
+
+                            },
+
+                          );
+
+                        },
 
 
 
                         child:
-                            Container(
 
+                        Container(
 
                           padding:
-                              const EdgeInsets.all(
-                                10,
-                              ),
-
+                              const EdgeInsets.all(10),
 
 
                           decoration:
                               BoxDecoration(
-
 
                             color:
                                 const Color(
                                   0xff0b506b,
                                 ),
 
-
-
                             borderRadius:
-                                BorderRadius.circular(
-                                  22,
-                                ),
-
-
+                                BorderRadius.circular(22),
 
                             border:
                                 Border.all(
+                                  color:
+                                      const Color(
+                                        0xffffd36a,
+                                      ),
+                                ),
 
-                              color:
-                                  const Color(
-                                    0xffffd36a,
-                                  ),
-                            ),
                           ),
 
 
-
                           child:
-                              Text(
+
+                          Text(
 
                             AppText.languageName(),
-
-
 
                             style:
                                 const TextStyle(
@@ -781,49 +875,36 @@ class _HomePageState
                               color:
                                   Colors.white,
 
-
                               fontWeight:
                                   FontWeight.bold,
 
                             ),
+
                           ),
+
                         ),
+
                       ),
+
                     ),
 
 
-
-
-                    area(1,.02,.62,.18,.10,width,height),
-
-                    area(2,.21,.62,.18,.10,width,height),
-
-                    area(3,.40,.62,.18,.10,width,height),
-
-                    area(4,.59,.62,.18,.10,width,height),
-
-                    area(5,.78,.62,.18,.10,width,height),
-
-
-                    area(6,.02,.73,.18,.10,width,height),
-
-                    area(7,.21,.73,.18,.10,width,height),
-
-                    area(8,.40,.73,.18,.10,width,height),
-
-                    area(9,.59,.73,.18,.10,width,height),
-
-                    area(10,.78,.73,.18,.10,width,height),
-
                   ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
 
+                ),
+
+              ),
+
+            );
+
+          },
+
+        ),
+
+      ),
+
+    );
+
+  }
 
 }
