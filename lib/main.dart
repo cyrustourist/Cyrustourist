@@ -9,6 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/map_state_service.dart';
 import 'providers/map_state_provider.dart';
 
+import 'map_place.dart';
+import 'pages/category_explorer_page.dart';
+
 // ============================================================
 // MAIN
 // ============================================================
@@ -299,29 +302,32 @@ class _HomePageState extends State<HomePage> {
 
   String buttonTitle(int number) {
     switch (number) {
+      case 1:
+        return 'نقشه';
+
       case 2:
-        return 'جاذبه‌های اطراف من';
+        return 'گردشگری سلامت';
 
       case 3:
         return 'جاذبه‌های گردشگری';
 
       case 4:
-        return 'فیلم‌های گردشگری';
+        return 'نمایش فیلم';
 
       case 5:
-        return 'اقامتگاه';
+        return 'اقامتگاه‌ها';
 
       case 6:
-        return 'خدمات گردشگری';
-
-      case 7:
-        return 'ایران';
-
-      case 8:
         return 'راهنمای سفر';
 
+      case 7:
+        return 'دنبال کنید';
+
+      case 8:
+        return 'درباره ما';
+
       case 9:
-        return 'من';
+        return 'پشتیبانی';
 
       case 10:
         return 'علاقه‌مندی‌ها';
@@ -368,7 +374,24 @@ class _HomePageState extends State<HomePage> {
     }
 
     // ========================================================
-    // کلیدهای 2 تا 10
+    // کلید 2 = گردشگری سلامت
+    // ========================================================
+
+    if (number == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const CategoryExplorerPage(
+            initialCategory: PlaceCategory.health,
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    // ========================================================
+    // کلیدهای 3 تا 10
     // فعلاً صفحه موقت
     // ========================================================
 
@@ -1298,285 +1321,3 @@ class _SmartMapPageState
                     ? 'جاذبه‌ها'
                     : LanguageManager.current ==
                             AppLanguage.arabic
-                        ? 'المعالم'
-                        : 'Attractions',
-              ),
-
-              mapServiceButton(
-                Icons.health_and_safety,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'سلامت'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'الصحة'
-                        : 'Health',
-              ),
-
-              mapServiceButton(
-                Icons.miscellaneous_services,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'خدمات'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'الخدمات'
-                        : 'Services',
-              ),
-            ],
-          ),
-
-          const SizedBox(
-            height: 10,
-          ),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(
-                '↪️ ${AppText.title()}',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget mapServiceButton(
-    IconData icon,
-    String text,
-  ) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.all(4),
-        height: 70,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius:
-              BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(
-                alpha: .30,
-              ),
-              blurRadius: 8,
-              offset: const Offset(
-                0,
-                3,
-              ),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment:
-              MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color:
-                  const Color(0xff0b506b),
-            ),
-
-            const SizedBox(
-              height: 4,
-            ),
-
-            Text(
-              text,
-              maxLines: 1,
-              overflow:
-                  TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight:
-                    FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // MAP PAGE BUILD
-  // ==========================================================
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection:
-          AppText.rtl
-              ? TextDirection.rtl
-              : TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor:
-            const Color(0xff071722),
-
-        appBar: AppBar(
-          backgroundColor:
-              const Color(0xff071722),
-          foregroundColor:
-              Colors.white,
-          title: Text(
-            AppText.map(),
-            style: const TextStyle(
-              fontWeight:
-                  FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-        ),
-
-        body: Stack(
-          children: [
-            Column(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      FlutterMap(
-                        mapController:
-                            mapController,
-                        options:
-                            const MapOptions(
-                          initialCenter:
-                              iranCenter,
-                          initialZoom:
-                              5,
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName:
-                                'cyrustourist.ir.app',
-                          ),
-                          MarkerLayer(
-                            markers:
-                                markers(),
-                          ),
-                        ],
-                      ),
-
-                      // ==================================================
-                      // دکمه موقعیت من
-                      // ==================================================
-
-                      Positioned(
-                        right: 15,
-                        bottom: 15,
-                        child:
-                            FloatingActionButton(
-                          backgroundColor:
-                              Colors.white,
-                          onPressed:
-                              getLocation,
-                          child: loading
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child:
-                                      CircularProgressIndicator(
-                                    strokeWidth:
-                                        2,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.my_location,
-                                ),
-                        ),
-                      ),
-
-                      // ==================================================
-                      // پیام بررسی موقعیت
-                      // ==================================================
-
-                      if (loading && mapReady)
-                        Positioned(
-                          top: 15,
-                          left: 15,
-                          right: 15,
-                          child: Center(
-                            child: Container(
-                              padding:
-                                  const EdgeInsets
-                                      .symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                color: const Color(
-                                  0xff071722,
-                                ).withValues(
-                                  alpha: .9,
-                                ),
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  25,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize:
-                                    MainAxisSize.min,
-                                children: [
-                                  const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child:
-                                        CircularProgressIndicator(
-                                      strokeWidth:
-                                          2,
-                                      color: Color(
-                                        0xffffd36a,
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(
-                                    width: 10,
-                                  ),
-
-                                  Text(
-                                    locationText,
-                                    style:
-                                        const TextStyle(
-                                      color:
-                                          Colors.white,
-                                      fontSize:
-                                          12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // ==================================================
-                // نوار خدمات نقشه
-                // ==================================================
-
-                mapTools(),
-              ],
-            ),
-
-            if (!mapReady)
-              Positioned.fill(
-                child: loadingScreen(),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
