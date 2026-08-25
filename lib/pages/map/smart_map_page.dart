@@ -445,6 +445,7 @@ class _SmartMapPageState extends State<SmartMapPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
         return _SearchPanel(
@@ -2082,6 +2083,7 @@ class _SearchPanelState
 
   @override
   void dispose() {
+    searchTimer?.cancel();
     originController.dispose();
     destinationController.dispose();
     super.dispose();
@@ -2098,62 +2100,56 @@ class _SearchPanelState
 
     await performSearch(
       controller.text,
+      keepKeyboard: false,
     );
   }
-
 
   void autoCompleteSearch(String value) {
     searchTimer?.cancel();
 
+    final cleanQuery = value.trim();
+
+    if (cleanQuery.length < 2) {
+      if (mounted) {
+        setState(() {
+          results = [];
+          searching = false;
+        });
+      }
+      return;
+    }
+
     searchTimer = Timer(
-      const Duration(milliseconds: 500),
+      const Duration(milliseconds: 450),
       () {
-        if (value.trim().length >= 2) {
-          performSearch(value);
+        if (mounted) {
+          performSearch(
+            cleanQuery,
+            keepKeyboard: true,
+          );
         }
       },
     );
   }
 
   Future<void> performSearch(
-    String query,
-  ) async {
-    final cleanQuery =
-        query.trim();
+    String query, {
+    bool keepKeyboard = false,
+  }) async {
+    final cleanQuery = query.trim();
 
     if (cleanQuery.length < 2) {
       setState(() {
         results = [];
+        searching = false;
       });
-
-      Future.delayed(
-        const Duration(milliseconds: 500),
-        () {
-          if (mounted) {
-            Navigator.pop(context);
-            // مسیر‌یابی پس از انتخاب مبدأ و مقصد
-            widget.onRoute();
-          }
-        },
-      );
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'حداقل دو حرف وارد کنید.',
-              'Enter at least two characters.',
-              'أدخل حرفين على الأقل.',
-            ),
-          ),
-        ),
-      );
 
       return;
     }
 
-    FocusScope.of(context).unfocus();
+    if (!keepKeyboard) {
+      FocusScope.of(context).unfocus();
+    }
 
     setState(() {
       searching = true;
@@ -2161,10 +2157,7 @@ class _SearchPanelState
     });
 
     try {
-      final data =
-          await widget.searchPlaces(
-        cleanQuery,
-      );
+      final data = await widget.searchPlaces(cleanQuery);
 
       if (!mounted) return;
 
@@ -2173,9 +2166,8 @@ class _SearchPanelState
         searching = false;
       });
 
-      if (data.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+      if (data.isEmpty && !keepKeyboard) {
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               widget.tr(
@@ -2195,8 +2187,7 @@ class _SearchPanelState
         results = [];
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             widget.tr(
@@ -2230,33 +2221,25 @@ class _SearchPanelState
     }
 
     final name =
-        result['display_name']
-                ?.toString() ??
+        result['display_name']?.toString() ??
             widget.tr(
               'مکان انتخاب‌شده',
               'Selected place',
               'المكان المحدد',
             );
 
-    final point =
-        LatLng(lat, lon);
+    final point = LatLng(lat, lon);
 
     if (originMode) {
-      widget.onOriginSelected(
-        point,
-        name,
-      );
-
-      originController.text =
-          name;
+      widget.onOriginSelected(point, name);
+      originController.text = name;
 
       setState(() {
         originMode = false;
         results = [];
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             widget.tr(
@@ -2267,32 +2250,20 @@ class _SearchPanelState
           ),
         ),
       );
-    } else {
-      widget.onDestinationSelected(
-        point,
-        name,
-      );
-
-      destinationController.text =
-          name;
-
-      setState(() {
-        results = [];
-      });
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.tr(
-              'مقصد انتخاب شد؛ برای مسیریابی دکمه مسیریابی را بزنید.',
-              'Destination selected; press Route to calculate the route.',
-              'تم اختيار الوجهة؛ اضغط على المسار لحساب الطريق.',
-            ),
-          ),
-        ),
-      );
+      return;
     }
+
+    // مقصد انتخاب شد. ابتدا وضعیت صفحه اصلی را به‌روزرسانی می‌کنیم،
+    // سپس همین BottomSheet را می‌بندیم تا پنل تأیید مقصد فوراً دیده شود.
+    widget.onDestinationSelected(point, name);
+    destinationController.text = name;
+
+    setState(() {
+      results = [];
+    });
+
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).pop();
   }
 
   // ============================================================
@@ -2383,10 +2354,12 @@ class _SearchPanelState
         textInputAction:
             TextInputAction.search,
         onTap: () {
-          setState(() {
-            originMode = origin;
-            results = [];
-          });
+          if (originMode != origin) {
+            setState(() {
+              originMode = origin;
+              results = [];
+            });
+          }
         },
         onSubmitted: (_) {
           setState(() {
@@ -2564,24 +2537,22 @@ class _SearchPanelState
 
   @override
   Widget build(BuildContext context) {
-    final bottom =
-        MediaQuery.of(context)
-            .viewInsets
-            .bottom;
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+    final availableHeight = media.size.height - keyboard - 12;
+    final panelMaxHeight = availableHeight.clamp(300.0, 680.0);
 
     return Directionality(
       textDirection: isRtl
           ? TextDirection.rtl
           : TextDirection.ltr,
-      child: Padding(
-        padding:
-            EdgeInsets.only(
-          bottom: bottom,
-        ),
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(bottom: keyboard),
         child: Container(
-          constraints:
-              const BoxConstraints(
-            maxHeight: 680,
+          constraints: BoxConstraints(
+            maxHeight: panelMaxHeight,
           ),
           decoration:
               const BoxDecoration(
@@ -2853,22 +2824,24 @@ class _SearchPanelState
                 ),
 
                 if (results.isNotEmpty)
-                  Container(
-                    constraints: const BoxConstraints(
-                      maxHeight: 220,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                    ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      physics: const ClampingScrollPhysics(),
-                      itemCount: results.length,
-                      itemBuilder: (context, index) {
-                        return resultItem(
-                          results[index],
-                        );
-                      },
+                  Flexible(
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        minHeight: 70,
+                        maxHeight: 260,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
+                      child: ListView.builder(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        physics: const ClampingScrollPhysics(),
+                        itemCount: results.length,
+                        itemBuilder: (context, index) {
+                          return resultItem(results[index]);
+                        },
+                      ),
                     ),
                   ),
 
