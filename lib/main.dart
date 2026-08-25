@@ -8,12 +8,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/map_state_service.dart';
 import 'providers/map_state_provider.dart';
-import 'pages/map/smart_map_page.dart';
+
+// ============================================================
+// MAIN
+// ============================================================
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const CyrusTouristApp());
 }
+
+// ============================================================
+// APP
+// ============================================================
 
 class CyrusTouristApp extends StatelessWidget {
   const CyrusTouristApp({super.key});
@@ -30,6 +37,10 @@ class CyrusTouristApp extends StatelessWidget {
     );
   }
 }
+
+// ============================================================
+// LANGUAGE
+// ============================================================
 
 enum AppLanguage {
   persian,
@@ -90,17 +101,21 @@ class LanguageManager {
   }
 }
 
+// ============================================================
+// TEXT
+// ============================================================
+
 class AppText {
-  static String languageName() {
+  static String map() {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
-        return 'پارسی';
-
-      case AppLanguage.english:
-        return 'English';
+        return 'نقشه';
 
       case AppLanguage.arabic:
-        return 'العربية';
+        return 'الخريطة';
+
+      case AppLanguage.english:
+        return 'Map';
     }
   }
 
@@ -117,6 +132,19 @@ class AppText {
 
       case AppLanguage.arabic:
         return 'سايروس توريست';
+    }
+  }
+
+  static String languageName() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'پارسی';
+
+      case AppLanguage.english:
+        return 'English';
+
+      case AppLanguage.arabic:
+        return 'العربية';
     }
   }
 }
@@ -162,7 +190,7 @@ class _SplashPageState extends State<SplashPage> {
         child: Image.asset(
           'assets/images/splash.jpg',
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stack) {
+          errorBuilder: (context, error, stackTrace) {
             return const Center(
               child: Text(
                 'Splash image not found',
@@ -180,12 +208,12 @@ class _SplashPageState extends State<SplashPage> {
 
 // ============================================================
 // HOME PAGE
-// تصویر اصلی بدون تغییر
-// فقط Touch Zone ها
 // ============================================================
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({
+    super.key,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -208,6 +236,102 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ==========================================================
+  // LANGUAGE
+  // ==========================================================
+
+  Future<void> openLanguage() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xff071722),
+      builder: (_) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            languageItem(
+              'پارسی',
+              AppLanguage.persian,
+            ),
+            languageItem(
+              'English',
+              AppLanguage.english,
+            ),
+            languageItem(
+              'العربية',
+              AppLanguage.arabic,
+            ),
+          ],
+        );
+      },
+    );
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Widget languageItem(
+    String text,
+    AppLanguage lang,
+  ) {
+    return ListTile(
+      title: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      onTap: () async {
+        await LanguageManager.setLanguage(lang);
+
+        if (mounted) {
+          Navigator.pop(context);
+          setState(() {});
+        }
+      },
+    );
+  }
+
+  // ==========================================================
+  // BUTTON TITLES
+  // ==========================================================
+
+  String buttonTitle(int number) {
+    switch (number) {
+      case 2:
+        return 'جاذبه‌های اطراف من';
+
+      case 3:
+        return 'جاذبه‌های گردشگری';
+
+      case 4:
+        return 'فیلم‌های گردشگری';
+
+      case 5:
+        return 'اقامتگاه';
+
+      case 6:
+        return 'خدمات گردشگری';
+
+      case 7:
+        return 'ایران';
+
+      case 8:
+        return 'راهنمای سفر';
+
+      case 9:
+        return 'من';
+
+      case 10:
+        return 'علاقه‌مندی‌ها';
+
+      default:
+        return 'Cyrus Tourist';
+    }
+  }
+
+  // ==========================================================
   // TAP
   // ==========================================================
 
@@ -217,7 +341,9 @@ class _HomePageState extends State<HomePage> {
     });
 
     await Future.delayed(
-      const Duration(milliseconds: 150),
+      const Duration(
+        milliseconds: 150,
+      ),
     );
 
     if (!mounted) return;
@@ -226,9 +352,9 @@ class _HomePageState extends State<HomePage> {
       selected = 0;
     });
 
-    // --------------------------------------------------------
-    // کلید 1 = Smart Map
-    // --------------------------------------------------------
+    // ========================================================
+    // کلید 1 = نقشه گردشگری
+    // ========================================================
 
     if (number == 1) {
       Navigator.push(
@@ -237,26 +363,28 @@ class _HomePageState extends State<HomePage> {
           builder: (_) => const SmartMapPage(),
         ),
       );
+
+      return;
     }
 
-    // --------------------------------------------------------
-    // کلید 9
-    // فعلاً همان وضعیت قبلی حفظ شده است
-    // --------------------------------------------------------
+    // ========================================================
+    // کلیدهای 2 تا 10
+    // فعلاً صفحه موقت
+    // ========================================================
 
-    if (number == 9) {
-      // TODO: صفحه Me
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkInProgressPage(
+          number: number,
+          title: buttonTitle(number),
+        ),
+      ),
+    );
   }
 
   // ==========================================================
   // TOUCH AREA
-  //
-  // مختصات بر اساس خود تصویر 9:16 هستند.
-  //
-  // مهم:
-  // هیچ Widget قابل مشاهده‌ای روی تصویر ساخته نمی‌شود.
-  // فقط GestureDetector شفاف وجود دارد.
   // ==========================================================
 
   Widget area(
@@ -277,12 +405,27 @@ class _HomePageState extends State<HomePage> {
         behavior: HitTestBehavior.opaque,
         onTap: () => tap(number),
         child: AnimatedScale(
-          scale: selected == number ? 0.92 : 1.0,
+          scale: selected == number ? 0.92 : 1,
           duration: const Duration(
             milliseconds: 120,
           ),
-          child: Container(
-            color: Colors.transparent,
+          child: AnimatedContainer(
+            duration: const Duration(
+              milliseconds: 120,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: selected == number
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xffffd36a)
+                            .withValues(alpha: 0.8),
+                        blurRadius: 25,
+                        spreadRadius: 5,
+                      ),
+                    ]
+                  : [],
+            ),
           ),
         ),
       ),
@@ -300,163 +443,29 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final screenW = constraints.maxWidth;
-            final screenH = constraints.maxHeight;
+            double width = constraints.maxWidth;
 
-            double imageW = screenW;
-            double imageH = screenW * 16 / 9;
+            double height = width * 16 / 9;
 
-            if (imageH > screenH) {
-              imageH = screenH;
-              imageW = screenH * 9 / 16;
+            if (height > constraints.maxHeight) {
+              height = constraints.maxHeight;
+              width = height * 9 / 16;
             }
 
             return Center(
               child: SizedBox(
-                width: screenW,
-                height: screenH,
+                width: width,
+                height: height,
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
                     // ==================================================
                     // HOME IMAGE
                     // ==================================================
 
-                    Center(
-                      child: SizedBox(
-                        width: imageW,
-                        height: imageH,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.asset(
-                              homeImage,
-                              fit: BoxFit.fill,
-                            ),
-
-                            // ==================================================
-                            // TOUCH ZONES HOME
-                            //
-                            // تنظیم بر اساس موقعیت واقعی کلیدهای داخل تصویر
-                            //
-                            // ردیف اول:
-                            // 0.535 تا 0.715
-                            //
-                            // ردیف دوم:
-                            // 0.725 تا 0.905
-                            //
-                            // هیچ ناحیه‌ای روی دیگری قرار ندارد.
-                            // ==================================================
-
-                            // -------------------------
-                            // ردیف اول: کلیدهای 1 تا 5
-                            // -------------------------
-
-                            area(
-                              1,
-                              0.02,
-                              0.535,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            area(
-                              2,
-                              0.21,
-                              0.535,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            area(
-                              3,
-                              0.40,
-                              0.535,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            area(
-                              4,
-                              0.59,
-                              0.535,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            area(
-                              5,
-                              0.78,
-                              0.535,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            // -------------------------
-                            // ردیف دوم: کلیدهای 6 تا 10
-                            // -------------------------
-
-                            area(
-                              6,
-                              0.02,
-                              0.725,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            area(
-                              7,
-                              0.21,
-                              0.725,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            area(
-                              8,
-                              0.40,
-                              0.725,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            area(
-                              9,
-                              0.59,
-                              0.725,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-
-                            area(
-                              10,
-                              0.78,
-                              0.725,
-                              0.18,
-                              0.18,
-                              imageW,
-                              imageH,
-                            ),
-                          ],
-                        ),
-                      ),
+                    Image.asset(
+                      homeImage,
+                      fit: BoxFit.cover,
                     ),
 
                     // ==================================================
@@ -467,109 +476,1105 @@ class _HomePageState extends State<HomePage> {
                       top: 15,
                       left: 15,
                       child: GestureDetector(
-                        onTap: () async {
-                          await showModalBottomSheet(
-                            context: context,
-                            backgroundColor:
-                                const Color(0xff071722),
-                            builder: (_) {
-                              return Column(
-                                mainAxisSize:
-                                    MainAxisSize.min,
-                                children: [
-                                  ListTile(
-                                    title: const Text(
-                                      'پارسی',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    onTap: () async {
-                                      await LanguageManager
-                                          .setLanguage(
-                                        AppLanguage.persian,
-                                      );
-
-                                      if (mounted) {
-                                        Navigator.pop(context);
-                                        setState(() {});
-                                      }
-                                    },
-                                  ),
-                                  ListTile(
-                                    title: const Text(
-                                      'English',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    onTap: () async {
-                                      await LanguageManager
-                                          .setLanguage(
-                                        AppLanguage.english,
-                                      );
-
-                                      if (mounted) {
-                                        Navigator.pop(context);
-                                        setState(() {});
-                                      }
-                                    },
-                                  ),
-                                  ListTile(
-                                    title: const Text(
-                                      'العربية',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    onTap: () async {
-                                      await LanguageManager
-                                          .setLanguage(
-                                        AppLanguage.arabic,
-                                      );
-
-                                      if (mounted) {
-                                        Navigator.pop(context);
-                                        setState(() {});
-                                      }
-                                    },
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
+                        onTap: openLanguage,
                         child: Container(
-                          padding:
-                              const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xff0b506b,
-                            ),
+                            color: const Color(0xff0b506b),
                             borderRadius:
                                 BorderRadius.circular(22),
                             border: Border.all(
-                              color: const Color(
-                                0xffffd36a,
-                              ),
+                              color:
+                                  const Color(0xffffd36a),
                             ),
                           ),
                           child: Text(
                             AppText.languageName(),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontWeight:
-                                  FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
+                    ),
+
+                    // ==================================================
+                    // TOUCH ZONES
+                    //
+                    // ردیف اول:
+                    // 0.535 تا 0.715
+                    //
+                    // ردیف دوم:
+                    // 0.725 تا 0.905
+                    //
+                    // عرض و ارتفاع هر ناحیه:
+                    // 0.18
+                    // ==================================================
+
+                    // -------------------------
+                    // ردیف اول: 1 تا 5
+                    // -------------------------
+
+                    area(
+                      1,
+                      .02,
+                      .535,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    area(
+                      2,
+                      .21,
+                      .535,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    area(
+                      3,
+                      .40,
+                      .535,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    area(
+                      4,
+                      .59,
+                      .535,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    area(
+                      5,
+                      .78,
+                      .535,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    // -------------------------
+                    // ردیف دوم: 6 تا 10
+                    // -------------------------
+
+                    area(
+                      6,
+                      .02,
+                      .725,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    area(
+                      7,
+                      .21,
+                      .725,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    area(
+                      8,
+                      .40,
+                      .725,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    area(
+                      9,
+                      .59,
+                      .725,
+                      .18,
+                      .18,
+                      width,
+                      height,
+                    ),
+
+                    area(
+                      10,
+                      .78,
+                      .725,
+                      .18,
+                      .18,
+                      width,
+                      height,
                     ),
                   ],
                 ),
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// TEMPORARY WORK IN PROGRESS PAGE
+// ============================================================
+
+class WorkInProgressPage extends StatelessWidget {
+  final int number;
+  final String title;
+
+  const WorkInProgressPage({
+    super.key,
+    required this.number,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection:
+          AppText.rtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: const Color(0xff071722),
+        appBar: AppBar(
+          backgroundColor: const Color(0xff071722),
+          foregroundColor: Colors.white,
+          centerTitle: true,
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment:
+                MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.construction,
+                color: Color(0xffffd36a),
+                size: 70,
+              ),
+
+              const SizedBox(
+                height: 25,
+              ),
+
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xffffd36a),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(
+                height: 20,
+              ),
+
+              const Text(
+                'در حال کار است',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
+              ),
+
+              const SizedBox(
+                height: 12,
+              ),
+
+              Text(
+                'کلید شماره $number',
+                style: TextStyle(
+                  color: Colors.white.withValues(
+                    alpha: 0.65,
+                  ),
+                  fontSize: 14,
+                ),
+              ),
+
+              const SizedBox(
+                height: 30,
+              ),
+
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: const Icon(
+                  Icons.arrow_back,
+                ),
+                label: const Text(
+                  'بازگشت',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// SMART MAP PAGE
+// ============================================================
+
+class SmartMapPage extends StatefulWidget {
+  const SmartMapPage({super.key});
+
+  @override
+  State<SmartMapPage> createState() =>
+      _SmartMapPageState();
+}
+
+class _SmartMapPageState
+    extends State<SmartMapPage>
+    with SingleTickerProviderStateMixin {
+  final MapController mapController =
+      MapController();
+
+  static const LatLng iranCenter = LatLng(
+    32.4279,
+    53.6880,
+  );
+
+  LatLng? userLocation;
+
+  final TextEditingController originController =
+      TextEditingController(
+    text: 'موقعیت فعلی من',
+  );
+
+  final TextEditingController
+      destinationController =
+      TextEditingController();
+
+  bool loading = true;
+  bool mapReady = false;
+  bool locationLoading = false;
+
+  String? locationWarning;
+
+  late AnimationController animationController;
+  late Animation<double> scaleAnimation;
+  late Animation<double> rotationAnimation;
+  late Animation<double> glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+
+    scaleAnimation = Tween<double>(
+      begin: 0.94,
+      end: 1.06,
+    ).animate(
+      CurvedAnimation(
+        parent: animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    rotationAnimation = Tween<double>(
+      begin: 0,
+      end: 6.283,
+    ).animate(
+      CurvedAnimation(
+        parent: animationController,
+        curve: Curves.linear,
+      ),
+    );
+
+    glowAnimation = Tween<double>(
+      begin: 0.25,
+      end: 0.85,
+    ).animate(
+      CurvedAnimation(
+        parent: animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) {
+      prepareMap();
+    });
+  }
+
+  @override
+  void dispose() {
+    animationController.dispose();
+    originController.dispose();
+    destinationController.dispose();
+
+    super.dispose();
+  }
+
+  // ==========================================================
+  // MAP START
+  // ==========================================================
+
+  Future<void> prepareMap() async {
+    if (!mounted) return;
+
+    setState(() {
+      mapReady = true;
+      loading = false;
+    });
+
+    await loadLastLocation();
+
+    await getLocation();
+  }
+
+  Future<void> loadLastLocation() async {
+    try {
+      final pref =
+          await SharedPreferences.getInstance();
+
+      final lat = pref.getDouble('last_lat');
+      final lng = pref.getDouble('last_lng');
+
+      if (lat == null || lng == null) return;
+
+      final point = LatLng(
+        lat,
+        lng,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        userLocation = point;
+      });
+
+      mapController.move(
+        point,
+        13,
+      );
+    } catch (_) {}
+  }
+
+  // ==========================================================
+  // LOCATION
+  // ==========================================================
+
+  Future<void> getLocation() async {
+    if (locationLoading) return;
+
+    locationLoading = true;
+
+    try {
+      final enabled =
+          await Geolocator.isLocationServiceEnabled();
+
+      if (!enabled) {
+        setState(() {
+          locationWarning =
+              'موقعیت‌یاب دستگاه خاموش است';
+        });
+
+        return;
+      }
+
+      LocationPermission permission =
+          await Geolocator.checkPermission();
+
+      if (permission ==
+          LocationPermission.denied) {
+        permission =
+            await Geolocator.requestPermission();
+      }
+
+      if (permission ==
+              LocationPermission.denied ||
+          permission ==
+              LocationPermission.deniedForever) {
+        setState(() {
+          locationWarning =
+              'دسترسی موقعیت فعال نیست';
+        });
+
+        return;
+      }
+
+      final position =
+          await Geolocator.getCurrentPosition(
+        desiredAccuracy:
+            LocationAccuracy.high,
+      );
+
+      final point = LatLng(
+        position.latitude,
+        position.longitude,
+      );
+
+      final pref =
+          await SharedPreferences.getInstance();
+
+      await pref.setDouble(
+        'last_lat',
+        point.latitude,
+      );
+
+      await pref.setDouble(
+        'last_lng',
+        point.longitude,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        userLocation = point;
+        locationWarning = null;
+      });
+
+      mapController.move(
+        point,
+        15,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          locationWarning =
+              'خطا در دریافت موقعیت';
+        });
+      }
+    } finally {
+      locationLoading = false;
+    }
+  }
+
+  // ==========================================================
+  // MARKERS
+  // ==========================================================
+
+  List<Marker> markers() {
+    final items = <Marker>[];
+
+    if (userLocation != null) {
+      items.add(
+        Marker(
+          point: userLocation!,
+          width: 65,
+          height: 65,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blue.withValues(
+                alpha: 0.25,
+              ),
+              border: Border.all(
+                color: Colors.blue,
+                width: 2,
+              ),
+            ),
+            child: const Icon(
+              Icons.my_location,
+              color: Colors.blue,
+              size: 35,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  // ==========================================================
+  // TEXTS
+  // ==========================================================
+
+  String get loadingTitle {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'در حال آماده‌سازی نقشه گردشگری...';
+
+      case AppLanguage.english:
+        return 'Preparing Tourism Map...';
+
+      case AppLanguage.arabic:
+        return 'جارٍ إعداد الخريطة السياحية...';
+    }
+  }
+
+  String get loadingSubtitle {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'لطفاً چند لحظه صبر کنید';
+
+      case AppLanguage.english:
+        return 'Please wait a moment';
+
+      case AppLanguage.arabic:
+        return 'يرجى الانتظار لحظة';
+    }
+  }
+
+  String get locationText {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'در حال بررسی موقعیت شما...';
+
+      case AppLanguage.english:
+        return 'Checking your location...';
+
+      case AppLanguage.arabic:
+        return 'جارٍ تحديد موقعك...';
+    }
+  }
+
+  // ==========================================================
+  // PROFESSIONAL LOADING SCREEN
+  // ==========================================================
+
+  Widget loadingScreen() {
+    return Container(
+      color: const Color(0xff071722),
+      child: Center(
+        child: AnimatedBuilder(
+          animation: animationController,
+          builder: (context, child) {
+            return Column(
+              mainAxisAlignment:
+                  MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 210,
+                  height: 210,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Transform.rotate(
+                        angle:
+                            rotationAnimation.value,
+                        child: Container(
+                          width: 190,
+                          height: 190,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(
+                                0xffffd36a,
+                              ).withValues(
+                                alpha:
+                                    glowAnimation.value,
+                              ),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xffffd36a,
+                                ).withValues(
+                                  alpha:
+                                      glowAnimation.value *
+                                          .5,
+                                ),
+                                blurRadius: 25,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Transform.scale(
+                        scale:
+                            scaleAnimation.value,
+                        child: Container(
+                          width: 115,
+                          height: 115,
+                          padding:
+                              const EdgeInsets.all(8),
+                          decoration:
+                              const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/logo-new.jpg',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 30,
+                ),
+
+                Text(
+                  AppText.title(),
+                  style: const TextStyle(
+                    color: Color(0xffffd36a),
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 15,
+                ),
+
+                Text(
+                  loadingTitle,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 8,
+                ),
+
+                Text(
+                  loadingSubtitle,
+                  style: TextStyle(
+                    color: Colors.white.withValues(
+                      alpha: .7,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 25,
+                ),
+
+                const SizedBox(
+                  width: 180,
+                  child: LinearProgressIndicator(
+                    minHeight: 4,
+                    backgroundColor:
+                        Color(0xff183746),
+                    valueColor:
+                        AlwaysStoppedAnimation(
+                      Color(0xffffd36a),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // MAP SEARCH BOX
+  // ==========================================================
+
+  Widget mapSearchBox() {
+    return Positioned(
+      top: 12,
+      left: 12,
+      right: 12,
+      child: Column(
+        children: [
+          _searchField(
+            originController,
+            Icons.my_location,
+            'مبدا',
+          ),
+          const SizedBox(
+            height: 8,
+          ),
+          _searchField(
+            destinationController,
+            Icons.place,
+            'مقصد',
+          ),
+          const SizedBox(
+            height: 8,
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'مسیر‌یابی آماده اتصال به سرویس مسیر است',
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(
+              Icons.directions,
+            ),
+            label: const Text(
+              'مسیریابی',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchField(
+    TextEditingController controller,
+    IconData icon,
+    String hint,
+  ) {
+    return Material(
+      elevation: 8,
+      borderRadius:
+          BorderRadius.circular(18),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon),
+          hintText: hint,
+          filled: true,
+          border: OutlineInputBorder(
+            borderRadius:
+                BorderRadius.circular(18),
+            borderSide:
+                BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // MAP TOOLS
+  // ==========================================================
+
+  Widget mapTools() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      color: const Color(0xff071722),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              mapServiceButton(
+                Icons.hotel,
+                LanguageManager.current ==
+                        AppLanguage.persian
+                    ? 'اقامتگاه'
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
+                        ? 'الإقامة'
+                        : 'Accommodation',
+              ),
+
+              mapServiceButton(
+                Icons.place,
+                LanguageManager.current ==
+                        AppLanguage.persian
+                    ? 'جاذبه‌ها'
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
+                        ? 'المعالم'
+                        : 'Attractions',
+              ),
+
+              mapServiceButton(
+                Icons.health_and_safety,
+                LanguageManager.current ==
+                        AppLanguage.persian
+                    ? 'سلامت'
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
+                        ? 'الصحة'
+                        : 'Health',
+              ),
+
+              mapServiceButton(
+                Icons.miscellaneous_services,
+                LanguageManager.current ==
+                        AppLanguage.persian
+                    ? 'خدمات'
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
+                        ? 'الخدمات'
+                        : 'Services',
+              ),
+            ],
+          ),
+
+          const SizedBox(
+            height: 10,
+          ),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(
+                '↪️ ${AppText.title()}',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget mapServiceButton(
+    IconData icon,
+    String text,
+  ) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.all(4),
+        height: 70,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius:
+              BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: .30,
+              ),
+              blurRadius: 8,
+              offset: const Offset(
+                0,
+                3,
+              ),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment:
+              MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color:
+                  const Color(0xff0b506b),
+            ),
+
+            const SizedBox(
+              height: 4,
+            ),
+
+            Text(
+              text,
+              maxLines: 1,
+              overflow:
+                  TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // MAP PAGE BUILD
+  // ==========================================================
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection:
+          AppText.rtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor:
+            const Color(0xff071722),
+
+        appBar: AppBar(
+          backgroundColor:
+              const Color(0xff071722),
+          foregroundColor:
+              Colors.white,
+          title: Text(
+            AppText.map(),
+            style: const TextStyle(
+              fontWeight:
+                  FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+        ),
+
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: Stack(
+                    children: [
+                      FlutterMap(
+                        mapController:
+                            mapController,
+                        options:
+                            const MapOptions(
+                          initialCenter:
+                              iranCenter,
+                          initialZoom:
+                              5,
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName:
+                                'cyrustourist.ir.app',
+                          ),
+                          MarkerLayer(
+                            markers:
+                                markers(),
+                          ),
+                        ],
+                      ),
+
+                      // ==================================================
+                      // دکمه موقعیت من
+                      // ==================================================
+
+                      Positioned(
+                        right: 15,
+                        bottom: 15,
+                        child:
+                            FloatingActionButton(
+                          backgroundColor:
+                              Colors.white,
+                          onPressed:
+                              getLocation,
+                          child: loading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child:
+                                      CircularProgressIndicator(
+                                    strokeWidth:
+                                        2,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.my_location,
+                                ),
+                        ),
+                      ),
+
+                      // ==================================================
+                      // پیام بررسی موقعیت
+                      // ==================================================
+
+                      if (loading && mapReady)
+                        Positioned(
+                          top: 15,
+                          left: 15,
+                          right: 15,
+                          child: Center(
+                            child: Container(
+                              padding:
+                                  const EdgeInsets
+                                      .symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration:
+                                  BoxDecoration(
+                                color: const Color(
+                                  0xff071722,
+                                ).withValues(
+                                  alpha: .9,
+                                ),
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                  25,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize:
+                                    MainAxisSize.min,
+                                children: [
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child:
+                                        CircularProgressIndicator(
+                                      strokeWidth:
+                                          2,
+                                      color: Color(
+                                        0xffffd36a,
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+
+                                  Text(
+                                    locationText,
+                                    style:
+                                        const TextStyle(
+                                      color:
+                                          Colors.white,
+                                      fontSize:
+                                          12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // ==================================================
+                // نوار خدمات نقشه
+                // ==================================================
+
+                mapTools(),
+              ],
+            ),
+
+            if (!mapReady)
+              Positioned.fill(
+                child: loadingScreen(),
+              ),
+          ],
         ),
       ),
     );
