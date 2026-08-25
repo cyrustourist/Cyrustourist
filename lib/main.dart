@@ -699,13 +699,9 @@ class _HomePageState
 
 
                     Image.asset(
-
-                      homeImage,
-
-                      fit:
-                          BoxFit.cover,
-
-                    ),
+  homeImage,
+  fit: BoxFit.contain,
+),
 
 
 
