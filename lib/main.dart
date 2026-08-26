@@ -16,7 +16,7 @@ import 'map_place.dart';
 import 'pages/category_explorer_page.dart';
 import 'pages/about_page.dart';
 import 'pages/contact_support_page.dart';
-
+import 'pages/favorites_page.dart';
 // ============================================================
 // MAIN
 // ============================================================
