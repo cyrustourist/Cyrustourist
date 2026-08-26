@@ -23,8 +23,8 @@ enum MapPlaceType {
 class MapPlacesService {
   MapPlacesService._();
 
-  static const MapPlacesService instance =
-      MapPlacesService._();
+  static final MapPlacesService instance =
+    MapPlacesService._();
 
   static const String _userAgent =
       'CyrusTourist/1.0 (cyrustourist.ir)';
@@ -562,9 +562,9 @@ class MapPlace {
 
   String? get address {
     final parts = <String>[
-      tags['addr:street'],
-      tags['addr:city'],
-      tags['addr:district'],
+      tags['addr:street'] ?? '',
+tags['addr:city'] ?? '',
+tags['addr:district'] ?? '',
     ];
 
     final values = parts
