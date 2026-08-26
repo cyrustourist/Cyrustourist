@@ -18,6 +18,13 @@ import 'pages/favorites_page.dart';
 import 'pages/social_media_page.dart';
 
 // ============================================================
+// NEW PAGES
+// ============================================================
+
+import 'pages/video_page.dart';
+import 'pages/travel/travel_guide_page.dart';
+
+// ============================================================
 // MAIN
 // ============================================================
 
@@ -413,6 +420,21 @@ class _HomePageState extends State<HomePage> {
     }
 
     // ========================================================
+    // کلید 4 = نمایش فیلم‌های گردشگری
+    // ========================================================
+
+    if (number == 4) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => VideoPage(),
+        ),
+      );
+
+      return;
+    }
+
+    // ========================================================
     // کلید 5 = اقامتگاه‌ها
     // ========================================================
 
@@ -430,6 +452,21 @@ class _HomePageState extends State<HomePage> {
     }
 
     // ========================================================
+    // کلید 6 = راهنمای سفر
+    // ========================================================
+
+    if (number == 6) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TravelGuidePage(),
+        ),
+      );
+
+      return;
+    }
+
+    // ========================================================
     // کلید 8 = درباره ما
     // ========================================================
 
@@ -440,6 +477,7 @@ class _HomePageState extends State<HomePage> {
           builder: (_) => const AboutPage(),
         ),
       );
+
       return;
     }
 
@@ -451,14 +489,15 @@ class _HomePageState extends State<HomePage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const ContactSupportPage(),
+          builder: (_) => ContactSupportPage(),
         ),
       );
+
       return;
     }
 
     // ========================================================
-    // کلید 7 = دنبال کنید (شبکه‌های اجتماعی)
+    // کلید 7 = دنبال کنید
     // ========================================================
 
     if (number == 7) {
@@ -468,6 +507,7 @@ class _HomePageState extends State<HomePage> {
           builder: (_) => const SocialMediaPage(),
         ),
       );
+
       return;
     }
 
@@ -482,11 +522,12 @@ class _HomePageState extends State<HomePage> {
           builder: (_) => const FavoritesPage(),
         ),
       );
+
       return;
     }
 
     // ========================================================
-    // کلیدهای باقی‌مانده = صفحه موقت
+    // کلیدهای باقی‌مانده
     // ========================================================
 
     Navigator.push(
@@ -576,18 +617,10 @@ class _HomePageState extends State<HomePage> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // ==================================================
-                    // HOME IMAGE
-                    // ==================================================
-
                     Image.asset(
                       homeImage,
                       fit: BoxFit.cover,
                     ),
-
-                    // ==================================================
-                    // LANGUAGE BUTTON
-                    // ==================================================
 
                     Positioned(
                       top: 15,
@@ -601,8 +634,7 @@ class _HomePageState extends State<HomePage> {
                             borderRadius:
                                 BorderRadius.circular(22),
                             border: Border.all(
-                              color:
-                                  const Color(0xffffd36a),
+                              color: const Color(0xffffd36a),
                             ),
                           ),
                           child: Text(
@@ -616,22 +648,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
 
-                    // ==================================================
-                    // TOUCH ZONES
-                    //
-                    // ردیف اول:
-                    // 0.535 تا 0.715
-                    //
-                    // ردیف دوم:
-                    // 0.725 تا 0.905
-                    //
-                    // عرض و ارتفاع هر ناحیه:
-                    // 0.18
-                    // ==================================================
-
-                    // -------------------------
-                    // ردیف اول: 1 تا 5
-                    // -------------------------
+                    // ردیف اول 1 تا 5
 
                     area(
                       1,
@@ -683,9 +700,7 @@ class _HomePageState extends State<HomePage> {
                       height,
                     ),
 
-                    // -------------------------
-                    // ردیف دوم: 6 تا 10
-                    // -------------------------
+                    // ردیف دوم 6 تا 10
 
                     area(
                       6,
@@ -747,6 +762,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+// ============================================================
 // TEMPORARY WORK IN PROGRESS PAGE
 // ============================================================
 
@@ -790,11 +806,7 @@ class WorkInProgressPage extends StatelessWidget {
                 color: Color(0xffffd36a),
                 size: 70,
               ),
-
-              const SizedBox(
-                height: 25,
-              ),
-
+              const SizedBox(height: 25),
               Text(
                 title,
                 style: const TextStyle(
@@ -804,11 +816,7 @@ class WorkInProgressPage extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-
-              const SizedBox(
-                height: 20,
-              ),
-
+              const SizedBox(height: 20),
               const Text(
                 'در حال کار است',
                 style: TextStyle(
@@ -816,11 +824,7 @@ class WorkInProgressPage extends StatelessWidget {
                   fontSize: 18,
                 ),
               ),
-
-              const SizedBox(
-                height: 12,
-              ),
-
+              const SizedBox(height: 12),
               Text(
                 'کلید شماره $number',
                 style: TextStyle(
@@ -830,21 +834,13 @@ class WorkInProgressPage extends StatelessWidget {
                   fontSize: 14,
                 ),
               ),
-
-              const SizedBox(
-                height: 30,
-              ),
-
+              const SizedBox(height: 30),
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                icon: const Icon(
-                  Icons.arrow_back,
-                ),
-                label: const Text(
-                  'بازگشت',
-                ),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('بازگشت'),
               ),
             ],
           ),
@@ -966,7 +962,6 @@ class _SmartMapPageState
     });
 
     await loadLastLocation();
-
     await getLocation();
   }
 
@@ -1012,11 +1007,12 @@ class _SmartMapPageState
           await Geolocator.isLocationServiceEnabled();
 
       if (!enabled) {
-        setState(() {
-          locationWarning =
-              'موقعیت‌یاب دستگاه خاموش است';
-        });
-
+        if (mounted) {
+          setState(() {
+            locationWarning =
+                'موقعیت‌یاب دستگاه خاموش است';
+          });
+        }
         return;
       }
 
@@ -1033,11 +1029,12 @@ class _SmartMapPageState
               LocationPermission.denied ||
           permission ==
               LocationPermission.deniedForever) {
-        setState(() {
-          locationWarning =
-              'دسترسی موقعیت فعال نیست';
-        });
-
+        if (mounted) {
+          setState(() {
+            locationWarning =
+                'دسترسی موقعیت فعال نیست';
+          });
+        }
         return;
       }
 
@@ -1246,9 +1243,7 @@ class _SmartMapPageState
                   ),
                 ),
 
-                const SizedBox(
-                  height: 30,
-                ),
+                const SizedBox(height: 30),
 
                 Text(
                   AppText.title(),
@@ -1259,9 +1254,7 @@ class _SmartMapPageState
                   ),
                 ),
 
-                const SizedBox(
-                  height: 15,
-                ),
+                const SizedBox(height: 15),
 
                 Text(
                   loadingTitle,
@@ -1271,9 +1264,7 @@ class _SmartMapPageState
                   ),
                 ),
 
-                const SizedBox(
-                  height: 8,
-                ),
+                const SizedBox(height: 8),
 
                 Text(
                   loadingSubtitle,
@@ -1284,9 +1275,7 @@ class _SmartMapPageState
                   ),
                 ),
 
-                const SizedBox(
-                  height: 25,
-                ),
+                const SizedBox(height: 25),
 
                 const SizedBox(
                   width: 180,
@@ -1324,17 +1313,13 @@ class _SmartMapPageState
             Icons.my_location,
             'مبدا',
           ),
-          const SizedBox(
-            height: 8,
-          ),
+          const SizedBox(height: 8),
           _searchField(
             destinationController,
             Icons.place,
             'مقصد',
           ),
-          const SizedBox(
-            height: 8,
-          ),
+          const SizedBox(height: 8),
           ElevatedButton.icon(
             onPressed: () {
               ScaffoldMessenger.of(context)
@@ -1395,13 +1380,18 @@ class _SmartMapPageState
   }) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 4,
+        ),
         child: InkWell(
           onTap: () {
             if (category == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(
                 SnackBar(
-                  content: Text('$title آماده اتصال به بخش مربوطه است.'),
+                  content: Text(
+                    '$title آماده اتصال به بخش مربوطه است.',
+                  ),
                 ),
               );
               return;
@@ -1410,40 +1400,50 @@ class _SmartMapPageState
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => CategoryExplorerPage(
+                builder: (_) =>
+                    CategoryExplorerPage(
                   initialCategory: category,
                 ),
               ),
             );
           },
-          borderRadius: BorderRadius.circular(14),
+          borderRadius:
+              BorderRadius.circular(14),
           child: Container(
             height: 58,
             decoration: BoxDecoration(
               color: const Color(0xff0b506b),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius:
+                  BorderRadius.circular(14),
               border: Border.all(
-                color: const Color(0xffffd36a).withValues(alpha: 0.65),
+                color: const Color(
+                  0xffffd36a,
+                ).withValues(alpha: 0.65),
               ),
             ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment:
+                  MainAxisAlignment.center,
               children: [
                 Icon(
                   icon,
-                  color: const Color(0xffffd36a),
+                  color:
+                      const Color(0xffffd36a),
                   size: 22,
                 ),
                 const SizedBox(height: 3),
                 Text(
                   title,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
+                  overflow:
+                      TextOverflow.ellipsis,
+                  textAlign:
+                      TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
               ],
@@ -1464,30 +1464,39 @@ class _SmartMapPageState
             children: [
               mapServiceButton(
                 Icons.hotel,
-                LanguageManager.current == AppLanguage.persian
+                LanguageManager.current ==
+                        AppLanguage.persian
                     ? 'اقامتگاه'
-                    : LanguageManager.current == AppLanguage.arabic
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
                         ? 'الإقامة'
                         : 'Accommodation',
-                category: PlaceCategory.accommodation,
+                category:
+                    PlaceCategory.accommodation,
               ),
               mapServiceButton(
                 Icons.place,
-                LanguageManager.current == AppLanguage.persian
+                LanguageManager.current ==
+                        AppLanguage.persian
                     ? 'جاذبه‌ها'
-                    : LanguageManager.current == AppLanguage.arabic
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
                         ? 'المعالم'
                         : 'Attractions',
-                category: PlaceCategory.attraction,
+                category:
+                    PlaceCategory.attraction,
               ),
               mapServiceButton(
                 Icons.local_hospital,
-                LanguageManager.current == AppLanguage.persian
+                LanguageManager.current ==
+                        AppLanguage.persian
                     ? 'سلامت'
-                    : LanguageManager.current == AppLanguage.arabic
+                    : LanguageManager.current ==
+                            AppLanguage.arabic
                         ? 'الصحة'
                         : 'Health',
-                category: PlaceCategory.health,
+                category:
+                    PlaceCategory.health,
               ),
             ],
           ),
@@ -1496,23 +1505,33 @@ class _SmartMapPageState
     );
   }
 
+  // ==========================================================
+  // BUILD MAP
+  // ==========================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff071722),
+      backgroundColor:
+          const Color(0xff071722),
       appBar: AppBar(
-        backgroundColor: const Color(0xff071722),
+        backgroundColor:
+            const Color(0xff071722),
         foregroundColor: Colors.white,
         centerTitle: true,
         title: Text(
           AppText.map(),
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
             tooltip: 'موقعیت من',
             onPressed: getLocation,
-            icon: const Icon(Icons.my_location),
+            icon: const Icon(
+              Icons.my_location,
+            ),
           ),
         ],
       ),
@@ -1530,7 +1549,8 @@ class _SmartMapPageState
               TileLayer(
                 urlTemplate:
                     'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.cyrustourist.app',
+                userAgentPackageName:
+                    'com.cyrustourist.app',
               ),
               MarkerLayer(
                 markers: markers(),
@@ -1548,17 +1568,28 @@ class _SmartMapPageState
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding:
+                      const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xff071722).withValues(alpha: 0.94),
-                    borderRadius: BorderRadius.circular(14),
+                    color: const Color(
+                      0xff071722,
+                    ).withValues(
+                      alpha: 0.94,
+                    ),
+                    borderRadius:
+                        BorderRadius.circular(
+                      14,
+                    ),
                     border: Border.all(
-                      color: const Color(0xffffd36a),
+                      color: const Color(
+                        0xffffd36a,
+                      ),
                     ),
                   ),
                   child: Text(
                     locationWarning!,
-                    textAlign: TextAlign.center,
+                    textAlign:
+                        TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
