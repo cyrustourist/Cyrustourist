@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -13,6 +14,8 @@ import 'providers/map_state_provider.dart';
 
 import 'map_place.dart';
 import 'pages/category_explorer_page.dart';
+import 'pages/about_page.dart';
+import 'pages/contact_support_page.dart';
 
 // ============================================================
 // MAIN
@@ -403,13 +406,25 @@ class _HomePageState extends State<HomePage> {
           builder: (_) => const AboutPage(),
         ),
       );
-
       return;
     }
 
     // ========================================================
-    // کلیدهای 3 تا 10
-    // فعلاً صفحه موقت
+    // کلید 9 = پشتیبانی و تماس
+    // ========================================================
+
+    if (number == 9) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ContactSupportPage(),
+        ),
+      );
+      return;
+    }
+
+    // ========================================================
+    // کلیدهای باقی‌مانده = صفحه موقت
     // ========================================================
 
     Navigator.push(
@@ -670,229 +685,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ============================================================
-// ABOUT PAGE
-// ============================================================
-
-class AboutPage extends StatelessWidget {
-  const AboutPage({super.key});
-
-  static const String websiteUrl =
-      'https://cyrustourist-maker.github.io/Cyrustourist/';
-
-  Future<void> openWebsite(BuildContext context) async {
-    final uri = Uri.parse(websiteUrl);
-    final opened = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
-
-    if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('امکان باز کردن وب‌سایت وجود ندارد.'),
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: AppText.rtl
-          ? TextDirection.rtl
-          : TextDirection.ltr,
-      child: Scaffold(
-        backgroundColor: const Color(0xff071722),
-        appBar: AppBar(
-          backgroundColor: const Color(0xff071722),
-          foregroundColor: Colors.white,
-          centerTitle: true,
-          title: const Text(
-            'درباره ما',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: Image.asset(
-                      'assets/images/logo-new.jpg',
-                      height: 105,
-                      width: 105,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'سایروس توریست؛ برای شناختن، دیدن و تجربه کردن ایران',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xffffd36a),
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Cyrus Tourist با عشق به ایران و با هدف معرفی زیبایی‌های سرزمین چهار فصل ایران آغاز به کار کرده است؛ سرزمینی سرشار از تاریخ و تمدن، طبیعت بکر، فرهنگ و هنر، شهرهای دیدنی و جاذبه‌های فراوان.\n\n'
-                  'سایروس توریست تلاش می‌کند ایران را به شکلی واقعی، جذاب و امروزی به گردشگران معرفی کند و مسیر شناخت و تجربه این سرزمین را برای مسافران ساده‌تر و لذت‌بخش‌تر سازد.\n\n'
-                  'در این مجموعه، معرفی جاذبه‌های تاریخی و طبیعی، طبیعت‌گردی، اقامتگاه‌ها، راهنمای سفر، نقشه گردشگری و فیلم‌های گردشگری در کنار ابزارهای کاربردی سفر گرد هم آمده‌اند تا یک همراه جامع برای گردشگران ایرانی و بین‌المللی فراهم شود.\n\n'
-                  'یکی از بخش‌های مهم فعالیت سایروس توریست، تولید محتوای گردشگری است؛ از فیلم‌ها و تیزرهای معرفی گرفته تا مستندها و محتوای تخصصی که با هدف معرفی بهتر مقاصد، مجموعه‌ها و فعالان گردشگری تولید می‌شوند.',
-                  textAlign: TextAlign.justify,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    height: 1.9,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                const Text(
-                  'چشم‌انداز ما',
-                  style: TextStyle(
-                    color: Color(0xffffd36a),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'ما باور داریم ایران تنها یک مقصد گردشگری نیست؛ بلکه گنجینه‌ای زنده از تاریخ، فرهنگ، طبیعت و تجربه‌های فراموش‌نشدنی است.\n\n'
-                  'هدف ما ساخت و توسعه یک پلتفرم گردشگری هوشمند و بین‌المللی است تا گردشگران بتوانند ایران را آسان‌تر پیدا کنند، بهتر بشناسند و با اطمینان بیشتری تجربه کنند.',
-                  textAlign: TextAlign.justify,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    height: 1.9,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'سایروس توریست؛ پنجره‌ای به سوی زیبایی‌های ایران.\nسفر کن، کشف کن، لذت ببر',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xffffd36a),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    height: 1.8,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff0b506b).withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xffffd36a).withValues(alpha: 0.65),
-                    ),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'درباره پروژه',
-                        style: TextStyle(
-                          color: Color(0xffffd36a),
-                          fontSize: 19,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        'آغاز به کار سایروس توریست: ۸ آبان ۱۳۹۸\n'
-                        'تاریخ میلادی: ۳۰ اکتبر ۲۰۱۹\n'
-                        'مدیر پروژه: مهندس تیرانداز',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          height: 1.9,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'وب‌سایت رسمی',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xffffd36a),
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                InkWell(
-                  onTap: () => openWebsite(context),
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xffffd36a)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.language,
-                          color: Color(0xffffd36a),
-                        ),
-                        SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            'cyrustourist-maker.github.io/Cyrustourist/',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Color(0xffffd36a),
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                              decorationColor: Color(0xffffd36a),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(
-                          Icons.open_in_new,
-                          color: Color(0xffffd36a),
-                          size: 19,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'برای مشاهده وب‌سایت و اطلاعات بیشتر، روی لینک بالا کلیک کنید.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
 // TEMPORARY WORK IN PROGRESS PAGE
 // ============================================================
 
@@ -1534,6 +1326,59 @@ class _SmartMapPageState
   // MAP TOOLS
   // ==========================================================
 
+  Widget mapServiceButton(
+    IconData icon,
+    String title,
+  ) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: InkWell(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('$title آماده اتصال به بخش مربوطه است.'),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            height: 58,
+            decoration: BoxDecoration(
+              color: const Color(0xff0b506b),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xffffd36a).withValues(alpha: 0.65),
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: const Color(0xffffd36a),
+                  size: 22,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget mapTools() {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -1544,19 +1389,121 @@ class _SmartMapPageState
             children: [
               mapServiceButton(
                 Icons.hotel,
-                LanguageManager.current ==
-                        AppLanguage.persian
+                LanguageManager.current == AppLanguage.persian
                     ? 'اقامتگاه'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
+                    : LanguageManager.current == AppLanguage.arabic
                         ? 'الإقامة'
                         : 'Accommodation',
               ),
-
               mapServiceButton(
                 Icons.place,
-                LanguageManager.current ==
-                        AppLanguage.persian
+                LanguageManager.current == AppLanguage.persian
                     ? 'جاذبه‌ها'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
+                    : LanguageManager.current == AppLanguage.arabic
+                        ? 'المعالم'
+                        : 'Attractions',
+              ),
+              mapServiceButton(
+                Icons.navigation,
+                LanguageManager.current == AppLanguage.persian
+                    ? 'مسیریابی'
+                    : LanguageManager.current == AppLanguage.arabic
+                        ? 'الملاحة'
+                        : 'Navigation',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xff071722),
+      appBar: AppBar(
+        backgroundColor: const Color(0xff071722),
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        title: Text(
+          AppText.map(),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'موقعیت من',
+            onPressed: getLocation,
+            icon: const Icon(Icons.my_location),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          FlutterMap(
+            mapController: mapController,
+            options: MapOptions(
+              initialCenter: iranCenter,
+              initialZoom: 5.2,
+              minZoom: 3,
+              maxZoom: 18,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate:
+                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.cyrustourist.app',
+              ),
+              MarkerLayer(
+                markers: markers(),
+              ),
+            ],
+          ),
+
+          mapSearchBox(),
+
+          if (locationWarning != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 90,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff071722).withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xffffd36a),
+                    ),
+                  ),
+                  child: Text(
+                    locationWarning!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          if (loading)
+            Positioned.fill(
+              child: loadingScreen(),
+            ),
+
+          if (!loading)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: mapTools(),
+            ),
+        ],
+      ),
+    );
+  }
+}
