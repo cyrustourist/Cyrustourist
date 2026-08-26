@@ -7,6 +7,7 @@ class TouristPlacesList extends StatelessWidget {
     super.key,
     required this.places,
     required this.language,
+    required this.category,
     required this.onPlaceTap,
     required this.onRouteTap,
     required this.isFavorite,
@@ -15,6 +16,7 @@ class TouristPlacesList extends StatelessWidget {
 
   final List<MapPlace> places;
   final String language;
+  final PlaceCategory category;
 
   final ValueChanged<MapPlace> onPlaceTap;
   final ValueChanged<MapPlace> onRouteTap;
@@ -50,6 +52,86 @@ class TouristPlacesList extends StatelessWidget {
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
+  String _headerTitle() {
+    switch (category) {
+      case PlaceCategory.health:
+        return _text(
+          'مراکز سلامت اطراف',
+          'Nearby health centers',
+          'مراكز صحية قريبة',
+        );
+
+      case PlaceCategory.accommodation:
+        return _text(
+          'اقامتگاه‌های اطراف',
+          'Nearby accommodations',
+          'أماكن إقامة قريبة',
+        );
+
+      case PlaceCategory.attraction:
+      default:
+        return _text(
+          'جاذبه‌های گردشگری اطراف',
+          'Nearby tourist attractions',
+          'المعالم السياحية القريبة',
+        );
+    }
+  }
+
+  String _emptyText() {
+    switch (category) {
+      case PlaceCategory.health:
+        return _text(
+          'در این شعاع مرکز سلامتی پیدا نشد.',
+          'No health centers found in this radius.',
+          'لم يتم العثور على مراكز صحية ضمن هذا النطاق.',
+        );
+
+      case PlaceCategory.accommodation:
+        return _text(
+          'در این شعاع اقامتگاهی پیدا نشد.',
+          'No accommodations found in this radius.',
+          'لم يتم العثور على أماكن إقامة ضمن هذا النطاق.',
+        );
+
+      case PlaceCategory.attraction:
+      default:
+        return _text(
+          'در این شعاع جاذبه‌ای پیدا نشد.',
+          'No attractions found in this radius.',
+          'لم يتم العثور على معالم ضمن هذا النطاق.',
+        );
+    }
+  }
+
+  String _placeSubtitle() {
+    switch (category) {
+      case PlaceCategory.health:
+        return _text('مرکز سلامت', 'Health center', 'مركز صحي');
+
+      case PlaceCategory.accommodation:
+        return _text('اقامتگاه', 'Accommodation', 'مكان إقامة');
+
+      case PlaceCategory.attraction:
+      default:
+        return _text('جاذبه گردشگری', 'Tourist attraction', 'معلم سياحي');
+    }
+  }
+
+  IconData _categoryIcon() {
+    switch (category) {
+      case PlaceCategory.health:
+        return Icons.local_hospital_rounded;
+
+      case PlaceCategory.accommodation:
+        return Icons.hotel_rounded;
+
+      case PlaceCategory.attraction:
+      default:
+        return Icons.account_balance_rounded;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (places.isEmpty) {
@@ -81,11 +163,7 @@ class TouristPlacesList extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                _text(
-                  'در این شعاع جاذبه‌ای پیدا نشد.',
-                  'No attractions found in this radius.',
-                  'لم يتم العثور على معالم ضمن هذا النطاق.',
-                ),
+                _emptyText(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -138,19 +216,15 @@ class TouristPlacesList extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.place_rounded,
-                  color: Color(0xffffd36a),
+                Icon(
+                  _categoryIcon(),
+                  color: const Color(0xffffd36a),
                   size: 24,
                 ),
                 const SizedBox(width: 7),
                 Expanded(
                   child: Text(
-                    _text(
-                      'جاذبه‌های گردشگری اطراف',
-                      'Nearby tourist attractions',
-                      'المعالم السياحية القريبة',
-                    ),
+                    _headerTitle(),
                     style: const TextStyle(
                       color: Color(0xffffe39a),
                       fontSize: 16,
@@ -196,6 +270,8 @@ class TouristPlacesList extends StatelessWidget {
             (place) => _TouristPlaceCard(
               place: place,
               language: language,
+              subtitle: _placeSubtitle(),
+              icon: _categoryIcon(),
               distance:
                   _distance(place),
               favorite:
@@ -219,6 +295,8 @@ class _TouristPlaceCard
   const _TouristPlaceCard({
     required this.place,
     required this.language,
+    required this.subtitle,
+    required this.icon,
     required this.distance,
     required this.favorite,
     required this.onTap,
@@ -228,6 +306,8 @@ class _TouristPlaceCard
 
   final MapPlace place;
   final String language;
+  final String subtitle;
+  final IconData icon;
   final String distance;
   final bool favorite;
 
@@ -316,7 +396,7 @@ class _TouristPlaceCardState
           child: Row(
             children: [
               _PlaceIcon(
-                place: place,
+                icon: widget.icon,
               ),
 
               const SizedBox(width: 10),
@@ -373,11 +453,7 @@ class _TouristPlaceCardState
                     const SizedBox(height: 3),
 
                     Text(
-                      _text(
-                        'جاذبه گردشگری',
-                        'Tourist attraction',
-                        'معلم سياحي',
-                      ),
+                      widget.subtitle,
                       style: TextStyle(
                         color:
                             Colors.white
@@ -480,10 +556,10 @@ class _TouristPlaceCardState
 
 class _PlaceIcon extends StatelessWidget {
   const _PlaceIcon({
-    required this.place,
+    required this.icon,
   });
 
-  final MapPlace place;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -512,9 +588,9 @@ class _PlaceIcon extends StatelessWidget {
           ),
         ],
       ),
-      child: const Icon(
-        Icons.account_balance_rounded,
-        color: Color(0xff071722),
+      child: Icon(
+        icon,
+        color: const Color(0xff071722),
         size: 28,
       ),
     );
