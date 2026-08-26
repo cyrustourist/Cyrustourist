@@ -8,16 +8,22 @@ class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
 
   @override
-  State<FavoritesPage> createState() => _FavoritesPageState();
+  State<FavoritesPage> createState() =>
+      _FavoritesPageState();
 }
 
-class _FavoritesPageState extends State<FavoritesPage> {
+class _FavoritesPageState
+    extends State<FavoritesPage> {
+
   final MapPlaceFavoritesService _favoritesService =
       MapPlaceFavoritesService();
 
   List<MapPlace> _favorites = [];
+
   bool _loading = true;
+
   bool _isRtl = true;
+
 
   @override
   void initState() {
@@ -25,8 +31,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
     _loadFavorites();
   }
 
+
   Future<void> _loadFavorites() async {
-    final items = await _favoritesService.loadFavorites();
+
+    final items =
+        await _favoritesService.loadFavorites();
 
     if (!mounted) return;
 
@@ -36,70 +45,148 @@ class _FavoritesPageState extends State<FavoritesPage> {
     });
   }
 
-  Future<void> _removeFavorite(MapPlace place) async {
+
+  Future<void> _removeFavorite(
+      MapPlace place) async {
+
     await _favoritesService.toggleFavorite(place);
+
     await _loadFavorites();
   }
 
+
   @override
   Widget build(BuildContext context) {
+
     return Directionality(
       textDirection:
-          _isRtl ? TextDirection.rtl : TextDirection.ltr,
+          _isRtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
+
       child: Scaffold(
+
         appBar: AppBar(
           title: const Text(
             'علاقه‌مندی‌ها',
           ),
+          centerTitle: true,
         ),
+
+
         body: _loading
+
             ? const Center(
                 child: CircularProgressIndicator(),
               )
+
+
             : _favorites.isEmpty
+
                 ? const Center(
                     child: Text(
                       'مورد علاقه‌ای ذخیره نشده است',
+                      style: TextStyle(
+                        fontSize: 18,
+                      ),
                     ),
                   )
+
+
                 : ListView.builder(
-                    itemCount: _favorites.length,
-                    itemBuilder: (context, index) {
-                      final place = _favorites[index];
+
+                    itemCount:
+                        _favorites.length,
+
+
+                    itemBuilder:
+                        (context, index) {
+
+
+                      final place =
+                          _favorites[index];
+
 
                       return Card(
-                        margin: const EdgeInsets.all(8),
+
+                        margin:
+                            const EdgeInsets.all(8),
+
+
                         child: ListTile(
+
+
+                          leading: const Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                          ),
+
+
                           title: Text(
                             place.name,
-                          ),
-                          subtitle: Text(
-                            place.category ?? '',
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.favorite,
+                            style:
+                                const TextStyle(
+                              fontWeight:
+                                  FontWeight.bold,
                             ),
+                          ),
+
+
+                          subtitle: Text(
+                            place.category.name,
+                          ),
+
+
+                          trailing:
+                              IconButton(
+
+                            icon:
+                                const Icon(
+                              Icons.delete,
+                            ),
+
+
                             onPressed: () {
                               _removeFavorite(place);
                             },
+
                           ),
+
+
                           onTap: () {
+
                             Navigator.push(
+
                               context,
+
                               MaterialPageRoute(
+
                                 builder: (_) =>
                                     CategoryExplorerPage(
-                                  category: place.category ?? '',
+
+                                  initialCategory:
+                                      place.category,
+
                                 ),
+
                               ),
+
                             );
+
                           },
+
                         ),
+
                       );
+
                     },
+
                   ),
+
       ),
+
     );
+
   }
+
 }
