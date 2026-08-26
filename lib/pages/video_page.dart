@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../core/language/language_manager.dart';
+import '../core/language/app_language.dart';
 
 class VideoPage extends StatefulWidget {
   const VideoPage({super.key});
