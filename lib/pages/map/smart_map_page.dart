@@ -12,19 +12,26 @@ import '../../widgets/map_search_bar.dart';
 import '../../widgets/map_place_bottom_sheet.dart';
 import '../../widgets/map_quick_tools.dart';
 
+import 'map_radius_selector.dart';
+import 'tourist_places_list.dart';
+
 class SmartMapScreen extends StatefulWidget {
   const SmartMapScreen({
     super.key,
   });
 
   @override
-  State<SmartMapScreen> createState() => _SmartMapScreenState();
+  State<SmartMapScreen> createState() =>
+      _SmartMapScreenState();
 }
 
-class _SmartMapScreenState extends State<SmartMapScreen> {
-  final MapController mapController = MapController();
+class _SmartMapScreenState
+    extends State<SmartMapScreen> {
+  final MapController mapController =
+      MapController();
 
-  final TextEditingController searchTextController =
+  final TextEditingController
+      searchTextController =
       TextEditingController();
 
   late final MapSmartController controller;
@@ -53,6 +60,13 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   String selectedLanguage = 'fa';
 
   // ============================================================
+  // FAVORITES
+  // مرحله بعد به کلید ۱۰ متصل می‌شود
+  // ============================================================
+
+  final Set<String> favoritePlaceIds = {};
+
+  // ============================================================
   // INIT
   // ============================================================
 
@@ -67,8 +81,11 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   }
 
   void _detectDeviceLanguage() {
-    final language =
-        WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+    final language = WidgetsBinding
+        .instance
+        .platformDispatcher
+        .locale
+        .languageCode;
 
     if (language == 'en') {
       selectedLanguage = 'en';
@@ -84,7 +101,8 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
 
     if (!mounted) return;
 
-    final location = controller.userLocation;
+    final location =
+        controller.userLocation;
 
     if (location != null) {
       originLocation = location;
@@ -143,6 +161,21 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
 
     if (searching) return;
 
+    if (controller.userLocation == null) {
+      await _initialize();
+
+      if (controller.userLocation == null) {
+        _showMessage(
+          _text(
+            'موقعیت کاربر مشخص نیست.',
+            'Your location is not available.',
+            'موقعك غير متاح.',
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() {
       searching = true;
     });
@@ -154,7 +187,8 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
 
       if (!mounted) return;
 
-      final place = controller.nearestPlace;
+      final place =
+          controller.nearestPlace;
 
       if (place == null) {
         setState(() {
@@ -237,7 +271,8 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   }
 
   void useCurrentLocationAsOrigin() {
-    final location = controller.userLocation;
+    final location =
+        controller.userLocation;
 
     if (location == null) {
       _initialize();
@@ -288,19 +323,156 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   }
 
   // ============================================================
+  // PLACE FROM LIST
+  // ============================================================
+
+  void _selectPlaceFromList(
+    MapPlace place,
+  ) {
+    setState(() {
+      selectedDestination = place;
+      destinationLocation =
+          place.location;
+      destinationName = place.name;
+    });
+
+    mapController.move(
+      place.location,
+      16,
+    );
+
+    _showMessage(
+      _text(
+        '${place.name} انتخاب شد.',
+        '${place.name} selected.',
+        'تم اختيار ${place.name}.',
+      ),
+    );
+  }
+
+  // ============================================================
+  // ROUTE FROM USER LOCATION
+  // ============================================================
+
+  void _routeToPlace(
+    MapPlace place,
+  ) {
+    final user =
+        controller.userLocation;
+
+    if (user == null) {
+      _showMessage(
+        _text(
+          'مکان کاربر مشخص نیست.',
+          'User location is not available.',
+          'موقع المستخدم غير متاح.',
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      originLocation = user;
+
+      originName = _text(
+        'موقعیت فعلی من',
+        'My current location',
+        'موقعي الحالي',
+      );
+
+      destinationLocation =
+          place.location;
+
+      destinationName =
+          place.name;
+
+      selectedDestination = place;
+
+      routePoints = [];
+      routeDistanceKm = null;
+      routeDurationMin = null;
+    });
+
+    mapController.move(
+      place.location,
+      15,
+    );
+
+    buildRoute();
+  }
+
+  // ============================================================
+  // FAVORITE
+  // ============================================================
+
+  String _placeId(
+    MapPlace place,
+  ) {
+    return '${place.name}|'
+        '${place.location.latitude}|'
+        '${place.location.longitude}';
+  }
+
+  bool _isFavorite(
+    MapPlace place,
+  ) {
+    return favoritePlaceIds
+        .contains(
+      _placeId(place),
+    );
+  }
+
+  void _toggleFavorite(
+    MapPlace place,
+  ) {
+    final id = _placeId(place);
+
+    setState(() {
+      if (favoritePlaceIds
+          .contains(id)) {
+        favoritePlaceIds.remove(id);
+      } else {
+        favoritePlaceIds.add(id);
+      }
+    });
+
+    _showMessage(
+      _isFavorite(place)
+          ? _text(
+              'به علاقه‌مندی‌ها اضافه شد ❤️',
+              'Added to favorites ❤️',
+              'تمت الإضافة إلى المفضلة ❤️',
+            )
+          : _text(
+              'از علاقه‌مندی‌ها حذف شد.',
+              'Removed from favorites.',
+              'تمت الإزالة من المفضلة.',
+            ),
+    );
+  }
+
+  // ============================================================
   // SWAP
   // ============================================================
 
   void _swapPlaces() {
-    final oldOrigin = originLocation;
-    final oldOriginName = originName;
+    final oldOrigin =
+        originLocation;
+    final oldOriginName =
+        originName;
 
     setState(() {
-      originLocation = destinationLocation;
-      originName = destinationName;
+      originLocation =
+          destinationLocation;
 
-      destinationLocation = oldOrigin;
-      destinationName = oldOriginName;
+      originName =
+          destinationName;
+
+      destinationLocation =
+          oldOrigin;
+
+      destinationName =
+          oldOriginName;
 
       routePoints = [];
       routeDistanceKm = null;
@@ -351,7 +523,6 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
           'حدد الوجهة أولاً.',
         ),
       );
-
       return;
     }
 
@@ -361,8 +532,11 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
       routeLoading = true;
     });
 
-    final start = originLocation!;
-    final destination = destinationLocation!;
+    final start =
+        originLocation!;
+
+    final destination =
+        destinationLocation!;
 
     final uri = Uri.parse(
       'https://router.project-osrm.org/route/v1/driving/'
@@ -371,23 +545,30 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
       '?overview=full&geometries=geojson&steps=false',
     );
 
-    final client = HttpClient();
+    final client =
+        HttpClient();
 
     try {
       client.userAgent =
           'CyrusTourist/1.0 (cyrustourist.ir)';
 
-      final request = await client.getUrl(uri);
+      final request =
+          await client.getUrl(uri);
 
       request.headers.set(
         HttpHeaders.acceptHeader,
         'application/json',
       );
 
-      final response = await request.close();
+      final response =
+          await request.close();
 
       final body =
-          await response.transform(utf8.decoder).join();
+          await response
+              .transform(
+                utf8.decoder,
+              )
+              .join();
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -395,33 +576,43 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
         );
       }
 
-      final data = jsonDecode(body);
+      final data =
+          jsonDecode(body);
 
       if (data is! Map ||
           data['code'] != 'Ok' ||
           data['routes'] is! List ||
-          (data['routes'] as List).isEmpty) {
-        throw Exception('No route');
+          (data['routes'] as List)
+              .isEmpty) {
+        throw Exception(
+          'No route',
+        );
       }
 
       final route =
-          (data['routes'] as List).first;
+          (data['routes'] as List)
+              .first;
 
-      final geometry = route['geometry'];
+      final geometry =
+          route['geometry'];
 
       if (geometry is! Map ||
-          geometry['coordinates'] is! List) {
+          geometry['coordinates']
+              is! List) {
         throw Exception(
           'Invalid route geometry',
         );
       }
 
       final coordinates =
-          geometry['coordinates'] as List;
+          geometry['coordinates']
+              as List;
 
-      final points = <LatLng>[];
+      final points =
+          <LatLng>[];
 
-      for (final coordinate in coordinates) {
+      for (final coordinate
+          in coordinates) {
         if (coordinate is! List ||
             coordinate.length < 2) {
           continue;
@@ -470,10 +661,13 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
 
       setState(() {
         routePoints = points;
+
         routeDistanceKm =
             distanceMeters / 1000;
+
         routeDurationMin =
             durationSeconds / 60;
+
         routeLoading = false;
       });
 
@@ -511,38 +705,59 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   ) {
     if (points.length < 2) return;
 
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
+    double minLat =
+        points.first.latitude;
+
+    double maxLat =
+        points.first.latitude;
+
+    double minLng =
+        points.first.longitude;
+
+    double maxLng =
+        points.first.longitude;
 
     for (final point in points) {
       if (point.latitude < minLat) {
-        minLat = point.latitude;
+        minLat =
+            point.latitude;
       }
 
       if (point.latitude > maxLat) {
-        maxLat = point.latitude;
+        maxLat =
+            point.latitude;
       }
 
       if (point.longitude < minLng) {
-        minLng = point.longitude;
+        minLng =
+            point.longitude;
       }
 
       if (point.longitude > maxLng) {
-        maxLng = point.longitude;
+        maxLng =
+            point.longitude;
       }
     }
 
-    final bounds = LatLngBounds(
-      LatLng(minLat, minLng),
-      LatLng(maxLat, maxLng),
+    final bounds =
+        LatLngBounds(
+      LatLng(
+        minLat,
+        minLng,
+      ),
+      LatLng(
+        maxLat,
+        maxLng,
+      ),
     );
 
     mapController.fitCamera(
       CameraFit.bounds(
         bounds: bounds,
-        padding: const EdgeInsets.all(80),
+        padding:
+            const EdgeInsets.all(
+          80,
+        ),
         maxZoom: 15,
       ),
     );
@@ -568,9 +783,14 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
     MapPlace place,
   ) {
     setState(() {
-      selectedDestination = place;
-      destinationLocation = place.location;
-      destinationName = place.name;
+      selectedDestination =
+          place;
+
+      destinationLocation =
+          place.location;
+
+      destinationName =
+          place.name;
     });
 
     showModalBottomSheet(
@@ -618,12 +838,35 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
     String language,
   ) {
     setState(() {
-      selectedLanguage = language;
+      selectedLanguage =
+          language;
     });
   }
 
   // ============================================================
-  // QUICK MAP TOOLS
+  // RADIUS
+  // ============================================================
+
+  void _changeRadius(
+    double radius,
+  ) {
+    controller.setRadius(
+      radius,
+    );
+
+    setState(() {});
+
+    _showMessage(
+      _text(
+        'شعاع جستجو: ${radius.toInt()} کیلومتر',
+        'Search radius: ${radius.toInt()} km',
+        'نطاق البحث: ${radius.toInt()} كم',
+      ),
+    );
+  }
+
+  // ============================================================
+  // QUICK TOOLS
   // ============================================================
 
   void _handleQuickTool(
@@ -634,65 +877,65 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
     switch (toolId) {
       case 'fuel':
         message = _text(
-          'جستجوی پمپ‌های بنزین اطراف آماده می‌شود.',
-          'Nearby fuel stations search is being prepared.',
-          'سيتم تجهيز البحث عن محطات الوقود القريبة.',
+          'جستجوی پمپ‌های بنزین اطراف.',
+          'Searching for nearby fuel stations.',
+          'البحث عن محطات الوقود القريبة.',
         );
         break;
 
       case 'atm':
         message = _text(
-          'جستجوی خودپردازهای اطراف آماده می‌شود.',
-          'Nearby ATMs search is being prepared.',
-          'سيتم تجهيز البحث عن أجهزة الصراف القريبة.',
+          'جستجوی خودپردازهای اطراف.',
+          'Searching for nearby ATMs.',
+          'البحث عن أجهزة الصراف القريبة.',
         );
         break;
 
       case 'medical':
         message = _text(
-          'جستجوی مراکز درمانی اطراف آماده می‌شود.',
-          'Nearby medical centers search is being prepared.',
-          'سيتم تجهيز البحث عن المراكز الطبية القريبة.',
+          'جستجوی مراکز درمانی اطراف.',
+          'Searching for nearby medical centers.',
+          'البحث عن المراكز الطبية القريبة.',
         );
         break;
 
       case 'food':
         message = _text(
-          'جستجوی رستوران‌ها و غذاخوری‌های اطراف آماده می‌شود.',
-          'Nearby restaurants and food places search is being prepared.',
-          'سيتم تجهيز البحث عن المطاعم وأماكن الطعام القريبة.',
+          'جستجوی رستوران‌ها و غذاخوری‌های اطراف.',
+          'Searching for nearby restaurants.',
+          'البحث عن المطاعم القريبة.',
         );
         break;
 
       case 'parking':
         message = _text(
-          'جستجوی پارکینگ‌های اطراف آماده می‌شود.',
-          'Nearby parking search is being prepared.',
-          'سيتم تجهيز البحث عن مواقف السيارات القريبة.',
+          'جستجوی پارکینگ‌های اطراف.',
+          'Searching for nearby parking.',
+          'البحث عن مواقف السيارات القريبة.',
         );
         break;
 
       case 'shopping':
         message = _text(
-          'جستجوی مراکز خرید اطراف آماده می‌شود.',
-          'Nearby shopping search is being prepared.',
-          'سيتم تجهيز البحث عن مراكز التسوق القريبة.',
+          'جستجوی مراکز خرید اطراف.',
+          'Searching for nearby shopping centers.',
+          'البحث عن مراكز التسوق القريبة.',
         );
         break;
 
       case 'toilet':
         message = _text(
-          'جستجوی سرویس‌های بهداشتی اطراف آماده می‌شود.',
-          'Nearby restrooms search is being prepared.',
-          'سيتم تجهيز البحث عن دورات المياه القريبة.',
+          'جستجوی سرویس‌های بهداشتی اطراف.',
+          'Searching for nearby restrooms.',
+          'البحث عن دورات المياه القريبة.',
         );
         break;
 
       case 'emergency':
         message = _text(
-          'خدمات ضروری اطراف آماده می‌شود.',
-          'Nearby emergency services are being prepared.',
-          'سيتم تجهيز خدمات الطوارئ القريبة.',
+          'خدمات ضروری اطراف.',
+          'Nearby emergency services.',
+          'خدمات الطوارئ القريبة.',
         );
         break;
 
@@ -704,7 +947,9 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
         );
     }
 
-    _showMessage(message);
+    _showMessage(
+      message,
+    );
   }
 
   // ============================================================
@@ -720,10 +965,12 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          behavior: SnackBarBehavior.floating,
+          behavior:
+              SnackBarBehavior.floating,
           content: Text(
             message,
-            textAlign: TextAlign.center,
+            textAlign:
+                TextAlign.center,
           ),
         ),
       );
@@ -734,7 +981,8 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   // ============================================================
 
   void _goBackToCyrusTourist() {
-    if (Navigator.of(context).canPop()) {
+    if (Navigator.of(context)
+        .canPop()) {
       Navigator.of(context).pop();
     }
   }
@@ -744,7 +992,8 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   // ============================================================
 
   String _distanceText() {
-    final distance = routeDistanceKm;
+    final distance =
+        routeDistanceKm;
 
     if (distance == null) {
       return '';
@@ -758,7 +1007,8 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   }
 
   String _durationText() {
-    final duration = routeDurationMin;
+    final duration =
+        routeDurationMin;
 
     if (duration == null) {
       return '';
@@ -768,7 +1018,9 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
       return '${duration.round()} min';
     }
 
-    final hours = duration ~/ 60;
+    final hours =
+        duration ~/ 60;
+
     final minutes =
         (duration % 60).round();
 
@@ -776,42 +1028,55 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
   }
 
   // ============================================================
-  // SEARCH HEADER
+  // SEARCH MODE BUTTON
   // ============================================================
 
   Widget _searchModeButton({
     required bool origin,
   }) {
-    final active = originMode == origin;
+    final active =
+        originMode == origin;
 
     return Expanded(
       child: Material(
         color: active
-            ? const Color(0xff0083B0)
+            ? const Color(
+                0xff0083B0,
+              )
             : Colors.white,
         borderRadius:
-            BorderRadius.circular(14),
+            BorderRadius.circular(
+          14,
+        ),
         elevation: 4,
         child: InkWell(
           borderRadius:
-              BorderRadius.circular(14),
+              BorderRadius.circular(
+            14,
+          ),
           onTap: () {
-            _setSearchMode(origin);
+            _setSearchMode(
+              origin,
+            );
           },
           child: Padding(
             padding:
-                const EdgeInsets.symmetric(
+                const EdgeInsets
+                    .symmetric(
               horizontal: 10,
               vertical: 10,
             ),
             child: Row(
               mainAxisAlignment:
-                  MainAxisAlignment.center,
+                  MainAxisAlignment
+                      .center,
               children: [
                 Icon(
                   origin
-                      ? Icons.trip_origin
-                      : Icons.location_on,
+                      ? Icons
+                          .trip_origin
+                      : Icons
+                          .location_on,
                   size: 19,
                   color: active
                       ? Colors.white
@@ -823,7 +1088,9 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                               0xffE53935,
                             ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(
+                  width: 6,
+                ),
                 Flexible(
                   child: Text(
                     origin
@@ -838,8 +1105,10 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                             'بحث عن الوجهة',
                           ),
                     overflow:
-                        TextOverflow.ellipsis,
-                    style: TextStyle(
+                        TextOverflow
+                            .ellipsis,
+                    style:
+                        TextStyle(
                       color: active
                           ? Colors.white
                           : const Color(
@@ -870,17 +1139,24 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
     return Positioned(
       left: 16,
       right: 16,
-      bottom: 118,
+      bottom: 122,
       child: Card(
         elevation: 10,
-        color: const Color(0xff071722),
-        shape: RoundedRectangleBorder(
+        color: const Color(
+          0xff071722,
+        ),
+        shape:
+            RoundedRectangleBorder(
           borderRadius:
-              BorderRadius.circular(20),
+              BorderRadius.circular(
+            20,
+          ),
         ),
         child: Padding(
           padding:
-              const EdgeInsets.all(14),
+              const EdgeInsets.all(
+            14,
+          ),
           child: Row(
             children: [
               const Icon(
@@ -888,7 +1164,9 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                 color: Colors.white,
                 size: 30,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(
+                width: 10,
+              ),
               Expanded(
                 child: Wrap(
                   spacing: 18,
@@ -899,9 +1177,11 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                       '${_distanceText()}',
                       style:
                           const TextStyle(
-                        color: Colors.white,
+                        color:
+                            Colors.white,
                         fontWeight:
-                            FontWeight.bold,
+                            FontWeight
+                                .bold,
                       ),
                     ),
                     Text(
@@ -909,19 +1189,24 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                       '${_durationText()}',
                       style:
                           const TextStyle(
-                        color: Colors.white,
+                        color:
+                            Colors.white,
                         fontWeight:
-                            FontWeight.bold,
+                            FontWeight
+                                .bold,
                       ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                onPressed: clearRoute,
-                icon: const Icon(
+                onPressed:
+                    clearRoute,
+                icon:
+                    const Icon(
                   Icons.close,
-                  color: Colors.white,
+                  color:
+                      Colors.white,
                 ),
               ),
             ],
@@ -977,11 +1262,13 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                       'ir.cyrustourist.app',
                 ),
 
-                if (routePoints.length >= 2)
+                if (routePoints.length >=
+                    2)
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        points: routePoints,
+                        points:
+                            routePoints,
                         strokeWidth: 6,
                         color:
                             const Color(
@@ -997,8 +1284,10 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
 
                 MapMarkersLayer(
                   places:
-                      controller.visiblePlaces,
-                  onTap: showPlace,
+                      controller
+                          .visiblePlaces,
+                  onTap:
+                      showPlace,
                 ),
               ],
             ),
@@ -1017,28 +1306,37 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                     children: [
                       Material(
                         elevation: 6,
-                        color: Colors.white,
+                        color:
+                            Colors.white,
                         borderRadius:
-                            BorderRadius.circular(
+                            BorderRadius
+                                .circular(
                           14,
                         ),
-                        child: InkWell(
+                        child:
+                            InkWell(
                           borderRadius:
-                              BorderRadius.circular(
+                              BorderRadius
+                                  .circular(
                             14,
                           ),
                           onTap:
                               _goBackToCyrusTourist,
-                          child: Padding(
+                          child:
+                              Padding(
                             padding:
                                 const EdgeInsets
                                     .symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                              horizontal:
+                                  12,
+                              vertical:
+                                  10,
                             ),
-                            child: Row(
+                            child:
+                                Row(
                               mainAxisSize:
-                                  MainAxisSize.min,
+                                  MainAxisSize
+                                      .min,
                               children: [
                                 const Icon(
                                   Icons
@@ -1067,13 +1365,17 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                         ),
                       ),
 
-                      const SizedBox(width: 8),
+                      const SizedBox(
+                        width: 8,
+                      ),
 
                       Expanded(
-                        child: MapSearchBar(
+                        child:
+                            MapSearchBar(
                           controller:
                               searchTextController,
-                          onSearch: () => search(
+                          onSearch:
+                              () => search(
                             searchTextController
                                 .text,
                           ),
@@ -1082,7 +1384,9 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(
+                    height: 8,
+                  ),
 
                   Row(
                     children: [
@@ -1098,36 +1402,41 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                       const SizedBox(
                         width: 8,
                       ),
-
-                      // LANGUAGE
-                      PopupMenuButton<String>(
+                      PopupMenuButton<
+                          String>(
                         initialValue:
                             selectedLanguage,
                         onSelected:
                             _changeLanguage,
                         itemBuilder:
-                            (_) => const [
+                            (_) =>
+                                const [
                           PopupMenuItem(
                             value: 'fa',
-                            child: Text(
+                            child:
+                                Text(
                               'پارسی',
                             ),
                           ),
                           PopupMenuItem(
                             value: 'en',
-                            child: Text(
+                            child:
+                                Text(
                               'English',
                             ),
                           ),
                           PopupMenuItem(
                             value: 'ar',
-                            child: Text(
+                            child:
+                                Text(
                               'العربية',
                             ),
                           ),
                         ],
-                        child: Material(
-                          elevation: 5,
+                        child:
+                            Material(
+                          elevation:
+                              5,
                           color:
                               Colors.white,
                           borderRadius:
@@ -1138,11 +1447,14 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                           child:
                               const Padding(
                             padding:
-                                EdgeInsets.all(
+                                EdgeInsets
+                                    .all(
                               10,
                             ),
-                            child: Icon(
-                              Icons.language,
+                            child:
+                                Icon(
+                              Icons
+                                  .language,
                             ),
                           ),
                         ),
@@ -1150,15 +1462,36 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(
+                    height: 6,
+                  ),
 
                   // ==================================================
-                  // CURRENT ROUTE FIELDS
+                  // RADIUS
+                  // ==================================================
+
+                  MapRadiusSelector(
+                    selectedRadius:
+                        controller
+                            .searchRadiusKm,
+                    language:
+                        selectedLanguage,
+                    onChanged:
+                        _changeRadius,
+                  ),
+
+                  const SizedBox(
+                    height: 6,
+                  ),
+
+                  // ==================================================
+                  // ORIGIN / DESTINATION
                   // ==================================================
 
                   Material(
                     elevation: 5,
-                    color: Colors.white,
+                    color:
+                        Colors.white,
                     borderRadius:
                         BorderRadius.circular(
                       15,
@@ -1187,14 +1520,16 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                                 width: 8,
                               ),
                               Expanded(
-                                child: Text(
+                                child:
+                                    Text(
                                   originName ??
                                       _text(
                                         'مبدأ: موقعیت من',
                                         'Origin: My location',
                                         'البداية: موقعي',
                                       ),
-                                  maxLines: 1,
+                                  maxLines:
+                                      1,
                                   overflow:
                                       TextOverflow
                                           .ellipsis,
@@ -1244,14 +1579,16 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                                 width: 8,
                               ),
                               Expanded(
-                                child: Text(
+                                child:
+                                    Text(
                                   destinationName ??
                                       _text(
                                         'مقصد: هنوز انتخاب نشده',
                                         'Destination: Not selected',
                                         'الوجهة: لم يتم اختيارها',
                                       ),
-                                  maxLines: 1,
+                                  maxLines:
+                                      1,
                                   overflow:
                                       TextOverflow
                                           .ellipsis,
@@ -1353,30 +1690,60 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
             ),
 
             // ==================================================
-            // QUICK TOURIST SERVICES
-            // پایین نقشه
+            // TOURIST PLACES LIST
             // ==================================================
 
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: MapQuickTools(
-                language: selectedLanguage,
-                onSelected:
-                    _handleQuickTool,
+              child: SafeArea(
+                top: false,
+                child: SizedBox(
+                  height: 220,
+                  child:
+                      SingleChildScrollView(
+                    physics:
+                        const BouncingScrollPhysics(),
+                    child:
+                        TouristPlacesList(
+                      places: controller
+                          .visiblePlaces,
+                      language:
+                          selectedLanguage,
+                      onPlaceTap:
+                          _selectPlaceFromList,
+                      onRouteTap:
+                          _routeToPlace,
+                      isFavorite:
+                          _isFavorite,
+                      onFavoriteTap:
+                          _toggleFavorite,
+                    ),
+                  ),
+                ),
               ),
             ),
 
             // ==================================================
-            // LOADING SEARCH / LOCATION
+            // QUICK TOURIST SERVICES
+            // ==================================================
+
+            // ابزارهای سریع در این مرحله
+            // هنگام وجود لیست جاذبه‌ها کنار آن قرار نمی‌گیرند
+            // تا روی اطلاعات جاذبه‌ها پوشانده نشوند.
+
+            // ==================================================
+            // LOADING
             // ==================================================
 
             if (controller.isLoading ||
-                controller.isLocationLoading ||
+                controller
+                    .isLocationLoading ||
                 searching)
               Positioned.fill(
-                child: IgnorePointer(
+                child:
+                    IgnorePointer(
                   child: Container(
                     color: Colors.black
                         .withValues(
@@ -1389,10 +1756,13 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                       child: Padding(
                         padding:
                             const EdgeInsets
-                                .all(18),
+                                .all(
+                          18,
+                        ),
                         child: Column(
                           mainAxisSize:
-                              MainAxisSize.min,
+                              MainAxisSize
+                                  .min,
                           children: [
                             const CircularProgressIndicator(),
                             const SizedBox(
@@ -1425,7 +1795,8 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
 
             if (routeLoading)
               Positioned.fill(
-                child: IgnorePointer(
+                child:
+                    IgnorePointer(
                   child: Container(
                     color: Colors.black
                         .withValues(
@@ -1438,10 +1809,13 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                       child: Padding(
                         padding:
                             const EdgeInsets
-                                .all(20),
+                                .all(
+                          20,
+                        ),
                         child: Column(
                           mainAxisSize:
-                              MainAxisSize.min,
+                              MainAxisSize
+                                  .min,
                           children: [
                             const CircularProgressIndicator(),
                             const SizedBox(
@@ -1472,10 +1846,11 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
             // ERROR
             // ==================================================
 
-            if (controller.errorMessage !=
+            if (controller
+                    .errorMessage !=
                 null)
               Positioned(
-                top: 210,
+                top: 220,
                 left: 20,
                 right: 20,
                 child: Card(
@@ -1483,9 +1858,12 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
                   child: Padding(
                     padding:
                         const EdgeInsets
-                            .all(12),
+                            .all(
+                      12,
+                    ),
                     child: Text(
-                      controller.errorMessage!,
+                      controller
+                          .errorMessage!,
                       textAlign:
                           TextAlign.center,
                     ),
@@ -1497,7 +1875,8 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
             // ROUTE SUMMARY
             // ==================================================
 
-            if (routePoints.length >= 2)
+            if (routePoints.length >=
+                2)
               _routeSummary(),
 
             // ==================================================
@@ -1506,9 +1885,10 @@ class _SmartMapScreenState extends State<SmartMapScreen> {
 
             Positioned(
               bottom:
-                  routePoints.length >= 2
-                      ? 190
-                      : 120,
+                  routePoints.length >=
+                          2
+                      ? 245
+                      : 235,
               right: 20,
               child:
                   FloatingActionButton(
