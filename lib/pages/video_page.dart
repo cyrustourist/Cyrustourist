@@ -20,72 +20,198 @@ class _VideoPageState extends State<VideoPage>
 
   final List<Map<String, String>> selectedVideos = const [
     {
-      'title': 'اقامتگاه‌های برتر ایران',
-      'location': 'ایران',
-      'category': 'اقامتگاه',
-      'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
-    },
-    {
-      'title': 'بوم‌گردی؛ تجربه‌ای متفاوت از سفر',
-      'location': 'ایران',
-      'category': 'بوم‌گردی',
+      'title': 'قنات قصبه گناباد؛ شگفتی تاریخ تمدن بشر',
+      'location': 'گناباد، خراسان رضوی',
+      'category': 'میراث تاریخی',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
+      'url': 'https://www.aparat.com/v/w17sz69',
     },
     {
-      'title': 'طبیعت زیبای ایران',
-      'location': 'ایران',
+      'title': 'رقص محلی فاروق خراسانی با آهنگ لیلا',
+      'location': 'خراسان',
+      'category': 'فرهنگ و هنر',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/xvo5q9c',
+    },
+    {
+      'title': 'چشمه گراب؛ جادوی طبیعت ایران',
+      'location': 'خراسان رضوی',
       'category': 'طبیعت ایران',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
+      'url': 'https://www.aparat.com/v/hzlol4k',
     },
     {
-      'title': 'آثار تاریخی و میراث ایران',
-      'location': 'ایران',
-      'category': 'آثار تاریخی',
+      'title': 'جنگل کوه‌پارک مشهد و قله زو',
+      'location': 'مشهد، خراسان رضوی',
+      'category': 'کوهنوردی',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
+      'url': 'https://www.aparat.com/v/guqcsg5',
     },
     {
-      'title': 'سواحل و جزایر دیدنی ایران',
-      'location': 'جنوب ایران',
+      'title': 'کاشت بلوط؛ راه نجات جنگل‌های هیرکانی',
+      'location': 'جنگل‌های هیرکانی',
+      'category': 'محیط زیست',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/w8lOg',
+    },
+    {
+      'title': 'آبشار شیرآباد؛ یکی از دیدنی‌های گلستان',
+      'location': 'استان گلستان',
+      'category': 'آبشار',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/uK3y5',
+    },
+    {
+      'title': 'آبگوشت دیزی سنگی در طبیعت',
+      'location': 'ایران',
+      'category': 'گردشگری خوراک',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/nuXAC',
+    },
+    {
+      'title': '۲۵ اردیبهشت؛ روز بزرگداشت فردوسی',
+      'location': 'مشهد، خراسان رضوی',
+      'category': 'فرهنگ و ادب',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/x707h19',
+    },
+    {
+      'title': 'چشمه سبز گلمکان؛ دریاچه زیبای مشهد',
+      'location': 'گلمکان، خراسان رضوی',
+      'category': 'طبیعت ایران',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/4Z0hQ',
+    },
+    {
+      'title': 'آموزش پخت سیب‌زمینی آتشی در طبیعت',
+      'location': 'طبیعت ایران',
+      'category': 'طبیعت‌گردی',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/s78jcie',
+    },
+    {
+      'title': 'جشن نوروز باستانی و سفره هفت‌سین',
+      'location': 'ایران',
+      'category': 'نوروز',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/R1p3U',
+    },
+    {
+      'title': 'چایخانه حمام وکیل کرمان',
+      'location': 'کرمان',
+      'category': 'دیدنی‌های کرمان',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/g40wppg',
+    },
+    {
+      'title': 'بجستان، آسبادهای نشتیفان و برج علی‌آباد کشمر',
+      'location': 'خراسان رضوی',
+      'category': 'میراث تاریخی',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/xsBFX',
+    },
+    {
+      'title': 'شاه نعمت‌الله ولی؛ ماهان کرمان',
+      'location': 'ماهان، کرمان',
+      'category': 'فرهنگ و تاریخ',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/3ZCGs',
+    },
+    {
+      'title': 'باغ شاهزاده ماهان؛ شاهکار باغ ایرانی',
+      'location': 'ماهان، کرمان',
+      'category': 'باغ تاریخی',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/z72q215',
+    },
+    {
+      'title': 'موزه بانو حیاتی؛ گنجینه‌ای در بازار کرمان',
+      'location': 'کرمان',
+      'category': 'موزه',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/c4744bv',
+    },
+    {
+      'title': 'قلعه سریزد؛ نخستین بانک جهان',
+      'location': 'سریزد، یزد',
+      'category': 'میراث تاریخی',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/kGS8o',
+    },
+    {
+      'title': 'جنگل‌های حرا و بندر تاریخی لافت',
+      'location': 'جزیره قشم',
       'category': 'سواحل و جزایر',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
+      'url': 'https://www.aparat.com/v/mPh2q',
     },
     {
-      'title': 'روستاهای گردشگری ایران',
-      'location': 'ایران',
-      'category': 'روستاهای گردشگری',
+      'title': 'باغ فین کاشان با موسیقی سنتی',
+      'location': 'کاشان',
+      'category': 'باغ تاریخی',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
+      'url': 'https://www.aparat.com/v/h86ieq2',
     },
     {
-      'title': 'سفر به دل طبیعت بکر ایران',
-      'location': 'ایران',
-      'category': 'طبیعت ایران',
-      'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
+      'title': 'زیباترین اقامتگاه بوم‌گردی در جنگل ابر',
+      'location': 'جنگل ابر',
+      'category': 'اقامتگاه',
+      'image': 'assets/images/video_accommodation.jpg',
+      'url': 'https://www.aparat.com/v/w43c127',
     },
     {
-      'title': 'اقامت در دل طبیعت',
+      'title': 'زیباترین اقامتگاه‌های بوم‌گردی ایران',
       'location': 'ایران',
       'category': 'اقامتگاه',
       'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
+      'url': 'https://www.aparat.com/v/k2RDX',
     },
     {
-      'title': 'گوشه‌های کمتر دیده‌شده ایران',
-      'location': 'ایران',
-      'category': 'جاذبه گردشگری',
+      'title': 'غار علی‌صدر؛ غار تالابی شگفت‌انگیز ایران',
+      'location': 'همدان',
+      'category': 'غار و طبیعت',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
+      'url': 'https://www.aparat.com/v/f91418q',
     },
     {
-      'title': 'ایران را زیبا ببینید',
+      'title': 'آبشار اخلمد چناران؛ طبیعت زیبای خراسان',
+      'location': 'چناران، خراسان رضوی',
+      'category': 'آبشار',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/f5212r6',
+    },
+    {
+      'title': 'جشن نوروز تخت جمشید؛ شهر پارس و پاسارگاد',
+      'location': 'فارس',
+      'category': 'میراث ایران',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/v/f38s8gz',
+    },
+    {
+      'title': 'اقامتگاه‌ها و دیدنی‌های ایران',
       'location': 'ایران',
-      'category': 'سفر و گردشگری',
+      'category': 'اقامتگاه',
+      'image': 'assets/images/video_accommodation.jpg',
+      'url': 'https://www.aparat.com/v/m37fn2a',
+    },
+    {
+      'title': 'اقامتگاه بوم‌گردی قوامیه گناباد',
+      'location': 'گناباد، خراسان رضوی',
+      'category': 'بوم‌گردی',
+      'image': 'assets/images/video_accommodation.jpg',
+      'url': 'https://www.aparat.com/v/a528058',
+    },
+    {
+      'title': 'اقامتگاه بوم‌گردی ناخدا علی در لافت',
+      'location': 'جزیره قشم، بندر لافت',
+      'category': 'بوم‌گردی',
+      'image': 'assets/images/video_accommodation.jpg',
+      'url': 'https://www.aparat.com/v/hLg1q',
+    },
+    {
+      'title': 'موزه جانورشناسی؛ مجموعه‌ای کم‌نظیر از جانوران ایران',
+      'location': 'ایران',
+      'category': 'موزه و طبیعت',
       'image': 'assets/images/video_attraction.jpg',
       'url': 'https://www.aparat.com/Cyrustourist',
     },
@@ -199,7 +325,6 @@ class _VideoPageState extends State<VideoPage>
                         );
                       },
                     ),
-
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -212,7 +337,6 @@ class _VideoPageState extends State<VideoPage>
                         ),
                       ),
                     ),
-
                     Positioned(
                       top: 10,
                       right: 10,
@@ -222,14 +346,10 @@ class _VideoPageState extends State<VideoPage>
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: backgroundColor.withValues(
-                            alpha: 0.82,
-                          ),
+                          color: backgroundColor.withValues(alpha: 0.82),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: goldColor.withValues(
-                              alpha: 0.7,
-                            ),
+                            color: goldColor.withValues(alpha: 0.7),
                           ),
                         ),
                         child: Text(
@@ -242,7 +362,6 @@ class _VideoPageState extends State<VideoPage>
                         ),
                       ),
                     ),
-
                     const Center(
                       child: Icon(
                         Icons.play_circle_fill_rounded,
@@ -250,7 +369,6 @@ class _VideoPageState extends State<VideoPage>
                         size: 58,
                       ),
                     ),
-
                     Positioned(
                       bottom: 9,
                       right: 12,
@@ -268,9 +386,7 @@ class _VideoPageState extends State<VideoPage>
                 ),
               ),
             ),
-
             const SizedBox(height: 11),
-
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -295,9 +411,7 @@ class _VideoPageState extends State<VideoPage>
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
                 Expanded(
                   child: Text(
                     video['title']!,
@@ -311,9 +425,7 @@ class _VideoPageState extends State<VideoPage>
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 8),
-
                 ElevatedButton.icon(
                   onPressed: () => _openUrl(video['url']!),
                   icon: const Icon(
@@ -381,21 +493,15 @@ class _VideoPageState extends State<VideoPage>
                   child: Column(
                     children: [
                       Row(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // سمت راست
                           _buildAnimatedCategoryCard(
                             image:
                                 'assets/images/video_accommodation.jpg',
                             title: 'نمایش فیلم',
                             icon: Icons.movie_creation_rounded,
                           ),
-
-                          // فاصله بین دو کارت
                           const SizedBox(width: 8),
-
-                          // سمت چپ
                           _buildAnimatedCategoryCard(
                             image:
                                 'assets/images/video_attraction.jpg',
@@ -404,9 +510,7 @@ class _VideoPageState extends State<VideoPage>
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 20),
-
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
@@ -415,10 +519,10 @@ class _VideoPageState extends State<VideoPage>
                         ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(18),
-                          gradient: LinearGradient(
+                          gradient: const LinearGradient(
                             colors: [
-                              const Color(0xff0b2a3c),
-                              const Color(0xff09202e),
+                              Color(0xff0b2a3c),
+                              Color(0xff09202e),
                             ],
                           ),
                           border: Border.all(
@@ -432,13 +536,11 @@ class _VideoPageState extends State<VideoPage>
                               height: 43,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: goldColor.withValues(
-                                  alpha: 0.13,
-                                ),
+                                color:
+                                    goldColor.withValues(alpha: 0.13),
                                 border: Border.all(
-                                  color: goldColor.withValues(
-                                    alpha: 0.45,
-                                  ),
+                                  color:
+                                      goldColor.withValues(alpha: 0.45),
                                 ),
                               ),
                               child: const Icon(
@@ -478,13 +580,11 @@ class _VideoPageState extends State<VideoPage>
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 14),
                     ],
                   ),
                 ),
               ),
-
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
@@ -497,7 +597,6 @@ class _VideoPageState extends State<VideoPage>
                   childCount: selectedVideos.length,
                 ),
               ),
-
               const SliverToBoxAdapter(
                 child: SizedBox(height: 18),
               ),
@@ -529,7 +628,6 @@ class _CategoryCard extends StatefulWidget {
 class _CategoryCardState extends State<_CategoryCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-
   late final Animation<double> _scaleAnimation;
   late final Animation<double> _glowAnimation;
 
@@ -643,7 +741,6 @@ class _CategoryCardState extends State<_CategoryCard>
                       );
                     },
                   ),
-
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -656,7 +753,6 @@ class _CategoryCardState extends State<_CategoryCard>
                       ),
                     ),
                   ),
-
                   Positioned(
                     top: 12,
                     right: 12,
@@ -679,7 +775,6 @@ class _CategoryCardState extends State<_CategoryCard>
                       ),
                     ),
                   ),
-
                   Positioned(
                     right: 12,
                     left: 12,
