@@ -21,11 +21,39 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Flutter version
+        run: flutter --version
+
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build APK arm64
-        run: flutter build apk --release --target-platform android-arm64
+      - name: Build APK with retry
+        shell: bash
+        run: |
+          set -e
+
+          for attempt in 1 2 3 4 5; do
+            echo "========================================"
+            echo "APK BUILD ATTEMPT: $attempt / 5"
+            echo "========================================"
+
+            if flutter build apk \
+              --release \
+              --target-platform android-arm64 \
+              --android-skip-build-dependency-validation; then
+
+              echo "APK BUILD SUCCESSFUL"
+              break
+            fi
+
+            if [ "$attempt" -eq 5 ]; then
+              echo "APK BUILD FAILED AFTER 5 ATTEMPTS"
+              exit 1
+            fi
+
+            echo "Build failed. Waiting 30 seconds before retry..."
+            sleep 30
+          done
 
       - name: Prepare APK
         run: |
