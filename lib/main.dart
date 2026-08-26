@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:url_launcher/url_launcher.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -17,6 +15,7 @@ import 'pages/category_explorer_page.dart';
 import 'pages/about_page.dart';
 import 'pages/contact_support_page.dart';
 import 'pages/favorites_page.dart';
+
 // ============================================================
 // MAIN
 // ============================================================
@@ -396,6 +395,40 @@ class _HomePageState extends State<HomePage> {
     }
 
     // ========================================================
+    // کلید 3 = جاذبه‌های گردشگری
+    // ========================================================
+
+    if (number == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const CategoryExplorerPage(
+            initialCategory: PlaceCategory.attraction,
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    // ========================================================
+    // کلید 5 = اقامتگاه‌ها
+    // ========================================================
+
+    if (number == 5) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const CategoryExplorerPage(
+            initialCategory: PlaceCategory.accommodation,
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    // ========================================================
     // کلید 8 = درباره ما
     // ========================================================
 
@@ -418,6 +451,20 @@ class _HomePageState extends State<HomePage> {
         context,
         MaterialPageRoute(
           builder: (_) => const ContactSupportPage(),
+        ),
+      );
+      return;
+    }
+
+    // ========================================================
+    // کلید 10 = علاقه‌مندی‌ها
+    // ========================================================
+
+    if (number == 10) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const FavoritesPage(),
         ),
       );
       return;
@@ -1328,16 +1375,29 @@ class _SmartMapPageState
 
   Widget mapServiceButton(
     IconData icon,
-    String title,
-  ) {
+    String title, {
+    PlaceCategory? category,
+  }) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: InkWell(
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$title آماده اتصال به بخش مربوطه است.'),
+            if (category == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('$title آماده اتصال به بخش مربوطه است.'),
+                ),
+              );
+              return;
+            }
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CategoryExplorerPage(
+                  initialCategory: category,
+                ),
               ),
             );
           },
@@ -1394,6 +1454,7 @@ class _SmartMapPageState
                     : LanguageManager.current == AppLanguage.arabic
                         ? 'الإقامة'
                         : 'Accommodation',
+                category: PlaceCategory.accommodation,
               ),
               mapServiceButton(
                 Icons.place,
@@ -1402,14 +1463,16 @@ class _SmartMapPageState
                     : LanguageManager.current == AppLanguage.arabic
                         ? 'المعالم'
                         : 'Attractions',
+                category: PlaceCategory.attraction,
               ),
               mapServiceButton(
-                Icons.navigation,
+                Icons.local_hospital,
                 LanguageManager.current == AppLanguage.persian
-                    ? 'مسیریابی'
+                    ? 'سلامت'
                     : LanguageManager.current == AppLanguage.arabic
-                        ? 'الملاحة'
-                        : 'Navigation',
+                        ? 'الصحة'
+                        : 'Health',
+                category: PlaceCategory.health,
               ),
             ],
           ),
