@@ -38,15 +38,32 @@ class MapQuickTools extends StatefulWidget {
   final ValueChanged<String> onSelected;
 
   @override
-  State<MapQuickTools> createState() => _MapQuickToolsState();
+  State<MapQuickTools> createState() =>
+      _MapQuickToolsState();
 }
 
-class _MapQuickToolsState extends State<MapQuickTools> {
+class _MapQuickToolsState
+    extends State<MapQuickTools> {
   String? selectedId;
 
-  static const Color background = Color(0xff071722);
-  static const Color gold = Color(0xffffd36a);
-  static const Color goldBright = Color(0xffffe39a);
+  static const Color background =
+      Color(0xff071722);
+
+  static const Color gold =
+      Color(0xffffd36a);
+
+  static const Color goldBright =
+      Color(0xffffe39a);
+
+  // ==========================================================
+  // خدمات مهم گردشگر
+  //
+  // اقامتگاه       ← کلید ۵
+  // جاذبه گردشگری  ← کلید ۳
+  // سلامت          ← کلید ۲
+  //
+  // بنابراین در اینجا تکرار نمی‌شوند.
+  // ==========================================================
 
   static const List<MapQuickTool> tools = [
     MapQuickTool(
@@ -109,7 +126,10 @@ class _MapQuickToolsState extends State<MapQuickTools> {
 
   void _tap(MapQuickTool tool) {
     setState(() {
-      selectedId = selectedId == tool.id ? null : tool.id;
+      selectedId =
+          selectedId == tool.id
+              ? null
+              : tool.id;
     });
 
     widget.onSelected(tool.id);
@@ -117,71 +137,126 @@ class _MapQuickToolsState extends State<MapQuickTools> {
 
   @override
   Widget build(BuildContext context) {
-    final rtl = widget.language != 'en';
+    final rtl =
+        widget.language != 'en';
 
     return Directionality(
       textDirection:
-          rtl ? TextDirection.rtl : TextDirection.ltr,
+          rtl
+              ? TextDirection.rtl
+              : TextDirection.ltr,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-        padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
-        decoration: BoxDecoration(
-          color: background.withValues(alpha: 0.96),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: gold.withValues(alpha: 0.35),
+        margin:
+            const EdgeInsets.fromLTRB(
+          10,
+          0,
+          10,
+          10,
+        ),
+        padding:
+            const EdgeInsets.fromLTRB(
+          8,
+          10,
+          8,
+          10,
+        ),
+        decoration:
+            BoxDecoration(
+          color:
+              background.withValues(
+            alpha: 0.97,
+          ),
+          borderRadius:
+              BorderRadius.circular(
+            22,
+          ),
+          border:
+              Border.all(
+            color:
+                gold.withValues(
+              alpha: 0.38,
+            ),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.45),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+              color:
+                  Colors.black.withValues(
+                alpha: 0.50,
+              ),
+              blurRadius: 20,
+              offset:
+                  const Offset(
+                0,
+                8,
+              ),
             ),
             BoxShadow(
-              color: gold.withValues(alpha: 0.08),
-              blurRadius: 20,
+              color:
+                  gold.withValues(
+                alpha: 0.10,
+              ),
+              blurRadius: 22,
               spreadRadius: 1,
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child:
+            Column(
+          crossAxisAlignment:
+              CrossAxisAlignment
+                  .stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(
+              padding:
+                  const EdgeInsets
+                      .symmetric(
                 horizontal: 8,
               ),
-              child: Row(
+              child:
+                  Row(
                 children: [
                   const Icon(
                     Icons.explore_rounded,
                     color: gold,
                     size: 22,
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(
+                    width: 7,
+                  ),
                   Expanded(
-                    child: Text(
-                      widget.language == 'en'
+                    child:
+                        Text(
+                      widget.language ==
+                              'en'
                           ? 'Tourist Services'
-                          : widget.language == 'ar'
+                          : widget.language ==
+                                  'ar'
                               ? 'خدمات السائح'
                               : 'خدمات ضروری گردشگر',
-                      style: const TextStyle(
-                        color: goldBright,
+                      style:
+                          const TextStyle(
+                        color:
+                            goldBright,
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight:
+                            FontWeight.bold,
                       ),
                     ),
                   ),
                   Text(
-                    widget.language == 'en'
+                    widget.language ==
+                            'en'
                         ? 'Nearby'
-                        : widget.language == 'ar'
+                        : widget.language ==
+                                'ar'
                             ? 'بالقرب منك'
                             : 'اطراف من',
-                    style: TextStyle(
-                      color: Colors.white.withValues(
+                    style:
+                        TextStyle(
+                      color:
+                          Colors.white
+                              .withValues(
                         alpha: 0.65,
                       ),
                       fontSize: 11,
@@ -190,26 +265,47 @@ class _MapQuickToolsState extends State<MapQuickTools> {
                 ],
               ),
             ),
-            const SizedBox(height: 9),
+
+            const SizedBox(
+              height: 9,
+            ),
+
             SizedBox(
               height: 91,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: tools.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: 9),
-                itemBuilder: (context, index) {
-                  final tool = tools[index];
+              child:
+                  ListView.separated(
+                scrollDirection:
+                    Axis.horizontal,
+                physics:
+                    const BouncingScrollPhysics(),
+                itemCount:
+                    tools.length,
+                separatorBuilder:
+                    (_, __) =>
+                        const SizedBox(
+                  width: 9,
+                ),
+                itemBuilder:
+                    (context, index) {
+                  final tool =
+                      tools[index];
+
                   final active =
-                      selectedId == tool.id;
+                      selectedId ==
+                          tool.id;
 
                   return _QuickToolButton(
                     tool: tool,
                     title:
-                        tool.title(widget.language),
-                    active: active,
-                    onTap: () => _tap(tool),
+                        tool.title(
+                      widget.language,
+                    ),
+                    active:
+                        active,
+                    onTap:
+                        () => _tap(
+                      tool,
+                    ),
                   );
                 },
               ),
@@ -221,7 +317,8 @@ class _MapQuickToolsState extends State<MapQuickTools> {
   }
 }
 
-class _QuickToolButton extends StatefulWidget {
+class _QuickToolButton
+    extends StatefulWidget {
   const _QuickToolButton({
     required this.tool,
     required this.title,
@@ -235,8 +332,9 @@ class _QuickToolButton extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_QuickToolButton> createState() =>
-      _QuickToolButtonState();
+  State<_QuickToolButton>
+      createState() =>
+          _QuickToolButtonState();
 }
 
 class _QuickToolButtonState
@@ -244,9 +342,11 @@ class _QuickToolButtonState
   bool pressed = false;
 
   @override
-  Widget build(BuildContext context) {
-    final gold =
-        const Color(0xffffd36a);
+  Widget build(
+    BuildContext context,
+  ) {
+    const gold =
+        Color(0xffffd36a);
 
     return GestureDetector(
       onTapDown: (_) {
@@ -259,91 +359,153 @@ class _QuickToolButtonState
           pressed = false;
         });
       },
-      onTapUp: (_) async {
+      onTapUp: (_) {
         setState(() {
           pressed = false;
         });
 
         widget.onTap();
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+      child:
+          AnimatedContainer(
+        duration:
+            const Duration(
+          milliseconds: 150,
+        ),
         width: 82,
-        transform: Matrix4.identity()
-          ..scale(pressed ? 0.94 : 1.0),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(17),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: widget.active
-                ? const [
-                    Color(0xffffe39a),
-                    Color(0xffffc84d),
-                  ]
-                : const [
-                    Color(0xff12374a),
-                    Color(0xff09202d),
-                  ],
+        transform:
+            Matrix4.identity()
+              ..scale(
+                pressed
+                    ? 0.94
+                    : 1.0,
+              ),
+        decoration:
+            BoxDecoration(
+          borderRadius:
+              BorderRadius.circular(
+            17,
           ),
-          border: Border.all(
-            color: widget.active
-                ? gold
-                : gold.withValues(alpha: 0.32),
-            width: widget.active ? 1.8 : 1,
+          gradient:
+              LinearGradient(
+            begin:
+                Alignment.topLeft,
+            end:
+                Alignment.bottomRight,
+            colors:
+                widget.active
+                    ? const [
+                        Color(
+                          0xffffe39a,
+                        ),
+                        Color(
+                          0xffffc84d,
+                        ),
+                      ]
+                    : const [
+                        Color(
+                          0xff16465c,
+                        ),
+                        Color(
+                          0xff09202d,
+                        ),
+                      ],
+          ),
+          border:
+              Border.all(
+            color:
+                widget.active
+                    ? gold
+                    : gold.withValues(
+                        alpha: 0.35,
+                      ),
+            width:
+                widget.active
+                    ? 1.8
+                    : 1,
           ),
           boxShadow: [
+            // سایه اصلی همه کلیدها
             BoxShadow(
-              color: Colors.black.withValues(
-                alpha: 0.42,
+              color:
+                  Colors.black.withValues(
+                alpha: 0.48,
               ),
-              blurRadius: 8,
-              offset: const Offset(0, 5),
+              blurRadius: 9,
+              offset:
+                  const Offset(
+                0,
+                6,
+              ),
             ),
+
+            // نور طلایی
             BoxShadow(
-              color: gold.withValues(
-                alpha: widget.active
-                    ? 0.55
-                    : pressed
-                        ? 0.38
-                        : 0.10,
+              color:
+                  gold.withValues(
+                alpha:
+                    widget.active
+                        ? 0.55
+                        : pressed
+                            ? 0.38
+                            : 0.10,
               ),
               blurRadius:
-                  widget.active ? 15 : 8,
+                  widget.active
+                      ? 16
+                      : 9,
               spreadRadius:
-                  widget.active ? 1.2 : 0,
+                  widget.active
+                      ? 1.2
+                      : 0,
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
+        child:
+            Padding(
+          padding:
+              const EdgeInsets
+                  .symmetric(
             horizontal: 5,
             vertical: 8,
           ),
-          child: Column(
+          child:
+              Column(
             mainAxisAlignment:
-                MainAxisAlignment.center,
+                MainAxisAlignment
+                    .center,
             children: [
               Icon(
                 widget.tool.icon,
                 size: 29,
-                color: widget.active
-                    ? const Color(0xff071722)
-                    : gold,
+                color:
+                    widget.active
+                        ? const Color(
+                            0xff071722,
+                          )
+                        : gold,
               ),
-              const SizedBox(height: 5),
+              const SizedBox(
+                height: 5,
+              ),
               Text(
                 widget.title,
                 maxLines: 1,
                 overflow:
                     TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: widget.active
-                      ? const Color(0xff071722)
-                      : Colors.white,
+                textAlign:
+                    TextAlign.center,
+                style:
+                    TextStyle(
+                  color:
+                      widget.active
+                          ? const Color(
+                              0xff071722,
+                            )
+                          : Colors.white,
                   fontSize: 11,
-                  fontWeight: FontWeight.bold,
+                  fontWeight:
+                      FontWeight.bold,
                 ),
               ),
             ],
