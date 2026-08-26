@@ -1,128 +1,348 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class VideoPage extends StatelessWidget {
+class VideoPage extends StatefulWidget {
   const VideoPage({super.key});
 
-  final String aparatUrl =
+  @override
+  State<VideoPage> createState() => _VideoPageState();
+}
+
+class _VideoPageState extends State<VideoPage>
+    with TickerProviderStateMixin {
+  static const Color backgroundColor = Color(0xff06121d);
+  static const Color cardColor = Color(0xff0b2636);
+  static const Color goldColor = Color(0xffffd36a);
+  static const Color goldBright = Color(0xffffe39a);
+
+  static const String aparatChannel =
       'https://www.aparat.com/Cyrustourist';
 
-  Future<void> openAparat() async {
-    final uri = Uri.parse(aparatUrl);
+  final List<Map<String, String>> selectedVideos = const [
+    {
+      'title': 'اقامتگاه‌های برتر ایران',
+      'location': 'ایران',
+      'category': 'اقامتگاه',
+      'image': 'assets/images/video_accommodation.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'بوم‌گردی؛ تجربه‌ای متفاوت از سفر',
+      'location': 'ایران',
+      'category': 'بوم‌گردی',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'طبیعت زیبای ایران',
+      'location': 'ایران',
+      'category': 'طبیعت ایران',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'آثار تاریخی و میراث ایران',
+      'location': 'ایران',
+      'category': 'آثار تاریخی',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'سواحل و جزایر دیدنی ایران',
+      'location': 'جنوب ایران',
+      'category': 'سواحل و جزایر',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'روستاهای گردشگری ایران',
+      'location': 'ایران',
+      'category': 'روستاهای گردشگری',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'سفر به دل طبیعت بکر ایران',
+      'location': 'ایران',
+      'category': 'طبیعت ایران',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'اقامت در دل طبیعت',
+      'location': 'ایران',
+      'category': 'اقامتگاه',
+      'image': 'assets/images/video_accommodation.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'گوشه‌های کمتر دیده‌شده ایران',
+      'location': 'ایران',
+      'category': 'جاذبه گردشگری',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+    {
+      'title': 'ایران را زیبا ببینید',
+      'location': 'ایران',
+      'category': 'سفر و گردشگری',
+      'image': 'assets/images/video_attraction.jpg',
+      'url': 'https://www.aparat.com/Cyrustourist',
+    },
+  ];
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(
+  Future<void> _openUrl(String url) async {
+    final Uri uri = Uri.parse(url);
+
+    try {
+      final bool launched = await launchUrl(
         uri,
         mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'امکان باز کردن لینک آپارات وجود ندارد.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'خطا در باز کردن آپارات.',
+            textAlign: TextAlign.center,
+          ),
+        ),
       );
     }
   }
 
-  Widget videoCategoryCard({
-    required BuildContext context,
+  Widget _buildAnimatedCategoryCard({
     required String image,
     required String title,
-    required String subtitle,
+    required IconData icon,
   }) {
     return Expanded(
-      child: GestureDetector(
-        onTap: openAparat,
-        child: Container(
-          margin: const EdgeInsets.all(8),
-          height: 210,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: const Color(0xffffd36a),
-              width: 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xffffd36a)
-                    .withValues(alpha: .35),
-                blurRadius: 15,
-              ),
-            ],
-            image: DecorationImage(
-              image: AssetImage(image),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Colors.black.withValues(alpha: .35),
-            ),
-            child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.play_circle_fill,
-                  color: Color(0xffffd36a),
-                  size: 60,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
+      child: _CategoryCard(
+        image: image,
+        title: title,
+        icon: icon,
+        onTap: () => _openUrl(aparatChannel),
       ),
     );
   }
 
-  Widget filmItem(int number) {
+  Widget _buildVideoCard(
+    BuildContext context,
+    Map<String, String> video,
+    int index,
+  ) {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 10,
+      margin: const EdgeInsets.only(
+        left: 14,
+        right: 14,
+        bottom: 14,
       ),
-      height: 150,
       decoration: BoxDecoration(
-        color: const Color(0xff0b506b),
-        borderRadius: BorderRadius.circular(20),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: const Color(0xffffd36a),
+          color: goldColor.withValues(alpha: 0.28),
+          width: 1,
         ),
-      ),
-      child: Row(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(20),
-            child: Icon(
-              Icons.play_circle,
-              color: Color(0xffffd36a),
-              size: 55,
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
           ),
-          Expanded(
-            child: Text(
-              'فیلم منتخب گردشگری شماره $number\nCyrus Tourist',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          BoxShadow(
+            color: goldColor.withValues(alpha: 0.06),
+            blurRadius: 18,
           ),
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(17),
+              child: AspectRatio(
+                aspectRatio: 16 / 8.5,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      video['image']!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (
+                        context,
+                        error,
+                        stackTrace,
+                      ) {
+                        return Container(
+                          color: const Color(0xff102c3b),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.image_not_supported_outlined,
+                            color: goldColor,
+                            size: 42,
+                          ),
+                        );
+                      },
+                    ),
+
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.05),
+                            Colors.black.withValues(alpha: 0.68),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: backgroundColor.withValues(
+                            alpha: 0.82,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: goldColor.withValues(
+                              alpha: 0.7,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          video['category']!,
+                          style: const TextStyle(
+                            color: goldBright,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const Center(
+                      child: Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: goldColor,
+                        size: 58,
+                      ),
+                    ),
+
+                    Positioned(
+                      bottom: 9,
+                      right: 12,
+                      left: 12,
+                      child: Text(
+                        video['location']!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 11),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: goldColor.withValues(alpha: 0.12),
+                    border: Border.all(
+                      color: goldColor.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: const TextStyle(
+                        color: goldColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Text(
+                    video['title']!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                ElevatedButton.icon(
+                  onPressed: () => _openUrl(video['url']!),
+                  icon: const Icon(
+                    Icons.play_arrow_rounded,
+                    size: 19,
+                  ),
+                  label: const Text(
+                    'مشاهده',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: goldColor,
+                    foregroundColor: backgroundColor,
+                    elevation: 5,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 9,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -132,70 +352,379 @@ class VideoPage extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor:
-            const Color(0xff071722),
-
+        backgroundColor: backgroundColor,
         appBar: AppBar(
-          backgroundColor:
-              const Color(0xff071722),
+          backgroundColor: backgroundColor,
           foregroundColor: Colors.white,
           centerTitle: true,
+          elevation: 0,
           title: const Text(
             'نمایش فیلم‌های گردشگری',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 19,
+            ),
           ),
         ),
-
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-
-              const SizedBox(height: 10),
-
-              Row(
-                children: [
-                  videoCategoryCard(
-                    context: context,
-                    image:
-                        'assets/images/video_accommodation.jpg',
-                    title: 'فیلم‌های اقامتی',
-                    subtitle:
-                        'اقامتگاه | بوم‌گردی | کلبه',
+        body: SafeArea(
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    10,
+                    8,
+                    10,
+                    0,
                   ),
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          // سمت راست
+                          _buildAnimatedCategoryCard(
+                            image:
+                                'assets/images/video_accommodation.jpg',
+                            title: 'نمایش فیلم',
+                            icon: Icons.movie_creation_rounded,
+                          ),
 
-                  videoCategoryCard(
-                    context: context,
-                    image:
-                        'assets/images/video_attraction.jpg',
-                    title:
-                        'جاذبه‌های گردشگری',
-                    subtitle:
-                        'تاریخ | طبیعت | فرهنگ',
+                          // فاصله بین دو کارت
+                          const SizedBox(width: 8),
+
+                          // سمت چپ
+                          _buildAnimatedCategoryCard(
+                            image:
+                                'assets/images/video_attraction.jpg',
+                            title: 'جاذبه گردشگری',
+                            icon: Icons.landscape_rounded,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xff0b2a3c),
+                              const Color(0xff09202e),
+                            ],
+                          ),
+                          border: Border.all(
+                            color: goldColor.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 43,
+                              height: 43,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: goldColor.withValues(
+                                  alpha: 0.13,
+                                ),
+                                border: Border.all(
+                                  color: goldColor.withValues(
+                                    alpha: 0.45,
+                                  ),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.ondemand_video_rounded,
+                                color: goldColor,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'فیلم‌های منتخب گردشگری',
+                                    style: TextStyle(
+                                      color: goldBright,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'ایران را زیبا ببینید.',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: goldColor,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+                    ],
                   ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                'فیلم‌های منتخب Cyrus Tourist',
-                style: TextStyle(
-                  color: Color(0xffffd36a),
-                  fontSize: 24,
-                  fontWeight:
-                      FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 10),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return _buildVideoCard(
+                      context,
+                      selectedVideos[index],
+                      index,
+                    );
+                  },
+                  childCount: selectedVideos.length,
+                ),
+              ),
 
-              ...List.generate(
-                10,
-                (index) => filmItem(index + 1),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 18),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CategoryCard extends StatefulWidget {
+  const _CategoryCard({
+    required this.image,
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String image;
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  State<_CategoryCard> createState() => _CategoryCardState();
+}
+
+class _CategoryCardState extends State<_CategoryCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 170),
+      reverseDuration: const Duration(milliseconds: 230),
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.955,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    _glowAnimation = Tween<double>(
+      begin: 0.20,
+      end: 0.95,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTap() async {
+    await _controller.forward();
+
+    if (!mounted) return;
+
+    await _controller.reverse();
+
+    if (!mounted) return;
+
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: GestureDetector(
+            onTap: _handleTap,
+            child: Container(
+              height: 190,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: Color.lerp(
+                    const Color(0xffffd36a)
+                        .withValues(alpha: 0.35),
+                    const Color(0xffffd36a),
+                    _glowAnimation.value,
+                  )!,
+                  width: 1.8,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xffffd36a).withValues(
+                      alpha: _glowAnimation.value * 0.45,
+                    ),
+                    blurRadius:
+                        10 + (_glowAnimation.value * 17),
+                    spreadRadius:
+                        _glowAnimation.value * 1.8,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 7),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    widget.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (
+                      context,
+                      error,
+                      stackTrace,
+                    ) {
+                      return Container(
+                        color: const Color(0xff102c3b),
+                        child: const Icon(
+                          Icons.image_not_supported_outlined,
+                          color: Color(0xffffd36a),
+                          size: 45,
+                        ),
+                      );
+                    },
+                  ),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.08),
+                          Colors.black.withValues(alpha: 0.72),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xff071722)
+                            .withValues(alpha: 0.72),
+                        border: Border.all(
+                          color: const Color(0xffffd36a)
+                              .withValues(alpha: 0.75),
+                        ),
+                      ),
+                      child: Icon(
+                        widget.icon,
+                        color: const Color(0xffffd36a),
+                        size: 23,
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    right: 12,
+                    left: 12,
+                    bottom: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xff071722)
+                            .withValues(alpha: 0.74),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: const Color(0xffffd36a)
+                              .withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              widget.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Color(0xffffd36a),
+                            size: 25,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
