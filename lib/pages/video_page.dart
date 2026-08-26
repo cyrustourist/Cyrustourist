@@ -492,23 +492,64 @@ class _VideoPageState extends State<VideoPage>
                   ),
                   child: Column(
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildAnimatedCategoryCard(
-                            image:
-                                'assets/images/video_accommodation.jpg',
-                            title: 'نمایش فیلم',
-                            icon: Icons.movie_creation_rounded,
+                      // تصویر ترکیبی جدید بالای صفحه.
+                      // خود تصویر بدون فیلتر یا پوشش گرافیکی نمایش داده می‌شود
+                      // تا کیفیت و جزئیات آن حفظ شود. دو ناحیه شفاف روی تصویر
+                      // مانند دو کلید عمل می‌کنند.
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: AspectRatio(
+                          aspectRatio: 1536 / 1024,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.asset(
+                                'assets/images/video_menu_header.png',
+                                fit: BoxFit.cover,
+                                filterQuality: FilterQuality.high,
+                                errorBuilder: (
+                                  context,
+                                  error,
+                                  stackTrace,
+                                ) {
+                                  return Container(
+                                    color: backgroundColor,
+                                    alignment: Alignment.center,
+                                    child: const Icon(
+                                      Icons.image_not_supported_outlined,
+                                      color: goldColor,
+                                      size: 45,
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              // کلید شفاف سمت چپ: فیلم‌های اقامتی
+                              Positioned(
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: MediaQuery.sizeOf(context).width * 0.5,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onTap: () => _openUrl(aparatChannel),
+                                ),
+                              ),
+
+                              // کلید شفاف سمت راست: جاذبه‌های گردشگری
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: MediaQuery.sizeOf(context).width * 0.5,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onTap: () => _openUrl(aparatChannel),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          _buildAnimatedCategoryCard(
-                            image:
-                                'assets/images/video_attraction.jpg',
-                            title: 'جاذبه گردشگری',
-                            icon: Icons.landscape_rounded,
-                          ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 20),
                       Container(
