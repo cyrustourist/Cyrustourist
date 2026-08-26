@@ -11,6 +11,7 @@ import 'services/map_state_service.dart';
 import 'providers/map_state_provider.dart';
 
 import 'map_place.dart';
+import 'core/language/app_language.dart';
 import 'pages/category_explorer_page.dart';
 import 'pages/about_page.dart';
 import 'pages/contact_support_page.dart';
@@ -56,65 +57,10 @@ class CyrusTouristApp extends StatelessWidget {
 // ============================================================
 // LANGUAGE
 // ============================================================
-
-enum AppLanguage {
-  persian,
-  english,
-  arabic,
-}
-
-class LanguageManager {
-  static AppLanguage current = AppLanguage.english;
-
-  static Future<void> load() async {
-    final pref = await SharedPreferences.getInstance();
-
-    final saved = pref.getString('language');
-
-    if (saved == 'fa') {
-      current = AppLanguage.persian;
-    } else if (saved == 'ar') {
-      current = AppLanguage.arabic;
-    } else if (saved == 'en') {
-      current = AppLanguage.english;
-    } else {
-      final code = WidgetsBinding
-          .instance
-          .platformDispatcher
-          .locale
-          .languageCode
-          .toLowerCase();
-
-      if (code == 'fa') {
-        current = AppLanguage.persian;
-      } else if (code == 'ar') {
-        current = AppLanguage.arabic;
-      } else {
-        current = AppLanguage.english;
-      }
-    }
-  }
-
-  static Future<void> setLanguage(AppLanguage lang) async {
-    current = lang;
-
-    final pref = await SharedPreferences.getInstance();
-
-    switch (lang) {
-      case AppLanguage.persian:
-        await pref.setString('language', 'fa');
-        break;
-
-      case AppLanguage.arabic:
-        await pref.setString('language', 'ar');
-        break;
-
-      case AppLanguage.english:
-        await pref.setString('language', 'en');
-        break;
-    }
-  }
-}
+//
+// AppLanguage و LanguageManager از core/language/app_language.dart
+// می‌آیند تا با video_page.dart و category_explorer_page.dart
+// یکی باشند و تغییر زبان همه‌جا همزمان اعمال شود.
 
 // ============================================================
 // TEXT
