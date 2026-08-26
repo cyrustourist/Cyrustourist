@@ -19,8 +19,12 @@ import 'map/tourist_places_list.dart';
 ///
 /// مرحله ۱: مکان‌های اطراف موقعیت GPS کاربر روی نقشه و زیر نقشه لیست می‌شود.
 /// مرحله ۲: اگر کاربر شهر/جاذبه‌ای را جستجو کند، نقشه و لیست حول همان
-/// نقطه جستجو‌شده بازسازی می‌شود و دکمه بازگشت به موقعیت کاربر نمایش
-/// داده می‌شود.
+/// نقطه جستجو‌شده (نقطه مرجع جدید) بازسازی می‌شود و دکمه بازگشت به
+/// موقعیت کاربر نمایش داده می‌شود.
+///
+/// نقطه مرجع مسیریابی:
+/// - در حالت عادی = موقعیت واقعی GPS کاربر.
+/// - در حالت جستجوی شهر/جاذبه = همان نقطه جستجو‌شده.
 class CategoryExplorerPage extends StatefulWidget {
   final PlaceCategory initialCategory;
 
@@ -91,6 +95,13 @@ class _CategoryExplorerPageState
   }
 
   bool get _isRtl => _langCode != 'en';
+
+  /// نقطه مرجع فعلی برای مسیریابی.
+  ///
+  /// در حالت جستجو، نقطه مرجع همان نتیجه جستجو است؛
+  /// در حالت عادی، موقعیت واقعی GPS کاربر است.
+  LatLng? get _referencePoint =>
+      _isSearchedMode ? _center : (_userLocation ?? _center);
 
   String _text(
     String fa,
@@ -319,9 +330,14 @@ class _CategoryExplorerPageState
   // ============================================================
   // ROUTE
   // ============================================================
+  //
+  // مبدأ مسیریابی به‌جای اینکه همیشه GPS واقعی باشد، از نقطه
+  // مرجع فعلی (_referencePoint) خوانده می‌شود:
+  // - حالت عادی → GPS واقعی کاربر
+  // - حالت جستجوی شهر/جاذبه → همان نقطه جستجو‌شده
 
   Future<void> _openRoute(MapPlace place) async {
-    final origin = _userLocation;
+    final origin = _referencePoint;
     final lat = place.location.latitude;
     final lon = place.location.longitude;
 
@@ -363,10 +379,10 @@ class _CategoryExplorerPageState
   }
 
   // ============================================================
-  // MARKER / PLACE TAP
+  // MARKER TAP → نمایش اطلاعات مکان
   // ============================================================
 
-  void _onPlaceSelected(MapPlace place) {
+  void _onMarkerTap(MapPlace place) {
     MapPlaceDetailsSheet.show(
       context,
       place,
@@ -380,6 +396,16 @@ class _CategoryExplorerPageState
         _openRoute(place);
       },
     );
+  }
+
+  // ============================================================
+  // LIST ITEM TAP → تمرکز نقشه روی نشانگر همان مکان
+  // سپس نمایش اطلاعات همان مکان
+  // ============================================================
+
+  void _onListItemTap(MapPlace place) {
+    _mapController.move(place.location, 15);
+    _onMarkerTap(place);
   }
 
   void _showSnack(String message) {
@@ -442,7 +468,7 @@ class _CategoryExplorerPageState
                         ),
                         MapMarkersLayer(
                           places: _places,
-                          onTap: _onPlaceSelected,
+                          onTap: _onMarkerTap,
                         ),
                       ],
                     ),
@@ -604,7 +630,7 @@ class _CategoryExplorerPageState
                       places: _places,
                       language: _langCode,
                       category: widget.initialCategory,
-                      onPlaceTap: _onPlaceSelected,
+                      onPlaceTap: _onListItemTap,
                       onRouteTap: _openRoute,
                       isFavorite: _isFavorite,
                       onFavoriteTap: _toggleFavorite,
