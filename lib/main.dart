@@ -15,6 +15,7 @@ import 'pages/category_explorer_page.dart';
 import 'pages/about_page.dart';
 import 'pages/contact_support_page.dart';
 import 'pages/favorites_page.dart';
+import 'pages/social_media_page.dart';
 
 // ============================================================
 // MAIN
@@ -451,6 +452,20 @@ class _HomePageState extends State<HomePage> {
         context,
         MaterialPageRoute(
           builder: (_) => const ContactSupportPage(),
+        ),
+      );
+      return;
+    }
+
+    // ========================================================
+    // کلید 7 = دنبال کنید (شبکه‌های اجتماعی)
+    // ========================================================
+
+    if (number == 7) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const SocialMediaPage(),
         ),
       );
       return;
