@@ -112,3 +112,4 @@ class SupportPage extends StatelessWidget {
     );
   }
 }
+import 'pages/favorites_page.dart';
