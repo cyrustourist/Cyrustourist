@@ -4,6 +4,11 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/app_language.dart';
 
+const Color appBackgroundColor = Color(0xff06121d);
+const Color appCardColor = Color(0xff0b2636);
+const Color appGoldColor = Color(0xffffd36a);
+const Color appGoldBright = Color(0xffffe39a);
+
 class VideoPage extends StatefulWidget {
   const VideoPage({super.key});
 
@@ -12,11 +17,6 @@ class VideoPage extends StatefulWidget {
 }
 
 class _VideoPageState extends State<VideoPage> {
-  static const Color backgroundColor = Color(0xff06121d);
-  static const Color cardColor = Color(0xff0b2636);
-  static const Color goldColor = Color(0xffffd36a);
-  static const Color goldBright = Color(0xffffe39a);
-
   static const String aparatChannel =
       'https://www.aparat.com/Cyrustourist';
 
@@ -516,16 +516,18 @@ class _VideoPageState extends State<VideoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isArabic = LanguageManager.current == AppLanguage.arabic;
-    final bool isPersian = LanguageManager.current == AppLanguage.persian;
+    final bool isArabic =
+        LanguageManager.current == AppLanguage.arabic;
+    final bool isPersian =
+        LanguageManager.current == AppLanguage.persian;
 
     return Directionality(
       textDirection:
           isPersian || isArabic ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: backgroundColor,
+        backgroundColor: appBackgroundColor,
         appBar: AppBar(
-          backgroundColor: backgroundColor,
+          backgroundColor: appBackgroundColor,
           foregroundColor: Colors.white,
           centerTitle: true,
           elevation: 0,
@@ -563,7 +565,8 @@ class _VideoPageState extends State<VideoPage> {
                             ],
                           ),
                           border: Border.all(
-                            color: goldColor.withValues(alpha: 0.3),
+                            color:
+                                appGoldColor.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -573,14 +576,17 @@ class _VideoPageState extends State<VideoPage> {
                               height: 43,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: goldColor.withValues(alpha: 0.13),
+                                color:
+                                    appGoldColor.withValues(alpha: 0.13),
                                 border: Border.all(
-                                  color: goldColor.withValues(alpha: 0.45),
+                                  color: appGoldColor.withValues(
+                                    alpha: 0.45,
+                                  ),
                                 ),
                               ),
                               child: const Icon(
                                 Icons.ondemand_video_rounded,
-                                color: goldColor,
+                                color: appGoldColor,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -592,7 +598,7 @@ class _VideoPageState extends State<VideoPage> {
                                   Text(
                                     _selectedTitle,
                                     style: const TextStyle(
-                                      color: goldBright,
+                                      color: appGoldBright,
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -610,7 +616,7 @@ class _VideoPageState extends State<VideoPage> {
                             ),
                             const Icon(
                               Icons.keyboard_arrow_down_rounded,
-                              color: goldColor,
+                              color: appGoldColor,
                             ),
                           ],
                         ),
@@ -654,7 +660,6 @@ class _VideoPageState extends State<VideoPage> {
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
             ),
-
             Positioned(
               left: 0,
               top: 0,
@@ -665,7 +670,6 @@ class _VideoPageState extends State<VideoPage> {
                 onTap: () => _openUrl(aparatChannel),
               ),
             ),
-
             Positioned(
               right: 0,
               top: 0,
@@ -693,10 +697,10 @@ class _VideoPageState extends State<VideoPage> {
         bottom: 14,
       ),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: appCardColor,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: goldColor.withValues(alpha: 0.28),
+          color: appGoldColor.withValues(alpha: 0.28),
         ),
         boxShadow: [
           BoxShadow(
@@ -723,16 +727,16 @@ class _VideoPageState extends State<VideoPage> {
                   height: 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: goldColor.withValues(alpha: 0.12),
+                    color: appGoldColor.withValues(alpha: 0.12),
                     border: Border.all(
-                      color: goldColor.withValues(alpha: 0.45),
+                      color: appGoldColor.withValues(alpha: 0.45),
                     ),
                   ),
                   child: Center(
                     child: Text(
                       '${index + 1}',
                       style: const TextStyle(
-                        color: goldColor,
+                        color: appGoldColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -760,7 +764,7 @@ class _VideoPageState extends State<VideoPage> {
               children: [
                 const Icon(
                   Icons.location_on_outlined,
-                  color: goldColor,
+                  color: appGoldColor,
                   size: 18,
                 ),
                 const SizedBox(width: 5),
@@ -780,16 +784,16 @@ class _VideoPageState extends State<VideoPage> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: goldColor.withValues(alpha: 0.1),
+                    color: appGoldColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: goldColor.withValues(alpha: 0.3),
+                      color: appGoldColor.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Text(
                     _text(video, 'category'),
                     style: const TextStyle(
-                      color: goldBright,
+                      color: appGoldBright,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -813,8 +817,8 @@ class _VideoPageState extends State<VideoPage> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: goldColor,
-                  foregroundColor: backgroundColor,
+                  backgroundColor: appGoldColor,
+                  foregroundColor: appBackgroundColor,
                   elevation: 5,
                   padding: const EdgeInsets.symmetric(
                     vertical: 10,
@@ -866,18 +870,18 @@ class _HeaderHalfButtonState extends State<_HeaderHalfButton> {
         duration: const Duration(milliseconds: 100),
         decoration: BoxDecoration(
           color: _pressed
-              ? goldColor.withValues(alpha: 0.18)
+              ? appGoldColor.withValues(alpha: 0.18)
               : Colors.transparent,
           border: Border.all(
             color: _pressed
-                ? goldBright
+                ? appGoldBright
                 : Colors.transparent,
             width: 2,
           ),
           boxShadow: _pressed
               ? [
                   BoxShadow(
-                    color: goldColor.withValues(alpha: 0.8),
+                    color: appGoldColor.withValues(alpha: 0.8),
                     blurRadius: 18,
                     spreadRadius: 2,
                   ),
@@ -896,14 +900,14 @@ class _HeaderHalfButtonState extends State<_HeaderHalfButton> {
                 vertical: 7,
               ),
               decoration: BoxDecoration(
-                color: backgroundColor.withValues(alpha: 0.88),
+                color: appBackgroundColor.withValues(alpha: 0.88),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: goldColor,
+                  color: appGoldColor,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: goldColor.withValues(alpha: 0.55),
+                    color: appGoldColor.withValues(alpha: 0.55),
                     blurRadius: 14,
                   ),
                 ],
@@ -912,7 +916,7 @@ class _HeaderHalfButtonState extends State<_HeaderHalfButton> {
                 widget.text,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: goldBright,
+                  color: appGoldBright,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -970,7 +974,7 @@ class _AparatPlayerState extends State<_AparatPlayer> {
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(backgroundColor)
+      ..setBackgroundColor(appBackgroundColor)
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (request) {
@@ -997,9 +1001,6 @@ class _AparatPlayerState extends State<_AparatPlayer> {
             WebViewWidget(
               controller: _controller,
             ),
-
-            // لایه بسیار کوچک برای کلیک روی فیلم
-            // دکمه «بازدید» همچنان لینک کامل را باز می‌کند.
             Positioned(
               top: 0,
               left: 0,
