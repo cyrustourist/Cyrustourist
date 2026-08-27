@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/language/app_language.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// صفحه‌ی کلید ۷ — دنبال کنید.
@@ -6,31 +7,87 @@ import 'package:url_launcher/url_launcher.dart';
 class SocialMediaPage extends StatelessWidget {
   const SocialMediaPage({super.key});
 
+  String _title() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'دنبال کنید';
+      case AppLanguage.english:
+        return 'Follow Us';
+      case AppLanguage.arabic:
+        return 'تابعنا';
+    }
+  }
+
+  String _headline() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return _headline();
+      case AppLanguage.english:
+        return 'Stay with Cyrus Tourist';
+      case AppLanguage.arabic:
+        return 'كن مع سايروس توريست';
+    }
+  }
+
+  String _description() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return _description();
+      case AppLanguage.english:
+        return 'Follow the latest videos and attractions of Iran.';
+      case AppLanguage.arabic:
+        return 'تابع أحدث الأفلام والمعالم السياحية في إيران.';
+    }
+  }
+
+  String _socialTitle(String key) {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return {'instagram':'اینستاگرام','aparat':'آپارات','youtube':'یوتیوب','tiktok':'تیک‌تاک'}[key]!;
+      case AppLanguage.english:
+        return {'instagram':'Instagram','aparat':'Aparat','youtube':'YouTube','tiktok':'TikTok'}[key]!;
+      case AppLanguage.arabic:
+        return {'instagram':'إنستغرام','aparat':'أبارات','youtube':'يوتيوب','tiktok':'تيك توك'}[key]!;
+    }
+  }
+
+  String _back() {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian: return 'بازگشت';
+      case AppLanguage.english: return 'Back';
+      case AppLanguage.arabic: return 'رجوع';
+    }
+  }
+
   static const List<_SocialLink> _links = [
     _SocialLink(
-      title: 'اینستاگرام',
+      title: 'Instagram',
       subtitle: 'Cyrus Tourist',
+      key: 'instagram',
       url: 'https://www.instagram.com/cyrustourist?igsi=aDc3end6dTNqNW1o',
       icon: Icons.camera_alt_rounded,
       color: Color(0xffe1306c),
     ),
     _SocialLink(
-      title: 'آپارات',
-      subtitle: 'کانال رسمی Cyrus Tourist',
+      title: 'Aparat',
+      subtitle: 'Cyrus Tourist',
+      key: 'aparat',
       url: 'https://www.aparat.com/Cyrustourist',
       icon: Icons.play_circle_fill_rounded,
       color: Color(0xffff7043),
     ),
     _SocialLink(
-      title: 'یوتیوب',
+      title: 'YouTube',
       subtitle: 'Cyrus Tourist',
+      key: 'youtube',
       url: 'https://youtube.com/@cyrustourist?si=fKcSD3vB6bzz2J6i',
       icon: Icons.smart_display_rounded,
       color: Color(0xffff0000),
     ),
     _SocialLink(
-      title: 'تیک‌تاک',
+      title: 'TikTok',
       subtitle: '@cyrustourist_app',
+      key: 'tiktok',
       url: 'https://www.tiktok.com/@cyrustourist_app',
       icon: Icons.music_note_rounded,
       color: Color(0xff25f4ee),
@@ -43,13 +100,13 @@ class SocialMediaPage extends StatelessWidget {
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!opened && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('امکان باز کردن ${link.title} وجود ندارد.')),
+          SnackBar(content: Text('Unable to open ${link.title}.')),
         );
       }
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطا در باز کردن ${link.title}')),
+        SnackBar(content: Text('Error opening ${link.title}.')),
       );
     }
   }
@@ -65,8 +122,8 @@ class SocialMediaPage extends StatelessWidget {
           foregroundColor: Colors.white,
           centerTitle: true,
           elevation: 0,
-          title: const Text(
-            'دنبال کنید',
+          title: Text(
+            _title(),
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
@@ -124,7 +181,7 @@ class SocialMediaPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'همراه سایروس توریست باشید',
+                              _headline(),
                               style: TextStyle(
                                 color: Color(0xffffe39a),
                                 fontSize: 19,
@@ -133,7 +190,7 @@ class SocialMediaPage extends StatelessWidget {
                             ),
                             SizedBox(height: 7),
                             Text(
-                              'جدیدترین فیلم‌ها و جاذبه‌های ایران را دنبال کنید.',
+                              _description(),
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 13,
@@ -159,8 +216,8 @@ class SocialMediaPage extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(Icons.arrow_back_rounded),
-                    label: const Text(
-                      'بازگشت',
+                    label: Text(
+                      _back(),
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -242,7 +299,7 @@ class SocialMediaPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      link.title,
+                      _socialTitle(link.key),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 17,
@@ -274,6 +331,7 @@ class SocialMediaPage extends StatelessWidget {
 class _SocialLink {
   final String title;
   final String subtitle;
+  final String key;
   final String url;
   final IconData icon;
   final Color color;
@@ -281,6 +339,7 @@ class _SocialLink {
   const _SocialLink({
     required this.title,
     required this.subtitle,
+    required this.key,
     required this.url,
     required this.icon,
     required this.color,
