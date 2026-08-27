@@ -21,7 +21,7 @@ class SocialMediaPage extends StatelessWidget {
   String _headline() {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
-        return _headline();
+        return 'با سایروس توریست همراه باشید';
       case AppLanguage.english:
         return 'Stay with Cyrus Tourist';
       case AppLanguage.arabic:
@@ -32,7 +32,7 @@ class SocialMediaPage extends StatelessWidget {
   String _description() {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
-        return _description();
+        return 'جدیدترین فیلم‌ها و جاذبه‌های گردشگری ایران را دنبال کنید.';
       case AppLanguage.english:
         return 'Follow the latest videos and attractions of Iran.';
       case AppLanguage.arabic:
@@ -114,7 +114,9 @@ class SocialMediaPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: LanguageManager.current == AppLanguage.english
+          ? TextDirection.ltr
+          : TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xff06121d),
         appBar: AppBar(
@@ -176,7 +178,7 @@ class SocialMediaPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 14),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
