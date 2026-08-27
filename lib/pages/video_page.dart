@@ -26,6 +26,13 @@ class _VideoPageState extends State<VideoPage> {
   static const String aparatChannel =
       'https://www.aparat.com/Cyrustourist';
 
+  static const String instagramUrl =
+      'https://www.instagram.com/cyrustourist?igsi=aDc3end6dTNqNW1o';
+  static const String youtubeUrl =
+      'https://youtube.com/@cyrustourist?si=fKcSD3vB6bzz2J6i';
+  static const String tiktokUrl =
+      'https://www.tiktok.com/@cyrustourist_app';
+
   final List<Map<String, String>> selectedVideos = const [
     {
       'title_fa': 'قنات قصبه گناباد؛ شگفتی تاریخ تمدن بشر',
@@ -466,6 +473,136 @@ class _VideoPageState extends State<VideoPage> {
     }
   }
 
+
+  String get _socialTitle {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'ما را دنبال کنید';
+      case AppLanguage.english:
+        return 'Follow Us';
+      case AppLanguage.arabic:
+        return 'تابعونا';
+    }
+  }
+
+  String get _socialSubtitle {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'فیلم‌ها و جاذبه‌های جدید Cyrus Tourist را دنبال کنید.';
+      case AppLanguage.english:
+        return 'Follow Cyrus Tourist for new videos and attractions.';
+      case AppLanguage.arabic:
+        return 'تابعوا أحدث فيديوهات ومعالم Cyrus Tourist.';
+    }
+  }
+
+  String get _backText {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'بازگشت';
+      case AppLanguage.english:
+        return 'Back';
+      case AppLanguage.arabic:
+        return 'رجوع';
+    }
+  }
+
+  String _socialLabel(String key) {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return switch (key) {
+          'instagram' => 'اینستاگرام',
+          'aparat' => 'آپارات',
+          'youtube' => 'یوتیوب',
+          'tiktok' => 'تیک‌تاک',
+          _ => '',
+        };
+      case AppLanguage.english:
+        return switch (key) {
+          'instagram' => 'Instagram',
+          'aparat' => 'Aparat',
+          'youtube' => 'YouTube',
+          'tiktok' => 'TikTok',
+          _ => '',
+        };
+      case AppLanguage.arabic:
+        return switch (key) {
+          'instagram' => 'إنستغرام',
+          'aparat' => 'أبارات',
+          'youtube' => 'يوتيوب',
+          'tiktok' => 'تيك توك',
+          _ => '',
+        };
+    }
+  }
+
+  Widget _buildSocialPanel() {
+    final links = <Map<String, dynamic>>[
+      {'key': 'instagram', 'url': instagramUrl, 'icon': Icons.camera_alt_rounded},
+      {'key': 'aparat', 'url': aparatChannel, 'icon': Icons.play_circle_fill_rounded},
+      {'key': 'youtube', 'url': youtubeUrl, 'icon': Icons.smart_display_rounded},
+      {'key': 'tiktok', 'url': tiktokUrl, 'icon': Icons.music_note_rounded},
+    ];
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [Color(0xff103b50), Color(0xff071a27)],
+        ),
+        border: Border.all(color: appGoldColor.withValues(alpha: 0.38)),
+        boxShadow: [
+          BoxShadow(
+            color: appGoldColor.withValues(alpha: 0.10),
+            blurRadius: 20,
+            spreadRadius: 1,
+            offset: const Offset(0, 7),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.30),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            _socialTitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: appGoldBright,
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            _socialSubtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+          ),
+          const SizedBox(height: 14),
+          ...links.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _SocialWideButton(
+                label: _socialLabel(item['key'] as String),
+                icon: item['icon'] as IconData,
+                onTap: () => _openUrl(item['url'] as String),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openUrl(String url) async {
     final Uri uri = Uri.parse(url);
 
@@ -629,6 +766,7 @@ class _VideoPageState extends State<VideoPage> {
                       ),
                       ),
                       const SizedBox(height: 14),
+                      _buildSocialPanel(),
                     ],
                   ),
                 ),
@@ -645,8 +783,34 @@ class _VideoPageState extends State<VideoPage> {
                   childCount: selectedVideos.length,
                 ),
               ),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 18),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 2, 14, 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      label: Text(
+                        _backText,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: appGoldBright,
+                        side: BorderSide(
+                          color: appGoldColor.withValues(alpha: 0.60),
+                        ),
+                        backgroundColor: appGoldColor.withValues(alpha: 0.06),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(17),
+                        ),
+                        shadowColor: appGoldColor,
+                        elevation: 5,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -848,6 +1012,103 @@ class _VideoPageState extends State<VideoPage> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class _SocialWideButton extends StatefulWidget {
+  const _SocialWideButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  State<_SocialWideButton> createState() => _SocialWideButtonState();
+}
+
+class _SocialWideButtonState extends State<_SocialWideButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+        transform: Matrix4.translationValues(0, _pressed ? 1.5 : 0, 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(17),
+          gradient: LinearGradient(
+            begin: Alignment.centerRight,
+            end: Alignment.centerLeft,
+            colors: [
+              const Color(0xff0c3042),
+              appGoldColor.withValues(alpha: _pressed ? 0.18 : 0.07),
+            ],
+          ),
+          border: Border.all(
+            color: _pressed
+                ? appGoldBright
+                : appGoldColor.withValues(alpha: 0.35),
+            width: _pressed ? 1.7 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: appGoldColor.withValues(alpha: _pressed ? 0.42 : 0.08),
+              blurRadius: _pressed ? 18 : 8,
+              spreadRadius: _pressed ? 1 : 0,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: appGoldColor.withValues(alpha: 0.10),
+                border: Border.all(color: appGoldColor.withValues(alpha: 0.55)),
+                boxShadow: [
+                  BoxShadow(
+                    color: appGoldColor.withValues(alpha: 0.18),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Icon(widget.icon, color: appGoldBright, size: 27),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Text(
+                widget.label,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward_ios_rounded, color: appGoldColor, size: 16),
           ],
         ),
       ),
