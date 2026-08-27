@@ -12,6 +12,7 @@ import 'providers/map_state_provider.dart';
 
 import 'map_place.dart';
 import 'core/language/app_language.dart';
+import 'services/map_places_service.dart';
 import 'pages/category_explorer_page.dart';
 import 'pages/about_page.dart';
 import 'pages/contact_support_page.dart';
@@ -821,6 +822,8 @@ class _SmartMapPageState
 
   LatLng? userLocation;
 
+  bool routingInProgress = false;
+
   final TextEditingController originController =
       TextEditingController(
     text: 'موقعیت فعلی من',
@@ -937,6 +940,100 @@ class _SmartMapPageState
         13,
       );
     } catch (_) {}
+  }
+
+  // ==========================================================
+  // ROUTING (هدف سفر)
+  // ==========================================================
+  //
+  // متن «هدف سفر» را به مختصات واقعی تبدیل می‌کند (Nominatim)
+  // و سپس مسیریابی واقعی را در گوگل‌مپ باز می‌کند.
+  // مبدأ: موقعیت واقعی GPS کاربر (در صورت وجود).
+
+  Future<void> _startRouting() async {
+    final destinationText =
+        destinationController.text.trim();
+
+    if (destinationText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'لطفاً هدف سفر را وارد کنید.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final origin = userLocation ?? iranCenter;
+
+    setState(() {
+      routingInProgress = true;
+    });
+
+    List<MapPlace> results = [];
+
+    try {
+      results = await MapPlacesService().searchPlaces(
+        query: destinationText,
+        userLocation: origin,
+      );
+    } catch (_) {
+      results = [];
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      routingInProgress = false;
+    });
+
+    if (results.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'هدف سفر پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final destination = results.first.location;
+
+    final url =
+        'https://www.google.com/maps/dir/?api=1'
+        '&origin=${origin.latitude},${origin.longitude}'
+        '&destination=${destination.latitude},${destination.longitude}';
+
+    final uri = Uri.parse(url);
+
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'امکان باز کردن مسیریاب وجود ندارد.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'خطا در باز کردن مسیریاب.',
+          ),
+        ),
+      );
+    }
   }
 
   // ==========================================================
@@ -1263,25 +1360,55 @@ class _SmartMapPageState
           _searchField(
             destinationController,
             Icons.place,
-            'مقصد',
+            'هدف سفر',
           ),
-          const SizedBox(height: 8),
-          ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'مسیر‌یابی آماده اتصال به سرویس مسیر است',
-                  ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: routingInProgress
+                  ? null
+                  : _startRouting,
+              icon: routingInProgress
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child:
+                          CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Color(0xff071722),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.directions_rounded,
+                      size: 24,
+                    ),
+              label: Text(
+                routingInProgress
+                    ? 'در حال جستجو...'
+                    : 'مسیریابی',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-              );
-            },
-            icon: const Icon(
-              Icons.directions,
-            ),
-            label: const Text(
-              'مسیریابی',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(
+                  0xffffe39a,
+                ),
+                foregroundColor: const Color(
+                  0xff071722,
+                ),
+                elevation: 6,
+                shadowColor: const Color(
+                  0xffffd36a,
+                ).withValues(alpha: 0.6),
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(16),
+                ),
+              ),
             ),
           ),
         ],
