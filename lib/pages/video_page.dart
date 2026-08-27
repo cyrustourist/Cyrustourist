@@ -637,7 +637,7 @@ class _VideoPageState extends State<VideoPage> {
                       index,
                     );
                   },
-                  childCount: selectedVideos.length,
+                  childCount: selectedVideos.take(10).length,
                 ),
               ),
               const SliverToBoxAdapter(
@@ -719,7 +719,6 @@ class _VideoPageState extends State<VideoPage> {
           children: [
             _VideoCoverPlayer(
               url: video['url']!,
-              fallbackAsset: video['image']!,
               onOpenExternal: () => _openUrl(video['url']!),
               language: _languageCode,
             ),
@@ -1129,13 +1128,11 @@ String _formatDuration(String? rawSeconds) {
 class _VideoCoverPlayer extends StatefulWidget {
   const _VideoCoverPlayer({
     required this.url,
-    required this.fallbackAsset,
     required this.onOpenExternal,
     required this.language,
   });
 
   final String url;
-  final String fallbackAsset;
   final VoidCallback onOpenExternal;
   final String language;
 
@@ -1201,39 +1198,49 @@ class _VideoCoverPlayerState extends State<_VideoCoverPlayer> {
     );
   }
 
+  Widget _buildFallbackCover() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xff123b52),
+            Color(0xff06121d),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.ondemand_video_rounded,
+          color: appGoldColor,
+          size: 58,
+        ),
+      ),
+    );
+  }
+
   Widget _buildCover() {
     final duration = _formatDuration(_info?.duration);
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
-        setState(() {
-          _playing = true;
-        });
+        if (!mounted) return;
+        setState(() => _playing = true);
       },
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _info?.coverUrl != null
-              ? Image.network(
-                  _info!.coverUrl!,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-
-                    return Image.asset(
-                      widget.fallbackAsset,
-                      fit: BoxFit.cover,
-                    );
-                  },
-                  errorBuilder: (_, __, ___) => Image.asset(
-                    widget.fallbackAsset,
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : Image.asset(
-                  widget.fallbackAsset,
-                  fit: BoxFit.cover,
-                ),
+          if (_info?.coverUrl != null)
+            Image.network(
+              _info!.coverUrl!,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.low,
+              errorBuilder: (_, __, ___) => _buildFallbackCover(),
+            )
+          else
+            _buildFallbackCover(),
 
           Container(
             decoration: BoxDecoration(
