@@ -8,6 +8,19 @@ enum MapPlaceType {
   healthTourism,
   touristAttraction,
   accommodation,
+
+  // ============================================================
+  // خدمات سریع کلید ۱ (نقشه) — کاملاً مستقل از کلید ۲، ۳ و ۵
+  // ============================================================
+  fuel,
+  atm,
+  restaurant,
+  parking,
+  restroom,
+  police,
+  market,
+  carService,
+  simCard,
 }
 
 /// سرویس مرکزی اطلاعات مکان‌های گردشگری.
@@ -246,6 +259,62 @@ class MapPlacesService {
           'tourism=chalet',
           'tourism=apartment',
           'tourism=alpine_hut',
+        ];
+
+      // ============================================================
+      // خدمات سریع کلید ۱ (نقشه)
+      // ============================================================
+
+      case MapPlaceType.fuel:
+        return const [
+          'amenity=fuel',
+        ];
+
+      case MapPlaceType.atm:
+        return const [
+          'amenity=atm',
+          'amenity=bank',
+        ];
+
+      case MapPlaceType.restaurant:
+        return const [
+          'amenity=restaurant',
+          'amenity=fast_food',
+          'amenity=cafe',
+        ];
+
+      case MapPlaceType.parking:
+        return const [
+          'amenity=parking',
+        ];
+
+      case MapPlaceType.restroom:
+        return const [
+          'amenity=toilets',
+        ];
+
+      case MapPlaceType.police:
+        return const [
+          'amenity=police',
+        ];
+
+      case MapPlaceType.market:
+        return const [
+          'shop=supermarket',
+          'shop=convenience',
+          'shop=mall',
+        ];
+
+      case MapPlaceType.carService:
+        return const [
+          'shop=car_repair',
+          'amenity=car_wash',
+        ];
+
+      case MapPlaceType.simCard:
+        return const [
+          'shop=mobile_phone',
+          'office=telecommunication',
         ];
     }
   }
@@ -606,6 +675,33 @@ tags['addr:district'] ?? '',
 
       case MapPlaceType.accommodation:
         return 'accommodation';
+
+      case MapPlaceType.fuel:
+        return 'fuel';
+
+      case MapPlaceType.atm:
+        return 'atm';
+
+      case MapPlaceType.restaurant:
+        return 'restaurant';
+
+      case MapPlaceType.parking:
+        return 'parking';
+
+      case MapPlaceType.restroom:
+        return 'restroom';
+
+      case MapPlaceType.police:
+        return 'police';
+
+      case MapPlaceType.market:
+        return 'market';
+
+      case MapPlaceType.carService:
+        return 'car_service';
+
+      case MapPlaceType.simCard:
+        return 'sim_card';
     }
   }
 }
