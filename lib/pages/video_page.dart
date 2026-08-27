@@ -627,6 +627,7 @@ class _VideoPageState extends State<VideoPage> {
                           ),
                         ),
                       ),
+                      ),
                       const SizedBox(height: 14),
                     ],
                   ),
