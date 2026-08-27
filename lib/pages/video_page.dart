@@ -20,7 +20,7 @@ class VideoPage extends StatefulWidget {
 }
 
 class _VideoPageState extends State<VideoPage> {
-  bool _showSelectedVideos = true;
+  bool _showSelectedVideos = false;
   final Map<String, String> _resolvedAparatTitles = {};
 
   static const String aparatChannel =
@@ -537,17 +537,17 @@ class _VideoPageState extends State<VideoPage> {
   }
 
   Widget _buildSocialPanel() {
-    final links = <Map<String, dynamic>>[
-      {'key': 'instagram', 'url': instagramUrl, 'icon': Icons.camera_alt_rounded},
-      {'key': 'aparat', 'url': aparatChannel, 'icon': Icons.play_circle_fill_rounded},
-      {'key': 'youtube', 'url': youtubeUrl, 'icon': Icons.smart_display_rounded},
-      {'key': 'tiktok', 'url': tiktokUrl, 'icon': Icons.music_note_rounded},
+    final links = <Map<String, String>>[
+      {'key': 'instagram', 'url': instagramUrl, 'logo': '◎'},
+      {'key': 'aparat', 'url': aparatChannel, 'logo': 'A'},
+      {'key': 'youtube', 'url': youtubeUrl, 'logo': '▶'},
+      {'key': 'tiktok', 'url': tiktokUrl, 'logo': '♪'},
     ];
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
         gradient: const LinearGradient(
@@ -555,18 +555,18 @@ class _VideoPageState extends State<VideoPage> {
           end: Alignment.bottomLeft,
           colors: [Color(0xff103b50), Color(0xff071a27)],
         ),
-        border: Border.all(color: appGoldColor.withValues(alpha: 0.38)),
+        border: Border.all(color: appGoldColor.withValues(alpha: 0.30)),
         boxShadow: [
           BoxShadow(
-            color: appGoldColor.withValues(alpha: 0.10),
-            blurRadius: 20,
+            color: appGoldColor.withValues(alpha: 0.08),
+            blurRadius: 18,
             spreadRadius: 1,
-            offset: const Offset(0, 7),
+            offset: const Offset(0, 6),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.30),
+            color: Colors.black.withValues(alpha: 0.28),
             blurRadius: 14,
-            offset: const Offset(0, 7),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -588,15 +588,19 @@ class _VideoPageState extends State<VideoPage> {
             style: const TextStyle(color: Colors.white70, fontSize: 12.5),
           ),
           const SizedBox(height: 14),
-          ...links.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _SocialWideButton(
-                label: _socialLabel(item['key'] as String),
-                icon: item['icon'] as IconData,
-                onTap: () => _openUrl(item['url'] as String),
-              ),
-            ),
+          Row(
+            children: links.map((item) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: _SocialLogoButton(
+                    label: _socialLabel(item['key']!),
+                    logo: item['logo']!,
+                    onTap: () => _openUrl(item['url']!),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -1020,22 +1024,22 @@ class _VideoPageState extends State<VideoPage> {
 }
 
 
-class _SocialWideButton extends StatefulWidget {
-  const _SocialWideButton({
+class _SocialLogoButton extends StatefulWidget {
+  const _SocialLogoButton({
     required this.label,
-    required this.icon,
+    required this.logo,
     required this.onTap,
   });
 
   final String label;
-  final IconData icon;
+  final String logo;
   final VoidCallback onTap;
 
   @override
-  State<_SocialWideButton> createState() => _SocialWideButtonState();
+  State<_SocialLogoButton> createState() => _SocialLogoButtonState();
 }
 
-class _SocialWideButtonState extends State<_SocialWideButton> {
+class _SocialLogoButtonState extends State<_SocialLogoButton> {
   bool _pressed = false;
 
   @override
@@ -1047,69 +1051,80 @@ class _SocialWideButtonState extends State<_SocialWideButton> {
         setState(() => _pressed = false);
         widget.onTap();
       },
-      child: AnimatedContainer(
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
         duration: const Duration(milliseconds: 120),
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-        transform: Matrix4.translationValues(0, _pressed ? 1.5 : 0, 0),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(17),
-          gradient: LinearGradient(
-            begin: Alignment.centerRight,
-            end: Alignment.centerLeft,
-            colors: [
-              const Color(0xff0c3042),
-              appGoldColor.withValues(alpha: _pressed ? 0.18 : 0.07),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(17),
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [
+                const Color(0xff123c50),
+                appGoldColor.withValues(alpha: _pressed ? 0.18 : 0.07),
+              ],
+            ),
+            border: Border.all(
+              color: _pressed
+                  ? appGoldBright
+                  : appGoldColor.withValues(alpha: 0.32),
+              width: _pressed ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: appGoldColor.withValues(alpha: _pressed ? 0.35 : 0.07),
+                blurRadius: _pressed ? 15 : 8,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
-          border: Border.all(
-            color: _pressed
-                ? appGoldBright
-                : appGoldColor.withValues(alpha: 0.35),
-            width: _pressed ? 1.7 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: appGoldColor.withValues(alpha: _pressed ? 0.42 : 0.08),
-              blurRadius: _pressed ? 18 : 8,
-              spreadRadius: _pressed ? 1 : 0,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: appGoldColor.withValues(alpha: 0.10),
-                border: Border.all(color: appGoldColor.withValues(alpha: 0.55)),
-                boxShadow: [
-                  BoxShadow(
-                    color: appGoldColor.withValues(alpha: 0.18),
-                    blurRadius: 10,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 47,
+                height: 47,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  color: appBackgroundColor.withValues(alpha: 0.72),
+                  border: Border.all(
+                    color: appGoldColor.withValues(alpha: 0.55),
                   ),
-                ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: appGoldColor.withValues(alpha: 0.12),
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  widget.logo,
+                  style: const TextStyle(
+                    color: appGoldBright,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
               ),
-              child: Icon(widget.icon, color: appGoldBright, size: 27),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Text(
+              const SizedBox(height: 7),
+              Text(
                 widget.label,
-                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward_ios_rounded, color: appGoldColor, size: 16),
-          ],
+            ],
+          ),
         ),
       ),
     );
