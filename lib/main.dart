@@ -403,15 +403,15 @@ class _HomePageState extends State<HomePage> {
     // ========================================================
 
     if (number == 6) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TravelGuidePage(),
-        ),
-      );
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => travel_guide.TravelGuidePage(),
+    ),
+  );
 
-      return;
-    }
+  return;
+}
 
     // ========================================================
     // کلید 8 = درباره ما
