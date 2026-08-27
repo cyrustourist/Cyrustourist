@@ -20,6 +20,9 @@ class VideoPage extends StatefulWidget {
 }
 
 class _VideoPageState extends State<VideoPage> {
+  bool _showSelectedVideos = true;
+  final Map<String, String> _resolvedAparatTitles = {};
+
   static const String aparatChannel =
       'https://www.aparat.com/Cyrustourist';
 
@@ -375,19 +378,6 @@ class _VideoPageState extends State<VideoPage> {
       'image': 'assets/images/video_accommodation.jpg',
       'url': 'https://www.aparat.com/v/hLg1q',
     },
-    {
-      'title_fa': 'موزه جانورشناسی؛ مجموعه‌ای کم‌نظیر از جانوران ایران',
-      'title_en': 'Zoology Museum; A Remarkable Collection of Iranian Animals',
-      'title_ar': 'متحف علم الحيوان؛ مجموعة مميزة من حيوانات إيران',
-      'location_fa': 'ایران',
-      'location_en': 'Iran',
-      'location_ar': 'إيران',
-      'category_fa': 'موزه و طبیعت',
-      'category_en': 'Museum and Nature',
-      'category_ar': 'المتحف والطبيعة',
-      'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/Cyrustourist',
-    },
   ];
 
   String get _languageCode {
@@ -553,12 +543,20 @@ class _VideoPageState extends State<VideoPage> {
                     children: [
                       _buildHeaderImage(),
                       const SizedBox(height: 20),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 14,
-                        ),
+                      Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(18),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => setState(() {
+                            _showSelectedVideos = !_showSelectedVideos;
+                          }),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 14,
+                            ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(18),
                           gradient: const LinearGradient(
@@ -617,11 +615,16 @@ class _VideoPageState extends State<VideoPage> {
                                 ],
                               ),
                             ),
-                            const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: appGoldColor,
+                            AnimatedRotation(
+                              turns: _showSelectedVideos ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 180),
+                              child: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: appGoldColor,
+                              ),
                             ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -629,7 +632,8 @@ class _VideoPageState extends State<VideoPage> {
                   ),
                 ),
               ),
-              SliverList(
+              if (_showSelectedVideos)
+                SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     return _buildVideoCard(
@@ -637,7 +641,7 @@ class _VideoPageState extends State<VideoPage> {
                       index,
                     );
                   },
-                  childCount: selectedVideos.take(10).length,
+                  childCount: selectedVideos.length,
                 ),
               ),
               const SliverToBoxAdapter(
@@ -719,7 +723,17 @@ class _VideoPageState extends State<VideoPage> {
           children: [
             _VideoCoverPlayer(
               url: video['url']!,
+              fallbackAsset: 'assets/images/video_menu_header.png',
               onOpenExternal: () => _openUrl(video['url']!),
+              onTitleResolved: (title) {
+                if (title == null || title.trim().isEmpty) return;
+                if (_resolvedAparatTitles[video['url']!] == title) return;
+                if (mounted) {
+                  setState(() {
+                    _resolvedAparatTitles[video['url']!] = title;
+                  });
+                }
+              },
               language: _languageCode,
             ),
             const SizedBox(height: 11),
@@ -750,7 +764,8 @@ class _VideoPageState extends State<VideoPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _text(video, 'title'),
+                    _resolvedAparatTitles[video['url']!] ??
+                        _text(video, 'title'),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -948,6 +963,8 @@ class _AparatPlayer extends StatefulWidget {
 
 class _AparatPlayerState extends State<_AparatPlayer> {
   late final WebViewController _controller;
+  bool _loading = true;
+  bool _failed = false;
 
   String _extractAparatId(String url) {
     final uri = Uri.tryParse(url);
@@ -973,14 +990,23 @@ class _AparatPlayerState extends State<_AparatPlayer> {
     final String videoId = _extractAparatId(widget.url);
 
     final String embedUrl =
-        'https://www.aparat.com/embed/$videoId'
-        '?data[responsive]=yes';
+        'https://www.aparat.com/video/video/embed/videohash/'
+        '$videoId/vt/frame';
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(appBackgroundColor)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onPageStarted: (_) {
+            if (mounted) setState(() { _loading = true; _failed = false; });
+          },
+          onPageFinished: (_) {
+            if (mounted) setState(() => _loading = false);
+          },
+          onWebResourceError: (_) {
+            if (mounted) setState(() { _loading = false; _failed = true; });
+          },
           onNavigationRequest: (request) {
             if (request.url.contains('aparat.com')) {
               return NavigationDecision.navigate;
@@ -1005,18 +1031,40 @@ class _AparatPlayerState extends State<_AparatPlayer> {
             WebViewWidget(
               controller: _controller,
             ),
-            Positioned(
-              top: 0,
-              left: 0,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: widget.onTap,
-                child: const SizedBox(
-                  width: 45,
-                  height: 45,
+            if (_loading)
+              Container(
+                color: appBackgroundColor,
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(
+                  color: appGoldColor,
                 ),
               ),
-            ),
+            if (_failed)
+              Container(
+                color: appBackgroundColor,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, color: appGoldColor, size: 34),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'پخش مستقیم آپارات بارگذاری نشد',
+                      style: TextStyle(color: Colors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: () {
+                        setState(() { _failed = false; _loading = true; });
+                        _controller.reload();
+                      },
+                      child: const Text('تلاش دوباره'),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -1030,11 +1078,13 @@ class _AparatPlayerState extends State<_AparatPlayer> {
 // ============================================================
 
 class _AparatVideoInfo {
+  final String? title;
   final String? coverUrl;
   final String? duration;
   final String? visitCount;
 
   const _AparatVideoInfo({
+    this.title,
     this.coverUrl,
     this.duration,
     this.visitCount,
@@ -1090,6 +1140,7 @@ class _AparatCoverLoader {
       }
 
       final info = _AparatVideoInfo(
+        title: video['title']?.toString(),
         coverUrl: video['big_poster'] as String? ??
             video['small_poster'] as String?,
         duration: video['duration']?.toString(),
@@ -1121,19 +1172,23 @@ String _formatDuration(String? rawSeconds) {
 // ============================================================
 // VIDEO COVER PLAYER
 //
-// حالت اول: کاور واقعی آپارات (سبک، سریع، بدون WebView).
+// حالت اول: کاور واقعی آپارات (سبک و سریع).
 // با لمس کاور → پخش‌کننده واقعی آپارات (همان embed سایت) باز می‌شود.
 // ============================================================
 
 class _VideoCoverPlayer extends StatefulWidget {
   const _VideoCoverPlayer({
     required this.url,
+    required this.fallbackAsset,
     required this.onOpenExternal,
+    required this.onTitleResolved,
     required this.language,
   });
 
   final String url;
+  final String fallbackAsset;
   final VoidCallback onOpenExternal;
+  final ValueChanged<String?> onTitleResolved;
   final String language;
 
   @override
@@ -1180,6 +1235,8 @@ class _VideoCoverPlayerState extends State<_VideoCoverPlayer> {
     setState(() {
       _info = info;
     });
+
+    widget.onTitleResolved(info.title);
   }
 
   @override
@@ -1198,49 +1255,39 @@ class _VideoCoverPlayerState extends State<_VideoCoverPlayer> {
     );
   }
 
-  Widget _buildFallbackCover() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xff123b52),
-            Color(0xff06121d),
-          ],
-        ),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.ondemand_video_rounded,
-          color: appGoldColor,
-          size: 58,
-        ),
-      ),
-    );
-  }
-
   Widget _buildCover() {
     final duration = _formatDuration(_info?.duration);
 
     return GestureDetector(
-      behavior: HitTestBehavior.opaque,
       onTap: () {
-        if (!mounted) return;
-        setState(() => _playing = true);
+        setState(() {
+          _playing = true;
+        });
       },
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (_info?.coverUrl != null)
-            Image.network(
-              _info!.coverUrl!,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.low,
-              errorBuilder: (_, __, ___) => _buildFallbackCover(),
-            )
-          else
-            _buildFallbackCover(),
+          _info?.coverUrl != null
+              ? Image.network(
+                  _info!.coverUrl!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+
+                    return Image.asset(
+                      widget.fallbackAsset,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    widget.fallbackAsset,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Image.asset(
+                  widget.fallbackAsset,
+                  fit: BoxFit.cover,
+                ),
 
           Container(
             decoration: BoxDecoration(
