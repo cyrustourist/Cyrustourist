@@ -4,256 +4,152 @@ import 'package:url_launcher/url_launcher.dart';
 class SupportPage extends StatelessWidget {
   const SupportPage({super.key});
 
-  // ============================================================
-  // اطلاعات رسمی Cyrus Tourist
-  // ============================================================
+  static const Color backgroundColor = Color(0xff06121d);
+  static const Color panelColor = Color(0xff0b2636);
+  static const Color panelLight = Color(0xff10394c);
+  static const Color goldColor = Color(0xffffd36a);
+  static const Color goldBright = Color(0xffffe39a);
 
   static const String phoneNumber = '09153448818';
   static const String whatsappNumber = '09153448818';
-
   static const String telegramUsername = '@Cyrustourist';
+  static const String telegramGroupUrl = 'https://t.me/cyrustourist_app';
+  static const String emailAddress = 'cyrustourist@gmail.com';
+  static const String address = 'استان خراسان رضوی، بلوار پیروزی، رضا شهر';
+  static const String websiteUrl = 'https://cyrustourist-maker.github.io/Cyrustourist/';
 
-  static const String telegramGroupUrl =
-      'https://t.me/cyrustourist_app';
-
-  static const String emailAddress =
-      'cyrustourist@gmail.com';
-
-  static const String address =
-      'استان خراسان رضوی، بلوار پیروزی، رضا شهر';
-
-  static const String websiteUrl =
-      'https://cyrustourist-maker.github.io/Cyrustourist/';
-
-  // ============================================================
-  // پیام سیستم
-  // ============================================================
-
-  void _showMessage(
-    BuildContext context,
-    String message,
-  ) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  // ============================================================
-  // باز کردن URL
-  // ============================================================
-
-  Future<void> _openUrl(
-    BuildContext context,
-    String url,
-  ) async {
-    final Uri uri = Uri.parse(url);
+  Future<void> _openUrl(BuildContext context, String value) async {
+    final Uri? uri = Uri.tryParse(value);
+    if (uri == null) {
+      _message(context, 'لینک نامعتبر است.');
+      return;
+    }
 
     try {
       final bool opened = await launchUrl(
         uri,
         mode: LaunchMode.externalApplication,
       );
-
       if (!opened && context.mounted) {
-        _showMessage(
-          context,
-          'امکان باز کردن این بخش وجود ندارد.',
-        );
+        _message(context, 'امکان باز کردن این بخش وجود ندارد.');
       }
     } catch (_) {
       if (context.mounted) {
-        _showMessage(
-          context,
-          'خطایی در باز کردن این بخش رخ داد.',
-        );
+        _message(context, 'برنامه مناسب برای این عملیات پیدا نشد.');
       }
     }
   }
 
-  // ============================================================
-  // تماس
-  // ============================================================
-
-  Future<void> _call(BuildContext context) async {
-    await _openUrl(
-      context,
-      'tel:$phoneNumber',
+  void _message(BuildContext context, String text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text, textAlign: TextAlign.center),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: panelColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
     );
   }
 
-  // ============================================================
-  // واتساپ
-  // ============================================================
+  Future<void> _call(BuildContext context) =>
+      _openUrl(context, 'tel:$phoneNumber');
 
-  Future<void> _openWhatsapp(
-    BuildContext context,
-  ) async {
-    final String number = whatsappNumber
-        .replaceAll('+', '')
-        .replaceAll(' ', '')
-        .replaceAll('-', '');
-
-    await _openUrl(
-      context,
-      'https://wa.me/98${number.substring(1)}',
-    );
+  Future<void> _whatsapp(BuildContext context) async {
+    final number = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
+    if (number.isEmpty) {
+      _message(context, 'شماره واتساپ تنظیم نشده است.');
+      return;
+    }
+    final international = number.startsWith('0') ? '98${number.substring(1)}' : number;
+    await _openUrl(context, 'https://wa.me/$international');
   }
 
-  // ============================================================
-  // تلگرام
-  // ============================================================
+  Future<void> _telegram(BuildContext context) =>
+      _openUrl(context, 'https://t.me/${telegramUsername.replaceAll('@', '')}');
 
-  Future<void> _openTelegram(
-    BuildContext context,
-  ) async {
-    final String username =
-        telegramUsername.replaceAll('@', '');
+  Future<void> _email(BuildContext context) => _openUrl(
+        context,
+        Uri(
+          scheme: 'mailto',
+          path: emailAddress,
+          queryParameters: const {'subject': 'Cyrus Tourist Support'},
+        ).toString(),
+      );
 
-    await _openUrl(
-      context,
-      'https://t.me/$username',
-    );
-  }
+  Future<void> _website(BuildContext context) => _openUrl(context, websiteUrl);
 
-  // ============================================================
-  // گروه تلگرام
-  // ============================================================
-
-  Future<void> _openTelegramGroup(
-    BuildContext context,
-  ) async {
-    await _openUrl(
-      context,
-      telegramGroupUrl,
-    );
-  }
-
-  // ============================================================
-  // ایمیل
-  // ============================================================
-
-  Future<void> _sendEmail(
-    BuildContext context,
-  ) async {
-    final Uri uri = Uri(
-      scheme: 'mailto',
-      path: emailAddress,
-      queryParameters: const {
-        'subject': 'Cyrus Tourist Support',
-      },
-    );
-
-    await _openUrl(
-      context,
-      uri.toString(),
-    );
-  }
-
-  // ============================================================
-  // وب‌سایت
-  // ============================================================
-
-  Future<void> _openWebsite(
-    BuildContext context,
-  ) async {
-    await _openUrl(
-      context,
-      websiteUrl,
-    );
-  }
-
-  // ============================================================
-  // کارت ارتباطی
-  // ============================================================
-
-  Widget _contactCard({
+  Widget _actionCard({
     required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    bool enabled = true,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 13),
-      decoration: BoxDecoration(
-        color: const Color(0xff0b506b).withValues(
-          alpha: 0.28,
-        ),
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(
-          color: const Color(0xffffd36a).withValues(
-            alpha: 0.55,
-          ),
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(17),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 15,
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(22),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [panelLight, panelColor],
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: goldColor.withValues(alpha: 0.38)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.38),
+                  blurRadius: 12,
+                  offset: const Offset(0, 7),
+                ),
+                BoxShadow(
+                  color: goldColor.withValues(alpha: 0.08),
+                  blurRadius: 18,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
             child: Row(
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xffffd36a)
-                        .withValues(alpha: 0.11),
-                    border: Border.all(
-                      color: const Color(0xffffd36a)
-                          .withValues(alpha: 0.70),
-                    ),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: const Color(0xffffd36a),
-                    size: 27,
-                  ),
-                ),
-
+                _Icon3D(icon: icon, enabled: enabled),
                 const SizedBox(width: 14),
-
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
-                          color: Color(0xffffd36a),
+                        style: TextStyle(
+                          color: enabled ? goldBright : Colors.white54,
                           fontSize: 17,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-
                       const SizedBox(height: 5),
-
                       Text(
                         subtitle,
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
-                          height: 1.5,
+                          height: 1.45,
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  color: Color(0xffffd36a),
-                  size: 16,
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: enabled ? goldColor : Colors.white24,
+                  size: 18,
                 ),
               ],
             ),
@@ -263,450 +159,112 @@ class SupportPage extends StatelessWidget {
     );
   }
 
-  // ============================================================
-  // صفحه پشتیبانی
-  // ============================================================
-
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xff071722),
-
+        backgroundColor: backgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xff071722),
+          backgroundColor: backgroundColor,
           foregroundColor: Colors.white,
+          elevation: 0,
           centerTitle: true,
           title: const Text(
             'پشتیبانی و تماس',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
-
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              15,
-              20,
-              30,
-            ),
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.stretch,
               children: [
-
-                // ==================================================
-                // آیکن پشتیبانی
-                // ==================================================
-
-                Center(
-                  child: Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xffffd36a)
-                          .withValues(alpha: 0.10),
-                      border: Border.all(
-                        color: const Color(0xffffd36a),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.support_agent,
-                      color: Color(0xffffd36a),
-                      size: 48,
-                    ),
+                _HeroSupport(),
+                const SizedBox(height: 22),
+                const Text(
+                  'راه‌های ارتباط با Cyrus Tourist',
+                  style: TextStyle(
+                    color: goldBright,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-
+                const SizedBox(height: 7),
+                const Text(
+                  'برای پرسش، پیشنهاد، گزارش مشکل یا همکاری با ما، یکی از گزینه‌های زیر را انتخاب کنید.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
+                ),
                 const SizedBox(height: 20),
-
-                const Text(
-                  'همراه شما هستیم',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xffffd36a),
-                    fontSize: 23,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                const Text(
-                  'ما در Cyrus Tourist آماده‌ایم تا در مسیر سفر و استفاده از خدمات برنامه همراه شما باشیم.\n\n'
-                  'برای پرسش، پیشنهاد، گزارش مشکل یا همکاری با ما، می‌توانید از راه‌های ارتباطی زیر استفاده کنید.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    height: 1.9,
-                  ),
-                ),
-
-                const SizedBox(height: 26),
-
-                // ==================================================
-                // تماس تلفنی
-                // ==================================================
-
-                _contactCard(
+                _actionCard(
                   context: context,
-                  icon: Icons.phone,
+                  icon: Icons.phone_in_talk_rounded,
                   title: 'تماس با ما',
                   subtitle: phoneNumber,
                   onTap: () => _call(context),
                 ),
-
-                // ==================================================
-                // واتساپ
-                // ==================================================
-
-                _contactCard(
+                _actionCard(
                   context: context,
-                  icon: Icons.chat,
+                  icon: Icons.chat_rounded,
                   title: 'واتساپ',
-                  subtitle:
-                      'ارتباط مستقیم با پشتیبانی',
-                  onTap: () =>
-                      _openWhatsapp(context),
+                  subtitle: 'ارتباط مستقیم با پشتیبانی',
+                  onTap: () => _whatsapp(context),
                 ),
-
-                // ==================================================
-                // تلگرام
-                // ==================================================
-
-                _contactCard(
+                _actionCard(
                   context: context,
-                  icon: Icons.send,
+                  icon: Icons.send_rounded,
                   title: 'تلگرام',
                   subtitle: telegramUsername,
-                  onTap: () =>
-                      _openTelegram(context),
+                  onTap: () => _telegram(context),
                 ),
-
-                // ==================================================
-                // گروه تلگرام
-                // ==================================================
-
-                _contactCard(
+                _actionCard(
                   context: context,
-                  icon: Icons.groups,
+                  icon: Icons.groups_rounded,
                   title: 'گروه تلگرام',
-                  subtitle:
-                      'عضویت در گروه Cyrus Tourist',
-                  onTap: () =>
-                      _openTelegramGroup(context),
+                  subtitle: 'عضویت در گروه Cyrus Tourist',
+                  onTap: () => _openUrl(context, telegramGroupUrl),
                 ),
-
-                // ==================================================
-                // ایمیل
-                // ==================================================
-
-                _contactCard(
+                _actionCard(
                   context: context,
-                  icon: Icons.email_outlined,
+                  icon: Icons.email_rounded,
                   title: 'ایمیل',
                   subtitle: emailAddress,
-                  onTap: () =>
-                      _sendEmail(context),
+                  onTap: () => _email(context),
                 ),
-
-                // ==================================================
-                // وب‌سایت
-                // ==================================================
-
-                _contactCard(
+                _actionCard(
                   context: context,
-                  icon: Icons.language,
+                  icon: Icons.language_rounded,
                   title: 'وب‌سایت رسمی',
-                  subtitle:
-                      'مشاهده اطلاعات و خدمات بیشتر',
-                  onTap: () =>
-                      _openWebsite(context),
+                  subtitle: 'مشاهده اطلاعات و خدمات بیشتر',
+                  onTap: () => _website(context),
                 ),
-
                 const SizedBox(height: 4),
-
-                // ==================================================
-                // چت آنلاین
-                // ==================================================
-
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff0b506b)
-                        .withValues(alpha: 0.30),
-                    borderRadius:
-                        BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xffffd36a)
-                          .withValues(alpha: 0.65),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-
-                      Container(
-                        width: 58,
-                        height: 58,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xffffd36a)
-                              .withValues(alpha: 0.12),
-                        ),
-                        child: const Icon(
-                          Icons.forum_outlined,
-                          color: Color(0xffffd36a),
-                          size: 31,
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      const Text(
-                        'چت آنلاین',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xffffd36a),
-                          fontSize: 19,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 7),
-
-                      const Text(
-                        'با تیم پشتیبانی Cyrus Tourist به‌صورت آنلاین گفتگو کنید.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          height: 1.7,
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const OnlineChatPage(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.chat_bubble_outline,
-                        ),
-                        label: const Text(
-                          'ورود به چت آنلاین',
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color(0xffffd36a),
-                          foregroundColor:
-                              const Color(0xff071722),
-                          padding:
-                              const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          shape:
-                              RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                _futureCard(),
+                const SizedBox(height: 16),
+                _InfoCard(
+                  icon: Icons.location_on_rounded,
+                  title: 'آدرس',
+                  text: address,
                 ),
-
-                const SizedBox(height: 18),
-
-                // ==================================================
-                // آدرس
-                // ==================================================
-
-                Container(
-                  padding: const EdgeInsets.all(17),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff0b506b)
-                        .withValues(alpha: 0.22),
-                    borderRadius:
-                        BorderRadius.circular(17),
-                    border: Border.all(
-                      color: const Color(0xffffd36a)
-                          .withValues(alpha: 0.40),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-
-                      const Icon(
-                        Icons.location_on_outlined,
-                        color: Color(0xffffd36a),
-                        size: 30,
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-
-                            const Text(
-                              'آدرس',
-                              style: TextStyle(
-                                color:
-                                    Color(0xffffd36a),
-                                fontSize: 17,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-
-                            const SizedBox(height: 7),
-
-                            const Text(
-                              address,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                height: 1.7,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 14),
+                _InfoCard(
+                  icon: Icons.feedback_rounded,
+                  title: 'پیشنهاد یا گزارش مشکل',
+                  text: 'بازخورد شما به ما کمک می‌کند Cyrus Tourist را بهتر و کاربردی‌تر کنیم.',
+                  buttonText: 'ارسال پیام به پشتیبانی',
+                  onTap: () => _email(context),
                 ),
-
                 const SizedBox(height: 22),
-
-                // ==================================================
-                // پیشنهاد و گزارش مشکل
-                // ==================================================
-
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff0b506b)
-                        .withValues(alpha: 0.22),
-                    borderRadius:
-                        BorderRadius.circular(17),
-                    border: Border.all(
-                      color: const Color(0xffffd36a)
-                          .withValues(alpha: 0.40),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-
-                      const Icon(
-                        Icons.feedback_outlined,
-                        color: Color(0xffffd36a),
-                        size: 34,
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      const Text(
-                        'پیشنهاد یا گزارش مشکل دارید؟',
-                        textAlign:
-                            TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xffffd36a),
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      const Text(
-                        'بازخورد شما به ما کمک می‌کند Cyrus Tourist را بهتر و کاربردی‌تر کنیم.',
-                        textAlign:
-                            TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          height: 1.7,
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      OutlinedButton.icon(
-                        onPressed: () =>
-                            _sendEmail(context),
-                        icon: const Icon(
-                          Icons.send_outlined,
-                        ),
-                        label: const Text(
-                          'ارسال پیام به پشتیبانی',
-                        ),
-                        style:
-                            OutlinedButton.styleFrom(
-                          foregroundColor:
-                              const Color(0xffffd36a),
-                          side: const BorderSide(
-                            color:
-                                Color(0xffffd36a),
-                          ),
-                          padding:
-                              const EdgeInsets
-                                  .symmetric(
-                            horizontal: 18,
-                            vertical: 12,
-                          ),
-                          shape:
-                              RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(
-                              12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
                 const Text(
                   'Cyrus Tourist',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xffffd36a),
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: goldColor, fontSize: 17, fontWeight: FontWeight.bold),
                 ),
-
                 const SizedBox(height: 5),
-
                 const Text(
                   'سفر کن، کشف کن، لذت ببر',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ],
             ),
@@ -717,325 +275,200 @@ class SupportPage extends StatelessWidget {
   }
 }
 
-// ==================================================================
-// صفحه چت آنلاین
-// ==================================================================
+class _Icon3D extends StatelessWidget {
+  const _Icon3D({required this.icon, required this.enabled});
 
-class OnlineChatPage extends StatefulWidget {
-  const OnlineChatPage({super.key});
-
-  @override
-  State<OnlineChatPage> createState() =>
-      _OnlineChatPageState();
-}
-
-class _OnlineChatPageState
-    extends State<OnlineChatPage> {
-  final TextEditingController _messageController =
-      TextEditingController();
-
-  final List<String> _messages = [];
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    super.dispose();
-  }
-
-  void _sendMessage() {
-    final String text =
-        _messageController.text.trim();
-
-    if (text.isEmpty) {
-      return;
-    }
-
-    setState(() {
-      _messages.add(text);
-    });
-
-    _messageController.clear();
-  }
+  final IconData icon;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xff071722),
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: enabled
+              ? [const Color(0xffffe39a), const Color(0xffb87918)]
+              : [Colors.white24, Colors.white10],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: goldColor.withValues(alpha: enabled ? 0.7 : 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: 7,
+            offset: const Offset(3, 5),
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        color: enabled ? const Color(0xff06121d) : Colors.white38,
+        size: 29,
+      ),
+    );
+  }
+}
 
-        appBar: AppBar(
-          backgroundColor: const Color(0xff071722),
-          foregroundColor: Colors.white,
-          centerTitle: true,
-          title: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-
-              Icon(
-                Icons.support_agent,
-                color: Color(0xffffd36a),
+class _HeroSupport extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xff123e51), Color(0xff071c29)],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: SupportPage.goldColor.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 92,
+            height: 92,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xffffe39a), Color(0xffb87918)],
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: SupportPage.goldColor.withValues(alpha: 0.3),
+                  blurRadius: 22,
+                  spreadRadius: 2,
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 10,
+                  offset: const Offset(4, 7),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.support_agent_rounded,
+              color: SupportPage.backgroundColor,
+              size: 52,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'همراه شما هستیم',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: SupportPage.goldBright, fontSize: 24, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 7),
+          const Text(
+            'پشتیبانی Cyrus Tourist برای سفر بهتر و استفاده آسان‌تر از برنامه در کنار شماست.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-              SizedBox(width: 8),
+Widget _futureCard() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(17),
+    decoration: BoxDecoration(
+      color: const Color(0xff0b2636).withValues(alpha: 0.75),
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: SupportPage.goldColor.withValues(alpha: 0.22)),
+    ),
+    child: const Row(
+      children: [
+        _Icon3D(icon: Icons.forum_rounded, enabled: false),
+        SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('چت آنلاین', style: TextStyle(color: Colors.white54, fontSize: 17, fontWeight: FontWeight.bold)),
+              SizedBox(height: 5),
+              Text('این قابلیت در نسخه آینده به پشتیبانی آنلاین متصل می‌شود.', style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.5)),
+            ],
+          ),
+        ),
+        Icon(Icons.lock_outline_rounded, color: Colors.white24, size: 20),
+      ],
+    ),
+  );
+}
 
-              Text(
-                'چت آنلاین',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({required this.icon, required this.title, required this.text, this.buttonText, this.onTap});
+
+  final IconData icon;
+  final String title;
+  final String text;
+  final String? buttonText;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: SupportPage.panelColor.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: SupportPage.goldColor.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: SupportPage.goldColor, size: 30),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(color: SupportPage.goldBright, fontSize: 17, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 7),
+                    Text(text, style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.7)),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-
-        body: Column(
-          children: [
-
-            // ====================================================
-            // وضعیت پشتیبانی
-            // ====================================================
-
-            Container(
+          if (buttonText != null && onTap != null) ...[
+            const SizedBox(height: 13),
+            SizedBox(
               width: double.infinity,
-              padding: const EdgeInsets.all(13),
-              color: const Color(0xff0b506b)
-                  .withValues(alpha: 0.35),
-
-              child: const Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                children: [
-
-                  Icon(
-                    Icons.circle,
-                    color: Colors.greenAccent,
-                    size: 10,
-                  ),
-
-                  SizedBox(width: 8),
-
-                  Text(
-                    'پشتیبانی Cyrus Tourist',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ====================================================
-            // پیام‌ها
-            // ====================================================
-
-            Expanded(
-              child: _messages.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.all(30),
-                        child: Column(
-                          mainAxisSize:
-                              MainAxisSize.min,
-                          children: [
-
-                            const Icon(
-                              Icons.forum_outlined,
-                              color:
-                                  Color(0xffffd36a),
-                              size: 58,
-                            ),
-
-                            const SizedBox(
-                              height: 15,
-                            ),
-
-                            const Text(
-                              'به پشتیبانی Cyrus Tourist خوش آمدید.',
-                              textAlign:
-                                  TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-
-                            const SizedBox(
-                              height: 8,
-                            ),
-
-                            const Text(
-                              'پیام خود را بنویسید تا پس از اتصال سرویس آنلاین، از همین بخش با پشتیبانی گفتگو کنید.',
-                              textAlign:
-                                  TextAlign.center,
-                              style: TextStyle(
-                                color:
-                                    Colors.white70,
-                                fontSize: 13,
-                                height: 1.7,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding:
-                          const EdgeInsets.all(15),
-                      itemCount:
-                          _messages.length,
-                      itemBuilder:
-                          (context, index) {
-                        return Align(
-                          alignment:
-                              Alignment.centerRight,
-                          child: Container(
-                            margin:
-                                const EdgeInsets.only(
-                              bottom: 10,
-                            ),
-                            padding:
-                                const EdgeInsets
-                                    .symmetric(
-                              horizontal: 14,
-                              vertical: 11,
-                            ),
-                            decoration:
-                                BoxDecoration(
-                              color:
-                                  const Color(0xffffd36a)
-                                      .withValues(
-                                alpha: 0.15,
-                              ),
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(14),
-                              border: Border.all(
-                                color:
-                                    const Color(
-                                  0xffffd36a,
-                                ).withValues(
-                                  alpha: 0.45,
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              _messages[index],
-                              style:
-                                  const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-
-            // ====================================================
-            // ورودی پیام
-            // ====================================================
-
-            SafeArea(
-              top: false,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(
-                  10,
-                  8,
-                  10,
-                  8,
-                ),
-                decoration: const BoxDecoration(
-                  color: Color(0xff0b202c),
-                ),
-                child: Row(
-                  children: [
-
-                    Expanded(
-                      child: TextField(
-                        controller:
-                            _messageController,
-
-                        style:
-                            const TextStyle(
-                          color: Colors.white,
-                        ),
-
-                        minLines: 1,
-                        maxLines: 4,
-
-                        decoration:
-                            InputDecoration(
-                          hintText:
-                              'پیام خود را بنویسید...',
-
-                          hintStyle:
-                              const TextStyle(
-                            color:
-                                Colors.white54,
-                          ),
-
-                          filled: true,
-
-                          fillColor:
-                              const Color(
-                            0xff071722,
-                          ),
-
-                          border:
-                              OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius
-                                    .circular(
-                              14,
-                            ),
-                            borderSide:
-                                BorderSide.none,
-                          ),
-
-                          contentPadding:
-                              const EdgeInsets
-                                  .symmetric(
-                            horizontal: 15,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    Container(
-                      decoration:
-                          const BoxDecoration(
-                        color:
-                            Color(0xffffd36a),
-                        shape:
-                            BoxShape.circle,
-                      ),
-
-                      child: IconButton(
-                        onPressed:
-                            _sendMessage,
-
-                        icon: const Icon(
-                          Icons.send,
-                          color:
-                              Color(0xff071722),
-                        ),
-                      ),
-                    ),
-                  ],
+              child: OutlinedButton.icon(
+                onPressed: onTap,
+                icon: const Icon(Icons.send_rounded, size: 18),
+                label: Text(buttonText!),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SupportPage.goldColor,
+                  side: BorderSide(color: SupportPage.goldColor.withValues(alpha: 0.7)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
