@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -714,9 +717,11 @@ class _VideoPageState extends State<VideoPage> {
         padding: const EdgeInsets.all(10),
         child: Column(
           children: [
-            _AparatPlayer(
+            _VideoCoverPlayer(
               url: video['url']!,
-              onTap: () => _openUrl(video['url']!),
+              fallbackAsset: video['image']!,
+              onOpenExternal: () => _openUrl(video['url']!),
+              language: _languageCode,
             ),
             const SizedBox(height: 11),
             Row(
@@ -1015,6 +1020,346 @@ class _AparatPlayerState extends State<_AparatPlayer> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// APARAT COVER — دریافت کاور واقعی، مدت‌زمان و تعداد بازدید
+// از API رسمی آپارات (بدون هیچ داده یا لینک جعلی)
+// ============================================================
+
+class _AparatVideoInfo {
+  final String? coverUrl;
+  final String? duration;
+  final String? visitCount;
+
+  const _AparatVideoInfo({
+    this.coverUrl,
+    this.duration,
+    this.visitCount,
+  });
+}
+
+class _AparatCoverLoader {
+  static final Map<String, _AparatVideoInfo?> _cache = {};
+
+  static Future<_AparatVideoInfo?> fetchInfo(
+    String videoHash,
+  ) async {
+    if (_cache.containsKey(videoHash)) {
+      return _cache[videoHash];
+    }
+
+    HttpClient? client;
+
+    try {
+      client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 8);
+
+      final request = await client.getUrl(
+        Uri.parse(
+          'https://www.aparat.com/etc/api/video/videohash/$videoHash',
+        ),
+      );
+
+      request.headers.set(
+        'User-Agent',
+        'Mozilla/5.0 (Android; CyrusTourist App)',
+      );
+
+      final response = await request.close();
+
+      if (response.statusCode != 200) {
+        _cache[videoHash] = null;
+        return null;
+      }
+
+      final body = await response
+          .transform(utf8.decoder)
+          .join();
+
+      final decoded = jsonDecode(body);
+      final video = decoded is Map
+          ? decoded['video'] as Map<String, dynamic>?
+          : null;
+
+      if (video == null) {
+        _cache[videoHash] = null;
+        return null;
+      }
+
+      final info = _AparatVideoInfo(
+        coverUrl: video['big_poster'] as String? ??
+            video['small_poster'] as String?,
+        duration: video['duration']?.toString(),
+        visitCount: video['visit_cnt']?.toString(),
+      );
+
+      _cache[videoHash] = info;
+      return info;
+    } catch (_) {
+      _cache[videoHash] = null;
+      return null;
+    } finally {
+      client?.close();
+    }
+  }
+}
+
+String _formatDuration(String? rawSeconds) {
+  final seconds = int.tryParse(rawSeconds ?? '');
+
+  if (seconds == null || seconds <= 0) return '';
+
+  final minutes = seconds ~/ 60;
+  final remaining = seconds % 60;
+
+  return '$minutes:${remaining.toString().padLeft(2, '0')}';
+}
+
+// ============================================================
+// VIDEO COVER PLAYER
+//
+// حالت اول: کاور واقعی آپارات (سبک، سریع، بدون WebView).
+// با لمس کاور → پخش‌کننده واقعی آپارات (همان embed سایت) باز می‌شود.
+// ============================================================
+
+class _VideoCoverPlayer extends StatefulWidget {
+  const _VideoCoverPlayer({
+    required this.url,
+    required this.fallbackAsset,
+    required this.onOpenExternal,
+    required this.language,
+  });
+
+  final String url;
+  final String fallbackAsset;
+  final VoidCallback onOpenExternal;
+  final String language;
+
+  @override
+  State<_VideoCoverPlayer> createState() =>
+      _VideoCoverPlayerState();
+}
+
+class _VideoCoverPlayerState extends State<_VideoCoverPlayer> {
+  _AparatVideoInfo? _info;
+  bool _playing = false;
+
+  String get _videoHash {
+    final uri = Uri.tryParse(widget.url);
+
+    if (uri == null) return '';
+
+    final segments =
+        uri.pathSegments.where((e) => e.isNotEmpty).toList();
+
+    if (segments.isEmpty) return '';
+
+    if (segments.first == 'v' && segments.length >= 2) {
+      return segments[1];
+    }
+
+    return segments.last;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInfo();
+  }
+
+  Future<void> _loadInfo() async {
+    final hash = _videoHash;
+
+    if (hash.isEmpty) return;
+
+    final info = await _AparatCoverLoader.fetchInfo(hash);
+
+    if (!mounted || info == null) return;
+
+    setState(() {
+      _info = info;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(17),
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: _playing
+            ? _AparatPlayer(
+                url: widget.url,
+                onTap: widget.onOpenExternal,
+              )
+            : _buildCover(),
+      ),
+    );
+  }
+
+  Widget _buildCover() {
+    final duration = _formatDuration(_info?.duration);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _playing = true;
+        });
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _info?.coverUrl != null
+              ? Image.network(
+                  _info!.coverUrl!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+
+                    return Image.asset(
+                      widget.fallbackAsset,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    widget.fallbackAsset,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Image.asset(
+                  widget.fallbackAsset,
+                  fit: BoxFit.cover,
+                ),
+
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.05),
+                  Colors.black.withValues(alpha: 0.5),
+                ],
+              ),
+            ),
+          ),
+
+          Center(
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: appGoldColor.withValues(alpha: 0.94),
+                boxShadow: [
+                  BoxShadow(
+                    color: appGoldColor.withValues(alpha: 0.55),
+                    blurRadius: 18,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: appBackgroundColor,
+                size: 36,
+              ),
+            ),
+          ),
+
+          Positioned(
+            right: 10,
+            bottom: 10,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.62),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.ondemand_video_rounded,
+                    color: appGoldColor,
+                    size: 13,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Aparat',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (duration.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 3,
+                      height: 3,
+                      decoration: const BoxDecoration(
+                        color: Colors.white54,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      duration,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          if (_info?.visitCount != null)
+            Positioned(
+              left: 10,
+              bottom: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.62),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.visibility_rounded,
+                      color: appGoldColor,
+                      size: 13,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _info!.visitCount!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
