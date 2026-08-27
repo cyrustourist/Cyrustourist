@@ -765,8 +765,7 @@ class _VideoPageState extends State<VideoPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _resolvedAparatTitles[video['url']!] ??
-                        _text(video, 'title'),
+                    _text(video, 'title'),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
