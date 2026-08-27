@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Allow placing phone calls from the support page -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
     <application
         android:name="${applicationName}"
         android:label="@string/app_name"
@@ -44,13 +47,60 @@
     </application>
 
 
-    <!-- Text processing support -->
+    <!--
+        بدون این بخش، از اندروید 11 به بعد، url_launcher برای باز کردن
+        تماس تلفنی، واتساپ/تلگرام/سایت (https) و ایمیل (mailto) بی‌سروصدا
+        شکست می‌خورد. این دقیقاً همان دلیل بسته نشدن گزینه‌های
+        کلید ۹ (پشتیبانی)، دکمه «بازدید» در کلید ۴ (فیلم)، و مسیریابی
+        در کلید ۱، ۲، ۳ و ۵ بود.
+    -->
     <queries>
 
+        <!-- Text processing support (already existing, kept as-is) -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
 
             <data android:mimeType="text/plain" />
+        </intent>
+
+        <!-- Opening web links: WhatsApp, Telegram, website, Aparat, Google Maps -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+
+            <data android:scheme="https" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+
+            <data android:scheme="http" />
+        </intent>
+
+        <!-- Phone dialer -->
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+
+            <data android:scheme="tel" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+
+            <data android:scheme="tel" />
+        </intent>
+
+        <!-- Email -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+
+            <data android:scheme="mailto" />
+        </intent>
+
+        <!-- Geo / navigation links (routing on the map) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+
+            <data android:scheme="geo" />
         </intent>
 
     </queries>
