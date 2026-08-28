@@ -345,7 +345,7 @@ class MapPlaceCard extends StatelessWidget {
 
       case PlaceCategory.accommodation:
 
-        return Colors.orange;
+        return Colors.lightBlue;
 
 
       case PlaceCategory.restaurant:
