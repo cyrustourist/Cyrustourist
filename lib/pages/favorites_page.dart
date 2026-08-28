@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/language/app_language.dart';
 import '../map_place.dart';
 import '../services/map_place_favorites_service.dart';
 import 'category_explorer_page.dart';
@@ -22,7 +23,29 @@ class _FavoritesPageState
 
   bool _loading = true;
 
-  bool _isRtl = true;
+  bool get _isRtl => LanguageManager.current != AppLanguage.english;
+
+  String get _title {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'علاقه‌مندی‌ها';
+      case AppLanguage.arabic:
+        return 'المفضلة';
+      case AppLanguage.english:
+        return 'Favorites';
+    }
+  }
+
+  String get _emptyMessage {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'مورد علاقه‌ای ذخیره نشده است';
+      case AppLanguage.arabic:
+        return 'لم يتم حفظ أي عنصر مفضل';
+      case AppLanguage.english:
+        return 'No favorites saved yet';
+    }
+  }
 
 
   @override
@@ -67,8 +90,8 @@ class _FavoritesPageState
       child: Scaffold(
 
         appBar: AppBar(
-          title: const Text(
-            'علاقه‌مندی‌ها',
+          title: Text(
+            _title,
           ),
           centerTitle: true,
         ),
@@ -83,10 +106,10 @@ class _FavoritesPageState
 
             : _favorites.isEmpty
 
-                ? const Center(
+                ? Center(
                     child: Text(
-                      'مورد علاقه‌ای ذخیره نشده است',
-                      style: TextStyle(
+                      _emptyMessage,
+                      style: const TextStyle(
                         fontSize: 18,
                       ),
                     ),
