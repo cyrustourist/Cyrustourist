@@ -174,7 +174,7 @@ class MapMarkerFactory {
 
 
       case PlaceCategory.accommodation:
-        return Colors.orange;
+        return Colors.lightBlue;
 
 
       case PlaceCategory.restaurant:
