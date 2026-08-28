@@ -232,7 +232,7 @@ class _PlaceMarker extends StatelessWidget {
 
       case PlaceCategory.accommodation:
 
-        return Colors.orange;
+        return Colors.lightBlue;
 
 
       case PlaceCategory.restaurant:
