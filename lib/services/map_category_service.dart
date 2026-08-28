@@ -133,7 +133,7 @@ class MapCategoryService {
         return 0xff43A047; // سبز گردشگری
 
       case PlaceCategory.accommodation:
-        return 0xffFB8C00; // نارنجی اقامت
+        return 0xff03A9F4; // آبی اقامت
 
       case PlaceCategory.restaurant:
         return 0xff8E24AA; // بنفش غذا
