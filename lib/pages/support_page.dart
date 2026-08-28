@@ -1,6 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/language/app_language.dart';
+
+String _t(String fa, String en, String ar) {
+  switch (LanguageManager.current) {
+    case AppLanguage.persian:
+      return fa;
+    case AppLanguage.arabic:
+      return ar;
+    case AppLanguage.english:
+      return en;
+  }
+}
+
+TextDirection get _supportDir =>
+    LanguageManager.current == AppLanguage.english
+        ? TextDirection.ltr
+        : TextDirection.rtl;
+
 class SupportPage extends StatelessWidget {
   const SupportPage({super.key});
 
@@ -21,7 +39,7 @@ class SupportPage extends StatelessWidget {
   Future<void> _openUrl(BuildContext context, String value) async {
     final Uri? uri = Uri.tryParse(value);
     if (uri == null) {
-      _message(context, 'لینک نامعتبر است.');
+      _message(context, _t('لینک نامعتبر است.', 'Invalid link.', 'الرابط غير صالح.'));
       return;
     }
 
@@ -31,11 +49,20 @@ class SupportPage extends StatelessWidget {
         mode: LaunchMode.externalApplication,
       );
       if (!opened && context.mounted) {
-        _message(context, 'امکان باز کردن این بخش وجود ندارد.');
+        _message(
+          context,
+          _t('امکان باز کردن این بخش وجود ندارد.',
+              'This section cannot be opened.', 'لا يمكن فتح هذا القسم.'),
+        );
       }
     } catch (_) {
       if (context.mounted) {
-        _message(context, 'برنامه مناسب برای این عملیات پیدا نشد.');
+        _message(
+          context,
+          _t('برنامه مناسب برای این عملیات پیدا نشد.',
+              'No suitable app was found for this action.',
+              'لم يتم العثور على تطبيق مناسب لهذا الإجراء.'),
+        );
       }
     }
   }
@@ -57,7 +84,11 @@ class SupportPage extends StatelessWidget {
   Future<void> _whatsapp(BuildContext context) async {
     final number = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
     if (number.isEmpty) {
-      _message(context, 'شماره واتساپ تنظیم نشده است.');
+      _message(
+        context,
+        _t('شماره واتساپ تنظیم نشده است.', 'WhatsApp number is not set.',
+            'رقم واتساب غير مضبوط.'),
+      );
       return;
     }
     final international = number.startsWith('0') ? '98${number.substring(1)}' : number;
@@ -162,7 +193,7 @@ class SupportPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: _supportDir,
       child: Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(
@@ -170,9 +201,9 @@ class SupportPage extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
-          title: const Text(
-            'پشتیبانی و تماس',
-            style: TextStyle(fontWeight: FontWeight.w800),
+          title: Text(
+            _t('پشتیبانی و تماس', 'Support & Contact', 'الدعم والتواصل'),
+            style: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
         body: SafeArea(
@@ -183,61 +214,72 @@ class SupportPage extends StatelessWidget {
               children: [
                 _HeroSupport(),
                 const SizedBox(height: 22),
-                const Text(
-                  'راه‌های ارتباط با Cyrus Tourist',
-                  style: TextStyle(
+                Text(
+                  _t('راه‌های ارتباط با Cyrus Tourist',
+                      'Ways to Contact Cyrus Tourist',
+                      'طرق التواصل مع Cyrus Tourist'),
+                  style: const TextStyle(
                     color: goldBright,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 7),
-                const Text(
-                  'برای پرسش، پیشنهاد، گزارش مشکل یا همکاری با ما، یکی از گزینه‌های زیر را انتخاب کنید.',
+                Text(
+                  _t(
+                    'برای پرسش، پیشنهاد، گزارش مشکل یا همکاری با ما، یکی از گزینه‌های زیر را انتخاب کنید.',
+                    'For questions, suggestions, reporting an issue, or collaborating with us, choose one of the options below.',
+                    'للأسئلة أو الاقتراحات أو الإبلاغ عن مشكلة أو التعاون معنا، اختر أحد الخيارات أدناه.',
+                  ),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
+                  style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
                 ),
                 const SizedBox(height: 20),
                 _actionCard(
                   context: context,
                   icon: Icons.phone_in_talk_rounded,
-                  title: 'تماس با ما',
+                  title: _t('تماس با ما', 'Call Us', 'اتصل بنا'),
                   subtitle: phoneNumber,
                   onTap: () => _call(context),
                 ),
                 _actionCard(
                   context: context,
                   icon: Icons.chat_rounded,
-                  title: 'واتساپ',
-                  subtitle: 'ارتباط مستقیم با پشتیبانی',
+                  title: _t('واتساپ', 'WhatsApp', 'واتساب'),
+                  subtitle: _t('ارتباط مستقیم با پشتیبانی',
+                      'Direct contact with support', 'تواصل مباشر مع الدعم'),
                   onTap: () => _whatsapp(context),
                 ),
                 _actionCard(
                   context: context,
                   icon: Icons.send_rounded,
-                  title: 'تلگرام',
+                  title: _t('تلگرام', 'Telegram', 'تيليجرام'),
                   subtitle: telegramUsername,
                   onTap: () => _telegram(context),
                 ),
                 _actionCard(
                   context: context,
                   icon: Icons.groups_rounded,
-                  title: 'گروه تلگرام',
-                  subtitle: 'عضویت در گروه Cyrus Tourist',
+                  title: _t('گروه تلگرام', 'Telegram Group', 'مجموعة تيليجرام'),
+                  subtitle: _t('عضویت در گروه Cyrus Tourist',
+                      'Join the Cyrus Tourist group',
+                      'انضم إلى مجموعة Cyrus Tourist'),
                   onTap: () => _openUrl(context, telegramGroupUrl),
                 ),
                 _actionCard(
                   context: context,
                   icon: Icons.email_rounded,
-                  title: 'ایمیل',
+                  title: _t('ایمیل', 'Email', 'البريد الإلكتروني'),
                   subtitle: emailAddress,
                   onTap: () => _email(context),
                 ),
                 _actionCard(
                   context: context,
                   icon: Icons.language_rounded,
-                  title: 'وب‌سایت رسمی',
-                  subtitle: 'مشاهده اطلاعات و خدمات بیشتر',
+                  title: _t('وب‌سایت رسمی', 'Official Website', 'الموقع الرسمي'),
+                  subtitle: _t('مشاهده اطلاعات و خدمات بیشتر',
+                      'View more information and services',
+                      'عرض المزيد من المعلومات والخدمات'),
                   onTap: () => _website(context),
                 ),
                 const SizedBox(height: 4),
@@ -245,15 +287,21 @@ class SupportPage extends StatelessWidget {
                 const SizedBox(height: 16),
                 _InfoCard(
                   icon: Icons.location_on_rounded,
-                  title: 'آدرس',
+                  title: _t('آدرس', 'Address', 'العنوان'),
                   text: address,
                 ),
                 const SizedBox(height: 14),
                 _InfoCard(
                   icon: Icons.feedback_rounded,
-                  title: 'پیشنهاد یا گزارش مشکل',
-                  text: 'بازخورد شما به ما کمک می‌کند Cyrus Tourist را بهتر و کاربردی‌تر کنیم.',
-                  buttonText: 'ارسال پیام به پشتیبانی',
+                  title: _t('پیشنهاد یا گزارش مشکل', 'Feedback or Report an Issue',
+                      'اقتراح أو الإبلاغ عن مشكلة'),
+                  text: _t(
+                    'بازخورد شما به ما کمک می‌کند Cyrus Tourist را بهتر و کاربردی‌تر کنیم.',
+                    'Your feedback helps us make Cyrus Tourist better and more useful.',
+                    'ملاحظاتكم تساعدنا على جعل Cyrus Tourist أفضل وأكثر فائدة.',
+                  ),
+                  buttonText: _t('ارسال پیام به پشتیبانی', 'Send Message to Support',
+                      'إرسال رسالة إلى الدعم'),
                   onTap: () => _email(context),
                 ),
                 const SizedBox(height: 22),
@@ -262,9 +310,10 @@ class SupportPage extends StatelessWidget {
                   style: TextStyle(color: goldColor, fontSize: 17, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 5),
-                const Text(
-                  'سفر کن، کشف کن، لذت ببر',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                Text(
+                  _t('سفر کن، کشف کن، لذت ببر', 'Travel, Discover, Enjoy',
+                      'سافر، اكتشف، استمتع'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ],
             ),
@@ -367,16 +416,20 @@ class _HeroSupport extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'همراه شما هستیم',
+          Text(
+            _t('همراه شما هستیم', 'We Are With You', 'نحن معك'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: SupportPage.goldBright, fontSize: 24, fontWeight: FontWeight.w900),
+            style: const TextStyle(color: SupportPage.goldBright, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 7),
-          const Text(
-            'پشتیبانی Cyrus Tourist برای سفر بهتر و استفاده آسان‌تر از برنامه در کنار شماست.',
+          Text(
+            _t(
+              'پشتیبانی Cyrus Tourist برای سفر بهتر و استفاده آسان‌تر از برنامه در کنار شماست.',
+              'Cyrus Tourist support is here for a better trip and easier use of the app.',
+              'دعم Cyrus Tourist بجانبك من أجل رحلة أفضل واستخدام أسهل للتطبيق.',
+            ),
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
+            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
           ),
         ],
       ),
@@ -393,21 +446,31 @@ Widget _futureCard() {
       borderRadius: BorderRadius.circular(22),
       border: Border.all(color: SupportPage.goldColor.withValues(alpha: 0.22)),
     ),
-    child: const Row(
+    child: Row(
       children: [
-        _Icon3D(icon: Icons.forum_rounded, enabled: false),
-        SizedBox(width: 14),
+        const _Icon3D(icon: Icons.forum_rounded, enabled: false),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('چت آنلاین', style: TextStyle(color: Colors.white54, fontSize: 17, fontWeight: FontWeight.bold)),
-              SizedBox(height: 5),
-              Text('این قابلیت در نسخه آینده به پشتیبانی آنلاین متصل می‌شود.', style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.5)),
+              Text(
+                _t('چت آنلاین', 'Online Chat', 'الدردشة المباشرة'),
+                style: const TextStyle(color: Colors.white54, fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                _t(
+                  'این قابلیت در نسخه آینده به پشتیبانی آنلاین متصل می‌شود.',
+                  'This feature will connect to live support in a future version.',
+                  'ستتصل هذه الميزة بالدعم المباشر في نسخة مستقبلية.',
+                ),
+                style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+              ),
             ],
           ),
         ),
-        Icon(Icons.lock_outline_rounded, color: Colors.white24, size: 20),
+        const Icon(Icons.lock_outline_rounded, color: Colors.white24, size: 20),
       ],
     ),
   );
