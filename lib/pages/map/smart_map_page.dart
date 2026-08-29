@@ -873,6 +873,7 @@ class _SmartMapScreenState
     String toolId,
   ) {
     String message;
+    String query;
 
     switch (toolId) {
       case 'fuel':
@@ -880,6 +881,11 @@ class _SmartMapScreenState
           'جستجوی پمپ‌های بنزین اطراف.',
           'Searching for nearby fuel stations.',
           'البحث عن محطات الوقود القريبة.',
+        );
+        query = _text(
+          'پمپ بنزین',
+          'gas station',
+          'محطة وقود',
         );
         break;
 
@@ -889,6 +895,11 @@ class _SmartMapScreenState
           'Searching for nearby ATMs.',
           'البحث عن أجهزة الصراف القريبة.',
         );
+        query = _text(
+          'خودپرداز',
+          'ATM',
+          'صراف آلي',
+        );
         break;
 
       case 'medical':
@@ -896,6 +907,11 @@ class _SmartMapScreenState
           'جستجوی مراکز درمانی اطراف.',
           'Searching for nearby medical centers.',
           'البحث عن المراكز الطبية القريبة.',
+        );
+        query = _text(
+          'بیمارستان',
+          'hospital',
+          'مستشفى',
         );
         break;
 
@@ -905,6 +921,11 @@ class _SmartMapScreenState
           'Searching for nearby restaurants.',
           'البحث عن المطاعم القريبة.',
         );
+        query = _text(
+          'رستوران',
+          'restaurant',
+          'مطعم',
+        );
         break;
 
       case 'parking':
@@ -913,13 +934,36 @@ class _SmartMapScreenState
           'Searching for nearby parking.',
           'البحث عن مواقف السيارات القريبة.',
         );
+        query = _text(
+          'پارکینگ',
+          'parking',
+          'موقف سيارات',
+        );
         break;
 
-      case 'shopping':
+      case 'pharmacy':
         message = _text(
-          'جستجوی مراکز خرید اطراف.',
-          'Searching for nearby shopping centers.',
-          'البحث عن مراكز التسوق القريبة.',
+          'جستجوی داروخانه‌های اطراف.',
+          'Searching for nearby pharmacies.',
+          'البحث عن الصيدليات القريبة.',
+        );
+        query = _text(
+          'داروخانه',
+          'pharmacy',
+          'صيدلية',
+        );
+        break;
+
+      case 'taxi':
+        message = _text(
+          'جستجوی ایستگاه‌های تاکسی اطراف.',
+          'Searching for nearby taxi stops.',
+          'البحث عن مواقف سيارات الأجرة القريبة.',
+        );
+        query = _text(
+          'ایستگاه تاکسی',
+          'taxi stand',
+          'موقف سيارات أجرة',
         );
         break;
 
@@ -929,6 +973,11 @@ class _SmartMapScreenState
           'Searching for nearby restrooms.',
           'البحث عن دورات المياه القريبة.',
         );
+        query = _text(
+          'سرویس بهداشتی',
+          'public restroom',
+          'دورة مياه عامة',
+        );
         break;
 
       case 'emergency':
@@ -936,6 +985,11 @@ class _SmartMapScreenState
           'خدمات ضروری اطراف.',
           'Nearby emergency services.',
           'خدمات الطوارئ القريبة.',
+        );
+        query = _text(
+          'اورژانس',
+          'emergency',
+          'طوارئ',
         );
         break;
 
@@ -945,11 +999,22 @@ class _SmartMapScreenState
           'Option selected.',
           'تم اختيار الخيار.',
         );
+        query = '';
     }
 
     _showMessage(
       message,
     );
+
+    if (query.isEmpty) return;
+
+    searchTextController.text = query;
+
+    setState(() {
+      originMode = false;
+    });
+
+    search(query);
   }
 
   // ============================================================
@@ -1690,8 +1755,13 @@ class _SmartMapScreenState
             ),
 
             // ==================================================
-            // TOURIST PLACES LIST
+            // TOURIST PLACES LIST / QUICK TOURIST SERVICES
             // ==================================================
+
+            // وقتی نتیجه‌ای روی نقشه نیست، نوار خدمات سریع
+            // (پمپ بنزین، خودپرداز، رستوران و ...) نمایش داده می‌شود.
+            // به محض یافتن مکان‌ها، جای آن را لیست جاذبه‌ها می‌گیرد
+            // تا این دو هرگز روی هم قرار نگیرند.
 
             Positioned(
               left: 0,
@@ -1699,39 +1769,40 @@ class _SmartMapScreenState
               bottom: 0,
               child: SafeArea(
                 top: false,
-                child: SizedBox(
-                  height: 220,
-                  child:
-                      SingleChildScrollView(
-                    physics:
-                        const BouncingScrollPhysics(),
-                    child:
-                        TouristPlacesList(
-                      places: controller
-                          .visiblePlaces,
-                      language:
-                          selectedLanguage,
-                      onPlaceTap:
-                          _selectPlaceFromList,
-                      onRouteTap:
-                          _routeToPlace,
-                      isFavorite:
-                          _isFavorite,
-                      onFavoriteTap:
-                          _toggleFavorite,
-                    ),
-                  ),
-                ),
+                child: controller
+                        .visiblePlaces
+                        .isEmpty
+                    ? MapQuickTools(
+                        language:
+                            selectedLanguage,
+                        onSelected:
+                            _handleQuickTool,
+                      )
+                    : SizedBox(
+                        height: 220,
+                        child:
+                            SingleChildScrollView(
+                          physics:
+                              const BouncingScrollPhysics(),
+                          child:
+                              TouristPlacesList(
+                            places: controller
+                                .visiblePlaces,
+                            language:
+                                selectedLanguage,
+                            onPlaceTap:
+                                _selectPlaceFromList,
+                            onRouteTap:
+                                _routeToPlace,
+                            isFavorite:
+                                _isFavorite,
+                            onFavoriteTap:
+                                _toggleFavorite,
+                          ),
+                        ),
+                      ),
               ),
             ),
-
-            // ==================================================
-            // QUICK TOURIST SERVICES
-            // ==================================================
-
-            // ابزارهای سریع در این مرحله
-            // هنگام وجود لیست جاذبه‌ها کنار آن قرار نمی‌گیرند
-            // تا روی اطلاعات جاذبه‌ها پوشانده نشوند.
 
             // ==================================================
             // LOADING
