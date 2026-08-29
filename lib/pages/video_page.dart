@@ -46,7 +46,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Historical Heritage',
       'category_ar': 'تراث تاريخي',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/w17sz69',
+      'url': 'https://www.aparat.com/v/t346o2k',
+
     },
     {
       'title_fa': 'رقص محلی فاروق خراسانی با آهنگ لیلا',
@@ -59,7 +60,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Culture and Art',
       'category_ar': 'الثقافة والفنون',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/xvo5q9c',
+      'url': 'https://www.aparat.com/v/w17sz69',
+
     },
     {
       'title_fa': 'چشمه گراب؛ جادوی طبیعت ایران',
@@ -72,7 +74,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Nature of Iran',
       'category_ar': 'طبيعة إيران',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/hzlol4k',
+      'url': 'https://www.aparat.com/v/xvo5q9c',
+
     },
     {
       'title_fa': 'جنگل کوه‌پارک مشهد و قله زو',
@@ -85,7 +88,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Mountaineering',
       'category_ar': 'تسلق الجبال',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/guqcsg5',
+      'url': 'https://www.aparat.com/v/hzlol4k',
+
     },
     {
       'title_fa': 'کاشت بلوط؛ راه نجات جنگل‌های هیرکانی',
@@ -98,7 +102,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Environment',
       'category_ar': 'البيئة',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/w8lOg',
+      'url': 'https://www.aparat.com/v/guqcsg5',
+
     },
     {
       'title_fa': 'آبشار شیرآباد؛ یکی از دیدنی‌های گلستان',
@@ -111,7 +116,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Waterfall',
       'category_ar': 'شلال',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/uK3y5',
+      'url': 'https://www.aparat.com/v/w8lOg',
+
     },
     {
       'title_fa': 'آبگوشت دیزی سنگی در طبیعت',
@@ -124,7 +130,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Food Tourism',
       'category_ar': 'سياحة الطعام',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/nuXAC',
+      'url': 'https://www.aparat.com/v/uK3y5',
+
     },
     {
       'title_fa': '۲۵ اردیبهشت؛ روز بزرگداشت فردوسی',
@@ -137,7 +144,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Culture and Literature',
       'category_ar': 'الثقافة والأدب',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/x707h19',
+      'url': 'https://www.aparat.com/v/nuXAC',
+
     },
     {
       'title_fa': 'چشمه سبز گلمکان؛ دریاچه زیبای مشهد',
@@ -150,7 +158,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Nature of Iran',
       'category_ar': 'طبيعة إيران',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/4Z0hQ',
+      'url': 'https://www.aparat.com/v/x707h19',
+
     },
     {
       'title_fa': 'آموزش پخت سیب‌زمینی آتشی در طبیعت',
@@ -163,7 +172,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Nature Tourism',
       'category_ar': 'السياحة الطبيعية',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/s78jcie',
+      'url': 'https://www.aparat.com/v/4Z0hQ',
+
     },
     {
       'title_fa': 'جشن نوروز باستانی و سفره هفت‌سین',
@@ -176,7 +186,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Nowruz',
       'category_ar': 'نوروز',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/R1p3U',
+      'url': 'https://www.aparat.com/v/s78jcie',
+
     },
     {
       'title_fa': 'چایخانه حمام وکیل کرمان',
@@ -189,7 +200,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Kerman Attractions',
       'category_ar': 'معالم كرمان',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/g40wppg',
+      'url': 'https://www.aparat.com/v/R1p3U',
+
     },
     {
       'title_fa': 'بجستان، آسبادهای نشتیفان و برج علی‌آباد کشمر',
@@ -202,7 +214,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Historical Heritage',
       'category_ar': 'تراث تاريخي',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/xsBFX',
+      'url': 'https://www.aparat.com/v/g40wppg',
+
     },
     {
       'title_fa': 'شاه نعمت‌الله ولی؛ ماهان کرمان',
@@ -215,7 +228,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Culture and History',
       'category_ar': 'الثقافة والتاريخ',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/3ZCGs',
+      'url': 'https://www.aparat.com/v/xsBFX',
+
     },
     {
       'title_fa': 'باغ شاهزاده ماهان؛ شاهکار باغ ایرانی',
@@ -228,7 +242,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Historic Garden',
       'category_ar': 'حديقة تاريخية',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/z72q215',
+      'url': 'https://www.aparat.com/v/3ZCGs',
+
     },
     {
       'title_fa': 'موزه بانو حیاتی؛ گنجینه‌ای در بازار کرمان',
@@ -241,7 +256,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Museum',
       'category_ar': 'متحف',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/c4744bv',
+      'url': 'https://www.aparat.com/v/z72q215',
+
     },
     {
       'title_fa': 'قلعه سریزد؛ نخستین بانک جهان',
@@ -254,7 +270,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Historical Heritage',
       'category_ar': 'تراث تاريخي',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/kGS8o',
+      'url': 'https://www.aparat.com/v/c4744bv',
+
     },
     {
       'title_fa': 'جنگل‌های حرا و بندر تاریخی لافت',
@@ -267,7 +284,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Coasts and Islands',
       'category_ar': 'السواحل والجزر',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/mPh2q',
+      'url': 'https://www.aparat.com/v/kGS8o',
+
     },
     {
       'title_fa': 'باغ فین کاشان با موسیقی سنتی',
@@ -280,7 +298,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Historic Garden',
       'category_ar': 'حديقة تاريخية',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/h86ieq2',
+      'url': 'https://www.aparat.com/v/mPh2q',
+
     },
     {
       'title_fa': 'زیباترین اقامتگاه بوم‌گردی در جنگل ابر',
@@ -293,7 +312,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Accommodation',
       'category_ar': 'إقامة',
       'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/w43c127',
+      'url': 'https://www.aparat.com/v/h86ieq2',
+
     },
     {
       'title_fa': 'زیباترین اقامتگاه‌های بوم‌گردی ایران',
@@ -306,7 +326,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Accommodation',
       'category_ar': 'إقامة',
       'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/k2RDX',
+      'url': 'https://www.aparat.com/v/w43c127',
+
     },
     {
       'title_fa': 'غار علی‌صدر؛ غار تالابی شگفت‌انگیز ایران',
@@ -319,7 +340,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Cave and Nature',
       'category_ar': 'الكهوف والطبيعة',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/f91418q',
+      'url': 'https://www.aparat.com/v/k2RDX',
+
     },
     {
       'title_fa': 'آبشار اخلمد چناران؛ طبیعت زیبای خراسان',
@@ -332,7 +354,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Waterfall',
       'category_ar': 'شلال',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/f5212r6',
+      'url': 'https://www.aparat.com/v/f91418q',
+
     },
     {
       'title_fa': 'جشن نوروز تخت جمشید؛ شهر پارس و پاسارگاد',
@@ -345,7 +368,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Iranian Heritage',
       'category_ar': 'التراث الإيراني',
       'image': 'assets/images/video_attraction.jpg',
-      'url': 'https://www.aparat.com/v/f38s8gz',
+      'url': 'https://www.aparat.com/v/f5212r6',
+
     },
     {
       'title_fa': 'اقامتگاه‌ها و دیدنی‌های ایران',
@@ -358,7 +382,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Accommodation',
       'category_ar': 'إقامة',
       'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/m37fn2a',
+      'url': 'https://www.aparat.com/v/f38s8gz',
+
     },
     {
       'title_fa': 'اقامتگاه بوم‌گردی قوامیه گناباد',
@@ -371,7 +396,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Eco-Tourism',
       'category_ar': 'السياحة البيئية',
       'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/a528058',
+      'url': 'https://www.aparat.com/v/m37fn2a',
+
     },
     {
       'title_fa': 'اقامتگاه بوم‌گردی ناخدا علی در لافت',
@@ -384,7 +410,8 @@ class _VideoPageState extends State<VideoPage> {
       'category_en': 'Eco-Tourism',
       'category_ar': 'السياحة البيئية',
       'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/hLg1q',
+      'url': 'https://www.aparat.com/v/a528058',
+
     },
   ];
 
