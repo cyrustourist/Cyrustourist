@@ -102,11 +102,18 @@ class _MapQuickToolsState
       icon: Icons.local_parking_rounded,
     ),
     MapQuickTool(
-      id: 'shopping',
-      fa: 'خرید',
-      en: 'Shopping',
-      ar: 'التسوق',
-      icon: Icons.shopping_bag_rounded,
+      id: 'pharmacy',
+      fa: 'داروخانه',
+      en: 'Pharmacy',
+      ar: 'صيدلية',
+      icon: Icons.local_pharmacy_rounded,
+    ),
+    MapQuickTool(
+      id: 'taxi',
+      fa: 'تاکسی',
+      en: 'Taxi',
+      ar: 'سيارة أجرة',
+      icon: Icons.local_taxi_rounded,
     ),
     MapQuickTool(
       id: 'toilet',
