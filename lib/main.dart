@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/material.dart';
@@ -804,12 +806,12 @@ class WorkInProgressPage extends StatelessWidget {
 class _QuickServiceTool {
   final IconData icon;
   final String title;
-  final String query;
+  final String amenityTag;
 
   const _QuickServiceTool({
     required this.icon,
     required this.title,
-    required this.query,
+    required this.amenityTag,
   });
 }
 
@@ -1013,61 +1015,127 @@ class _SmartMapPageState
         text == currentLocationLabel;
   }
 
+  // مبدأ را به مختصات واقعی تبدیل می‌کند: اگر کاربر متن مبدأ را
+  // عوض نکرده («موقعیت فعلی من» است) موقعیت GPS برگردانده
+  // می‌شود، وگرنه متن تایپ‌شده جستجو و به مختصات تبدیل می‌شود.
+  // در صورت پیدا نشدن مبدأ تایپ‌شده، null برمی‌گردد.
+
+  Future<LatLng?> _resolveOrigin() async {
+    final referencePoint =
+        userLocation ?? iranCenter;
+
+    if (_originIsCurrentLocation) {
+      return referencePoint;
+    }
+
+    try {
+      final originResults =
+          await MapPlacesService().searchPlaces(
+        query: originController.text.trim(),
+        userLocation: referencePoint,
+      );
+
+      if (originResults.isNotEmpty) {
+        return originResults.first.location;
+      }
+    } catch (_) {
+      // نادیده گرفته می‌شود، در ادامه null برمی‌گردد
+    }
+
+    return null;
+  }
+
+  Future<void> _openDirections(
+    LatLng origin,
+    LatLng destination,
+  ) async {
+    final url =
+        'https://www.google.com/maps/dir/?api=1'
+        '&origin=${origin.latitude},${origin.longitude}'
+        '&destination=${destination.latitude},${destination.longitude}';
+
+    final uri = Uri.parse(url);
+
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _localize(
+                'امکان باز کردن مسیریاب وجود ندارد.',
+                'Could not open navigation.',
+                'تعذر فتح تطبيق المسار.',
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _localize(
+              'خطا در باز کردن مسیریاب.',
+              'Error opening navigation.',
+              'حدث خطأ أثناء فتح المسار.',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _startRouting() async {
     final destinationText =
         destinationController.text.trim();
 
     if (destinationText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'لطفاً هدف سفر را وارد کنید.',
+            _localize(
+              'لطفاً هدف سفر را وارد کنید.',
+              'Please enter a destination.',
+              'يرجى إدخال وجهة الرحلة.',
+            ),
           ),
         ),
       );
       return;
     }
 
-    final referencePoint =
-        userLocation ?? iranCenter;
-
     setState(() {
       routingInProgress = true;
     });
 
-    LatLng origin = referencePoint;
+    final origin = await _resolveOrigin();
 
-    if (!_originIsCurrentLocation) {
-      List<MapPlace> originResults = [];
+    if (!mounted) return;
 
-      try {
-        originResults =
-            await MapPlacesService().searchPlaces(
-          query: originController.text.trim(),
-          userLocation: referencePoint,
-        );
-      } catch (_) {
-        originResults = [];
-      }
+    if (origin == null) {
+      setState(() {
+        routingInProgress = false;
+      });
 
-      if (!mounted) return;
-
-      if (originResults.isEmpty) {
-        setState(() {
-          routingInProgress = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _localize(
               'مبدأ پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
+              'Origin not found. Please enter a more exact name.',
+              'لم يتم العثور على نقطة البداية. يرجى إدخال اسم أدق.',
             ),
           ),
-        );
-        return;
-      }
-
-      origin = originResults.first.location;
+        ),
+      );
+      return;
     }
 
     List<MapPlace> results = [];
@@ -1089,9 +1157,13 @@ class _SmartMapPageState
 
     if (results.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'هدف سفر پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
+            _localize(
+              'هدف سفر پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
+              'Destination not found. Please enter a more exact name.',
+              'لم يتم العثور على الوجهة. يرجى إدخال اسم أدق.',
+            ),
           ),
         ),
       );
@@ -1100,44 +1172,34 @@ class _SmartMapPageState
 
     final destination = results.first.location;
 
-    final url =
-        'https://www.google.com/maps/dir/?api=1'
-        '&origin=${origin.latitude},${origin.longitude}'
-        '&destination=${destination.latitude},${destination.longitude}';
-
-    final uri = Uri.parse(url);
-
-    try {
-      final opened = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'امکان باز کردن مسیریاب وجود ندارد.',
-            ),
-          ),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'خطا در باز کردن مسیریاب.',
-          ),
-        ),
-      );
-    }
+    await _openDirections(origin, destination);
   }
 
   // ==========================================================
   // LOCATION
   // ==========================================================
+
+  // ==========================================================
+  // LOCALIZATION HELPER
+  // ==========================================================
+
+  String _localize(
+    String fa,
+    String en,
+    String ar,
+  ) {
+    if (LanguageManager.current ==
+        AppLanguage.english) {
+      return en;
+    }
+
+    if (LanguageManager.current ==
+        AppLanguage.arabic) {
+      return ar;
+    }
+
+    return fa;
+  }
 
   Future<void> getLocation() async {
     if (locationLoading) return;
@@ -1151,8 +1213,11 @@ class _SmartMapPageState
       if (!enabled) {
         if (mounted) {
           setState(() {
-            locationWarning =
-                'موقعیت‌یاب دستگاه خاموش است';
+            locationWarning = _localize(
+              'موقعیت‌یاب دستگاه خاموش است',
+              'Device location is turned off',
+              'خدمة تحديد الموقع في الجهاز متوقفة',
+            );
           });
         }
         return;
@@ -1173,8 +1238,11 @@ class _SmartMapPageState
               LocationPermission.deniedForever) {
         if (mounted) {
           setState(() {
-            locationWarning =
-                'دسترسی موقعیت فعال نیست';
+            locationWarning = _localize(
+              'دسترسی موقعیت فعال نیست',
+              'Location access is not granted',
+              'الوصول إلى الموقع غير مفعّل',
+            );
           });
         }
         return;
@@ -1218,8 +1286,11 @@ class _SmartMapPageState
     } catch (_) {
       if (mounted) {
         setState(() {
-          locationWarning =
-              'خطا در دریافت موقعیت';
+          locationWarning = _localize(
+            'خطا در دریافت موقعیت',
+            'Could not get your location',
+            'تعذر الحصول على الموقع',
+          );
         });
       }
     } finally {
@@ -1543,7 +1614,25 @@ class _SmartMapPageState
             isOrigin: isOrigin,
           ),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon),
+            prefixIcon: isOrigin
+                ? IconButton(
+                    icon: Icon(icon),
+                    tooltip: _localize(
+                      'استفاده از موقعیت فعلی',
+                      'Use current location',
+                      'استخدام الموقع الحالي',
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        originController.text =
+                            currentLocationLabel;
+                      });
+                      _removeSuggestionsOverlay();
+                      FocusScope.of(context)
+                          .unfocus();
+                    },
+                  )
+                : Icon(icon),
             hintText: hint,
             filled: true,
             border: OutlineInputBorder(
@@ -1730,22 +1819,175 @@ class _SmartMapPageState
   // با زدن هر گزینه، نزدیک‌ترین نمونه از مبدأ فعلی پیدا و
   // مسیریابی به آن باز می‌شود.
 
-  void _quickService(String query) {
-    destinationController.text = query;
-    _startRouting();
+  // ==========================================================
+  // NEAREST POI (Overpass) — برای گزینه‌های سریع زیر نقشه
+  // ==========================================================
+  //
+  // Nominatim برای پیدا کردن آدرس/اسم مکان خوب است اما برای
+  // «نزدیک‌ترین پمپ‌بنزین/خودپرداز/...» ساخته نشده. برای همین
+  // گزینه‌های سریع از Overpass API استفاده می‌کنند که مستقیماً
+  // بر اساس نوع (amenity) و شعاع جستجو می‌کند و نتیجهٔ دقیق‌تری
+  // نسبت به موقعیت واقعی کاربر می‌دهد.
+
+  Future<LatLng?> _findNearestAmenity(
+    String amenityTag,
+    LatLng center, {
+    double radiusMeters = 5000,
+  }) async {
+    final query =
+        '[out:json][timeout:20];'
+        '(node["amenity"="$amenityTag"]'
+        '(around:$radiusMeters,${center.latitude},${center.longitude});'
+        'way["amenity"="$amenityTag"]'
+        '(around:$radiusMeters,${center.latitude},${center.longitude});'
+        ');out center 30;';
+
+    final uri = Uri.https(
+      'overpass-api.de',
+      '/api/interpreter',
+      {'data': query},
+    );
+
+    HttpClient? client;
+
+    try {
+      client = HttpClient();
+      client.userAgent =
+          'CyrusTourist/1.0 (cyrustourist app)';
+      client.connectionTimeout =
+          const Duration(seconds: 15);
+
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final body = await response
+          .transform(const Utf8Decoder())
+          .join();
+
+      final data =
+          json.decode(body) as Map<String, dynamic>;
+
+      final elements =
+          (data['elements'] as List<dynamic>?) ??
+              [];
+
+      if (elements.isEmpty) return null;
+
+      const distanceCalculator = Distance();
+
+      LatLng? nearest;
+      double bestDistance = double.infinity;
+
+      for (final element in elements) {
+        final map = element as Map<String, dynamic>;
+
+        double? lat =
+            (map['lat'] as num?)?.toDouble();
+        double? lon =
+            (map['lon'] as num?)?.toDouble();
+
+        if (lat == null || lon == null) {
+          final centerTag =
+              map['center'] as Map<String, dynamic>?;
+
+          lat = (centerTag?['lat'] as num?)
+              ?.toDouble();
+          lon = (centerTag?['lon'] as num?)
+              ?.toDouble();
+        }
+
+        if (lat == null || lon == null) continue;
+
+        final point = LatLng(lat, lon);
+        final d =
+            distanceCalculator(center, point);
+
+        if (d < bestDistance) {
+          bestDistance = d;
+          nearest = point;
+        }
+      }
+
+      return nearest;
+    } catch (_) {
+      return null;
+    } finally {
+      client?.close();
+    }
+  }
+
+  Future<void> _quickService(
+    _QuickServiceTool tool,
+  ) async {
+    setState(() {
+      routingInProgress = true;
+    });
+
+    final origin = await _resolveOrigin();
+
+    if (!mounted) return;
+
+    if (origin == null) {
+      setState(() {
+        routingInProgress = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _localize(
+              'مبدأ پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
+              'Origin not found. Please enter a more exact name.',
+              'لم يتم العثور على نقطة البداية. يرجى إدخال اسم أدق.',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final nearest = await _findNearestAmenity(
+      tool.amenityTag,
+      origin,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      routingInProgress = false;
+    });
+
+    if (nearest == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _localize(
+              '${tool.title} نزدیکی پیدا نشد.',
+              'No nearby ${tool.title} found.',
+              'لم يتم العثور على ${tool.title} قريب.',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    await _openDirections(origin, nearest);
   }
 
   Widget mapServiceButton(
-    IconData icon,
-    String title, {
-    required String query,
-  }) {
+    _QuickServiceTool tool,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: 4,
       ),
       child: InkWell(
-        onTap: () => _quickService(query),
+        onTap: () => _quickService(tool),
         borderRadius:
             BorderRadius.circular(14),
         child: Container(
@@ -1766,14 +2008,14 @@ class _SmartMapPageState
                 MainAxisAlignment.center,
             children: [
               Icon(
-                icon,
+                tool.icon,
                 color:
                     const Color(0xffffd36a),
                 size: 22,
               ),
               const SizedBox(height: 3),
               Text(
-                title,
+                tool.title,
                 maxLines: 1,
                 overflow:
                     TextOverflow.ellipsis,
@@ -1793,129 +2035,175 @@ class _SmartMapPageState
     );
   }
 
+  // ==========================================================
+  // SIDE CONTROLS (کنار نقشه، سمت راست) — مانند گوگل‌مپ
+  // ==========================================================
+  //
+  // بزرگ‌نمایی/کوچک‌نمایی، قطب‌نما (بازگشت شمال به بالا) و
+  // دکمهٔ «موقعیت من» کنار نقشه، بالای نوار خدمات سریع.
+
+  Widget _mapSideButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: const Color(0xff0b506b),
+        shape: const CircleBorder(),
+        elevation: 4,
+        child: IconButton(
+          tooltip: tooltip,
+          icon: Icon(
+            icon,
+            color: const Color(0xffffd36a),
+          ),
+          onPressed: onPressed,
+        ),
+      ),
+    );
+  }
+
+  Widget _mapSideControls() {
+    return Positioned(
+      right: 12,
+      bottom: 110,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _mapSideButton(
+            icon: Icons.add,
+            tooltip: _localize(
+              'بزرگ‌نمایی',
+              'Zoom in',
+              'تكبير',
+            ),
+            onPressed: () {
+              final camera =
+                  mapController.camera;
+
+              mapController.move(
+                camera.center,
+                camera.zoom + 1,
+              );
+            },
+          ),
+          _mapSideButton(
+            icon: Icons.remove,
+            tooltip: _localize(
+              'کوچک‌نمایی',
+              'Zoom out',
+              'تصغير',
+            ),
+            onPressed: () {
+              final camera =
+                  mapController.camera;
+
+              mapController.move(
+                camera.center,
+                camera.zoom - 1,
+              );
+            },
+          ),
+          _mapSideButton(
+            icon: Icons.explore_outlined,
+            tooltip: _localize(
+              'قطب‌نما (بازگشت به شمال)',
+              'Compass (reset to north)',
+              'البوصلة (إعادة للشمال)',
+            ),
+            onPressed: () {
+              mapController.rotate(0);
+            },
+          ),
+          _mapSideButton(
+            icon: Icons.my_location,
+            tooltip: _localize(
+              'موقعیت من',
+              'My location',
+              'موقعي الحالي',
+            ),
+            onPressed: getLocation,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget mapTools() {
-    final isArabic =
-        LanguageManager.current ==
-            AppLanguage.arabic;
-
-    final isEnglish =
-        LanguageManager.current ==
-            AppLanguage.english;
-
-    String label(
-      String fa,
-      String en,
-      String ar,
-    ) {
-      if (isEnglish) return en;
-      if (isArabic) return ar;
-      return fa;
-    }
-
     final tools = <_QuickServiceTool>[
       _QuickServiceTool(
         icon: Icons.local_gas_station_rounded,
-        title: label(
+        title: _localize(
           'پمپ بنزین',
           'Fuel',
           'محطة وقود',
         ),
-        query: label(
-          'پمپ بنزین',
-          'gas station',
-          'محطة وقود',
-        ),
+        amenityTag: 'fuel',
       ),
       _QuickServiceTool(
         icon: Icons.restaurant_rounded,
-        title: label(
+        title: _localize(
           'رستوران',
           'Food',
           'مطعم',
         ),
-        query: label(
-          'رستوران',
-          'restaurant',
-          'مطعم',
-        ),
+        amenityTag: 'restaurant',
       ),
       _QuickServiceTool(
         icon: Icons.atm_rounded,
-        title: label(
+        title: _localize(
           'خودپرداز',
           'ATM',
           'صراف آلي',
         ),
-        query: label(
-          'خودپرداز',
-          'ATM',
-          'صراف آلي',
-        ),
+        amenityTag: 'atm',
       ),
       _QuickServiceTool(
         icon: Icons.local_parking_rounded,
-        title: label(
+        title: _localize(
           'پارکینگ',
           'Parking',
           'موقف سيارات',
         ),
-        query: label(
-          'پارکینگ',
-          'parking',
-          'موقف سيارات',
-        ),
+        amenityTag: 'parking',
       ),
       _QuickServiceTool(
         icon: Icons.local_pharmacy_rounded,
-        title: label(
+        title: _localize(
           'داروخانه',
           'Pharmacy',
           'صيدلية',
         ),
-        query: label(
-          'داروخانه',
-          'pharmacy',
-          'صيدلية',
-        ),
+        amenityTag: 'pharmacy',
       ),
       _QuickServiceTool(
         icon: Icons.local_taxi_rounded,
-        title: label(
+        title: _localize(
           'تاکسی',
           'Taxi',
           'سيارة أجرة',
         ),
-        query: label(
-          'ایستگاه تاکسی',
-          'taxi stand',
-          'موقف سيارات أجرة',
-        ),
+        amenityTag: 'taxi',
       ),
       _QuickServiceTool(
         icon: Icons.wc_rounded,
-        title: label(
+        title: _localize(
           'سرویس',
           'Restroom',
           'دورة مياه',
         ),
-        query: label(
-          'سرویس بهداشتی',
-          'public restroom',
-          'دورة مياه عامة',
-        ),
+        amenityTag: 'toilets',
       ),
       _QuickServiceTool(
         icon: Icons.emergency_rounded,
-        title: label(
+        title: _localize(
           'اورژانس',
           'Emergency',
           'طوارئ',
         ),
-        query: label(
-          'اورژانس',
-          'emergency',
-          'طوارئ',
-        ),
+        amenityTag: 'hospital',
       ),
     ];
 
@@ -1933,12 +2221,8 @@ class _SmartMapPageState
           ),
           itemCount: tools.length,
           itemBuilder: (context, index) {
-            final tool = tools[index];
-
             return mapServiceButton(
-              tool.icon,
-              tool.title,
-              query: tool.query,
+              tools[index],
             );
           },
         ),
@@ -1968,7 +2252,11 @@ class _SmartMapPageState
         ),
         actions: [
           IconButton(
-            tooltip: 'موقعیت من',
+            tooltip: _localize(
+              'موقعیت من',
+              'My location',
+              'موقعي',
+            ),
             onPressed: getLocation,
             icon: const Icon(
               Icons.my_location,
@@ -2000,6 +2288,8 @@ class _SmartMapPageState
           ),
 
           mapSearchBox(),
+
+          if (!loading) _mapSideControls(),
 
           if (locationWarning != null)
             Positioned(
