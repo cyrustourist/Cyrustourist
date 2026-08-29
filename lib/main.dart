@@ -801,6 +801,18 @@ class WorkInProgressPage extends StatelessWidget {
 // SMART MAP PAGE
 // ============================================================
 
+class _QuickServiceTool {
+  final IconData icon;
+  final String title;
+  final String query;
+
+  const _QuickServiceTool({
+    required this.icon,
+    required this.title,
+    required this.query,
+  });
+}
+
 class SmartMapPage extends StatefulWidget {
   const SmartMapPage({super.key});
 
@@ -824,14 +836,32 @@ class _SmartMapPageState
 
   bool routingInProgress = false;
 
+  static const String currentLocationLabel =
+      'موقعیت فعلی من';
+
   final TextEditingController originController =
       TextEditingController(
-    text: 'موقعیت فعلی من',
+    text: currentLocationLabel,
   );
 
   final TextEditingController
       destinationController =
       TextEditingController();
+
+  // ==========================================================
+  // SEARCH SUGGESTIONS (پیشنهاد خودکار مبدأ/مقصد)
+  // ==========================================================
+
+  final FocusNode originFocusNode = FocusNode();
+  final FocusNode destinationFocusNode =
+      FocusNode();
+
+  final LayerLink originLayerLink = LayerLink();
+  final LayerLink destinationLayerLink =
+      LayerLink();
+
+  OverlayEntry? _suggestionsOverlay;
+  Timer? _suggestionsDebounce;
 
   bool loading = true;
   bool mapReady = false;
@@ -887,13 +917,36 @@ class _SmartMapPageState
         .addPostFrameCallback((_) {
       prepareMap();
     });
+
+    originFocusNode.addListener(() {
+      if (!originFocusNode.hasFocus) {
+        Future.delayed(
+          const Duration(milliseconds: 150),
+          _removeSuggestionsOverlay,
+        );
+      }
+    });
+
+    destinationFocusNode.addListener(() {
+      if (!destinationFocusNode.hasFocus) {
+        Future.delayed(
+          const Duration(milliseconds: 150),
+          _removeSuggestionsOverlay,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _suggestionsDebounce?.cancel();
+    _removeSuggestionsOverlay();
+
     animationController.dispose();
     originController.dispose();
     destinationController.dispose();
+    originFocusNode.dispose();
+    destinationFocusNode.dispose();
 
     super.dispose();
   }
@@ -943,12 +996,22 @@ class _SmartMapPageState
   }
 
   // ==========================================================
-  // ROUTING (هدف سفر)
+  // ROUTING (مبدأ + هدف سفر)
   // ==========================================================
   //
-  // متن «هدف سفر» را به مختصات واقعی تبدیل می‌کند (Nominatim)
-  // و سپس مسیریابی واقعی را در گوگل‌مپ باز می‌کند.
-  // مبدأ: موقعیت واقعی GPS کاربر (در صورت وجود).
+  // متن «مبدأ» و «هدف سفر» هر دو به مختصات واقعی تبدیل می‌شوند
+  // (Nominatim) و سپس مسیریابی واقعی در گوگل‌مپ باز می‌شود.
+  //
+  // اگر کاربر متن مبدأ را تغییر نداده باشد (همان «موقعیت فعلی
+  // من» است)، از موقعیت واقعی GPS استفاده می‌شود؛ در غیر این
+  // صورت متنی که کاربر تایپ کرده جستجو و به مختصات تبدیل می‌شود.
+
+  bool get _originIsCurrentLocation {
+    final text = originController.text.trim();
+
+    return text.isEmpty ||
+        text == currentLocationLabel;
+  }
 
   Future<void> _startRouting() async {
     final destinationText =
@@ -965,11 +1028,47 @@ class _SmartMapPageState
       return;
     }
 
-    final origin = userLocation ?? iranCenter;
+    final referencePoint =
+        userLocation ?? iranCenter;
 
     setState(() {
       routingInProgress = true;
     });
+
+    LatLng origin = referencePoint;
+
+    if (!_originIsCurrentLocation) {
+      List<MapPlace> originResults = [];
+
+      try {
+        originResults =
+            await MapPlacesService().searchPlaces(
+          query: originController.text.trim(),
+          userLocation: referencePoint,
+        );
+      } catch (_) {
+        originResults = [];
+      }
+
+      if (!mounted) return;
+
+      if (originResults.isEmpty) {
+        setState(() {
+          routingInProgress = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'مبدأ پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      origin = originResults.first.location;
+    }
 
     List<MapPlace> results = [];
 
@@ -1352,15 +1451,21 @@ class _SmartMapPageState
       child: Column(
         children: [
           _searchField(
-            originController,
-            Icons.my_location,
-            'مبدا',
+            controller: originController,
+            icon: Icons.my_location,
+            hint: 'مبدا',
+            focusNode: originFocusNode,
+            layerLink: originLayerLink,
+            isOrigin: true,
           ),
           const SizedBox(height: 8),
           _searchField(
-            destinationController,
-            Icons.place,
-            'هدف سفر',
+            controller: destinationController,
+            icon: Icons.place,
+            hint: 'هدف سفر',
+            focusNode: destinationFocusNode,
+            layerLink: destinationLayerLink,
+            isOrigin: false,
           ),
           const SizedBox(height: 10),
           SizedBox(
@@ -1416,26 +1521,37 @@ class _SmartMapPageState
     );
   }
 
-  Widget _searchField(
-    TextEditingController controller,
-    IconData icon,
-    String hint,
-  ) {
-    return Material(
-      elevation: 8,
-      borderRadius:
-          BorderRadius.circular(18),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon),
-          hintText: hint,
-          filled: true,
-          border: OutlineInputBorder(
-            borderRadius:
-                BorderRadius.circular(18),
-            borderSide:
-                BorderSide.none,
+  Widget _searchField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    required FocusNode focusNode,
+    required LayerLink layerLink,
+    required bool isOrigin,
+  }) {
+    return CompositedTransformTarget(
+      link: layerLink,
+      child: Material(
+        elevation: 8,
+        borderRadius:
+            BorderRadius.circular(18),
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          onChanged: (text) => _onSearchTextChanged(
+            text,
+            isOrigin: isOrigin,
+          ),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon),
+            hintText: hint,
+            filled: true,
+            border: OutlineInputBorder(
+              borderRadius:
+                  BorderRadius.circular(18),
+              borderSide:
+                  BorderSide.none,
+            ),
           ),
         ),
       ),
@@ -1443,84 +1559,234 @@ class _SmartMapPageState
   }
 
   // ==========================================================
+  // SEARCH SUGGESTIONS (پیشنهاد خودکار)
+  // ==========================================================
+  //
+  // با تایپ در فیلد مبدأ/مقصد، پس از یک مکث کوتاه، چند پیشنهاد
+  // از Nominatim به‌صورت یک پنجرهٔ شناور (Overlay) درست زیر همان
+  // فیلد نمایش داده می‌شود؛ چون از Overlay استفاده می‌شود، بقیهٔ
+  // نقشه/فیلدها جابه‌جا یا بالا-پایین نمی‌شوند.
+
+  void _onSearchTextChanged(
+    String text, {
+    required bool isOrigin,
+  }) {
+    _suggestionsDebounce?.cancel();
+
+    final query = text.trim();
+
+    if (query.length < 2) {
+      _removeSuggestionsOverlay();
+      return;
+    }
+
+    _suggestionsDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => _fetchSuggestions(
+        query,
+        isOrigin: isOrigin,
+      ),
+    );
+  }
+
+  Future<void> _fetchSuggestions(
+    String query, {
+    required bool isOrigin,
+  }) async {
+    final referencePoint =
+        userLocation ?? iranCenter;
+
+    List<MapPlace> results = [];
+
+    try {
+      results = await MapPlacesService().searchPlaces(
+        query: query,
+        userLocation: referencePoint,
+      );
+    } catch (_) {
+      results = [];
+    }
+
+    if (!mounted) return;
+
+    // اگر کاربر همچنان در همان فیلد تایپ می‌کند نتیجه را نشان بده
+    final currentText = isOrigin
+        ? originController.text.trim()
+        : destinationController.text.trim();
+
+    if (currentText != query) return;
+
+    _showSuggestionsOverlay(
+      results.take(6).toList(),
+      isOrigin: isOrigin,
+    );
+  }
+
+  void _showSuggestionsOverlay(
+    List<MapPlace> results, {
+    required bool isOrigin,
+  }) {
+    _removeSuggestionsOverlay();
+
+    if (results.isEmpty) return;
+
+    final layerLink =
+        isOrigin ? originLayerLink : destinationLayerLink;
+
+    final width =
+        MediaQuery.of(context).size.width - 24;
+
+    _suggestionsOverlay = OverlayEntry(
+      builder: (context) => Positioned(
+        width: width,
+        child: CompositedTransformFollower(
+          link: layerLink,
+          showWhenUnlinked: false,
+          offset: const Offset(0, 56),
+          child: Material(
+            elevation: 8,
+            borderRadius:
+                BorderRadius.circular(14),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxHeight: 240,
+              ),
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: results.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final place = results[index];
+
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(
+                      Icons.place_outlined,
+                    ),
+                    title: Text(
+                      place.name,
+                      maxLines: 1,
+                      overflow:
+                          TextOverflow.ellipsis,
+                    ),
+                    subtitle: place.address != null
+                        ? Text(
+                            place.address!,
+                            maxLines: 1,
+                            overflow:
+                                TextOverflow.ellipsis,
+                          )
+                        : null,
+                    onTap: () => _selectSuggestion(
+                      place,
+                      isOrigin: isOrigin,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(
+      _suggestionsOverlay!,
+    );
+  }
+
+  void _selectSuggestion(
+    MapPlace place, {
+    required bool isOrigin,
+  }) {
+    if (isOrigin) {
+      originController.text = place.name;
+    } else {
+      destinationController.text = place.name;
+    }
+
+    _removeSuggestionsOverlay();
+    FocusScope.of(context).unfocus();
+  }
+
+  void _removeSuggestionsOverlay() {
+    _suggestionsOverlay?.remove();
+    _suggestionsOverlay = null;
+  }
+
+  // ==========================================================
   // MAP TOOLS
   // ==========================================================
+
+  // ==========================================================
+  // QUICK SERVICES (زیر نقشه)
+  // ==========================================================
+  //
+  // اقامتگاه (کلید ۵)، جاذبه‌ها (کلید ۳) و سلامت (کلید ۲) در
+  // خانهٔ اصلی کلید مستقل خودشان را دارند، پس اینجا تکرار
+  // نمی‌شوند. این نوار برای نیازهای رایج مسافر روی خودِ نقشه است:
+  // با زدن هر گزینه، نزدیک‌ترین نمونه از مبدأ فعلی پیدا و
+  // مسیریابی به آن باز می‌شود.
+
+  void _quickService(String query) {
+    destinationController.text = query;
+    _startRouting();
+  }
 
   Widget mapServiceButton(
     IconData icon,
     String title, {
-    PlaceCategory? category,
+    required String query,
   }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 4,
-        ),
-        child: InkWell(
-          onTap: () {
-            if (category == null) {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '$title آماده اتصال به بخش مربوطه است.',
-                  ),
-                ),
-              );
-              return;
-            }
-
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    CategoryExplorerPage(
-                  initialCategory: category,
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4,
+      ),
+      child: InkWell(
+        onTap: () => _quickService(query),
+        borderRadius:
+            BorderRadius.circular(14),
+        child: Container(
+          width: 78,
+          height: 68,
+          decoration: BoxDecoration(
+            color: const Color(0xff0b506b),
+            borderRadius:
+                BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(
+                0xffffd36a,
+              ).withValues(alpha: 0.65),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment:
+                MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color:
+                    const Color(0xffffd36a),
+                size: 22,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                title,
+                maxLines: 1,
+                overflow:
+                    TextOverflow.ellipsis,
+                textAlign:
+                    TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight:
+                      FontWeight.bold,
                 ),
               ),
-            );
-          },
-          borderRadius:
-              BorderRadius.circular(14),
-          child: Container(
-            height: 58,
-            decoration: BoxDecoration(
-              color: const Color(0xff0b506b),
-              borderRadius:
-                  BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(
-                  0xffffd36a,
-                ).withValues(alpha: 0.65),
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color:
-                      const Color(0xffffd36a),
-                  size: 22,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow:
-                      TextOverflow.ellipsis,
-                  textAlign:
-                      TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -1528,52 +1794,154 @@ class _SmartMapPageState
   }
 
   Widget mapTools() {
+    final isArabic =
+        LanguageManager.current ==
+            AppLanguage.arabic;
+
+    final isEnglish =
+        LanguageManager.current ==
+            AppLanguage.english;
+
+    String label(
+      String fa,
+      String en,
+      String ar,
+    ) {
+      if (isEnglish) return en;
+      if (isArabic) return ar;
+      return fa;
+    }
+
+    final tools = <_QuickServiceTool>[
+      _QuickServiceTool(
+        icon: Icons.local_gas_station_rounded,
+        title: label(
+          'پمپ بنزین',
+          'Fuel',
+          'محطة وقود',
+        ),
+        query: label(
+          'پمپ بنزین',
+          'gas station',
+          'محطة وقود',
+        ),
+      ),
+      _QuickServiceTool(
+        icon: Icons.restaurant_rounded,
+        title: label(
+          'رستوران',
+          'Food',
+          'مطعم',
+        ),
+        query: label(
+          'رستوران',
+          'restaurant',
+          'مطعم',
+        ),
+      ),
+      _QuickServiceTool(
+        icon: Icons.atm_rounded,
+        title: label(
+          'خودپرداز',
+          'ATM',
+          'صراف آلي',
+        ),
+        query: label(
+          'خودپرداز',
+          'ATM',
+          'صراف آلي',
+        ),
+      ),
+      _QuickServiceTool(
+        icon: Icons.local_parking_rounded,
+        title: label(
+          'پارکینگ',
+          'Parking',
+          'موقف سيارات',
+        ),
+        query: label(
+          'پارکینگ',
+          'parking',
+          'موقف سيارات',
+        ),
+      ),
+      _QuickServiceTool(
+        icon: Icons.local_pharmacy_rounded,
+        title: label(
+          'داروخانه',
+          'Pharmacy',
+          'صيدلية',
+        ),
+        query: label(
+          'داروخانه',
+          'pharmacy',
+          'صيدلية',
+        ),
+      ),
+      _QuickServiceTool(
+        icon: Icons.local_taxi_rounded,
+        title: label(
+          'تاکسی',
+          'Taxi',
+          'سيارة أجرة',
+        ),
+        query: label(
+          'ایستگاه تاکسی',
+          'taxi stand',
+          'موقف سيارات أجرة',
+        ),
+      ),
+      _QuickServiceTool(
+        icon: Icons.wc_rounded,
+        title: label(
+          'سرویس',
+          'Restroom',
+          'دورة مياه',
+        ),
+        query: label(
+          'سرویس بهداشتی',
+          'public restroom',
+          'دورة مياه عامة',
+        ),
+      ),
+      _QuickServiceTool(
+        icon: Icons.emergency_rounded,
+        title: label(
+          'اورژانس',
+          'Emergency',
+          'طوارئ',
+        ),
+        query: label(
+          'اورژانس',
+          'emergency',
+          'طوارئ',
+        ),
+      ),
+    ];
+
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(
+        vertical: 10,
+      ),
       color: const Color(0xff071722),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              mapServiceButton(
-                Icons.hotel,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'اقامتگاه'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'الإقامة'
-                        : 'Accommodation',
-                category:
-                    PlaceCategory.accommodation,
-              ),
-              mapServiceButton(
-                Icons.place,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'جاذبه‌ها'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'المعالم'
-                        : 'Attractions',
-                category:
-                    PlaceCategory.attraction,
-              ),
-              mapServiceButton(
-                Icons.local_hospital,
-                LanguageManager.current ==
-                        AppLanguage.persian
-                    ? 'سلامت'
-                    : LanguageManager.current ==
-                            AppLanguage.arabic
-                        ? 'الصحة'
-                        : 'Health',
-                category:
-                    PlaceCategory.health,
-              ),
-            ],
+      child: SizedBox(
+        height: 78,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 6,
           ),
-        ],
+          itemCount: tools.length,
+          itemBuilder: (context, index) {
+            final tool = tools[index];
+
+            return mapServiceButton(
+              tool.icon,
+              tool.title,
+              query: tool.query,
+            );
+          },
+        ),
       ),
     );
   }
