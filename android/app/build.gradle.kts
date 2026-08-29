@@ -28,19 +28,39 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // فقط معماری 64 بیتی گوشی‌های جدید
         ndk {
             abiFilters += "arm64-v8a"
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("CYRUS_KEYSTORE_PATH")
+            val storePasswordValue = System.getenv("CYRUS_STORE_PASSWORD")
+            val keyPasswordValue = System.getenv("CYRUS_KEY_PASSWORD")
+            val aliasValue = System.getenv("CYRUS_KEY_ALIAS")
+
+            if (keystorePath.isNullOrBlank() ||
+                storePasswordValue.isNullOrBlank() ||
+                keyPasswordValue.isNullOrBlank() ||
+                aliasValue.isNullOrBlank()
+            ) {
+                throw GradleException(
+                    "Release signing secrets are missing."
+                )
+            }
+
+            storeFile = file(keystorePath)
+            storePassword = storePasswordValue
+            keyAlias = aliasValue
+            keyPassword = keyPasswordValue
+        }
+    }
+
     buildTypes {
-
         release {
-            // موقتاً برای تست Build
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
 
-            // بهینه‌سازی حجم APK
             isMinifyEnabled = true
             isShrinkResources = true
 
