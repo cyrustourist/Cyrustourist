@@ -1,13 +1,16 @@
-name: Build CyrusTourist APK
+name: CyrusTourist Secure Release
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
 
 jobs:
-  build-apk:
+  build-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,51 +20,137 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.1'
+          flutter-version: "3.47.1"
           channel: stable
           cache: true
 
       - name: Flutter version
         run: flutter --version
 
+      - name: Verify version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION_LINE="$(grep '^version:' pubspec.yaml | head -n 1)"
+          EXPECTED="5.8.0+5800"
+          ACTUAL="$(echo "$VERSION_LINE" | sed -E 's/^version:[[:space:]]*//')"
+
+          echo "Project version: $ACTUAL"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "ERROR: Expected $EXPECTED"
+            exit 1
+          fi
+
+      - name: Decode CyrusTourist release keystore
+        shell: bash
+        env:
+          CYRUS_KEYSTORE_BASE64: ${{ secrets.CYRUS_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$CYRUS_KEYSTORE_BASE64" ]; then
+            echo "ERROR: CYRUS_KEYSTORE_BASE64 is missing."
+            exit 1
+          fi
+
+          mkdir -p "$RUNNER_TEMP/cyrus-signing"
+
+          printf '%s' "$CYRUS_KEYSTORE_BASE64" \
+            | base64 --decode \
+            > "$RUNNER_TEMP/cyrus-signing/cyrus-tourist.jks"
+
+          test -s "$RUNNER_TEMP/cyrus-signing/cyrus-tourist.jks"
+
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build APK with retry
+      - name: Build Release APK
+        shell: bash
+        env:
+          CYRUS_KEYSTORE_PATH: ${{ runner.temp }}/cyrus-signing/cyrus-tourist.jks
+          CYRUS_STORE_PASSWORD: ${{ secrets.CYRUS_STORE_PASSWORD }}
+          CYRUS_KEY_PASSWORD: ${{ secrets.CYRUS_KEY_PASSWORD }}
+          CYRUS_KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$CYRUS_STORE_PASSWORD" ]; then
+            echo "ERROR: CYRUS_STORE_PASSWORD is missing."
+            exit 1
+          fi
+
+          if [ -z "$CYRUS_KEY_PASSWORD" ]; then
+            echo "ERROR: CYRUS_KEY_PASSWORD is missing."
+            exit 1
+          fi
+
+          if [ -z "$CYRUS_KEY_ALIAS" ]; then
+            echo "ERROR: CYRUS_KEY_ALIAS is missing."
+            exit 1
+          fi
+
+          flutter build apk \
+            --release \
+            --target-platform android-arm64 \
+            --android-skip-build-dependency-validation
+
+      - name: Build Release AAB
+        shell: bash
+        env:
+          CYRUS_KEYSTORE_PATH: ${{ runner.temp }}/cyrus-signing/cyrus-tourist.jks
+          CYRUS_STORE_PASSWORD: ${{ secrets.CYRUS_STORE_PASSWORD }}
+          CYRUS_KEY_PASSWORD: ${{ secrets.CYRUS_KEY_PASSWORD }}
+          CYRUS_KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          flutter build appbundle \
+            --release \
+            --android-skip-build-dependency-validation
+
+      - name: Verify output
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
-          for attempt in 1 2 3 4 5; do
-            echo "========================================"
-            echo "APK BUILD ATTEMPT: $attempt / 5"
-            echo "========================================"
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          AAB="build/app/outputs/bundle/release/app-release.aab"
 
-            if flutter build apk \
-              --release \
-              --target-platform android-arm64 \
-              --android-skip-build-dependency-validation; then
+          test -s "$APK"
+          test -s "$AAB"
 
-              echo "APK BUILD SUCCESSFUL"
-              break
-            fi
+          echo "APK:"
+          sha256sum "$APK"
 
-            if [ "$attempt" -eq 5 ]; then
-              echo "APK BUILD FAILED AFTER 5 ATTEMPTS"
-              exit 1
-            fi
+          echo "AAB:"
+          sha256sum "$AAB"
 
-            echo "Build failed. Waiting 30 seconds before retry..."
-            sleep 30
-          done
-
-      - name: Prepare APK
+      - name: Prepare release files
+        shell: bash
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk \
-          build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+          set -euo pipefail
 
-      - name: Upload APK
+          mkdir -p release
+
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            release/Cyrustourist-5.8.0.apk
+
+          cp build/app/outputs/bundle/release/app-release.aab \
+            release/Cyrustourist-5.8.0.aab
+
+          sha256sum release/* > release/SHA256SUMS.txt
+
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Cyrustourist.ir
-          path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+          name: CyrusTourist-5.8.0-Release
+          path: release/
+          if-no-files-found: error
+
+      - name: Delete temporary keystore
+        if: always()
+        shell: bash
+        run: |
+          rm -rf "$RUNNER_TEMP/cyrus-signing"
