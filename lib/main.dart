@@ -17,7 +17,7 @@ import 'core/language/app_language.dart';
 import 'services/map_places_service.dart';
 import 'pages/category_explorer_page.dart';
 import 'pages/about_page.dart' as about_page;
-import 'pages/contact_support_page.dart';
+import 'pages/support_page.dart';
 import 'pages/favorites_page.dart';
 import 'pages/social_media_page.dart';
 
