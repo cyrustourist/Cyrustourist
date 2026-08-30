@@ -344,7 +344,7 @@ class _Icon3D extends StatelessWidget {
               : [Colors.white24, Colors.white10],
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: goldColor.withValues(alpha: enabled ? 0.7 : 0.15)),
+        border: Border.all(color: SupportPage.goldColor.withValues(alpha: enabled ? 0.7 : 0.15)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.45),
