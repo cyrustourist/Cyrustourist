@@ -24,6 +24,9 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Decode release keystore
         shell: bash
         env:
@@ -72,7 +75,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apksigner verify --verbose build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose build/app/outputs/flutter-apk/app-release.apk
           echo "APK signature verification successful."
 
       - name: Prepare APK
