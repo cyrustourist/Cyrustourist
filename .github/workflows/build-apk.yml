@@ -1,3 +1,4 @@
+```yaml
 name: Build CyrusTourist APK
 
 on:
@@ -24,11 +25,6 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
-      - name: Verify Android project
-        run: |
-          test -f android/app/build.gradle.kts
-          echo "Android project found."
-
       - name: Decode CyrusTourist release keystore
         shell: bash
         env:
@@ -50,6 +46,19 @@ jobs:
 
           echo "Keystore decoded successfully."
 
+      - name: Check signing secret lengths
+        shell: bash
+        env:
+          CYRUS_STORE_PASSWORD: ${{ secrets.CYRUS_STORE_PASSWORD }}
+          CYRUS_KEY_PASSWORD: ${{ secrets.CYRUS_KEY_PASSWORD }}
+          CYRUS_KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          echo "STORE_PASSWORD length: ${#CYRUS_STORE_PASSWORD}"
+          echo "KEY_PASSWORD length: ${#CYRUS_KEY_PASSWORD}"
+          echo "KEY_ALIAS: $CYRUS_KEY_ALIAS"
+
       - name: Verify keystore alias
         shell: bash
         env:
@@ -62,7 +71,8 @@ jobs:
           keytool -list \
             -keystore "$CYRUS_KEYSTORE_PATH" \
             -storepass "$CYRUS_STORE_PASSWORD" \
-            -alias "$CYRUS_KEY_ALIAS"
+            -alias "$CYRUS_KEY_ALIAS" \
+            > "$RUNNER_TEMP/keystore-check.txt"
 
           echo "Keystore alias verification successful."
 
@@ -88,6 +98,19 @@ jobs:
 
           echo "SIGNED APK BUILD SUCCESSFUL."
 
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify \
+            --verbose \
+            "$APK"
+
+          echo "APK signature verification successful."
+
       - name: Prepare APK
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk \
@@ -105,3 +128,4 @@ jobs:
         shell: bash
         run: |
           rm -rf "$RUNNER_TEMP/cyrus-signing"
+```
