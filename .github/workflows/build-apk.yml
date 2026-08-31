@@ -1,3 +1,4 @@
+```yaml
 name: Build CyrusTourist APK
 
 on:
@@ -11,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -24,24 +25,53 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
+      - name: Verify Android project
+        run: |
+          test -f android/app/build.gradle.kts
+          test -f android/gradle/wrapper/gradle-wrapper.properties
+          echo "Android project found."
+
       - name: Decode CyrusTourist release keystore
         shell: bash
         env:
           CYRUS_KEYSTORE_BASE64: ${{ secrets.CYRUS_KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
+
           if [ -z "$CYRUS_KEYSTORE_BASE64" ]; then
             echo "ERROR: CYRUS_KEYSTORE_BASE64 is missing."
             exit 1
           fi
+
           mkdir -p "$RUNNER_TEMP/cyrus-signing"
-          printf '%s' "$CYRUS_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/cyrus-signing/cyrus-tourist.jks"
+
+          printf '%s' "$CYRUS_KEYSTORE_BASE64" | base64 --decode \
+            > "$RUNNER_TEMP/cyrus-signing/cyrus-tourist.jks"
+
           test -s "$RUNNER_TEMP/cyrus-signing/cyrus-tourist.jks"
+
+          echo "Keystore decoded successfully."
+
+      - name: Verify keystore alias
+        shell: bash
+        env:
+          CYRUS_KEYSTORE_PATH: ${{ runner.temp }}/cyrus-signing/cyrus-tourist.jks
+          CYRUS_STORE_PASSWORD: ${{ secrets.CYRUS_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          keytool -list \
+            -keystore "$CYRUS_KEYSTORE_PATH" \
+            -storepass "$CYRUS_STORE_PASSWORD" \
+            -alias "${{ secrets.CYRUS_KEY_ALIAS }}" \
+            > "$RUNNER_TEMP/keystore-check.txt"
+
+          echo "Keystore alias verification successful."
 
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build APK with retry
+      - name: Build signed release APK
         shell: bash
         env:
           CYRUS_KEYSTORE_PATH: ${{ runner.temp }}/cyrus-signing/cyrus-tourist.jks
@@ -49,39 +79,45 @@ jobs:
           CYRUS_KEY_PASSWORD: ${{ secrets.CYRUS_KEY_PASSWORD }}
           CYRUS_KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
         run: |
-          set -e
-          for attempt in 1 2 3 4 5; do
-            echo "========================================"
-            echo "APK BUILD ATTEMPT: $attempt / 5"
-            echo "========================================"
-            if flutter build apk \
-              --release \
-              --target-platform android-arm64 \
-              --android-skip-build-dependency-validation; then
-              echo "APK BUILD SUCCESSFUL"
-              break
-            fi
-            if [ "$attempt" -eq 5 ]; then
-              echo "APK BUILD FAILED AFTER 5 ATTEMPTS"
-              exit 1
-            fi
-            echo "Build failed. Waiting 30 seconds before retry..."
-            sleep 30
-          done
+          set -euo pipefail
+
+          flutter build apk \
+            --release \
+            --target-platform android-arm64 \
+            --android-skip-build-dependency-validation
+
+          test -s build/app/outputs/flutter-apk/app-release.apk
+
+          echo "SIGNED APK BUILD SUCCESSFUL."
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify \
+            --verbose \
+            "$APK"
+
+          echo "APK signature verification successful."
 
       - name: Prepare APK
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk \
-            build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+             build/app/outputs/flutter-apk/Cyrustourist.ir.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Cyrustourist.ir
           path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+          if-no-files-found: error
 
       - name: Delete temporary keystore
         if: always()
         shell: bash
         run: |
           rm -rf "$RUNNER_TEMP/cyrus-signing"
+```
