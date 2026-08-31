@@ -7,9 +7,6 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Allow placing phone calls from the support page -->
-    <uses-permission android:name="android.permission.CALL_PHONE" />
-
     <application
         android:name="${applicationName}"
         android:label="@string/app_name"
