@@ -51,9 +51,6 @@ class SupportPage extends StatelessWidget {
     );
   }
 
-  Future<void> _call(BuildContext context) =>
-      _openUrl(context, 'tel:$phoneNumber');
-
   Future<void> _whatsapp(BuildContext context) async {
     final number = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
     if (number.isEmpty) {
@@ -88,7 +85,7 @@ class SupportPage extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
     bool enabled = true,
   }) {
     return Padding(
@@ -150,12 +147,14 @@ class SupportPage extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: enabled ? goldColor : Colors.white24,
-                  size: 18,
-                ),
+                if (onTap != null) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: enabled ? goldColor : Colors.white24,
+                    size: 18,
+                  ),
+                ],
               ],
             ),
           ),
@@ -208,7 +207,6 @@ class SupportPage extends StatelessWidget {
                   icon: Icons.phone_in_talk_rounded,
                   title: 'تماس با ما',
                   subtitle: phoneNumber,
-                  onTap: () => _call(context),
                 ),
                 _actionCard(
                   context: context,
