@@ -6,11 +6,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/app_language.dart';
+import 'residence_register_page.dart';
 
 const Color appBackgroundColor = Color(0xff06121d);
 const Color appCardColor = Color(0xff0b2636);
 const Color appGoldColor = Color(0xffffd36a);
 const Color appGoldBright = Color(0xffffe39a);
+const Color appTealColor = Color(0xff29e0ad);
+const Color appTealBright = Color(0xff6bf0c8);
 
 class VideoPage extends StatefulWidget {
   const VideoPage({super.key});
@@ -21,7 +24,6 @@ class VideoPage extends StatefulWidget {
 
 class _VideoPageState extends State<VideoPage> {
   bool _showSelectedVideos = true;
-  bool _showSocialLinks = false;
   final Map<String, String> _resolvedAparatTitles = {};
 
   static const String aparatChannel =
@@ -302,34 +304,6 @@ class _VideoPageState extends State<VideoPage> {
 
     },
     {
-      'title_fa': 'زیباترین اقامتگاه بوم‌گردی در جنگل ابر',
-      'title_en': 'A Beautiful Eco-Lodge in Abr Forest',
-      'title_ar': 'أحد أجمل النزل البيئية في غابة أبر',
-      'location_fa': 'جنگل ابر',
-      'location_en': 'Abr Forest',
-      'location_ar': 'غابة أبر',
-      'category_fa': 'اقامتگاه',
-      'category_en': 'Accommodation',
-      'category_ar': 'إقامة',
-      'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/h86ieq2',
-
-    },
-    {
-      'title_fa': 'زیباترین اقامتگاه‌های بوم‌گردی ایران',
-      'title_en': 'The Most Beautiful Eco-Lodges in Iran',
-      'title_ar': 'أجمل النزل البيئية في إيران',
-      'location_fa': 'ایران',
-      'location_en': 'Iran',
-      'location_ar': 'إيران',
-      'category_fa': 'اقامتگاه',
-      'category_en': 'Accommodation',
-      'category_ar': 'إقامة',
-      'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/w43c127',
-
-    },
-    {
       'title_fa': 'غار علی‌صدر؛ غار تالابی شگفت‌انگیز ایران',
       'title_en': 'Ali Sadr Cave; Iran’s Amazing Water Cave',
       'title_ar': 'كهف علي صدر؛ الكهف المائي المذهل في إيران',
@@ -369,48 +343,6 @@ class _VideoPageState extends State<VideoPage> {
       'category_ar': 'التراث الإيراني',
       'image': 'assets/images/video_attraction.jpg',
       'url': 'https://www.aparat.com/v/f5212r6',
-
-    },
-    {
-      'title_fa': 'اقامتگاه‌ها و دیدنی‌های ایران',
-      'title_en': 'Accommodation and Attractions in Iran',
-      'title_ar': 'أماكن الإقامة والمعالم السياحية في إيران',
-      'location_fa': 'ایران',
-      'location_en': 'Iran',
-      'location_ar': 'إيران',
-      'category_fa': 'اقامتگاه',
-      'category_en': 'Accommodation',
-      'category_ar': 'إقامة',
-      'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/f38s8gz',
-
-    },
-    {
-      'title_fa': 'اقامتگاه بوم‌گردی قوامیه گناباد',
-      'title_en': 'Qavamieh Eco-Lodge in Gonabad',
-      'title_ar': 'النزل البيئي قوامية في غناباد',
-      'location_fa': 'گناباد، خراسان رضوی',
-      'location_en': 'Gonabad, Razavi Khorasan',
-      'location_ar': 'غناباد، خراسان الرضوية',
-      'category_fa': 'بوم‌گردی',
-      'category_en': 'Eco-Tourism',
-      'category_ar': 'السياحة البيئية',
-      'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/m37fn2a',
-
-    },
-    {
-      'title_fa': 'اقامتگاه بوم‌گردی ناخدا علی در لافت',
-      'title_en': 'Nakhoda Ali Eco-Lodge in Laft',
-      'title_ar': 'النزل البيئي ناخدا علي في لافت',
-      'location_fa': 'جزیره قشم، بندر لافت',
-      'location_en': 'Qeshm Island, Laft Port',
-      'location_ar': 'جزيرة قشم، ميناء لافت',
-      'category_fa': 'بوم‌گردی',
-      'category_en': 'Eco-Tourism',
-      'category_ar': 'السياحة البيئية',
-      'image': 'assets/images/video_accommodation.jpg',
-      'url': 'https://www.aparat.com/v/a528058',
 
     },
   ];
@@ -502,28 +434,6 @@ class _VideoPageState extends State<VideoPage> {
   }
 
 
-  String get _socialTitle {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'ما را دنبال کنید';
-      case AppLanguage.english:
-        return 'Follow Us';
-      case AppLanguage.arabic:
-        return 'تابعونا';
-    }
-  }
-
-  String get _socialSubtitle {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'فیلم‌ها و جاذبه‌های جدید Cyrus Tourist را دنبال کنید.';
-      case AppLanguage.english:
-        return 'Follow Cyrus Tourist for new videos and attractions.';
-      case AppLanguage.arabic:
-        return 'تابعوا أحدث فيديوهات ومعالم Cyrus Tourist.';
-    }
-  }
-
   String get _backText {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
@@ -533,132 +443,6 @@ class _VideoPageState extends State<VideoPage> {
       case AppLanguage.arabic:
         return 'رجوع';
     }
-  }
-
-  String _socialLabel(String key) {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return switch (key) {
-          'instagram' => 'اینستاگرام',
-          'aparat' => 'آپارات',
-          'youtube' => 'یوتیوب',
-          'tiktok' => 'تیک‌تاک',
-          _ => '',
-        };
-      case AppLanguage.english:
-        return switch (key) {
-          'instagram' => 'Instagram',
-          'aparat' => 'Aparat',
-          'youtube' => 'YouTube',
-          'tiktok' => 'TikTok',
-          _ => '',
-        };
-      case AppLanguage.arabic:
-        return switch (key) {
-          'instagram' => 'إنستغرام',
-          'aparat' => 'أبارات',
-          'youtube' => 'يوتيوب',
-          'tiktok' => 'تيك توك',
-          _ => '',
-        };
-    }
-  }
-
-  Widget _buildSocialPanel() {
-    final links = <Map<String, dynamic>>[
-      {
-        'key': 'instagram',
-        'url': instagramUrl,
-        'logo':
-            'https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png',
-      },
-      {
-        'key': 'aparat',
-        'url': aparatChannel,
-        'logo':
-            'https://www.aparat.com/favicon.ico',
-      },
-      {
-        'key': 'youtube',
-        'url': youtubeUrl,
-        'logo':
-            'https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg',
-      },
-      {
-        'key': 'tiktok',
-        'url': tiktokUrl,
-        'logo':
-            'https://upload.wikimedia.org/wikipedia/en/a/a9/TikTok_logo.svg',
-      },
-    ];
-
-    if (!_showSocialLinks) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: appCardColor,
-        border: Border.all(color: appGoldColor.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: links.map((item) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => _openUrl(item['url'] as String),
-              child: Container(
-                height: 58,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xff103b50),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: appGoldColor.withValues(alpha: 0.25),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        item['logo'] as String,
-                        width: 34,
-                        height: 34,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.link_rounded,
-                          color: appGoldColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Text(
-                      _socialLabel(item['key'] as String),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
   }
 
   Future<void> _openUrl(String url) async {
@@ -826,45 +610,55 @@ class _VideoPageState extends State<VideoPage> {
                       const SizedBox(height: 14),
                       InkWell(
                         borderRadius: BorderRadius.circular(18),
-                        onTap: () => setState(() {
-                          _showSocialLinks = !_showSocialLinks;
-                        }),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ResidenceRegisterPage(),
+                          ),
+                        ),
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 18,
-                            vertical: 14,
+                            vertical: 16,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xff0b2636),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: appGoldColor.withValues(alpha: 0.35),
+                            gradient: const LinearGradient(
+                              begin: Alignment.centerRight,
+                              end: Alignment.centerLeft,
+                              colors: [appTealColor, appTealBright],
                             ),
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: appTealColor.withValues(alpha: 0.45),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(
-                                Icons.public_rounded,
-                                color: appGoldColor,
+                                Icons.home_work_rounded,
+                                color: Color(0xff03202a),
                               ),
                               const SizedBox(width: 10),
-                              Text(
-                                _showSocialLinks
-                                    ? 'بستن لینک‌های شبکه اجتماعی'
-                                    : 'لینک‌های شبکه اجتماعی',
-                                style: const TextStyle(
-                                  color: appGoldBright,
-                                  fontWeight: FontWeight.bold,
+                              const Flexible(
+                                child: Text(
+                                  'ثبت‌نام اقامتگاه / گردشگری سلامت',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Color(0xff03202a),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15.5,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      _buildSocialPanel(),
                     ],
                   ),
                 ),
