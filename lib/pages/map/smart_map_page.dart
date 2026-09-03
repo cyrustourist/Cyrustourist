@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../map_place.dart';
+import '../../config/map_ir_config.dart';
 import '../../services/map_smart_controller.dart';
 import '../../widgets/map_markers_layer.dart';
 import '../../widgets/map_search_bar.dart';
@@ -1321,8 +1322,30 @@ class _SmartMapScreenState
               ),
               children: [
                 TileLayer(
-                  urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  wmsOptions:
+                      const WMSTileLayerOptions(
+                    baseUrl:
+                        'https://map.ir/shiveh',
+                    layers: [
+                      'Shiveh:Shiveh',
+                    ],
+                    styles: [],
+                    format: 'image/png',
+                    version: '1.1.1',
+                    transparent: false,
+                    otherParameters: {
+                      'width': '256',
+                      'height': '256',
+                    },
+                  ),
+                  tileProvider:
+                      NetworkTileProvider(
+                    headers: {
+                      'x-api-key':
+                          MapIrConfig.apiKey,
+                    },
+                  ),
+                  tileDimension: 256,
                   userAgentPackageName:
                       'ir.cyrustourist.app',
                 ),
