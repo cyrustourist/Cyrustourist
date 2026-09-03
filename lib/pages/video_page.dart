@@ -37,28 +37,6 @@ class _VideoPageState extends State<VideoPage> {
   static const String tiktokUrl =
       'https://www.tiktok.com/@cyrustourist_app';
 
-  // نمونه‌ی نمایشی برای صفحه‌ی «فیلم‌های اقامتی» — تا وقتی سیستم
-  // واقعی اقامتگاه‌ها به اپ وصل شود، با همین داده‌ی نمونه باز
-  // می‌شود. بعداً باید با رکورد واقعی اقامتگاه جایگزین شود.
-  static const ResidenceVideoData _sampleResidenceVideo = ResidenceVideoData(
-    name: 'اقامتگاه نمونه سایروس توریست',
-    city: 'مشهد',
-    province: 'خراسان رضوی',
-    description:
-        'این یک نمونه از صفحه‌ی معرفی و نمایش فیلم اقامتگاه است. پس از ثبت‌نام اقامتگاه شما در سایروس توریست، همین قالب با فیلم، توضیحات، آدرس، آب‌وهوا و راه‌های تماس واقعی اقامتگاه شما پر می‌شود تا گردشگران پیش از سفر تصمیم بهتری بگیرند و مستقیم با شما در ارتباط باشند.',
-    aparatHash: 'w43c127',
-    mobilePhone: '09153448818',
-    landlinePhone: '09153448818',
-    supportPhone: '09153448818',
-    instagramUrl:
-        'https://www.instagram.com/cyrustourist?igsi=aDc3end6dTNqNW1o',
-    websiteUrl: 'https://cyrustourist-maker.github.io/Cyrustourist/',
-    latitude: 36.2970,
-    longitude: 59.6062,
-    rating: 4.7,
-    ratingCount: 128,
-  );
-
   final List<Map<String, String>> selectedVideos = const [
     {
       'title_fa': 'قنات قصبه گناباد؛ شگفتی تاریخ تمدن بشر',
@@ -756,8 +734,7 @@ class _VideoPageState extends State<VideoPage> {
                 text: _leftHeaderText,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        const ResidenceVideoPage(data: _sampleResidenceVideo),
+                    builder: (_) => const ResidenceSlotGalleryPage(),
                   ),
                 ),
               ),
