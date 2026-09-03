@@ -6,43 +6,24 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../services/location_service.dart';
 import '../main.dart' show SmartMapPage;
 
 // ===================== رنگ‌ها و برند =====================
 
 const Color _bg = Color(0xff070f18);
 const Color _card = Color(0xff0d2432);
-const Color _cardAlt = Color(0xff0a1c28);
 const Color _gold = Color(0xffffd36a);
 const Color _goldBright = Color(0xffffe39a);
 const Color _teal = Color(0xff22e0ad);
 const Color _tealBright = Color(0xff6df5cf);
 
-// گرادیان برند سایروس توریست — هماهنگ با هدر سایت (ct-registration-header)
 const List<Color> _brandGradient = [
   Color(0xff11998e),
   Color(0xff38ef7d),
   Color(0xff667eea),
 ];
 
-const List<Color> _callGradient = [Color(0xff00b09b), Color(0xff96c93d)];
-const List<Color> _telegramGradient = [Color(0xff229ed9), Color(0xff2aabee)];
-const List<Color> _whatsappGradient = [Color(0xff25d366), Color(0xff128c7e)];
-
 Color _goldA(double a) => _gold.withValues(alpha: a);
-
-/// اطلاعات پشتیبانی — همان مقادیر استفاده‌شده در residences-registration.js سایت
-class _SupportInfo {
-  static const String phone = '09153448818';
-  static const String telegram = 'https://t.me/Cyrustourist';
-  static const String telegramLabel = '@Cyrustourist';
-  static const String whatsapp = 'https://wa.me/989153448818';
-  static const String instagramUrl =
-      'https://www.instagram.com/cyrustourist?igsi=aDc3end6dTNqNW1o';
-  static const String websiteUrl =
-      'https://cyrustourist-maker.github.io/Cyrustourist/';
-}
 
 Future<void> _openUrl(BuildContext context, String url) async {
   final uri = Uri.parse(url);
@@ -63,27 +44,83 @@ Future<void> _openUrl(BuildContext context, String url) async {
   }
 }
 
-class ResidenceRegisterPage extends StatefulWidget {
-  const ResidenceRegisterPage({super.key});
+// ============================================================
+// مدل داده‌ی اقامتگاه برای این صفحه
+// ============================================================
+//
+// فیلدها هم‌راستا با residences-data.js سایت هستند تا وقتی
+// سیستم واقعی اقامتگاه‌ها (id/name/type/province/city/...) به
+// اپ وصل شد، همین مدل مستقیماً از آن داده پر شود.
+//
+// نکته درباره‌ی شماره‌ها: طبق قوانین بازار/دیوار، این صفحه هرگز
+// مستقیماً تماس نمی‌گیرد (بدون CALL_PHONE) — فقط با tel: برنامه‌ی
+// تلفن گوشی کاربر را با شماره‌ی از پیش پرشده باز می‌کند و خود
+// کاربر باید دکمه‌ی تماس را در برنامه‌ی تلفن بزند؛ دقیقاً مانند
+// بخش پشتیبانی فعلی (کلید ۹).
 
-  @override
-  State<ResidenceRegisterPage> createState() =>
-      _ResidenceRegisterPageState();
+class ResidenceVideoData {
+  const ResidenceVideoData({
+    required this.name,
+    required this.city,
+    required this.description,
+    required this.aparatHash,
+    this.province,
+    this.mobilePhone,
+    this.landlinePhone,
+    this.supportPhone,
+    this.instagramUrl,
+    this.websiteUrl,
+    this.latitude,
+    this.longitude,
+    this.rating,
+    this.ratingCount,
+  });
+
+  final String name;
+  final String city;
+  final String? province;
+  final String description;
+
+  /// هش ویدیوی آپارات (همان بخش بعد از videohash/ در لینک امبد)
+  final String aparatHash;
+
+  final String? mobilePhone;
+  final String? landlinePhone;
+  final String? supportPhone;
+
+  final String? instagramUrl;
+  final String? websiteUrl;
+
+  /// مختصات برای مسیریابی مستقیم؛ اگر خالی باشد، دکمه‌ی
+  /// «مسیریابی» نقشه‌ی عمومی اپ را باز می‌کند.
+  final double? latitude;
+  final double? longitude;
+
+  /// امتیاز ۰ تا ۵ و تعداد رأی‌دهندگان (اختیاری، فقط نمایشی)
+  final double? rating;
+  final int? ratingCount;
+
+  bool get hasAnyPhone =>
+      mobilePhone != null || landlinePhone != null || supportPhone != null;
 }
 
-class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
-  bool _rulesAccepted = false;
-  bool _showSupportStep = false;
+// ============================================================
+// صفحه‌ی نمایش فیلم اقامتگاه
+// ============================================================
 
-  final List<Map<String, String>> _benefits = const [
-    {'icon': '🎬', 'text': 'نمایش فیلم اقامتگاه در سایت و نرم‌افزار'},
-    {'icon': '🎥', 'text': 'امکان تولید فیلم توسط سایروس توریست'},
-    {'icon': '🗺️', 'text': 'مسیریابی مستقیم برای گردشگران'},
-    {'icon': '📞', 'text': 'تماس مستقیم گردشگر با اقامتگاه'},
-    {'icon': '📸', 'text': 'معرفی صفحه اینستاگرام اقامتگاه'},
-    {'icon': '🌐', 'text': 'معرفی وب‌سایت اقامتگاه'},
-    {'icon': '⭐', 'text': 'دریافت امتیاز و بازخورد گردشگران'},
-  ];
+class ResidenceVideoPage extends StatefulWidget {
+  const ResidenceVideoPage({super.key, required this.data});
+
+  final ResidenceVideoData data;
+
+  @override
+  State<ResidenceVideoPage> createState() => _ResidenceVideoPageState();
+}
+
+class _ResidenceVideoPageState extends State<ResidenceVideoPage> {
+  ResidenceVideoData get _d => widget.data;
+
+  bool _descriptionExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -97,651 +134,259 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
       ),
       body: SafeArea(
         top: false,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 320),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, .04),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            // ---------- نمایش فیلم ----------
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: _AparatEmbedPlayer(aparatHash: _d.aparatHash),
             ),
-          ),
-          child: _showSupportStep
-              ? _buildSupportStep(key: const ValueKey('support'))
-              : _buildMainStep(key: const ValueKey('main')),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 30),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _titleBlock(),
+                  const SizedBox(height: 16),
+
+                  // ---------- متن توضیحات (بیشتر/بازگشت) ----------
+                  if (_d.description.trim().isNotEmpty) ...[
+                    _descriptionBlock(),
+                    const SizedBox(height: 22),
+                  ],
+
+                  // ---------- مسیریابی ----------
+                  SizedBox(
+                    width: double.infinity,
+                    child: _gradientButton(
+                      icon: Icons.map_rounded,
+                      label: 'مسیریابی سریع',
+                      colors: const [_teal, _tealBright],
+                      textColor: const Color(0xff03202a),
+                      onTap: _openRoute,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ---------- هواشناسی ----------
+                  _ResidenceWeatherButton(
+                    city: _d.city,
+                    province: _d.province,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ---------- تماس مستقیم ----------
+                  if (_d.hasAnyPhone) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: _outlinedIconButton(
+                        icon: Icons.call_rounded,
+                        label: 'تماس مستقیم',
+                        onTap: _openContactSheet,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
+
+                  // ---------- اینستاگرام ----------
+                  if (_d.instagramUrl != null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: _linkRow(
+                        icon: Icons.camera_alt_rounded,
+                        label: 'اینستاگرام',
+                        onTap: () => _openUrl(context, _d.instagramUrl!),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // ---------- وب‌سایت ----------
+                  if (_d.websiteUrl != null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: _linkRow(
+                        icon: Icons.public_rounded,
+                        label: 'وب‌سایت',
+                        onTap: () => _openUrl(context, _d.websiteUrl!),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      bottomNavigationBar: _showSupportStep ? null : _stickyContinueBar(),
     );
   }
 
-  // ===================== هدر گرادیانی برند =====================
+  // ---------- عنوان + امتیاز ----------
 
-  Widget _heroHeader({required bool onSupportStep}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 54, 20, 26),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: _brandGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: -30,
-            top: -30,
-            child: Container(
-              width: 130,
-              height: 130,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.07),
-              ),
-            ),
-          ),
-          Positioned(
-            right: -20,
-            bottom: -40,
-            child: Container(
-              width: 110,
-              height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          Column(
+  Widget _titleBlock() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                _d.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 6),
               Row(
                 children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: const Text('🏡', style: TextStyle(fontSize: 22)),
-                  ),
-                  const SizedBox(width: 12),
+                  const Icon(Icons.location_on_rounded,
+                      color: _goldBright, size: 15),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      onSupportStep
-                          ? 'هماهنگی با پشتیبانی'
-                          : 'ثبت اقامتگاه در سایروس توریست',
+                      _d.province != null
+                          ? '${_d.city}، ${_d.province}'
+                          : _d.city,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        height: 1.4,
+                        color: _goldBright,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              Text(
-                onSupportStep
-                    ? 'یک قدم تا معرفی اقامتگاه شما باقی مانده — با ما در ارتباط باشید.'
-                    : 'اقامتگاه خود را به گردشگران سایروس توریست معرفی کنید.',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  fontSize: 13,
-                  height: 1.8,
-                ),
-              ),
-              if (!onSupportStep) ...[
-                const SizedBox(height: 14),
-                _trustBadgesRow(),
-              ],
-              const SizedBox(height: 22),
-              _stepProgress(onSupportStep: onSupportStep),
             ],
           ),
+        ),
+        if (_d.rating != null) _ratingBadge(),
+      ],
+    );
+  }
+
+  Widget _ratingBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _goldA(0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.star_rounded, color: _gold, size: 16),
+              const SizedBox(width: 3),
+              Text(
+                _d.rating!.toStringAsFixed(1),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13.5,
+                ),
+              ),
+            ],
+          ),
+          if (_d.ratingCount != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              '${_d.ratingCount} رأی',
+              style: const TextStyle(color: Colors.white38, fontSize: 9.5),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _trustBadgesRow() {
-    const badges = [
-      ['✅', 'رایگان'],
-      ['🤝', 'بدون واسطه'],
-      ['⚡', 'فعال‌سازی سریع'],
-    ];
+  // ---------- توضیحات با بیشتر/بازگشت ----------
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: badges
-          .map(
-            (b) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(30),
-              ),
+  Widget _descriptionBlock() {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOut,
+      alignment: Alignment.topCenter,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _d.description,
+            maxLines: _descriptionExpanded ? null : 3,
+            overflow: _descriptionExpanded
+                ? TextOverflow.visible
+                : TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              height: 1.9,
+            ),
+          ),
+          const SizedBox(height: 6),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() => _descriptionExpanded = !_descriptionExpanded);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(b[0], style: const TextStyle(fontSize: 13)),
-                  const SizedBox(width: 5),
+                  Icon(
+                    _descriptionExpanded
+                        ? Icons.undo_rounded
+                        : Icons.expand_more_rounded,
+                    color: _gold,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 4),
                   Text(
-                    b[1],
+                    _descriptionExpanded ? 'بازگشت' : 'بیشتر',
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
+                      color: _gold,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.5,
                     ),
                   ),
                 ],
               ),
             ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _stepProgress({required bool onSupportStep}) {
-    return Row(
-      children: [
-        _stepDot(number: '1', label: 'معرفی و مزایا', active: true),
-        Expanded(
-          child: Container(
-            height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            color: Colors.white.withValues(alpha: onSupportStep ? 0.9 : 0.35),
-          ),
-        ),
-        _stepDot(number: '2', label: 'پشتیبانی', active: onSupportStep),
-      ],
-    );
-  }
-
-  Widget _stepDot({
-    required String number,
-    required String label,
-    required bool active,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 30,
-          height: 30,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: active ? Colors.white : Colors.white.withValues(alpha: 0.22),
-          ),
-          child: Text(
-            number,
-            style: TextStyle(
-              color: active ? const Color(0xff11998e) : Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: active ? 1 : 0.75),
-            fontSize: 10.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ===================== STEP 1: MAIN =====================
-
-  Widget _buildMainStep({Key? key}) {
-    return ListView(
-      key: key,
-      padding: EdgeInsets.zero,
-      children: [
-        _heroHeader(onSupportStep: false),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sectionTitle('🌟', 'مزایای ثبت اقامتگاه'),
-              const SizedBox(height: 12),
-              _FadeInUp(
-                delay: const Duration(milliseconds: 60),
-                child: _benefitsGrid(),
-              ),
-              const SizedBox(height: 22),
-              _sectionTitle('🌤️', 'آب‌وهوای مقصد'),
-              const SizedBox(height: 12),
-              _FadeInUp(
-                delay: const Duration(milliseconds: 140),
-                child: const _CityWeatherCard(),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'نمونه — بر اساس موقعیت فعلی شما. پس از ثبت‌نام، آب‌وهوای شهر اقامتگاه شما اینجا نمایش داده می‌شود تا گردشگر پیش از سفر تصمیم بهتری بگیرد.',
-                style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.8),
-              ),
-              const SizedBox(height: 22),
-              _sectionTitle('🎬', 'نمونه کارت اقامتگاه شما'),
-              const SizedBox(height: 12),
-              _FadeInUp(
-                delay: const Duration(milliseconds: 220),
-                child: _sampleCard(),
-              ),
-              const SizedBox(height: 22),
-              _sectionTitle('📋', 'قوانین و شرایط خدمات'),
-              const SizedBox(height: 12),
-              _FadeInUp(
-                delay: const Duration(milliseconds: 300),
-                child: _rulesCard(),
-              ),
-              const SizedBox(height: 14),
-              _FadeInUp(
-                delay: const Duration(milliseconds: 380),
-                child: _acceptCheckCard(),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _sectionTitle(String emoji, String title) {
-    return Row(
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 17)),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            color: _goldBright,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ---------- نوار پایین ثابت (Sticky CTA) ----------
-
-  Widget _stickyContinueBar() {
-    final bottomInset = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomInset),
-      decoration: BoxDecoration(
-        color: _bg,
-        border: Border(top: BorderSide(color: _goldA(0.14))),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 18,
-            offset: const Offset(0, -6),
-          ),
-        ],
-      ),
-      child: _gradientButton(
-        icon: _rulesAccepted ? Icons.check_circle_rounded : Icons.lock_rounded,
-        label: _rulesAccepted
-            ? 'ادامه و ارتباط با پشتیبانی'
-            : 'برای ادامه، قوانین را بپذیرید',
-        colors: _rulesAccepted
-            ? const [_teal, _tealBright]
-            : const [Color(0xff1c2b34), Color(0xff1c2b34)],
-        textColor: _rulesAccepted ? const Color(0xff03202a) : Colors.white38,
-        onTap: _rulesAccepted
-            ? () => setState(() => _showSupportStep = true)
-            : null,
-      ),
-    );
-  }
-
-  // ---------- کارت‌های مزایا ----------
-
-  Widget _benefitsGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _benefits.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisExtent: 128,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemBuilder: (context, index) {
-        final b = _benefits[index];
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_cardAlt, _card],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _goldA(0.22)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(colors: _brandGradient),
-                ),
-                child: Text(b['icon']!, style: const TextStyle(fontSize: 16)),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Text(
-                  b['text']!,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    height: 1.6,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ---------- کارت نمونه اقامتگاه ----------
-
-  Widget _sampleCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _goldA(0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: const _DemoAparatPlayer(aparatVideoId: 'w43c127'),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: _brandGradient),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'نمونه',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'این یک نمونه از کارت اقامتگاه شماست. برای فیلم اقامتگاه دو روش دارید:\n'
-                  '۱. ارسال لینک فیلم شبکه‌های اجتماعی‌تان به پشتیبانی سایروس توریست\n'
-                  '۲. سفارش تولید محتوای حرفه‌ای توسط تیم سایروس توریست (حضوری یا دورکاری)',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12.5,
-                    height: 1.9,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _outlinedIconButton(
-                        icon: Icons.map_rounded,
-                        label: 'مسیریابی',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SmartMapPage(),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _outlinedIconButton(
-                        icon: Icons.my_location_rounded,
-                        label: 'مکان من',
-                        onTap: _handleMyLocation,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: _gradientButton(
-                    icon: Icons.event_available_rounded,
-                    label: '📅 رزرو',
-                    colors: const [_teal, _tealBright],
-                    textColor: const Color(0xff03202a),
-                    onTap: _openReserveSheet,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _circleLinkButton(
-                      icon: Icons.camera_alt_rounded,
-                      onTap: () => _openUrl(context, _SupportInfo.instagramUrl),
-                    ),
-                    const SizedBox(width: 14),
-                    _circleLinkButton(
-                      icon: Icons.public_rounded,
-                      onTap: () => _openUrl(context, _SupportInfo.websiteUrl),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'نمونه‌ی اینستاگرام و وب‌سایت — برای آزمایش، لینک‌های سایروس توریست نمایش داده شده است.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white38, fontSize: 11),
-                ),
-              ],
-            ),
           ),
         ],
       ),
     );
   }
 
-  // ---------- قوانین ----------
+  // ---------- مسیریابی ----------
 
-  Widget _rulesCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xff2a2210),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xffffb020).withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.info_outline_rounded, color: Color(0xffffb020), size: 20),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'شرایط و خدمات ثبت اقامتگاه در سایروس توریست بر پایه زیرساخت اینترنت کشور و صرفاً به‌صورت تبلیغات مجازی ارائه می‌شود. '
-              'سایروس توریست در صورت بروز هرگونه اختلال، قطعی یا محدودیت در زیرساخت اینترنت، هیچ‌گونه مسئولیتی در قبال آن نخواهد داشت.\n\n'
-              'هزینه خدمات ثبت اقامتگاه به‌صورت سالانه محاسبه و دریافت می‌شود.',
-              style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.9),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _acceptCheckCard() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () {
-        HapticFeedback.selectionClick();
-        setState(() => _rulesAccepted = !_rulesAccepted);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: _rulesAccepted ? _teal.withValues(alpha: 0.12) : _card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _rulesAccepted ? _teal.withValues(alpha: 0.65) : _goldA(0.22),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 24,
-              height: 24,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _rulesAccepted ? _teal : Colors.transparent,
-                border: Border.all(
-                  color: _rulesAccepted ? _teal : Colors.white38,
-                  width: 1.6,
-                ),
-              ),
-              child: _rulesAccepted
-                  ? const Icon(Icons.check_rounded, color: Color(0xff03202a), size: 16)
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'قوانین و شرایط خدمات سایروس توریست را مطالعه کرده‌ام و می‌پذیرم.',
-                style: TextStyle(color: Colors.white, fontSize: 13, height: 1.6),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _handleMyLocation() async {
-    final position = await LocationService.getCurrentLocation();
-
-    if (!mounted) return;
-
-    if (position == null) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          backgroundColor: _card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('⚠️ موقعیت‌مکانی خاموش است',
-              style: TextStyle(color: _goldBright)),
-          content: const Text(
-            'برای نمایش مکان اقامتگاه، لطفاً GPS گوشی خود را روشن و دسترسی موقعیت‌مکانی را فعال کنید.',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('بستن'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                LocationService.openLocationSettings();
-              },
-              child: const Text('باز کردن تنظیمات'),
-            ),
-          ],
-        ),
-      );
+  void _openRoute() {
+    if (_d.latitude != null && _d.longitude != null) {
+      HapticFeedback.selectionClick();
+      final url = 'https://www.google.com/maps/dir/?api=1'
+          '&destination=${_d.latitude},${_d.longitude}';
+      _openUrl(context, url);
       return;
     }
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: _card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('📍 موقعیت شما دریافت شد', style: TextStyle(color: _goldBright)),
-        content: const Text(
-          'در نسخه‌ی نهایی، فاصله و مسیر دقیق شما تا اقامتگاه اینجا نمایش داده می‌شود. این صفحه فقط یک نمونه‌ی آزمایشی است.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('باشه'),
-          ),
-        ],
-      ),
+    HapticFeedback.selectionClick();
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SmartMapPage()),
     );
   }
 
-  void _openReserveSheet() {
+  // ---------- تماس مستقیم (فقط انتقال به برنامه‌ی تلفن) ----------
+
+  void _openContactSheet() {
+    HapticFeedback.selectionClick();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: _card,
@@ -767,7 +412,7 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
                 ),
               ),
               const Text(
-                '📅 رزرو اقامتگاه — یک شماره را انتخاب کنید',
+                '📞 تماس مستقیم — یک شماره را انتخاب کنید',
                 style: TextStyle(
                   color: _goldBright,
                   fontWeight: FontWeight.bold,
@@ -775,21 +420,24 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
                 ),
               ),
               const SizedBox(height: 14),
-              _reserveOption(
-                icon: Icons.smartphone_rounded,
-                label: 'تلفن همراه اقامتگاه',
-                onTap: _goToPaymentWarning,
-              ),
-              _reserveOption(
-                icon: Icons.phone_rounded,
-                label: 'تلفن ثابت اقامتگاه',
-                onTap: _goToPaymentWarning,
-              ),
-              _reserveOption(
-                icon: Icons.support_agent_rounded,
-                label: 'پشتیبانی سایروس توریست',
-                onTap: _goToPaymentWarning,
-              ),
+              if (_d.mobilePhone != null)
+                _contactOption(
+                  icon: Icons.smartphone_rounded,
+                  label: 'تلفن همراه',
+                  phone: _d.mobilePhone!,
+                ),
+              if (_d.landlinePhone != null)
+                _contactOption(
+                  icon: Icons.phone_rounded,
+                  label: 'تلفن ثابت',
+                  phone: _d.landlinePhone!,
+                ),
+              if (_d.supportPhone != null)
+                _contactOption(
+                  icon: Icons.support_agent_rounded,
+                  label: 'تلفن پشتیبان',
+                  phone: _d.supportPhone!,
+                ),
             ],
           ),
         ),
@@ -797,17 +445,20 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
     );
   }
 
-  Widget _reserveOption({
+  Widget _contactOption({
     required IconData icon,
     required String label,
-    required VoidCallback onTap,
+    required String phone,
   }) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
         HapticFeedback.selectionClick();
         Navigator.of(context).pop();
-        onTap();
+        // فقط برنامه‌ی تلفن گوشی را با شماره باز می‌کند — تماس
+        // خودکار برقرار نمی‌شود (بدون نیاز به مجوز CALL_PHONE)،
+        // دقیقاً مطابق بخش پشتیبانی (کلید ۹).
+        _openUrl(context, 'tel:$phone');
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -831,225 +482,17 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(label,
-                  style: const TextStyle(color: Colors.white, fontSize: 14)),
-            ),
-            const Icon(Icons.chevron_left_rounded, color: Colors.white38),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _goToPaymentWarning() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        backgroundColor: _card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 58,
-                height: 58,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xffffb020).withValues(alpha: 0.15),
-                ),
-                child: const Icon(Icons.warning_amber_rounded,
-                    color: Color(0xffffb020), size: 30),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'هشدار مهم',
-                style: TextStyle(
-                  color: _goldBright,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'تا پیش از تحویل نهایی اقامتگاه و تأیید حضوری، از پرداخت هرگونه وجه، بیعانه یا ودیعه (اینترنتی یا کارت‌به‌کارت) خودداری کنید. '
-                'سایروس توریست هیچ مسئولیتی در قبال پرداخت‌های انجام‌شده پیش از تحویل نهایی نمی‌پذیرد.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.9),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: _gradientButton(
-                  icon: Icons.call_rounded,
-                  label: 'تماس',
-                  colors: const [_teal, _tealBright],
-                  textColor: const Color(0xff03202a),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _openUrl(context, 'tel:${_SupportInfo.phone}');
-                  },
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  label: const Text('بازگشت'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _goldBright,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: _goldA(0.6)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ===================== STEP 2: SUPPORT =====================
-
-  Widget _buildSupportStep({Key? key}) {
-    return ListView(
-      key: key,
-      padding: EdgeInsets.zero,
-      children: [
-        _heroHeader(onSupportStep: true),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 22, 16, 30),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: _teal.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _teal.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle_rounded, color: _teal, size: 22),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        '✅ قوانین و شرایط پذیرفته شد. اکنون می‌توانید برای تکمیل ثبت اقامتگاه با پشتیبانی هماهنگ کنید.',
-                        style: TextStyle(color: Colors.white, fontSize: 12.5, height: 1.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              _contactRow(
-                icon: Icons.call_rounded,
-                gradient: _callGradient,
-                title: 'تماس با پشتیبانی',
-                subtitle: _SupportInfo.phone,
-                onTap: () => _openUrl(context, 'tel:${_SupportInfo.phone}'),
-              ),
-              _contactRow(
-                icon: Icons.send_rounded,
-                gradient: _telegramGradient,
-                title: 'پشتیبانی تلگرام',
-                subtitle: _SupportInfo.telegramLabel,
-                onTap: () => _openUrl(context, _SupportInfo.telegram),
-              ),
-              _contactRow(
-                icon: Icons.chat_rounded,
-                gradient: _whatsappGradient,
-                title: 'پشتیبانی واتساپ',
-                subtitle: _SupportInfo.phone,
-                onTap: () => _openUrl(context, _SupportInfo.whatsapp),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => setState(() => _showSupportStep = false),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  label: const Text('بازگشت'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _goldBright,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    side: BorderSide(color: _goldA(0.6)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _contactRow({
-    required IconData icon,
-    required List<Color> gradient,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _goldA(0.22)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(colors: gradient),
-              ),
-              child: Icon(icon, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
+                  Text(label,
                       style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14.5)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12.5)),
+                          fontSize: 13.5)),
+                  Text(phone,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
                 ],
               ),
             ),
@@ -1060,28 +503,7 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
     );
   }
 
-  // ===================== ویجت‌های مشترک =====================
-
-  Widget _outlinedIconButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return OutlinedButton.icon(
-      onPressed: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      icon: Icon(icon, size: 18),
-      label: Text(label, style: const TextStyle(fontSize: 13)),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _goldBright,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        side: BorderSide(color: _goldA(0.5)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-    );
-  }
+  // ---------- ویجت‌های مشترک ----------
 
   Widget _gradientButton({
     required IconData icon,
@@ -1136,166 +558,192 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
     );
   }
 
-  Widget _circleLinkButton({
+  Widget _outlinedIconButton({
     required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      icon: Icon(icon, size: 18),
+      label: Text(label, style: const TextStyle(fontSize: 13.5)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _goldBright,
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        side: BorderSide(color: _goldA(0.5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
+  }
+
+  Widget _linkRow({
+    required IconData icon,
+    required String label,
     required VoidCallback onTap,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: BorderRadius.circular(14),
       onTap: () {
         HapticFeedback.selectionClick();
         onTap();
       },
       child: Container(
-        width: 48,
-        height: 48,
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xff103b50),
-          border: Border.all(color: _goldA(0.4)),
+          color: _card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _goldA(0.25)),
         ),
-        child: Icon(icon, color: _gold),
+        child: Row(
+          children: [
+            Icon(icon, color: _gold, size: 19),
+            const SizedBox(width: 10),
+            Text(label,
+                style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+            const Spacer(),
+            const Icon(Icons.chevron_left_rounded, color: Colors.white38),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ===================== ورود پلکانی (Fade + Slide) =====================
-
-class _FadeInUp extends StatefulWidget {
-  const _FadeInUp({required this.child, this.delay = Duration.zero});
-
-  final Widget child;
-  final Duration delay;
-
-  @override
-  State<_FadeInUp> createState() => _FadeInUpState();
-}
-
-class _FadeInUpState extends State<_FadeInUp> {
-  bool _visible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(widget.delay, () {
-      if (mounted) setState(() => _visible = true);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      opacity: _visible ? 1 : 0,
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeOut,
-      child: AnimatedSlide(
-        offset: _visible ? Offset.zero : const Offset(0, .08),
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutCubic,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
-// ===================== کارت آب‌وهوای مقصد =====================
+// ============================================================
+// دکمه/آیکون هواشناسی — بر اساس نام شهر اقامتگاه (نه GPS کاربر)
+// ============================================================
 //
-// از Open-Meteo (بدون نیاز به کلید API) برای دما/وضعیت هوا و از
-// Nominatim (همان سرویسی که در main.dart برای جستجوی مکان استفاده
-// می‌شود) برای نام شهر استفاده می‌کند. ابتدا آخرین موقعیت شناخته‌شده
-// (سریع) نمایش داده می‌شود، سپس در پس‌زمینه با موقعیت دقیق‌تر
-// به‌روزرسانی می‌شود.
+// با تپ روی دکمه، ابتدا نام شهر با Nominatim به مختصات تبدیل
+// می‌شود (forward geocoding)، سپس آب‌وهوای همان مختصات از
+// Open-Meteo گرفته می‌شود. نتیجه فقط یک‌بار کش می‌شود.
 
-class _CityWeatherCard extends StatefulWidget {
-  const _CityWeatherCard();
+class _ResidenceWeatherButton extends StatefulWidget {
+  const _ResidenceWeatherButton({required this.city, this.province});
+
+  final String city;
+  final String? province;
 
   @override
-  State<_CityWeatherCard> createState() => _CityWeatherCardState();
+  State<_ResidenceWeatherButton> createState() =>
+      _ResidenceWeatherButtonState();
 }
 
-class _CityWeatherCardState extends State<_CityWeatherCard> {
-  bool _loading = true;
+class _ResidenceWeatherButtonState extends State<_ResidenceWeatherButton> {
+  bool _expanded = false;
+  bool _loading = false;
   bool _failed = false;
-  bool _locationUnavailable = false;
+  bool _loaded = false;
 
   double? _temperature;
   int? _weatherCode;
   int? _humidity;
   double? _windSpeed;
-  String? _cityName;
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
+  void _toggle() {
+    HapticFeedback.selectionClick();
+
+    if (_expanded) {
+      setState(() => _expanded = false);
+      return;
+    }
+
+    setState(() => _expanded = true);
+
+    if (!_loaded) _loadWeather();
   }
 
-  Future<void> _load() async {
+  void _retry() {
+    setState(() {
+      _loaded = false;
+      _failed = false;
+    });
+    _loadWeather();
+  }
+
+  Future<void> _loadWeather() async {
     setState(() {
       _loading = true;
       _failed = false;
-      _locationUnavailable = false;
     });
 
     try {
-      var position = await LocationService.getLastKnownLocation();
-      position ??= await LocationService.getCurrentLocation();
+      final coords = await _geocodeCity();
 
-      if (position == null) {
+      if (coords == null) {
         if (!mounted) return;
         setState(() {
           _loading = false;
-          _locationUnavailable = true;
+          _failed = true;
+          _loaded = true;
         });
         return;
       }
 
-      final results = await Future.wait([
-        _fetchWeather(position.latitude, position.longitude),
-        _fetchCityName(position.latitude, position.longitude),
-      ]);
+      final weather = await _fetchWeather(coords[0], coords[1]);
 
       if (!mounted) return;
 
-      final weather = results[0] as Map<String, dynamic>?;
-
       setState(() {
         _loading = false;
+        _loaded = true;
         _failed = weather == null;
         _temperature = (weather?['temperature'] as num?)?.toDouble();
         _weatherCode = (weather?['weathercode'] as num?)?.toInt();
         _humidity = (weather?['humidity'] as num?)?.toInt();
         _windSpeed = (weather?['windspeed'] as num?)?.toDouble();
-        _cityName = results[1] as String?;
       });
-
-      // به‌روزرسانی خاموش با موقعیت دقیق‌تر GPS (بدون نمایش لودینگ مجدد)
-      LocationService.getCurrentLocation().then((accurate) async {
-        if (accurate == null || !mounted) return;
-
-        final refined =
-            await _fetchWeather(accurate.latitude, accurate.longitude);
-        final refinedCity =
-            await _fetchCityName(accurate.latitude, accurate.longitude);
-
-        if (!mounted || refined == null) return;
-
-        setState(() {
-          _failed = false;
-          _temperature = (refined['temperature'] as num?)?.toDouble();
-          _weatherCode = (refined['weathercode'] as num?)?.toInt();
-          _humidity = (refined['humidity'] as num?)?.toInt();
-          _windSpeed = (refined['windspeed'] as num?)?.toDouble();
-          _cityName = refinedCity ?? _cityName;
-        });
-      }).catchError((_) {});
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _failed = true;
+        _loaded = true;
       });
+    }
+  }
+
+  Future<List<double>?> _geocodeCity() async {
+    final query = widget.province != null
+        ? '${widget.city}, ${widget.province}, ایران'
+        : '${widget.city}, ایران';
+
+    final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+      'q': query,
+      'format': 'jsonv2',
+      'limit': '1',
+      'accept-language': 'fa',
+    });
+
+    final client = HttpClient();
+    try {
+      client.userAgent = 'CyrusTourist/1.0 (cyrustourist.ir)';
+      client.connectionTimeout = const Duration(seconds: 10);
+
+      final request = await client.getUrl(uri);
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+
+      final response = await request.close();
+      if (response.statusCode != 200) return null;
+
+      final body = await response.transform(const Utf8Decoder()).join();
+      final data = jsonDecode(body);
+
+      if (data is! List || data.isEmpty) return null;
+
+      final first = data.first as Map<String, dynamic>;
+      final lat = double.tryParse(first['lat']?.toString() ?? '');
+      final lon = double.tryParse(first['lon']?.toString() ?? '');
+
+      if (lat == null || lon == null) return null;
+
+      return [lat, lon];
+    } catch (_) {
+      return null;
+    } finally {
+      client.close();
     }
   }
 
@@ -1303,7 +751,8 @@ class _CityWeatherCardState extends State<_CityWeatherCard> {
     final uri = Uri.https('api.open-meteo.com', '/v1/forecast', {
       'latitude': lat.toStringAsFixed(4),
       'longitude': lon.toStringAsFixed(4),
-      'current': 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
+      'current':
+          'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
       'timezone': 'auto',
     });
 
@@ -1328,44 +777,6 @@ class _CityWeatherCardState extends State<_CityWeatherCard> {
         'humidity': current['relative_humidity_2m'],
         'windspeed': current['wind_speed_10m'],
       };
-    } catch (_) {
-      return null;
-    } finally {
-      client.close();
-    }
-  }
-
-  Future<String?> _fetchCityName(double lat, double lon) async {
-    final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
-      'lat': lat.toString(),
-      'lon': lon.toString(),
-      'format': 'jsonv2',
-      'accept-language': 'fa',
-      'zoom': '10',
-    });
-
-    final client = HttpClient();
-    try {
-      client.userAgent = 'CyrusTourist/1.0 (cyrustourist.ir)';
-      client.connectionTimeout = const Duration(seconds: 10);
-
-      final request = await client.getUrl(uri);
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-
-      final response = await request.close();
-      if (response.statusCode != 200) return null;
-
-      final body = await response.transform(const Utf8Decoder()).join();
-      final data = jsonDecode(body) as Map<String, dynamic>;
-      final address = data['address'] as Map<String, dynamic>?;
-
-      final name = address?['city'] ??
-          address?['town'] ??
-          address?['county'] ??
-          address?['state'] ??
-          data['name'];
-
-      return name as String?;
     } catch (_) {
       return null;
     } finally {
@@ -1406,164 +817,170 @@ class _CityWeatherCardState extends State<_CityWeatherCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xff103b50), Color(0xff0d2432)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _goldA(0.22)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _goldA(0.25)),
       ),
-      child: _loading
-          ? _weatherLoading()
-          : _locationUnavailable
-              ? _weatherLocationOff()
-              : _failed
-                  ? _weatherFailed()
-                  : _weatherContent(),
-    );
-  }
-
-  Widget _weatherLoading() {
-    return const Row(
-      children: [
-        SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2.4, color: _gold),
-        ),
-        SizedBox(width: 12),
-        Text(
-          'در حال دریافت آب‌وهوا…',
-          style: TextStyle(color: Colors.white70, fontSize: 12.5),
-        ),
-      ],
-    );
-  }
-
-  Widget _weatherLocationOff() {
-    return Row(
-      children: [
-        const Icon(Icons.location_off_rounded, color: Colors.white38),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Text(
-            'برای نمایش آب‌وهوا، دسترسی موقعیت‌مکانی را فعال کنید.',
-            style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.7),
-          ),
-        ),
-        TextButton(
-          onPressed: _load,
-          child: const Text('تلاش دوباره', style: TextStyle(color: _gold)),
-        ),
-      ],
-    );
-  }
-
-  Widget _weatherFailed() {
-    return Row(
-      children: [
-        const Icon(Icons.cloud_off_rounded, color: Colors.white38),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Text(
-            'دریافت آب‌وهوا ممکن نشد.',
-            style: TextStyle(color: Colors.white70, fontSize: 12.5),
-          ),
-        ),
-        TextButton(
-          onPressed: _load,
-          child: const Text('تلاش دوباره', style: TextStyle(color: _gold)),
-        ),
-      ],
-    );
-  }
-
-  Widget _weatherContent() {
-    final temp = _temperature != null ? '${_temperature!.round()}°' : '—';
-
-    return Row(
-      children: [
-        Text(_weatherEmoji(_weatherCode), style: const TextStyle(fontSize: 34)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _toggle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              child: Row(
                 children: [
-                  Text(
-                    temp,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                  const Icon(Icons.location_on_rounded,
+                      color: _goldBright, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'آب‌وهوای ${widget.city}',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.5,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      _weatherLabel(_weatherCode),
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+                  if (_loaded && !_failed && _temperature != null) ...[
+                    Text(_weatherEmoji(_weatherCode),
+                        style: const TextStyle(fontSize: 17)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${_temperature!.round()}°',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.5,
+                      ),
                     ),
+                    const SizedBox(width: 6),
+                  ],
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: _gold),
                   ),
                 ],
               ),
-              const SizedBox(height: 3),
-              Text(
-                '📍 ${_cityName ?? 'موقعیت شما'}',
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: _goldBright,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _expanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: _weatherBody(),
+            ),
+            secondChild: const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _weatherBody() {
+    if (_loading) {
+      return const Row(
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2.2, color: _gold),
+          ),
+          SizedBox(width: 10),
+          Text('در حال دریافت آب‌وهوا…',
+              style: TextStyle(color: Colors.white70, fontSize: 12)),
+        ],
+      );
+    }
+
+    if (_failed) {
+      return Row(
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: Colors.white38, size: 18),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text('دریافت آب‌وهوا ممکن نشد.',
+                style: TextStyle(color: Colors.white70, fontSize: 12)),
+          ),
+          TextButton(
+            onPressed: _retry,
+            child: const Text('تلاش دوباره', style: TextStyle(color: _gold)),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            _weatherLabel(_weatherCode),
+            style: const TextStyle(color: Colors.white70, fontSize: 12.5),
           ),
         ),
-        if (_humidity != null || _windSpeed != null)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (_humidity != null)
-                Text('💧 $_humidity٪',
-                    style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
-              if (_windSpeed != null)
-                Text('🌬️ ${_windSpeed!.round()} km/h',
-                    style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
-            ],
-          ),
+        if (_humidity != null)
+          Text('💧 $_humidity٪',
+              style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
+        if (_windSpeed != null) ...[
+          const SizedBox(width: 10),
+          Text('🌬️ ${_windSpeed!.round()} km/h',
+              style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
+        ],
       ],
     );
   }
 }
 
-/// پخش‌کننده‌ی نمونه برای آپارات — نسخه‌ی مستقل از پخش‌کننده‌ی video_page.dart
-class _DemoAparatPlayer extends StatefulWidget {
-  const _DemoAparatPlayer({required this.aparatVideoId});
+// ============================================================
+// پخش‌کننده‌ی عمومی آپارات — مخصوص این صفحه
+// ============================================================
 
-  final String aparatVideoId;
+class _AparatEmbedPlayer extends StatefulWidget {
+  const _AparatEmbedPlayer({required this.aparatHash});
+
+  final String aparatHash;
 
   @override
-  State<_DemoAparatPlayer> createState() => _DemoAparatPlayerState();
+  State<_AparatEmbedPlayer> createState() => _AparatEmbedPlayerState();
 }
 
-class _DemoAparatPlayerState extends State<_DemoAparatPlayer> {
-  late final WebViewController _controller;
+class _AparatEmbedPlayerState extends State<_AparatEmbedPlayer> {
+  late WebViewController _controller;
   bool _loading = true;
   bool _failed = false;
 
   @override
   void initState() {
     super.initState();
+    _createController();
+  }
 
+  @override
+  void didUpdateWidget(covariant _AparatEmbedPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.aparatHash != widget.aparatHash) {
+      _createController();
+    }
+  }
+
+  void _createController() {
     final embedUrl = 'https://www.aparat.com/video/video/embed/videohash/'
-        '${widget.aparatVideoId}/vt/frame';
+        '${widget.aparatHash}/vt/frame';
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -1598,6 +1015,8 @@ class _DemoAparatPlayerState extends State<_DemoAparatPlayer> {
         ),
       )
       ..loadRequest(Uri.parse(embedUrl));
+
+    if (mounted) setState(() {});
   }
 
   @override
@@ -1623,7 +1042,7 @@ class _DemoAparatPlayerState extends State<_DemoAparatPlayer> {
                 const Icon(Icons.error_outline, color: _gold, size: 30),
                 const SizedBox(height: 8),
                 const Text(
-                  'پخش نمونه بارگذاری نشد',
+                  'پخش ویدیو بارگذاری نشد',
                   style: TextStyle(color: Colors.white),
                   textAlign: TextAlign.center,
                 ),
