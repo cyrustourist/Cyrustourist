@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/map_state_service.dart';
 import 'providers/map_state_provider.dart';
+import 'config/map_ir_config.dart';
 
 import 'map_place.dart';
 import 'core/language/app_language.dart';
@@ -2276,8 +2277,24 @@ class _SmartMapPageState
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                wmsOptions: const WMSTileLayerOptions(
+                  baseUrl: 'https://map.ir/shiveh',
+                  layers: ['Shiveh:Shiveh'],
+                  styles: [],
+                  format: 'image/png',
+                  version: '1.1.1',
+                  transparent: false,
+                  otherParameters: {
+                    'width': '256',
+                    'height': '256',
+                  },
+                ),
+                tileProvider: NetworkTileProvider(
+                  headers: {
+                    'x-api-key': MapIrConfig.apiKey,
+                  },
+                ),
+                tileDimension: 256,
                 userAgentPackageName:
                     'com.cyrustourist.app',
               ),
