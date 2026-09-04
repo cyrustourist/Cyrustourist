@@ -59,8 +59,7 @@ class _SmartMapScreenState
   // Map provider fallback:
   // Map.ir is tried first. If a Map.ir tile fails, CARTO becomes
   // the active tile source for the rest of this map screen.
-  bool _useCartoMap = false;
-
+  bool _useCartoMap = true;
   double? routeDistanceKm;
   double? routeDurationMin;
 
