@@ -2277,7 +2277,7 @@ class _SmartMapPageState
             ),
             children: [
               TileLayer(
-                wmsOptions: const WMSTileLayerOptions(
+                wmsOptions: WMSTileLayerOptions(
                   baseUrl: 'https://map.ir/shiveh',
                   layers: ['Shiveh:Shiveh'],
                   styles: [],
@@ -2294,7 +2294,6 @@ class _SmartMapPageState
                     'x-api-key': MapIrConfig.apiKey,
                   },
                 ),
-                tileDimension: 256,
                 userAgentPackageName:
                     'com.cyrustourist.app',
               ),
