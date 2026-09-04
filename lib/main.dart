@@ -840,9 +840,9 @@ class _SmartMapPageState
 
   bool routingInProgress = false;
 
-  // نمایش نقشه: ابتدا Map.ir امتحان می‌شود؛ اگر یک تایل Map.ir با
-  // خطا مواجه شود، به‌طور خودکار و سریع به CARTO سوییچ می‌کند.
-  bool useCartoMap = false;
+  // نمایش نقشه: ابتدا Map.ir امتحان می‌شود، اگر خطا داد به CARTO،
+  // و اگر آن هم خطا داد به نقشه‌ی OSM سایت (آخرین راه‌حل).
+  int mapProviderStep = 0; // 0 = Map.ir, 1 = CARTO, 2 = OSM
 
   static const String currentLocationLabel =
       'موقعیت فعلی من';
@@ -2281,13 +2281,7 @@ class _SmartMapPageState
               maxZoom: 18,
             ),
             children: [
-              if (useCartoMap)
-                TileLayer(
-                  urlTemplate: CartoConfig.tileUrlWithKey,
-                  userAgentPackageName:
-                      'com.cyrustourist.app',
-                )
-              else
+              if (mapProviderStep == 0)
                 TileLayer(
                   wmsOptions: WMSTileLayerOptions(
                     baseUrl: 'https://map.ir/shiveh',
@@ -2309,11 +2303,33 @@ class _SmartMapPageState
                   userAgentPackageName:
                       'com.cyrustourist.app',
                   errorTileCallback: (_, __, ___) {
-                    if (!mounted || useCartoMap) return;
+                    if (!mounted || mapProviderStep != 0) return;
                     setState(() {
-                      useCartoMap = true;
+                      mapProviderStep = 1;
                     });
                   },
+                )
+              else if (mapProviderStep == 1)
+                TileLayer(
+                  urlTemplate: CartoConfig.tileUrlWithKey,
+                  userAgentPackageName:
+                      'com.cyrustourist.app',
+                  errorTileCallback: (_, __, ___) {
+                    if (!mounted || mapProviderStep != 1) return;
+                    setState(() {
+                      mapProviderStep = 2;
+                    });
+                  },
+                )
+              else
+                // آخرین راه‌حل: همان نقشه‌ی OSM که سایت استفاده
+                // می‌کند (بدون کلید، ساب‌دامین‌های چرخشی a/b/c).
+                TileLayer(
+                  urlTemplate:
+                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c'],
+                  userAgentPackageName:
+                      'com.cyrustourist.app',
                 ),
               MarkerLayer(
                 markers: markers(),
