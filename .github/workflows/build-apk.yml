@@ -108,6 +108,20 @@ jobs:
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk              build/app/outputs/flutter-apk/Cyrustourist.ir.apk
 
+      - name: Create GitHub Release with APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="v${{ steps.bump.outputs.new_version }}"
+          gh release create "$TAG" \
+            build/app/outputs/flutter-apk/Cyrustourist.ir.apk \
+            --repo "${{ github.repository }}" \
+            --title "Cyrus Tourist $TAG" \
+            --notes "Automated build from commit ${{ github.sha }}"
+          echo "Release $TAG created with APK attached."
+
       - name: Upload APK
         id: upload_apk
         continue-on-error: true
