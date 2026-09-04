@@ -34,12 +34,22 @@ class SupportPage extends StatelessWidget {
   static const String telegramGroupUrl = 'https://t.me/cyrustourist_app';
   static const String emailAddress = 'cyrustourist@gmail.com';
   static const String address = 'استان خراسان رضوی، بلوار پیروزی، رضا شهر';
-  static const String websiteUrl = 'https://cyrustourist-maker.github.io/Cyrustourist/';
+  static const String websiteUrl =
+      'https://cyrustourist-maker.github.io/Cyrustourist/';
+  static const String eitaaUrl = 'https://eitaa.com/cyrustourist';
 
   Future<void> _openUrl(BuildContext context, String value) async {
     final Uri? uri = Uri.tryParse(value);
+
     if (uri == null) {
-      _message(context, _t('لینک نامعتبر است.', 'Invalid link.', 'الرابط غير صالح.'));
+      _message(
+        context,
+        _t(
+          'لینک نامعتبر است.',
+          'Invalid link.',
+          'الرابط غير صالح.',
+        ),
+      );
       return;
     }
 
@@ -48,20 +58,26 @@ class SupportPage extends StatelessWidget {
         uri,
         mode: LaunchMode.externalApplication,
       );
+
       if (!opened && context.mounted) {
         _message(
           context,
-          _t('امکان باز کردن این بخش وجود ندارد.',
-              'This section cannot be opened.', 'لا يمكن فتح هذا القسم.'),
+          _t(
+            'امکان باز کردن این بخش وجود ندارد.',
+            'This section cannot be opened.',
+            'لا يمكن فتح هذا القسم.',
+          ),
         );
       }
     } catch (_) {
       if (context.mounted) {
         _message(
           context,
-          _t('برنامه مناسب برای این عملیات پیدا نشد.',
-              'No suitable app was found for this action.',
-              'لم يتم العثور على تطبيق مناسب لهذا الإجراء.'),
+          _t(
+            'برنامه مناسب برای این عملیات پیدا نشد.',
+            'No suitable app was found for this action.',
+            'لم يتم العثور على تطبيق مناسب لهذا الإجراء.',
+          ),
         );
       }
     }
@@ -70,10 +86,15 @@ class SupportPage extends StatelessWidget {
   void _message(BuildContext context, String text) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text, textAlign: TextAlign.center),
+        content: Text(
+          text,
+          textAlign: TextAlign.center,
+        ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: panelColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
       ),
     );
   }
@@ -83,33 +104,50 @@ class SupportPage extends StatelessWidget {
 
   Future<void> _whatsapp(BuildContext context) async {
     final number = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
+
     if (number.isEmpty) {
       _message(
         context,
-        _t('شماره واتساپ تنظیم نشده است.', 'WhatsApp number is not set.',
-            'رقم واتساب غير مضبوط.'),
+        _t(
+          'شماره واتساپ تنظیم نشده است.',
+          'WhatsApp number is not set.',
+          'رقم واتساب غير مضبوط.',
+        ),
       );
       return;
     }
-    final international = number.startsWith('0') ? '98${number.substring(1)}' : number;
-    await _openUrl(context, 'https://wa.me/$international');
+
+    final international =
+        number.startsWith('0') ? '98${number.substring(1)}' : number;
+
+    await _openUrl(
+      context,
+      'https://wa.me/$international',
+    );
   }
 
   Future<void> _telegram(BuildContext context) =>
-      _openUrl(context, 'https://t.me/${telegramUsername.replaceAll('@', '')}');
+      _openUrl(
+        context,
+        'https://t.me/${telegramUsername.replaceAll('@', '')}',
+      );
 
   Future<void> _email(BuildContext context) => _openUrl(
         context,
         Uri(
           scheme: 'mailto',
           path: emailAddress,
-          queryParameters: const {'subject': 'Cyrus Tourist Support'},
+          queryParameters: const {
+            'subject': 'Cyrus Tourist Support',
+          },
         ).toString(),
       );
 
-  Future<void> _website(BuildContext context) => _openUrl(context, websiteUrl);
+  Future<void> _website(BuildContext context) =>
+      _openUrl(context, websiteUrl);
 
-Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
+  Future<void> _eitaa(BuildContext context) =>
+      _openUrl(context, eitaaUrl);
 
   Widget _actionCard({
     required BuildContext context,
@@ -133,10 +171,15 @@ Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [panelLight, panelColor],
+                colors: [
+                  panelLight,
+                  panelColor,
+                ],
               ),
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: goldColor.withValues(alpha: 0.38)),
+              border: Border.all(
+                color: goldColor.withValues(alpha: 0.38),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.38),
@@ -152,7 +195,10 @@ Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
             ),
             child: Row(
               children: [
-                _Icon3D(icon: icon, enabled: enabled),
+                _Icon3D(
+                  icon: icon,
+                  enabled: enabled,
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -161,7 +207,9 @@ Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
                       Text(
                         title,
                         style: TextStyle(
-                          color: enabled ? goldBright : Colors.white54,
+                          color: enabled
+                              ? goldBright
+                              : Colors.white54,
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                         ),
@@ -181,7 +229,9 @@ Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
                 const SizedBox(width: 8),
                 Icon(
                   Icons.arrow_back_ios_new_rounded,
-                  color: enabled ? goldColor : Colors.white24,
+                  color: enabled
+                      ? goldColor
+                      : Colors.white24,
                   size: 18,
                 ),
               ],
@@ -204,29 +254,46 @@ Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
           elevation: 0,
           centerTitle: true,
           title: Text(
-            _t('پشتیبانی و تماس', 'Support & Contact', 'الدعم والتواصل'),
-            style: const TextStyle(fontWeight: FontWeight.w800),
+            _t(
+              'پشتیبانی و تماس',
+              'Support & Contact',
+              'الدعم والتواصل',
+            ),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
         body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              10,
+              16,
+              30,
+            ),
             child: Column(
               children: [
                 _HeroSupport(),
+
                 const SizedBox(height: 22),
+
                 Text(
-                  _t('راه‌های ارتباط با Cyrus Tourist',
-                      'Ways to Contact Cyrus Tourist',
-                      'طرق التواصل مع Cyrus Tourist'),
+                  _t(
+                    'راه‌های ارتباط با Cyrus Tourist',
+                    'Ways to Contact Cyrus Tourist',
+                    'طرق التواصل مع Cyrus Tourist',
+                  ),
                   style: const TextStyle(
                     color: goldBright,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 const SizedBox(height: 7),
+
                 Text(
                   _t(
                     'برای پرسش، پیشنهاد، گزارش مشکل یا همکاری با ما، یکی از گزینه‌های زیر را انتخاب کنید.',
@@ -234,88 +301,180 @@ Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
                     'للأسئلة أو الاقتراحات أو الإبلاغ عن مشكلة أو التعاون معنا، اختر أحد الخيارات أدناه.',
                   ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    height: 1.7,
+                  ),
                 ),
+
                 const SizedBox(height: 20),
+
                 _actionCard(
                   context: context,
                   icon: Icons.phone_in_talk_rounded,
-                  title: _t('تماس با ما', 'Call Us', 'اتصل بنا'),
+                  title: _t(
+                    'تماس با ما',
+                    'Call Us',
+                    'اتصل بنا',
+                  ),
                   subtitle: phoneNumber,
                   onTap: () => _call(context),
                 ),
+
                 _actionCard(
                   context: context,
                   icon: Icons.chat_rounded,
-                  title: _t('واتساپ', 'WhatsApp', 'واتساب'),
-                  subtitle: _t('ارتباط مستقیم با پشتیبانی',
-                      'Direct contact with support', 'تواصل مباشر مع الدعم'),
+                  title: _t(
+                    'واتساپ',
+                    'WhatsApp',
+                    'واتساب',
+                  ),
+                  subtitle: _t(
+                    'ارتباط مستقیم با پشتیبانی',
+                    'Direct contact with support',
+                    'تواصل مباشر مع الدعم',
+                  ),
                   onTap: () => _whatsapp(context),
                 ),
+
                 _actionCard(
                   context: context,
                   icon: Icons.send_rounded,
-                  title: _t('تلگرام', 'Telegram', 'تيليجرام'),
+                  title: _t(
+                    'تلگرام',
+                    'Telegram',
+                    'تيليجرام',
+                  ),
                   subtitle: telegramUsername,
                   onTap: () => _telegram(context),
                 ),
+
                 _actionCard(
                   context: context,
                   icon: Icons.groups_rounded,
-                  title: _t('گروه تلگرام', 'Telegram Group', 'مجموعة تيليجرام'),
-                  subtitle: _t('عضویت در گروه Cyrus Tourist',
-                      'Join the Cyrus Tourist group',
-                      'انضم إلى مجموعة Cyrus Tourist'),
-                  onTap: () => _openUrl(context, telegramGroupUrl),
+                  title: _t(
+                    'گروه تلگرام',
+                    'Telegram Group',
+                    'مجموعة تيليجرام',
+                  ),
+                  subtitle: _t(
+                    'عضویت در گروه Cyrus Tourist',
+                    'Join the Cyrus Tourist group',
+                    'انضم إلى مجموعة Cyrus Tourist',
+                  ),
+                  onTap: () => _openUrl(
+                    context,
+                    telegramGroupUrl,
+                  ),
                 ),
+
                 _actionCard(
                   context: context,
                   icon: Icons.email_rounded,
-                  title: _t('ایمیل', 'Email', 'البريد الإلكتروني'),
+                  title: _t(
+                    'ایمیل',
+                    'Email',
+                    'البريد الإلكتروني',
+                  ),
                   subtitle: emailAddress,
                   onTap: () => _email(context),
                 ),
+
                 _actionCard(
                   context: context,
                   icon: Icons.language_rounded,
-                  title: _t('وب‌سایت رسمی', 'Official Website', 'الموقع الرسمي'),
-                  subtitle: _t('مشاهده اطلاعات و خدمات بیشتر',
-                      'View more information and services',
-                      'عرض المزيد من المعلومات والخدمات'),
+                  title: _t(
+                    'وب‌سایت رسمی',
+                    'Official Website',
+                    'الموقع الرسمي',
+                  ),
+                  subtitle: _t(
+                    'مشاهده اطلاعات و خدمات بیشتر',
+                    'View more information and services',
+                    'عرض المزيد من المعلومات والخدمات',
+                  ),
                   onTap: () => _website(context),
                 ),
+
+                // Accommodation Registration / ثبت‌نام اقامتگاه
+                _actionCard(
+                  context: context,
+                  icon: Icons.hotel_rounded,
+                  title: _t(
+                    'ثبت‌نام اقامتگاه',
+                    'Accommodation Registration',
+                    'تسجيل أماكن الإقامة',
+                  ),
+                  subtitle: _t(
+                    'ثبت و معرفی اقامتگاه در Cyrus Tourist\nایتا: @cyrustourist',
+                    'Register and introduce your accommodation on Cyrus Tourist\nEitaa: @cyrustourist',
+                    'تسجيل وإضافة مكان إقامتك في Cyrus Tourist\nإيتا: @cyrustourist',
+                  ),
+                  onTap: () => _eitaa(context),
+                ),
+
                 const SizedBox(height: 4),
+
                 _futureCard(),
+
                 const SizedBox(height: 16),
+
                 _InfoCard(
                   icon: Icons.location_on_rounded,
-                  title: _t('آدرس', 'Address', 'العنوان'),
+                  title: _t(
+                    'آدرس',
+                    'Address',
+                    'العنوان',
+                  ),
                   text: address,
                 ),
+
                 const SizedBox(height: 14),
+
                 _InfoCard(
                   icon: Icons.feedback_rounded,
-                  title: _t('پیشنهاد یا گزارش مشکل', 'Feedback or Report an Issue',
-                      'اقتراح أو الإبلاغ عن مشكلة'),
+                  title: _t(
+                    'پیشنهاد یا گزارش مشکل',
+                    'Feedback or Report an Issue',
+                    'اقتراح أو الإبلاغ عن مشكلة',
+                  ),
                   text: _t(
                     'بازخورد شما به ما کمک می‌کند Cyrus Tourist را بهتر و کاربردی‌تر کنیم.',
                     'Your feedback helps us make Cyrus Tourist better and more useful.',
                     'ملاحظاتكم تساعدنا على جعل Cyrus Tourist أفضل وأكثر فائدة.',
                   ),
-                  buttonText: _t('ارسال پیام به پشتیبانی', 'Send Message to Support',
-                      'إرسال رسالة إلى الدعم'),
+                  buttonText: _t(
+                    'ارسال پیام به پشتیبانی',
+                    'Send Message to Support',
+                    'إرسال رسالة إلى الدعم',
+                  ),
                   onTap: () => _email(context),
                 ),
+
                 const SizedBox(height: 22),
+
                 const Text(
                   'Cyrus Tourist',
-                  style: TextStyle(color: goldColor, fontSize: 17, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: goldColor,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+
                 const SizedBox(height: 5),
+
                 Text(
-                  _t('سفر کن، کشف کن، لذت ببر', 'Travel, Discover, Enjoy',
-                      'سافر، اكتشف، استمتع'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  _t(
+                    'سفر کن، کشف کن، لذت ببر',
+                    'Travel, Discover, Enjoy',
+                    'سافر، اكتشف، استمتع',
+                  ),
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -327,7 +486,10 @@ Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
 }
 
 class _Icon3D extends StatelessWidget {
-  const _Icon3D({required this.icon, required this.enabled});
+  const _Icon3D({
+    required this.icon,
+    required this.enabled,
+  });
 
   final IconData icon;
   final bool enabled;
@@ -342,11 +504,21 @@ class _Icon3D extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: enabled
-              ? [const Color(0xffffe39a), const Color(0xffb87918)]
-              : [Colors.white24, Colors.white10],
+              ? [
+                  const Color(0xffffe39a),
+                  const Color(0xffb87918),
+                ]
+              : [
+                  Colors.white24,
+                  Colors.white10,
+                ],
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: SupportPage.goldColor.withValues(alpha: enabled ? 0.7 : 0.15)),
+        border: Border.all(
+          color: SupportPage.goldColor.withValues(
+            alpha: enabled ? 0.7 : 0.15,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.45),
@@ -357,7 +529,9 @@ class _Icon3D extends StatelessWidget {
       ),
       child: Icon(
         icon,
-        color: enabled ? const Color(0xff06121d) : Colors.white38,
+        color: enabled
+            ? const Color(0xff06121d)
+            : Colors.white38,
         size: 29,
       ),
     );
@@ -369,15 +543,27 @@ class _HeroSupport extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        22,
+        20,
+        20,
+      ),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xff123e51), Color(0xff071c29)],
+          colors: [
+            Color(0xff123e51),
+            Color(0xff071c29),
+          ],
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: SupportPage.goldColor.withValues(alpha: 0.45)),
+        border: Border.all(
+          color: SupportPage.goldColor.withValues(
+            alpha: 0.45,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.45),
@@ -396,16 +582,23 @@ class _HeroSupport extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xffffe39a), Color(0xffb87918)],
+                colors: [
+                  Color(0xffffe39a),
+                  Color(0xffb87918),
+                ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: SupportPage.goldColor.withValues(alpha: 0.3),
+                  color: SupportPage.goldColor.withValues(
+                    alpha: 0.3,
+                  ),
                   blurRadius: 22,
                   spreadRadius: 2,
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
+                  color: Colors.black.withValues(
+                    alpha: 0.45,
+                  ),
                   blurRadius: 10,
                   offset: const Offset(4, 7),
                 ),
@@ -417,13 +610,25 @@ class _HeroSupport extends StatelessWidget {
               size: 52,
             ),
           ),
+
           const SizedBox(height: 16),
+
           Text(
-            _t('همراه شما هستیم', 'We Are With You', 'نحن معك'),
+            _t(
+              'همراه شما هستیم',
+              'We Are With You',
+              'نحن معك',
+            ),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: SupportPage.goldBright, fontSize: 24, fontWeight: FontWeight.w900),
+            style: const TextStyle(
+              color: SupportPage.goldBright,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
+
           const SizedBox(height: 7),
+
           Text(
             _t(
               'پشتیبانی Cyrus Tourist برای سفر بهتر و استفاده آسان‌تر از برنامه در کنار شماست.',
@@ -431,7 +636,11 @@ class _HeroSupport extends StatelessWidget {
               'دعم Cyrus Tourist بجانبك من أجل رحلة أفضل واستخدام أسهل للتطبيق.',
             ),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.7),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              height: 1.7,
+            ),
           ),
         ],
       ),
@@ -444,42 +653,78 @@ Widget _futureCard() {
     width: double.infinity,
     padding: const EdgeInsets.all(17),
     decoration: BoxDecoration(
-      color: const Color(0xff0b2636).withValues(alpha: 0.75),
+      color: const Color(0xff0b2636).withValues(
+        alpha: 0.75,
+      ),
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: SupportPage.goldColor.withValues(alpha: 0.22)),
+      border: Border.all(
+        color: SupportPage.goldColor.withValues(
+          alpha: 0.22,
+        ),
+      ),
     ),
     child: Row(
       children: [
-        const _Icon3D(icon: Icons.forum_rounded, enabled: false),
+        const _Icon3D(
+          icon: Icons.forum_rounded,
+          enabled: false,
+        ),
+
         const SizedBox(width: 14),
+
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _t('چت آنلاین', 'Online Chat', 'الدردشة المباشرة'),
-                style: const TextStyle(color: Colors.white54, fontSize: 17, fontWeight: FontWeight.bold),
+                _t(
+                  'چت آنلاین',
+                  'Online Chat',
+                  'الدردشة المباشرة',
+                ),
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+
               const SizedBox(height: 5),
+
               Text(
                 _t(
                   'این قابلیت در نسخه آینده به پشتیبانی آنلاین متصل می‌شود.',
                   'This feature will connect to live support in a future version.',
                   'ستتصل هذه الميزة بالدعم المباشر في نسخة مستقبلية.',
                 ),
-                style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+                style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 12,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
         ),
-        const Icon(Icons.lock_outline_rounded, color: Colors.white24, size: 20),
+
+        const Icon(
+          Icons.lock_outline_rounded,
+          color: Colors.white24,
+          size: 20,
+        ),
       ],
     ),
   );
 }
 
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.icon, required this.title, required this.text, this.buttonText, this.onTap});
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.text,
+    this.buttonText,
+    this.onTap,
+  });
 
   final IconData icon;
   final String title;
@@ -493,42 +738,83 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: SupportPage.panelColor.withValues(alpha: 0.72),
+        color: SupportPage.panelColor.withValues(
+          alpha: 0.72,
+        ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: SupportPage.goldColor.withValues(alpha: 0.24)),
+        border: Border.all(
+          color: SupportPage.goldColor.withValues(
+            alpha: 0.24,
+          ),
+        ),
       ),
       child: Column(
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: SupportPage.goldColor, size: 30),
+              Icon(
+                icon,
+                color: SupportPage.goldColor,
+                size: 30,
+              ),
+
               const SizedBox(width: 12),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(color: SupportPage.goldBright, fontSize: 17, fontWeight: FontWeight.bold)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: SupportPage.goldBright,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
                     const SizedBox(height: 7),
-                    Text(text, style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.7)),
+
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        height: 1.7,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
+
           if (buttonText != null && onTap != null) ...[
             const SizedBox(height: 13),
+
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: onTap,
-                icon: const Icon(Icons.send_rounded, size: 18),
+                icon: const Icon(
+                  Icons.send_rounded,
+                  size: 18,
+                ),
                 label: Text(buttonText!),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: SupportPage.goldColor,
-                  side: BorderSide(color: SupportPage.goldColor.withValues(alpha: 0.7)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  side: BorderSide(
+                    color: SupportPage.goldColor.withValues(
+                      alpha: 0.7,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
