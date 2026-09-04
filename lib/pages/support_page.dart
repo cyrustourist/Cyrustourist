@@ -109,6 +109,8 @@ class SupportPage extends StatelessWidget {
 
   Future<void> _website(BuildContext context) => _openUrl(context, websiteUrl);
 
+Future<void> _eitaa(BuildContext context) => _openUrl(context, eitaaUrl);
+
   Widget _actionCard({
     required BuildContext context,
     required IconData icon,
