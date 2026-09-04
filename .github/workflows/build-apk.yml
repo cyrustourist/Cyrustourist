@@ -77,10 +77,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          keytool -list \
-            -keystore "$KEYSTORE_PATH" \
-            -storepass "$STORE_PASSWORD" \
-            -alias "$KEY_ALIAS"
+          keytool -list             -keystore "$KEYSTORE_PATH"             -storepass "$STORE_PASSWORD"             -alias "$KEY_ALIAS"
           echo "Keystore verification successful."
 
       - name: Flutter pub get
@@ -95,10 +92,7 @@ jobs:
           CYRUS_KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          flutter build apk \
-            --release \
-            --target-platform android-arm64 \
-            --android-skip-build-dependency-validation
+          flutter build apk             --release             --target-platform android-arm64             --android-skip-build-dependency-validation
           test -s build/app/outputs/flutter-apk/app-release.apk
           echo "SIGNED APK BUILD SUCCESSFUL."
 
@@ -112,15 +106,29 @@ jobs:
 
       - name: Prepare APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk \
-             build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+          cp build/app/outputs/flutter-apk/app-release.apk              build/app/outputs/flutter-apk/Cyrustourist.ir.apk
 
       - name: Upload APK
+        id: upload_apk
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: Cyrustourist.ir
           path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
           if-no-files-found: error
+          retention-days: 1
+
+      - name: Artifact upload status
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.upload_apk.outcome }}" = "success" ]; then
+            echo "APK artifact uploaded successfully."
+          else
+            echo "WARNING: APK artifact could not be uploaded."
+            echo "APK build and signature verification completed; only artifact upload failed."
+            echo "GitHub artifact storage quota may still be recalculating."
+          fi
 
       - name: Delete temporary keystore
         if: always()
