@@ -1,6 +1,6 @@
 class CartoConfig {
-  // کلید واقعی CARTO را اینجا قرار بده
-  static const String apiKey = 'YOUR_CARTO_API_KEY';
+  // کلید واقعی CARTO
+  static const String apiKey = 'cb1_2whu_1_535e0db3c38cb9e2b233253a';
 
   static const String tileUrl =
       'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
