@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../map_place.dart';
 import '../../config/map_ir_config.dart';
+import '../../config/carto_config.dart';
 import '../../services/map_smart_controller.dart';
 import '../../widgets/map_markers_layer.dart';
 import '../../widgets/map_search_bar.dart';
@@ -54,6 +55,11 @@ class _SmartMapScreenState
   bool originMode = false;
   bool routeLoading = false;
   bool searching = false;
+
+  // Map provider fallback:
+  // Map.ir is tried first. If a Map.ir tile fails, CARTO becomes
+  // the active tile source for the rest of this map screen.
+  bool _useCartoMap = false;
 
   double? routeDistanceKm;
   double? routeDurationMin;
@@ -1321,34 +1327,57 @@ class _SmartMapScreenState
                 initialZoom: 13,
               ),
               children: [
-                TileLayer(
-                  wmsOptions:
-                      const WMSTileLayerOptions(
-                    baseUrl:
-                        'https://map.ir/shiveh',
-                    layers: [
-                      'Shiveh:Shiveh',
-                    ],
-                    styles: [],
-                    format: 'image/png',
-                    version: '1.1.1',
-                    transparent: false,
-                    otherParameters: {
-                      'width': '256',
-                      'height': '256',
+                if (_useCartoMap)
+                  TileLayer(
+                    urlTemplate:
+                        '${CartoConfig.tileUrl}?key={key}',
+                    additionalOptions: {
+                      'key': CartoConfig.apiKey,
+                    },
+                    tileDimension: 256,
+                    userAgentPackageName:
+                        'ir.cyrustourist.app',
+                  )
+                else
+                  TileLayer(
+                    wmsOptions:
+                        const WMSTileLayerOptions(
+                      baseUrl:
+                          'https://map.ir/shiveh',
+                      layers: [
+                        'Shiveh:Shiveh',
+                      ],
+                      styles: [],
+                      format: 'image/png',
+                      version: '1.1.1',
+                      transparent: false,
+                      otherParameters: {
+                        'width': '256',
+                        'height': '256',
+                      },
+                    ),
+                    tileProvider:
+                        NetworkTileProvider(
+                      headers: {
+                        'x-api-key':
+                            MapIrConfig.apiKey,
+                      },
+                    ),
+                    tileDimension: 256,
+                    userAgentPackageName:
+                        'ir.cyrustourist.app',
+                    errorTileCallback:
+                        (_, __, ___) {
+                      if (!mounted ||
+                          _useCartoMap) {
+                        return;
+                      }
+
+                      setState(() {
+                        _useCartoMap = true;
+                      });
                     },
                   ),
-                  tileProvider:
-                      NetworkTileProvider(
-                    headers: {
-                      'x-api-key':
-                          MapIrConfig.apiKey,
-                    },
-                  ),
-                  tileDimension: 256,
-                  userAgentPackageName:
-                      'ir.cyrustourist.app',
-                ),
 
                 if (routePoints.length >=
                     2)
