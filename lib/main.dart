@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/map_state_service.dart';
 import 'providers/map_state_provider.dart';
 import 'config/map_ir_config.dart';
+import 'config/carto_config.dart';
 
 import 'map_place.dart';
 import 'core/language/app_language.dart';
@@ -838,6 +839,10 @@ class _SmartMapPageState
   LatLng? userLocation;
 
   bool routingInProgress = false;
+
+  // نمایش نقشه: ابتدا Map.ir امتحان می‌شود؛ اگر یک تایل Map.ir با
+  // خطا مواجه شود، به‌طور خودکار و سریع به CARTO سوییچ می‌کند.
+  bool useCartoMap = false;
 
   static const String currentLocationLabel =
       'موقعیت فعلی من';
@@ -2276,27 +2281,40 @@ class _SmartMapPageState
               maxZoom: 18,
             ),
             children: [
-              TileLayer(
-                wmsOptions: WMSTileLayerOptions(
-                  baseUrl: 'https://map.ir/shiveh',
-                  layers: ['Shiveh:Shiveh'],
-                  styles: [],
-                  format: 'image/png',
-                  version: '1.1.1',
-                  transparent: false,
-                  otherParameters: {
-                    'width': '256',
-                    'height': '256',
+              if (useCartoMap)
+                TileLayer(
+                  urlTemplate: CartoConfig.tileUrlWithKey,
+                  userAgentPackageName:
+                      'com.cyrustourist.app',
+                )
+              else
+                TileLayer(
+                  wmsOptions: WMSTileLayerOptions(
+                    baseUrl: 'https://map.ir/shiveh',
+                    layers: ['Shiveh:Shiveh'],
+                    styles: [],
+                    format: 'image/png',
+                    version: '1.1.1',
+                    transparent: false,
+                    otherParameters: {
+                      'width': '256',
+                      'height': '256',
+                    },
+                  ),
+                  tileProvider: NetworkTileProvider(
+                    headers: {
+                      'x-api-key': MapIrConfig.apiKey,
+                    },
+                  ),
+                  userAgentPackageName:
+                      'com.cyrustourist.app',
+                  errorTileCallback: (_, __, ___) {
+                    if (!mounted || useCartoMap) return;
+                    setState(() {
+                      useCartoMap = true;
+                    });
                   },
                 ),
-                tileProvider: NetworkTileProvider(
-                  headers: {
-                    'x-api-key': MapIrConfig.apiKey,
-                  },
-                ),
-                userAgentPackageName:
-                    'com.cyrustourist.app',
-              ),
               MarkerLayer(
                 markers: markers(),
               ),
