@@ -176,9 +176,10 @@ jobs:
           TAG="v${{ steps.bump.outputs.new_version }}"
           APK="build/app/outputs/flutter-apk/Cyrustourist.ir.apk"
 
-          echo "Creating release:"
-          echo "TAG = $TAG"
-          echo "APK = $APK"
+          echo "Creating GitHub Release..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Tag: $TAG"
+          echo "APK: $APK"
 
           gh release create "$TAG" \
             "$APK" \
@@ -186,30 +187,105 @@ jobs:
             --title "Cyrus Tourist $TAG" \
             --notes "Automated build from commit ${{ github.sha }}"
 
-          echo "Release created."
+          echo "Release created successfully."
+
+          echo "Getting real Release information from GitHub API..."
+
+          RELEASE_JSON="$(
+            gh api \
+              "/repos/${{ github.repository }}/releases/tags/${TAG}"
+          )"
 
           RELEASE_URL="$(
-            gh release view "$TAG" \
-              --repo "${{ github.repository }}" \
-              --json url \
-              --jq '.url'
+            echo "$RELEASE_JSON" \
+              | jq -r '.html_url'
           )"
 
-          ASSET_URL="$(
-            gh release view "$TAG" \
-              --repo "${{ github.repository }}" \
-              --json assets \
-              --jq '.assets[] | select(.name == "Cyrustourist.ir.apk") | .url'
+          APK_URL="$(
+            echo "$RELEASE_JSON" \
+              | jq -r '
+                .assets[]
+                | select(.name == "Cyrustourist.ir.apk")
+                | .browser_download_url
+              '
           )"
+
+          APK_STATE="$(
+            echo "$RELEASE_JSON" \
+              | jq -r '
+                .assets[]
+                | select(.name == "Cyrustourist.ir.apk")
+                | .state
+              '
+          )"
+
+          APK_SIZE="$(
+            echo "$RELEASE_JSON" \
+              | jq -r '
+                .assets[]
+                | select(.name == "Cyrustourist.ir.apk")
+                | .size
+              '
+          )"
+
+          echo ""
+          echo "======================================"
+          echo "REAL GITHUB RELEASE INFORMATION"
+          echo "======================================"
+          echo "Release URL:"
+          echo "$RELEASE_URL"
+          echo ""
+          echo "APK Download URL:"
+          echo "$APK_URL"
+          echo ""
+          echo "APK State:"
+          echo "$APK_STATE"
+          echo ""
+          echo "APK Size:"
+          echo "$APK_SIZE bytes"
+          echo "======================================"
 
           test -n "$RELEASE_URL"
-          test -n "$ASSET_URL"
+          test "$RELEASE_URL" != "null"
 
-          echo "Release URL: $RELEASE_URL"
-          echo "APK URL: $ASSET_URL"
+          test -n "$APK_URL"
+          test "$APK_URL" != "null"
+
+          test "$APK_STATE" = "uploaded"
+
+          test "$APK_SIZE" -gt 0
 
           echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
-          echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
+          echo "apk_size=$APK_SIZE" >> "$GITHUB_OUTPUT"
+
+      - name: Test APK download URL
+        shell: bash
+        env:
+          APK_URL: ${{ steps.release.outputs.apk_url }}
+        run: |
+          set -euo pipefail
+
+          echo "Testing APK download URL..."
+
+          HTTP_CODE="$(
+            curl \
+              --location \
+              --silent \
+              --show-error \
+              --output /dev/null \
+              --write-out "%{http_code}" \
+              "$APK_URL"
+          )"
+
+          echo "HTTP status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ERROR: APK download URL did not return HTTP 200."
+            exit 1
+          fi
+
+          echo "APK download URL is working."
 
       - name: Verify Release and APK
         shell: bash
@@ -226,22 +302,33 @@ jobs:
           gh release view "$TAG" \
             --repo "${{ github.repository }}"
 
+          echo ""
           echo "Checking APK asset..."
 
-          gh release view "$TAG" \
-            --repo "${{ github.repository }}" \
-            --json assets \
-            --jq '.assets[] | select(.name == "Cyrustourist.ir.apk") | "\(.name) | \(.size) bytes"'
+          gh api \
+            "/repos/${{ github.repository }}/releases/tags/${TAG}" \
+            --jq '
+              .assets[]
+              | select(.name == "Cyrustourist.ir.apk")
+              | {
+                  name: .name,
+                  size: .size,
+                  state: .state,
+                  browser_download_url: .browser_download_url
+                }
+            '
 
+          echo ""
           echo "Release and APK verification successful."
 
-      - name: Add APK download link to Summary
+      - name: Add APK download links to Summary
         if: success()
         shell: bash
         env:
           VERSION: ${{ steps.bump.outputs.new_version }}
           RELEASE_URL: ${{ steps.release.outputs.release_url }}
-          APK_URL: ${{ steps.release.outputs.asset_url }}
+          APK_URL: ${{ steps.release.outputs.apk_url }}
+          APK_SIZE: ${{ steps.release.outputs.apk_size }}
         run: |
           set -euo pipefail
 
@@ -255,29 +342,36 @@ jobs:
           **نام فایل:**
           \`Cyrustourist.ir.apk\`
 
-          ## 📥 دانلود APK
-
-          ### ⭐ دانلود مستقیم APK
-
-          👉 **[دانلود مستقیم Cyrustourist.ir.apk](${APK_URL})**
-
-          ### 📦 صفحه Release
-
-          👉 **[مشاهده Release نسخه ${VERSION}](${RELEASE_URL})**
-
-          > لینک دانلود بالا مستقیماً به فایل APK داخل GitHub Release متصل است و دیگر لازم نیست داخل صفحه Release دنبال فایل بگردید.
+          **حجم APK:** ${APK_SIZE} bytes
 
           ---
 
-          ### وضعیت Build
+          ## 📥 دانلود APK
+
+          ### ⭐ دانلود مستقیم
+
+          👉 **[⬇️ دانلود مستقیم Cyrustourist.ir.apk](${APK_URL})**
+
+          ### 📦 صفحه Release
+
+          👉 **[📦 مشاهده Release نسخه ${VERSION}](${RELEASE_URL})**
+
+          > لینک دانلود بالا مستقیماً از فیلد \`browser_download_url\` خود GitHub گرفته شده است.
+
+          ---
+
+          ## 🔎 بررسی نهایی
 
           - ✅ APK ساخته شد
           - ✅ APK با Keystore سایروس امضا شد
           - ✅ امضای APK تأیید شد
           - ✅ Release ساخته شد
-          - ✅ فایل \`Cyrustourist.ir.apk\` در Release قرار گرفت
-          - ✅ وجود فایل APK در Release تأیید شد
-          - ✅ لینک مستقیم واقعی APK استخراج شد
+          - ✅ فایل \`Cyrustourist.ir.apk\` آپلود شد
+          - ✅ Asset در GitHub پیدا شد
+          - ✅ وضعیت Asset برابر \`uploaded\` است
+          - ✅ حجم فایل تأیید شد
+          - ✅ لینک واقعی دانلود از GitHub API دریافت شد
+          - ✅ لینک دانلود با HTTP 200 تست شد
 
           **نسخه آماده تست: ${VERSION}**
           EOF
