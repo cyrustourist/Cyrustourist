@@ -177,6 +177,46 @@ jobs:
           echo "Release $TAG created successfully."
           echo "APK uploaded to GitHub Release."
 
+      - name: Add APK download link to Summary
+        if: success()
+        shell: bash
+        env:
+          VERSION: ${{ steps.bump.outputs.new_version }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${VERSION}"
+          RELEASE_URL="https://github.com/${REPOSITORY}/releases/tag/${TAG}"
+
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          # 📱 Cyrus Tourist APK آماده است
+
+          ## ✅ Build موفق بود
+
+          **نسخه:** ${VERSION}
+
+          **نام فایل:**
+          \`Cyrustourist.ir.apk\`
+
+          ## 📥 دانلود APK
+
+          👉 **[دانلود مستقیم APK از GitHub Release](${RELEASE_URL})**
+
+          > روی لینک بالا بزن و در صفحه بازشده فقط فایل **Cyrustourist.ir.apk** را انتخاب کن.
+
+          ---
+
+          ### وضعیت Build
+
+          - ✅ APK ساخته شد
+          - ✅ APK با Keystore سایروس امضا شد
+          - ✅ امضای APK تأیید شد
+          - ✅ Release ساخته شد
+          - ✅ APK در Release قرار گرفت
+          - ✅ لینک دانلود در همین صفحه قرار گرفت
+          EOF
+
       - name: Delete temporary keystore
         if: always()
         shell: bash
