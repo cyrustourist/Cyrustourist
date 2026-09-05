@@ -356,6 +356,20 @@ class _VideoPageState extends State<VideoPage> {
         return 'ar';
       case AppLanguage.english:
         return 'en';
+      case AppLanguage.german:
+        return 'de';
+      case AppLanguage.spanish:
+        return 'es';
+      case AppLanguage.french:
+        return 'fr';
+      case AppLanguage.italian:
+        return 'it';
+      case AppLanguage.russian:
+        return 'ru';
+      case AppLanguage.turkish:
+        return 'tr';
+      case AppLanguage.chinese:
+        return 'zh';
     }
   }
 
@@ -372,10 +386,24 @@ class _VideoPageState extends State<VideoPage> {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'فیلم‌های گردشگری';
-      case AppLanguage.english:
-        return 'Tourism Videos';
       case AppLanguage.arabic:
         return 'فيديوهات سياحية';
+      case AppLanguage.english:
+        return 'Tourism Videos';
+      case AppLanguage.german:
+        return 'Tourismus-Videos';
+      case AppLanguage.spanish:
+        return 'Vídeos turísticos';
+      case AppLanguage.french:
+        return 'Vidéos touristiques';
+      case AppLanguage.italian:
+        return 'Video turistici';
+      case AppLanguage.russian:
+        return 'Туристические видео';
+      case AppLanguage.turkish:
+        return 'Turizm Videoları';
+      case AppLanguage.chinese:
+        return '旅游视频';
     }
   }
 
@@ -383,10 +411,24 @@ class _VideoPageState extends State<VideoPage> {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'فیلم‌های منتخب گردشگری';
-      case AppLanguage.english:
-        return 'Selected Tourism Videos';
       case AppLanguage.arabic:
         return 'فيديوهات سياحية مختارة';
+      case AppLanguage.english:
+        return 'Selected Tourism Videos';
+      case AppLanguage.german:
+        return 'Ausgewählte Tourismus-Videos';
+      case AppLanguage.spanish:
+        return 'Vídeos turísticos seleccionados';
+      case AppLanguage.french:
+        return 'Vidéos touristiques sélectionnées';
+      case AppLanguage.italian:
+        return 'Video turistici selezionati';
+      case AppLanguage.russian:
+        return 'Избранные туристические видео';
+      case AppLanguage.turkish:
+        return 'Seçilmiş Turizm Videoları';
+      case AppLanguage.chinese:
+        return '精选旅游视频';
     }
   }
 
@@ -394,10 +436,24 @@ class _VideoPageState extends State<VideoPage> {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'ایران را زیبا ببینید.';
-      case AppLanguage.english:
-        return 'Discover the beauty of Iran.';
       case AppLanguage.arabic:
         return 'اكتشفوا جمال إيران.';
+      case AppLanguage.english:
+        return 'Discover the beauty of Iran.';
+      case AppLanguage.german:
+        return 'Entdecken Sie die Schönheit des Iran.';
+      case AppLanguage.spanish:
+        return 'Descubre la belleza de Irán.';
+      case AppLanguage.french:
+        return "Découvrez la beauté de l'Iran.";
+      case AppLanguage.italian:
+        return "Scopri la bellezza dell'Iran.";
+      case AppLanguage.russian:
+        return 'Откройте для себя красоту Ирана.';
+      case AppLanguage.turkish:
+        return 'İran\'ın güzelliğini keşfedin.';
+      case AppLanguage.chinese:
+        return '探索伊朗之美。';
     }
   }
 
@@ -405,10 +461,24 @@ class _VideoPageState extends State<VideoPage> {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'بازدید';
-      case AppLanguage.english:
-        return 'Visit';
       case AppLanguage.arabic:
         return 'زيارة';
+      case AppLanguage.english:
+        return 'Visit';
+      case AppLanguage.german:
+        return 'Ansehen';
+      case AppLanguage.spanish:
+        return 'Ver';
+      case AppLanguage.french:
+        return 'Voir';
+      case AppLanguage.italian:
+        return 'Guarda';
+      case AppLanguage.russian:
+        return 'Смотреть';
+      case AppLanguage.turkish:
+        return 'İzle';
+      case AppLanguage.chinese:
+        return '观看';
     }
   }
 
@@ -416,10 +486,24 @@ class _VideoPageState extends State<VideoPage> {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'فیلم‌های اقامتی';
-      case AppLanguage.english:
-        return 'Accommodation Videos';
       case AppLanguage.arabic:
         return 'فيديوهات الإقامة';
+      case AppLanguage.english:
+        return 'Accommodation Videos';
+      case AppLanguage.german:
+        return 'Unterkunftsvideos';
+      case AppLanguage.spanish:
+        return 'Vídeos de alojamiento';
+      case AppLanguage.french:
+        return "Vidéos d'hébergement";
+      case AppLanguage.italian:
+        return 'Video degli alloggi';
+      case AppLanguage.russian:
+        return 'Видео о жилье';
+      case AppLanguage.turkish:
+        return 'Konaklama Videoları';
+      case AppLanguage.chinese:
+        return '住宿视频';
     }
   }
 
@@ -427,10 +511,24 @@ class _VideoPageState extends State<VideoPage> {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'جاذبه‌های گردشگری';
-      case AppLanguage.english:
-        return 'Tourist Attractions';
       case AppLanguage.arabic:
         return 'المعالم السياحية';
+      case AppLanguage.english:
+        return 'Tourist Attractions';
+      case AppLanguage.german:
+        return 'Sehenswürdigkeiten';
+      case AppLanguage.spanish:
+        return 'Atracciones turísticas';
+      case AppLanguage.french:
+        return 'Attractions touristiques';
+      case AppLanguage.italian:
+        return 'Attrazioni turistiche';
+      case AppLanguage.russian:
+        return 'Туристические достопримечательности';
+      case AppLanguage.turkish:
+        return 'Turistik Yerler';
+      case AppLanguage.chinese:
+        return '旅游景点';
     }
   }
 
@@ -439,10 +537,24 @@ class _VideoPageState extends State<VideoPage> {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'بازگشت';
-      case AppLanguage.english:
-        return 'Back';
       case AppLanguage.arabic:
         return 'رجوع';
+      case AppLanguage.english:
+        return 'Back';
+      case AppLanguage.german:
+        return 'Zurück';
+      case AppLanguage.spanish:
+        return 'Atrás';
+      case AppLanguage.french:
+        return 'Retour';
+      case AppLanguage.italian:
+        return 'Indietro';
+      case AppLanguage.russian:
+        return 'Назад';
+      case AppLanguage.turkish:
+        return 'Geri';
+      case AppLanguage.chinese:
+        return '返回';
     }
   }
 
