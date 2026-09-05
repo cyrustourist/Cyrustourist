@@ -83,36 +83,56 @@ class AppText {
 
       case AppLanguage.english:
         return 'Map';
+
+      case AppLanguage.german:
+        return 'Karte';
+
+      case AppLanguage.spanish:
+        return 'Mapa';
+
+      case AppLanguage.french:
+        return 'Carte';
+
+      case AppLanguage.italian:
+        return 'Mappa';
+
+      case AppLanguage.russian:
+        return 'Карта';
+
+      case AppLanguage.turkish:
+        return 'Harita';
+
+      case AppLanguage.chinese:
+        return '地图';
     }
   }
 
   static bool get rtl =>
-      LanguageManager.current != AppLanguage.english;
+      LanguageManager.current == AppLanguage.persian ||
+      LanguageManager.current == AppLanguage.arabic;
 
   static String title() {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'سایروس توریست';
 
-      case AppLanguage.english:
-        return 'Cyrus Tourist';
-
       case AppLanguage.arabic:
         return 'سايروس توريست';
+
+      case AppLanguage.english:
+      case AppLanguage.german:
+      case AppLanguage.spanish:
+      case AppLanguage.french:
+      case AppLanguage.italian:
+      case AppLanguage.russian:
+      case AppLanguage.turkish:
+      case AppLanguage.chinese:
+        return 'Cyrus Tourist';
     }
   }
 
   static String languageName() {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'پارسی';
-
-      case AppLanguage.english:
-        return 'English';
-
-      case AppLanguage.arabic:
-        return 'العربية';
-    }
+    return LanguageManager.languageName(LanguageManager.current);
   }
 }
 
@@ -1626,11 +1646,32 @@ class _SmartMapPageState
       case AppLanguage.persian:
         return 'در حال آماده‌سازی نقشه گردشگری...';
 
+      case AppLanguage.arabic:
+        return 'جارٍ إعداد الخريطة السياحية...';
+
       case AppLanguage.english:
         return 'Preparing Tourism Map...';
 
-      case AppLanguage.arabic:
-        return 'جارٍ إعداد الخريطة السياحية...';
+      case AppLanguage.german:
+        return 'Reisekarte wird vorbereitet...';
+
+      case AppLanguage.spanish:
+        return 'Preparando el mapa turístico...';
+
+      case AppLanguage.french:
+        return 'Préparation de la carte touristique...';
+
+      case AppLanguage.italian:
+        return 'Preparazione della mappa turistica...';
+
+      case AppLanguage.russian:
+        return 'Подготовка туристической карты...';
+
+      case AppLanguage.turkish:
+        return 'Turizm haritası hazırlanıyor...';
+
+      case AppLanguage.chinese:
+        return '正在准备旅游地图...';
     }
   }
 
@@ -1639,11 +1680,32 @@ class _SmartMapPageState
       case AppLanguage.persian:
         return 'لطفاً چند لحظه صبر کنید';
 
+      case AppLanguage.arabic:
+        return 'يرجى الانتظار لحظة';
+
       case AppLanguage.english:
         return 'Please wait a moment';
 
-      case AppLanguage.arabic:
-        return 'يرجى الانتظار لحظة';
+      case AppLanguage.german:
+        return 'Bitte einen Moment warten';
+
+      case AppLanguage.spanish:
+        return 'Por favor, espera un momento';
+
+      case AppLanguage.french:
+        return 'Veuillez patienter un instant';
+
+      case AppLanguage.italian:
+        return 'Attendere un momento, per favore';
+
+      case AppLanguage.russian:
+        return 'Пожалуйста, подождите немного';
+
+      case AppLanguage.turkish:
+        return 'Lütfen bir an bekleyin';
+
+      case AppLanguage.chinese:
+        return '请稍候';
     }
   }
 
@@ -1652,11 +1714,32 @@ class _SmartMapPageState
       case AppLanguage.persian:
         return 'در حال بررسی موقعیت شما...';
 
+      case AppLanguage.arabic:
+        return 'جارٍ تحديد موقعك...';
+
       case AppLanguage.english:
         return 'Checking your location...';
 
-      case AppLanguage.arabic:
-        return 'جارٍ تحديد موقعك...';
+      case AppLanguage.german:
+        return 'Dein Standort wird überprüft...';
+
+      case AppLanguage.spanish:
+        return 'Comprobando tu ubicación...';
+
+      case AppLanguage.french:
+        return 'Vérification de votre position...';
+
+      case AppLanguage.italian:
+        return 'Verifica della tua posizione...';
+
+      case AppLanguage.russian:
+        return 'Проверка вашего местоположения...';
+
+      case AppLanguage.turkish:
+        return 'Konumunuz kontrol ediliyor...';
+
+      case AppLanguage.chinese:
+        return '正在检查您的位置...';
     }
   }
 
