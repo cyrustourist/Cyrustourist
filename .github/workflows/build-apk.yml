@@ -76,6 +76,66 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Verify project assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "======================================"
+          echo "VERIFYING FLUTTER ASSETS"
+          echo "======================================"
+
+          REQUIRED_ASSETS=(
+            "assets/images/splash.jpg"
+            "assets/images/home-hero.jpg"
+            "assets/images/logo-new.jpg"
+            "assets/images/video_menu_header.png"
+          )
+
+          FAILED=0
+
+          for ASSET in "${REQUIRED_ASSETS[@]}"; do
+            if [ -f "$ASSET" ]; then
+              SIZE="$(stat -c%s "$ASSET")"
+              echo "OK: $ASSET ($SIZE bytes)"
+            else
+              echo "ERROR: Missing asset: $ASSET"
+              FAILED=1
+            fi
+          done
+
+          echo ""
+          echo "Checking old deleted home images..."
+
+          OLD_ASSETS=(
+            "assets/images/home_fa.jpg"
+            "assets/images/home_en.jpg"
+            "assets/images/home_ar.jpg"
+          )
+
+          for ASSET in "${OLD_ASSETS[@]}"; do
+            if [ -f "$ASSET" ]; then
+              echo "WARNING: Old asset still exists: $ASSET"
+            else
+              echo "OK: Old asset not present: $ASSET"
+            fi
+          done
+
+          echo ""
+          echo "Checking pubspec asset declarations..."
+
+          grep -n "assets/images/" pubspec.yaml || true
+
+          echo ""
+          echo "======================================"
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "ERROR: One or more required assets are missing."
+            exit 1
+          fi
+
+          echo "Asset verification successful."
+
       - name: Decode release keystore
         shell: bash
         env:
@@ -111,7 +171,49 @@ jobs:
           echo "Keystore verification successful."
 
       - name: Flutter pub get
-        run: flutter pub get
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          flutter pub get
+
+      - name: Flutter clean
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Cleaning Flutter build cache..."
+
+          flutter clean
+
+          echo "Flutter clean completed."
+
+      - name: Flutter pub get after clean
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          flutter pub get
+
+      - name: Verify Flutter configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "======================================"
+          echo "FLUTTER PROJECT CHECK"
+          echo "======================================"
+
+          echo ""
+          echo "Pubspec version:"
+          grep '^version:' pubspec.yaml
+
+          echo ""
+          echo "Flutter dependencies:"
+          flutter pub deps --style=compact
+
+          echo ""
+          echo "======================================"
 
       - name: Build signed APK
         shell: bash
@@ -121,16 +223,76 @@ jobs:
           CYRUS_KEY_PASSWORD: ${{ secrets.CYRUS_KEY_PASSWORD }}
           CYRUS_KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+
+          LOG_FILE="$RUNNER_TEMP/flutter-build.log"
+
+          echo "======================================"
+          echo "STARTING SIGNED APK BUILD"
+          echo "======================================"
+          echo ""
+
+          echo "Version:"
+          grep '^version:' pubspec.yaml
+
+          echo ""
+          echo "Target platform: android-arm64"
+          echo "Build mode: release"
+          echo ""
+
+          set +e
 
           flutter build apk \
             --release \
             --target-platform android-arm64 \
-            --android-skip-build-dependency-validation
+            --android-skip-build-dependency-validation \
+            2>&1 | tee "$LOG_FILE"
+
+          BUILD_EXIT=${PIPESTATUS[0]}
+
+          set -e
+
+          echo ""
+          echo "======================================"
+
+          if [ "$BUILD_EXIT" -ne 0 ]; then
+            echo "❌ FLUTTER APK BUILD FAILED"
+            echo "Exit code: $BUILD_EXIT"
+            echo "======================================"
+            echo ""
+            echo "========== LAST 200 LINES OF BUILD LOG =========="
+            tail -n 200 "$LOG_FILE" || true
+            echo "=================================================="
+            echo ""
+
+            echo "========== SEARCHING FOR COMMON ERRORS =========="
+            grep -Ei \
+              "error:|exception|failed|FAILURE|missing|not found|asset|gradle" \
+              "$LOG_FILE" \
+              | tail -n 100 \
+              || true
+            echo "================================================="
+
+            {
+              echo "## ❌ Flutter APK Build Failed"
+              echo ""
+              echo "**Exit code:** $BUILD_EXIT"
+              echo ""
+              echo "### Last 200 lines of build log"
+              echo '```text'
+              tail -n 200 "$LOG_FILE" || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            exit "$BUILD_EXIT"
+          fi
+
+          echo "✅ FLUTTER APK BUILD SUCCESSFUL."
+          echo "======================================"
 
           test -s build/app/outputs/flutter-apk/app-release.apk
 
-          echo "SIGNED APK BUILD SUCCESSFUL."
+          echo "APK file exists and is not empty."
 
       - name: Verify APK signature
         shell: bash
@@ -145,6 +307,9 @@ jobs:
           )"
 
           test -n "$APKSIGNER"
+
+          echo "Using apksigner:"
+          echo "$APKSIGNER"
 
           "$APKSIGNER" verify \
             --verbose \
@@ -163,7 +328,10 @@ jobs:
 
           test -s build/app/outputs/flutter-apk/Cyrustourist.ir.apk
 
+          APK_SIZE="$(stat -c%s build/app/outputs/flutter-apk/Cyrustourist.ir.apk)"
+
           echo "APK prepared successfully."
+          echo "APK size: $APK_SIZE bytes"
 
       - name: Create GitHub Release with APK
         id: release
@@ -232,17 +400,22 @@ jobs:
           echo "======================================"
           echo "REAL GITHUB RELEASE INFORMATION"
           echo "======================================"
+
           echo "Release URL:"
           echo "$RELEASE_URL"
+
           echo ""
           echo "APK Download URL:"
           echo "$APK_URL"
+
           echo ""
           echo "APK State:"
           echo "$APK_STATE"
+
           echo ""
           echo "APK Size:"
           echo "$APK_SIZE bytes"
+
           echo "======================================"
 
           test -n "$RELEASE_URL"
