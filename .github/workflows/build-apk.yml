@@ -54,10 +54,14 @@ jobs:
 
           git add pubspec.yaml
 
-          git commit \
-            -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          if git diff --cached --quiet; then
+            echo "No version changes to commit."
+          else
+            git commit \
+              -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
 
-          git push
+            git push
+          fi
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -140,6 +144,8 @@ jobs:
               | tail -n 1
           )"
 
+          test -n "$APKSIGNER"
+
           "$APKSIGNER" verify \
             --verbose \
             build/app/outputs/flutter-apk/app-release.apk
@@ -160,6 +166,7 @@ jobs:
           echo "APK prepared successfully."
 
       - name: Create GitHub Release with APK
+        id: release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,27 +174,76 @@ jobs:
           set -euo pipefail
 
           TAG="v${{ steps.bump.outputs.new_version }}"
+          APK="build/app/outputs/flutter-apk/Cyrustourist.ir.apk"
+
+          echo "Creating release:"
+          echo "TAG = $TAG"
+          echo "APK = $APK"
 
           gh release create "$TAG" \
-            build/app/outputs/flutter-apk/Cyrustourist.ir.apk \
+            "$APK" \
             --repo "${{ github.repository }}" \
             --title "Cyrus Tourist $TAG" \
             --notes "Automated build from commit ${{ github.sha }}"
 
-          echo "Release $TAG created successfully."
-          echo "APK uploaded to GitHub Release."
+          echo "Release created."
+
+          RELEASE_URL="$(
+            gh release view "$TAG" \
+              --repo "${{ github.repository }}" \
+              --json url \
+              --jq '.url'
+          )"
+
+          ASSET_URL="$(
+            gh release view "$TAG" \
+              --repo "${{ github.repository }}" \
+              --json assets \
+              --jq '.assets[] | select(.name == "Cyrustourist.ir.apk") | .url'
+          )"
+
+          test -n "$RELEASE_URL"
+          test -n "$ASSET_URL"
+
+          echo "Release URL: $RELEASE_URL"
+          echo "APK URL: $ASSET_URL"
+
+          echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
+          echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Release and APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.bump.outputs.new_version }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${VERSION}"
+
+          echo "Checking GitHub Release..."
+
+          gh release view "$TAG" \
+            --repo "${{ github.repository }}"
+
+          echo "Checking APK asset..."
+
+          gh release view "$TAG" \
+            --repo "${{ github.repository }}" \
+            --json assets \
+            --jq '.assets[] | select(.name == "Cyrustourist.ir.apk") | "\(.name) | \(.size) bytes"'
+
+          echo "Release and APK verification successful."
 
       - name: Add APK download link to Summary
         if: success()
         shell: bash
         env:
           VERSION: ${{ steps.bump.outputs.new_version }}
-          REPOSITORY: ${{ github.repository }}
+          RELEASE_URL: ${{ steps.release.outputs.release_url }}
+          APK_URL: ${{ steps.release.outputs.asset_url }}
         run: |
           set -euo pipefail
-
-          TAG="v${VERSION}"
-          RELEASE_URL="https://github.com/${REPOSITORY}/releases/tag/${TAG}"
 
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           # 📱 Cyrus Tourist APK آماده است
@@ -201,9 +257,15 @@ jobs:
 
           ## 📥 دانلود APK
 
-          👉 **[دانلود مستقیم APK از GitHub Release](${RELEASE_URL})**
+          ### ⭐ دانلود مستقیم APK
 
-          > روی لینک بالا بزن و در صفحه بازشده فقط فایل **Cyrustourist.ir.apk** را انتخاب کن.
+          👉 **[دانلود مستقیم Cyrustourist.ir.apk](${APK_URL})**
+
+          ### 📦 صفحه Release
+
+          👉 **[مشاهده Release نسخه ${VERSION}](${RELEASE_URL})**
+
+          > لینک دانلود بالا مستقیماً به فایل APK داخل GitHub Release متصل است و دیگر لازم نیست داخل صفحه Release دنبال فایل بگردید.
 
           ---
 
@@ -213,8 +275,11 @@ jobs:
           - ✅ APK با Keystore سایروس امضا شد
           - ✅ امضای APK تأیید شد
           - ✅ Release ساخته شد
-          - ✅ APK در Release قرار گرفت
-          - ✅ لینک دانلود در همین صفحه قرار گرفت
+          - ✅ فایل \`Cyrustourist.ir.apk\` در Release قرار گرفت
+          - ✅ وجود فایل APK در Release تأیید شد
+          - ✅ لینک مستقیم واقعی APK استخراج شد
+
+          **نسخه آماده تست: ${VERSION}**
           EOF
 
       - name: Delete temporary keystore
