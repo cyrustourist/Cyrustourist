@@ -11,10 +11,24 @@ class SocialMediaPage extends StatelessWidget {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'دنبال کنید';
-      case AppLanguage.english:
-        return 'Follow Us';
       case AppLanguage.arabic:
         return 'تابعنا';
+      case AppLanguage.english:
+        return 'Follow Us';
+      case AppLanguage.german:
+        return 'Folgen Sie uns';
+      case AppLanguage.spanish:
+        return 'Síguenos';
+      case AppLanguage.french:
+        return 'Suivez-nous';
+      case AppLanguage.italian:
+        return 'Seguici';
+      case AppLanguage.russian:
+        return 'Подписывайтесь на нас';
+      case AppLanguage.turkish:
+        return 'Bizi Takip Edin';
+      case AppLanguage.chinese:
+        return '关注我们';
     }
   }
 
@@ -22,10 +36,24 @@ class SocialMediaPage extends StatelessWidget {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'با سایروس توریست همراه باشید';
-      case AppLanguage.english:
-        return 'Stay with Cyrus Tourist';
       case AppLanguage.arabic:
         return 'كن مع سايروس توريست';
+      case AppLanguage.english:
+        return 'Stay with Cyrus Tourist';
+      case AppLanguage.german:
+        return 'Bleiben Sie bei Cyrus Tourist';
+      case AppLanguage.spanish:
+        return 'Mantente con Cyrus Tourist';
+      case AppLanguage.french:
+        return 'Restez avec Cyrus Tourist';
+      case AppLanguage.italian:
+        return 'Resta con Cyrus Tourist';
+      case AppLanguage.russian:
+        return 'Оставайтесь с Cyrus Tourist';
+      case AppLanguage.turkish:
+        return 'Cyrus Tourist ile Kalın';
+      case AppLanguage.chinese:
+        return '与Cyrus Tourist同行';
     }
   }
 
@@ -33,10 +61,24 @@ class SocialMediaPage extends StatelessWidget {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'جدیدترین فیلم‌ها و جاذبه‌های گردشگری ایران را دنبال کنید.';
-      case AppLanguage.english:
-        return 'Follow the latest videos and attractions of Iran.';
       case AppLanguage.arabic:
         return 'تابع أحدث الأفلام والمعالم السياحية في إيران.';
+      case AppLanguage.english:
+        return 'Follow the latest videos and attractions of Iran.';
+      case AppLanguage.german:
+        return 'Folgen Sie den neuesten Videos und Attraktionen des Iran.';
+      case AppLanguage.spanish:
+        return 'Sigue los últimos vídeos y atracciones de Irán.';
+      case AppLanguage.french:
+        return "Suivez les dernières vidéos et attractions de l'Iran.";
+      case AppLanguage.italian:
+        return "Segui gli ultimi video e le attrazioni dell'Iran.";
+      case AppLanguage.russian:
+        return 'Следите за последними видео и достопримечательностями Ирана.';
+      case AppLanguage.turkish:
+        return "İran'ın en yeni videolarını ve gezilecek yerlerini takip edin.";
+      case AppLanguage.chinese:
+        return '关注伊朗最新的视频和景点。';
     }
   }
 
@@ -44,18 +86,32 @@ class SocialMediaPage extends StatelessWidget {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return {'instagram':'اینستاگرام','aparat':'آپارات','youtube':'یوتیوب','tiktok':'تیک‌تاک'}[key]!;
-      case AppLanguage.english:
-        return {'instagram':'Instagram','aparat':'Aparat','youtube':'YouTube','tiktok':'TikTok'}[key]!;
       case AppLanguage.arabic:
         return {'instagram':'إنستغرام','aparat':'أبارات','youtube':'يوتيوب','tiktok':'تيك توك'}[key]!;
+      case AppLanguage.english:
+      case AppLanguage.german:
+      case AppLanguage.spanish:
+      case AppLanguage.french:
+      case AppLanguage.italian:
+      case AppLanguage.russian:
+      case AppLanguage.turkish:
+      case AppLanguage.chinese:
+        return {'instagram':'Instagram','aparat':'Aparat','youtube':'YouTube','tiktok':'TikTok'}[key]!;
     }
   }
 
   String _back() {
     switch (LanguageManager.current) {
       case AppLanguage.persian: return 'بازگشت';
-      case AppLanguage.english: return 'Back';
       case AppLanguage.arabic: return 'رجوع';
+      case AppLanguage.english: return 'Back';
+      case AppLanguage.german: return 'Zurück';
+      case AppLanguage.spanish: return 'Atrás';
+      case AppLanguage.french: return 'Retour';
+      case AppLanguage.italian: return 'Indietro';
+      case AppLanguage.russian: return 'Назад';
+      case AppLanguage.turkish: return 'Geri';
+      case AppLanguage.chinese: return '返回';
     }
   }
 
