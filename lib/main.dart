@@ -16,6 +16,7 @@ import 'config/carto_config.dart';
 
 import 'map_place.dart';
 import 'core/language/app_language.dart';
+import 'core/language/menu_translations.dart';
 import 'services/map_places_service.dart';
 import 'pages/category_explorer_page.dart';
 import 'pages/about_page.dart' as about_page;
@@ -132,6 +133,8 @@ class _SplashPageState extends State<SplashPage> {
     super.initState();
 
     LanguageManager.load();
+    MenuLanguage.load();
+    MenuTranslations.preloadAll();
 
     Future.delayed(
       const Duration(seconds: 3),
@@ -189,16 +192,10 @@ class _HomePageState extends State<HomePage> {
   int selected = 0;
 
   String get homeImage {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'assets/images/home_fa.jpg';
-
-      case AppLanguage.english:
-        return 'assets/images/home_en.jpg';
-
-      case AppLanguage.arabic:
-        return 'assets/images/home_ar.jpg';
-    }
+    // یک عکس بدون نوشته برای همه‌ی زبان‌ها — متن ۱۰ کلید با ویجت
+    // Text واقعی (از سیستم ترجمه‌ی جدید) روی همین عکس نمایش داده
+    // می‌شود، نه پیکسل‌های ثابت داخل عکس.
+    return 'assets/images/home-hero.jpg';
   }
 
   // ==========================================================
@@ -210,22 +207,25 @@ class _HomePageState extends State<HomePage> {
       context: context,
       backgroundColor: const Color(0xff071722),
       builder: (_) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            languageItem(
-              'پارسی',
-              AppLanguage.persian,
-            ),
-            languageItem(
-              'English',
-              AppLanguage.english,
-            ),
-            languageItem(
-              'العربية',
-              AppLanguage.arabic,
-            ),
-          ],
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Text(
+                  'انتخاب زبان',
+                  style: TextStyle(
+                    color: Color(0xffffd36a),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              ...kMenuLanguages.map(languageItem),
+              const SizedBox(height: 8),
+            ],
+          ),
         );
       },
     );
@@ -235,26 +235,78 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget languageItem(
-    String text,
-    AppLanguage lang,
-  ) {
+  Widget languageItem(MenuLanguageOption option) {
+    final selected = MenuLanguage.current == option.code;
+
     return ListTile(
       title: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
+        option.nativeName,
+        style: TextStyle(
+          color: selected ? const Color(0xffffd36a) : Colors.white,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
       ),
+      trailing: selected
+          ? const Icon(Icons.check_rounded, color: Color(0xffffd36a))
+          : null,
       onTap: () async {
-        await LanguageManager.setLanguage(lang);
+        await MenuLanguage.setLanguage(option.code);
+
+        // برای سه زبانی که کل اپ می‌شناسد (فارسی/انگلیسی/عربی)،
+        // زبان اصلی اپ هم هماهنگ می‌شود تا بقیه‌ی صفحات هم همراه
+        // شوند؛ برای ۷ زبان دیگر فقط متن همین ۱۰ کلید تغییر می‌کند.
+        if (option.code == 'fa') {
+          await LanguageManager.setLanguage(AppLanguage.persian);
+        } else if (option.code == 'ar') {
+          await LanguageManager.setLanguage(AppLanguage.arabic);
+        } else if (option.code == 'en') {
+          await LanguageManager.setLanguage(AppLanguage.english);
+        }
 
         if (mounted) {
           Navigator.pop(context);
           setState(() {});
         }
+      },
+    );
+  }
+
+  // ==========================================================
+  // MENU (هامبورگر) — جای‌گیر تا گزینه‌های واقعی مشخص شود
+  // ==========================================================
+
+  Future<void> openMenu() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xff071722),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.construction_rounded, color: Color(0xffffd36a), size: 30),
+                SizedBox(height: 10),
+                Text(
+                  'به‌زودی',
+                  style: TextStyle(
+                    color: Color(0xffffd36a),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'گزینه‌های این منو به‌زودی اضافه می‌شود.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
@@ -549,6 +601,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      drawer: _buildMenuDrawer(),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -573,29 +626,111 @@ class _HomePageState extends State<HomePage> {
                       fit: BoxFit.cover,
                     ),
 
+                    // ==================================================
+                    // نوار بالای صفحه: ☰ منو (چپ) — زبان + حساب کاربری (راست)
+                    // ==================================================
+
                     Positioned(
-                      top: 15,
-                      left: 15,
+                      top: 14,
+                      left: 14,
                       child: GestureDetector(
-                        onTap: openLanguage,
+                        onTap: () => Scaffold.of(context).openDrawer(),
                         child: Container(
-                          padding: const EdgeInsets.all(10),
+                          width: 42,
+                          height: 42,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: const Color(0xff0b506b),
-                            borderRadius:
-                                BorderRadius.circular(22),
+                            color: const Color(0xff0b1826)
+                                .withValues(alpha: 0.55),
+                            shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xffffd36a),
+                              color: const Color(0xffffd36a)
+                                  .withValues(alpha: 0.85),
                             ),
                           ),
-                          child: Text(
-                            AppText.languageName(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: const Icon(
+                            Icons.menu_rounded,
+                            color: Color(0xffffd36a),
+                            size: 22,
                           ),
                         ),
+                      ),
+                    ),
+
+                    Positioned(
+                      top: 14,
+                      right: 14,
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: openLanguage,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xff0b1826)
+                                    .withValues(alpha: 0.55),
+                                borderRadius:
+                                    BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xffffd36a)
+                                      .withValues(alpha: 0.85),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.public_rounded,
+                                    color: Color(0xffffd36a),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    MenuLanguage.current
+                                        .toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: Color(0xffffd36a),
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          GestureDetector(
+                            onTap: () => tap(8),
+                            child: Container(
+                              width: 42,
+                              height: 42,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xff0b1826)
+                                    .withValues(alpha: 0.55),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xffffd36a)
+                                      .withValues(alpha: 0.85),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.person_rounded,
+                                color: Color(0xffffd36a),
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -702,6 +837,22 @@ class _HomePageState extends State<HomePage> {
                       width,
                       height,
                     ),
+
+                    // ==================================================
+                    // عنوان‌های ۱۰ کلید (متن واقعی Flutter، نه پیکسل عکس)
+                    // ==================================================
+
+                    caption(1, .02, .535, .18, .18, width, height),
+                    caption(2, .21, .535, .18, .18, width, height),
+                    caption(3, .40, .535, .18, .18, width, height),
+                    caption(4, .59, .535, .18, .18, width, height),
+                    caption(5, .78, .535, .18, .18, width, height),
+
+                    caption(6, .02, .725, .18, .18, width, height),
+                    caption(7, .21, .725, .18, .18, width, height),
+                    caption(8, .40, .725, .18, .18, width, height),
+                    caption(9, .59, .725, .18, .18, width, height),
+                    caption(10, .78, .725, .18, .18, width, height),
                   ],
                 ),
               ),
@@ -709,6 +860,131 @@ class _HomePageState extends State<HomePage> {
           },
         ),
       ),
+    );
+  }
+
+  // ==========================================================
+  // CAPTION (عنوان چندزبانه‌ی هر کلید — روی خودِ عکس بدون‌نوشته)
+  // ==========================================================
+
+  Widget caption(
+    int number,
+    double left,
+    double top,
+    double width,
+    double height,
+    double imageWidth,
+    double imageHeight,
+  ) {
+    final text = MenuTranslations.title(MenuLanguage.current, number);
+
+    final label = text.isNotEmpty ? text : buttonTitle(number);
+
+    return Positioned(
+      left: imageWidth * left,
+      top: imageHeight * (top + height) + 3,
+      width: imageWidth * width,
+      child: IgnorePointer(
+        child: Directionality(
+          textDirection:
+              MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 6,
+              vertical: 3,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xff0b1826).withValues(alpha: 0.62),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                color: const Color(0xffffd36a).withValues(alpha: 0.55),
+                width: 0.6,
+              ),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10.5,
+                height: 1.25,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // DRAWER (منوی ☰ — همان ۱۰ گزینه، به شکل فهرست)
+  // ==========================================================
+
+  Widget _buildMenuDrawer() {
+    return Drawer(
+      backgroundColor: const Color(0xff071722),
+      child: SafeArea(
+        child: Directionality(
+          textDirection:
+              MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Color(0x33ffd36a),
+                    ),
+                  ),
+                ),
+                child: const Text(
+                  'Cyrus Tourist',
+                  style: TextStyle(
+                    color: Color(0xffffd36a),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              for (var number = 1; number <= 10; number++)
+                _drawerItem(number),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerItem(int number) {
+    final text = MenuTranslations.title(MenuLanguage.current, number);
+
+    final label = text.isNotEmpty ? text : buttonTitle(number);
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: const Color(0xff0b506b),
+        foregroundColor: const Color(0xffffd36a),
+        child: Text(
+          '$number',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      onTap: () {
+        Navigator.of(context).pop();
+        tap(number);
+      },
     );
   }
 }
