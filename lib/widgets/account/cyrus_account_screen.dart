@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../pages/residence_register_page.dart';
+
 /// کلید شماره ۸ — حساب کاربری سایروس توریست
 ///
 /// این فایل به‌صورت مستقل طراحی شده است و فعلاً به main.dart
@@ -101,6 +103,7 @@ class CyrusAccountScreen extends StatelessWidget {
                       subtitle:
                           texts.accommodationRegistrationSubtitle,
                       iconColor: const Color(0xffffb84d),
+                      actionId: 'registration',
                     ),
                     _AccountItem(
                       icon: Icons.local_hospital_rounded,
@@ -108,6 +111,7 @@ class CyrusAccountScreen extends StatelessWidget {
                       subtitle:
                           texts.healthTourismRegistrationSubtitle,
                       iconColor: const Color(0xff66e6a5),
+                      actionId: 'registration',
                     ),
                     _AccountItem(
                       icon: Icons.cottage_rounded,
@@ -115,6 +119,7 @@ class CyrusAccountScreen extends StatelessWidget {
                       subtitle:
                           texts.cabinRegistrationSubtitle,
                       iconColor: const Color(0xffffd36a),
+                      actionId: 'registration',
                     ),
                   ],
                 ),
@@ -398,8 +403,19 @@ class CyrusAccountScreen extends StatelessWidget {
       return;
     }
 
-    // اتصال واقعی هر گزینه در مرحله نهایی اتصال کلید ۸
-    // انجام خواهد شد.
+    // هر سه گزینه‌ی ثبت‌نام (اقامتگاه، گردشگری سلامت، کلبه) فعلاً
+    // به همان یک فایل ثبت‌نام آماده و موجود وصل می‌شوند:
+    // residence_register_page.dart (همان کلیدی که بالای «نمایش
+    // فیلم‌ها»، کلید ۴، قرار دارد). بقیه‌ی گزینه‌های حساب کاربری
+    // در مرحله نهایی اتصال کلید ۸ انجام خواهد شد.
+    if (item.actionId == 'registration') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const ResidenceRegisterPage(),
+        ),
+      );
+      return;
+    }
   }
 
   void _handleLogout(
@@ -527,6 +543,7 @@ class _AccountItem {
     required this.iconColor,
     this.futureFeature = false,
     this.logout = false,
+    this.actionId,
   });
 
   final IconData icon;
@@ -535,6 +552,10 @@ class _AccountItem {
   final Color iconColor;
   final bool futureFeature;
   final bool logout;
+
+  /// شناسه‌ی داخلی برای مسیردهی در `_handleAccountItem`
+  /// (مثلاً 'registration' برای هر سه گزینه‌ی ثبت‌نام).
+  final String? actionId;
 }
 
 /// دکمه سه‌بعدی حساب کاربری با سایه طلایی.
