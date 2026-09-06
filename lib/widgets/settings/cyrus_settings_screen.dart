@@ -122,7 +122,7 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
     required String de,
     required String es,
     required String zh,
-    required String ja,
+    required String it,
   }) {
     switch (_languageCode) {
       case 'en':
@@ -141,8 +141,8 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
         return es;
       case 'zh':
         return zh;
-      case 'ja':
-        return ja;
+      case 'it':
+        return it;
       case 'fa':
       default:
         return fa;
@@ -213,7 +213,7 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
                         de: 'Design',
                         es: 'Tema',
                         zh: '主题',
-                        ja: 'テーマ',
+                        it: 'Tema',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -234,7 +234,7 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
                         de: 'Benachrichtigungen',
                         es: 'Notificaciones',
                         zh: '通知',
-                        ja: '通知',
+                        it: 'Notifiche',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -332,7 +332,7 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
                 de: 'Einstellungen',
                 es: 'Ajustes',
                 zh: '设置',
-                ja: '設定',
+                it: 'Impostazioni',
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
