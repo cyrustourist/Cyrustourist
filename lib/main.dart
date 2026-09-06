@@ -19,10 +19,7 @@ import 'core/language/app_language.dart';
 import 'core/language/menu_translations.dart';
 import 'services/map_places_service.dart';
 import 'pages/category_explorer_page.dart';
-import 'pages/about_page.dart' as about_page;
-import 'pages/support_page.dart';
 import 'pages/favorites_page.dart';
-import 'pages/social_media_page.dart';
 
 // ============================================================
 // NEW PAGES
@@ -30,6 +27,16 @@ import 'pages/social_media_page.dart';
 
 import 'pages/video_page.dart';
 import 'pages/travel/travel_guide_page.dart' as travel_guide;
+
+// ------------------------------------------------------------
+// فایل‌های جدید هدر و کلیدهای ۷/۸/۹ (اتصال نهایی)
+// ------------------------------------------------------------
+import 'widgets/cyrus_language_button.dart';
+import 'widgets/cyrus_header_account_button.dart';
+import 'widgets/toolbox/cyrus_smart_toolbox.dart';
+import 'widgets/account/cyrus_account_screen.dart';
+import 'widgets/search/cyrus_smart_search.dart';
+import 'widgets/settings/cyrus_settings_screen.dart';
 
 // ============================================================
 // MAIN
@@ -353,16 +360,16 @@ class _HomePageState extends State<HomePage> {
         return 'اقامتگاه‌ها';
 
       case 6:
-        return 'راهنمای سفر';
+        return 'تورها';
 
       case 7:
-        return 'دنبال کنید';
+        return 'برنامه‌ریز سفر';
 
       case 8:
-        return 'درباره ما';
+        return 'پروفایل';
 
       case 9:
-        return 'پشتیبانی';
+        return 'جستجو';
 
       case 10:
         return 'علاقه‌مندی‌ها';
@@ -490,14 +497,16 @@ class _HomePageState extends State<HomePage> {
 }
 
     // ========================================================
-    // کلید 8 = درباره ما
+    // کلید 8 = حساب کاربری / پروفایل
     // ========================================================
 
     if (number == 8) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => about_page.AboutPage(),
+          builder: (_) => CyrusAccountScreen(
+            languageCode: MenuLanguage.current,
+          ),
         ),
       );
 
@@ -505,14 +514,16 @@ class _HomePageState extends State<HomePage> {
     }
 
     // ========================================================
-    // کلید 9 = پشتیبانی و تماس
+    // کلید 9 = جستجوی هوشمند
     // ========================================================
 
     if (number == 9) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => SupportPage(),
+          builder: (_) => CyrusSmartSearch(
+            languageCode: MenuLanguage.current,
+          ),
         ),
       );
 
@@ -520,14 +531,16 @@ class _HomePageState extends State<HomePage> {
     }
 
     // ========================================================
-    // کلید 7 = دنبال کنید
+    // کلید 7 = جعبه ابزار بسیار هوشمند (برنامه‌ریز سفر)
     // ========================================================
 
     if (number == 7) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const SocialMediaPage(),
+          builder: (_) => CyrusSmartToolbox(
+            languageCode: MenuLanguage.current,
+          ),
         ),
       );
 
@@ -654,7 +667,12 @@ class _HomePageState extends State<HomePage> {
                       top: 14,
                       left: 14,
                       child: GestureDetector(
-                        onTap: () => Scaffold.of(context).openDrawer(),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CyrusSettingsScreen(),
+                          ),
+                        ),
                         child: Container(
                           width: 42,
                           height: 42,
@@ -682,72 +700,64 @@ class _HomePageState extends State<HomePage> {
                       right: 14,
                       child: Row(
                         children: [
-                          GestureDetector(
-                            onTap: openLanguage,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xff0b1826)
+                                  .withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xffffd36a)
+                                    .withValues(alpha: 0.85),
                               ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xff0b1826)
-                                    .withValues(alpha: 0.55),
-                                borderRadius:
-                                    BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(0xffffd36a)
-                                      .withValues(alpha: 0.85),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.public_rounded,
-                                    color: Color(0xffffd36a),
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    MenuLanguage.current
-                                        .toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12.5,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  const Icon(
-                                    Icons.keyboard_arrow_down_rounded,
-                                    color: Color(0xffffd36a),
-                                    size: 16,
-                                  ),
-                                ],
-                              ),
+                            ),
+                            child: CyrusLanguageButton(
+                              currentLanguage: MenuLanguage.current,
+                              onLanguageChanged: (code) async {
+                                await MenuLanguage.setLanguage(code);
+
+                                // هماهنگی با زبان اصلی برنامه برای
+                                // سه زبانی که کل اپ می‌شناسد.
+                                if (code == 'fa') {
+                                  await LanguageManager.setLanguage(
+                                    AppLanguage.persian,
+                                  );
+                                } else if (code == 'ar') {
+                                  await LanguageManager.setLanguage(
+                                    AppLanguage.arabic,
+                                  );
+                                } else if (code == 'en') {
+                                  await LanguageManager.setLanguage(
+                                    AppLanguage.english,
+                                  );
+                                }
+
+                                if (mounted) setState(() {});
+                              },
                             ),
                           ),
                           const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () => tap(8),
-                            child: Container(
-                              width: 42,
-                              height: 42,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: const Color(0xff0b1826)
-                                    .withValues(alpha: 0.55),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xffffd36a)
-                                      .withValues(alpha: 0.85),
-                                ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xff0b1826)
+                                  .withValues(alpha: 0.55),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xffffd36a)
+                                    .withValues(alpha: 0.85),
                               ),
-                              child: const Icon(
-                                Icons.person_rounded,
-                                color: Color(0xffffd36a),
-                                size: 22,
-                              ),
+                            ),
+                            child: CyrusHeaderAccountButton(
+                              currentLanguage: MenuLanguage.current,
+                              onAccountPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => CyrusAccountScreen(
+                                      languageCode: MenuLanguage.current,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
