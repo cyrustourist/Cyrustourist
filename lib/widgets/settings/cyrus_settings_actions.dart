@@ -6,6 +6,14 @@ import 'cyrus_settings_panel.dart';
 ///
 /// این فایل عمداً مستقل نگه داشته شده است تا بعداً گزینه‌های
 /// تأییدشده تنظیمات بدون دستکاری ساختار اصلی برنامه اضافه شوند.
+///
+/// نکته اتصال نهایی:
+/// گزینه‌های «شبکه‌های مجازی / درباره ما / پشتیبانی» در نهایت
+/// از طریق cyrus_settings_social_about_support.dart به
+/// cyrus_settings_screen.dart وصل شدند، چون آن فایل از قبل
+/// UI سه‌بعدی و ترجمه کامل ۱۰ زبان آماده داشت. این فایل
+/// (cyrus_settings_actions.dart) فعلاً استفاده نمی‌شود و برای
+/// گزینه‌های تأییدشده‌ی بعدی نگه داشته شده است.
 class CyrusSettingsActions {
   CyrusSettingsActions._();
 
@@ -33,8 +41,6 @@ class CyrusSettingsActions {
 
 /// صفحه واسط داخلی برای جلوگیری از وابستگی مستقیم این فایل
 /// به فایل صفحه تنظیمات.
-///
-/// اتصال نهایی صفحه اصلی در مرحله اتصال کلیدها انجام می‌شود.
 class _SettingsScreenPlaceholder extends StatelessWidget {
   const _SettingsScreenPlaceholder();
 
