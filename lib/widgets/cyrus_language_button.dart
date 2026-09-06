@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 /// دکمه انتخاب زبان سایروس توریست.
 ///
-/// این فایل مستقل است و فعلاً به main.dart یا سیستم اصلی ترجمه
-/// متصل نمی‌شود.
-/// اتصال نهایی در مرحله یکپارچه‌سازی انجام خواهد شد.
+/// این ویجت در main.dart (هدر صفحه اصلی) استفاده و به
+/// MenuLanguage/MenuTranslations وصل است.
 ///
 /// زبان‌های پشتیبانی‌شده:
 /// fa = فارسی
@@ -16,7 +15,7 @@ import 'package:flutter/material.dart';
 /// de = Deutsch
 /// es = Español
 /// zh = 中文
-/// ja = 日本語
+/// it = Italiano
 class CyrusLanguageButton extends StatelessWidget {
   const CyrusLanguageButton({
     super.key,
@@ -101,10 +100,10 @@ class CyrusLanguageButton extends StatelessWidget {
       isRtl: false,
     ),
     CyrusLanguage(
-      code: 'ja',
-      name: '日本語',
-      nativeName: '日本語',
-      flag: '🇯🇵',
+      code: 'it',
+      name: 'Italiano',
+      nativeName: 'Italiano',
+      flag: '🇮🇹',
       isRtl: false,
     ),
   ];
@@ -204,8 +203,8 @@ class CyrusLanguageButton extends StatelessWidget {
         return 'Idioma';
       case 'zh':
         return '语言';
-      case 'ja':
-        return '言語';
+      case 'it':
+        return 'Lingua';
       case 'fa':
       default:
         return 'زبان';
