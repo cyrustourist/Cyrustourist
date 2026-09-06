@@ -14,7 +14,7 @@ import 'package:flutter/material.dart';
 ///
 /// زبان‌های آماده:
 /// فارسی، انگلیسی، عربی، ترکی، روسی،
-/// فرانسوی، آلمانی، اسپانیایی، چینی، ژاپنی
+/// فرانسوی، آلمانی، اسپانیایی، چینی، ایتالیایی
 
 class CyrusSettingsNotifications {
   CyrusSettingsNotifications._();
@@ -45,7 +45,7 @@ class CyrusSettingsNotifications {
           'App-Benachrichtigungen',
           'Notificaciones de la aplicación',
           '应用通知',
-          'アプリ通知',
+          'Notifiche app',
         ),
         subtitle: _text(
           languageCode,
@@ -58,7 +58,7 @@ class CyrusSettingsNotifications {
           'Benachrichtigungen von CyrusTourist erhalten',
           'Recibir notificaciones de CyrusTourist',
           '接收 CyrusTourist 通知',
-          'CyrusTouristから通知を受け取る',
+          'Ricevi notifiche da CyrusTourist',
         ),
         value: notificationsEnabled,
         enabled: true,
@@ -78,7 +78,7 @@ class CyrusSettingsNotifications {
           'Tourismus-Benachrichtigungen',
           'Notificaciones turísticas',
           '旅游通知',
-          '観光通知',
+          'Notifiche turistiche',
         ),
         subtitle: _text(
           languageCode,
@@ -91,7 +91,7 @@ class CyrusSettingsNotifications {
           'Neuigkeiten zu Sehenswürdigkeiten und Veranstaltungen',
           'Novedades sobre atracciones y eventos turísticos',
           '景点和旅游活动更新',
-          '観光スポットやイベントのお知らせ',
+          'Aggiornamenti su attrazioni ed eventi turistici',
         ),
         value: tourismNotificationsEnabled,
         enabled: notificationsEnabled,
@@ -111,7 +111,7 @@ class CyrusSettingsNotifications {
           'Reiseempfehlungen',
           'Sugerencias de viaje',
           '旅行推荐',
-          '旅行のおすすめ',
+          'Suggerimenti di viaggio',
         ),
         subtitle: _text(
           languageCode,
@@ -124,7 +124,7 @@ class CyrusSettingsNotifications {
           'Besondere Reise- und Tourismusempfehlungen',
           'Sugerencias especiales de viaje y turismo',
           '特别旅行和旅游推荐',
-          '旅行・観光の特別おすすめ',
+          'Suggerimenti speciali di viaggio e turismo',
         ),
         value: travelSuggestionsEnabled,
         enabled: notificationsEnabled,
@@ -144,7 +144,7 @@ class CyrusSettingsNotifications {
           'Support-Nachrichten',
           'Mensajes de soporte',
           '支持消息',
-          'サポートメッセージ',
+          'Messaggi di supporto',
         ),
         subtitle: _text(
           languageCode,
@@ -157,7 +157,7 @@ class CyrusSettingsNotifications {
           'Support-Antworten und Nachrichten erhalten',
           'Recibir respuestas y mensajes de soporte',
           '接收支持回复和消息',
-          'サポートの返信やメッセージを受け取る',
+          'Ricevi risposte e messaggi di supporto',
         ),
         value: supportNotificationsEnabled,
         enabled: notificationsEnabled,
@@ -179,7 +179,7 @@ class CyrusSettingsNotifications {
     String de,
     String es,
     String zh,
-    String ja,
+    String it,
   ) {
     final code = languageCode.toLowerCase().split('-').first;
 
@@ -200,8 +200,8 @@ class CyrusSettingsNotifications {
         return es;
       case 'zh':
         return zh;
-      case 'ja':
-        return ja;
+      case 'it':
+        return it;
       case 'fa':
       default:
         return fa;
