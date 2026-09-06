@@ -30,7 +30,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// شدند و از همان صفحات قدیمی استفاده می‌کنند.
 ///
 /// هر ۱۰ زبان زیر برای هر ۱۰ کلید تکمیل شده است:
-/// fa, en, ar, tr, ru, fr, de, es, zh, ja
+/// fa, en, ar, tr, ru, fr, de, es, zh, it
 
 class MenuLanguageOption {
   const MenuLanguageOption({
@@ -54,7 +54,7 @@ const List<MenuLanguageOption> kMenuLanguages = [
   MenuLanguageOption(code: 'de', nativeName: 'Deutsch', isRtl: false),
   MenuLanguageOption(code: 'es', nativeName: 'Español', isRtl: false),
   MenuLanguageOption(code: 'zh', nativeName: '中文', isRtl: false),
-  MenuLanguageOption(code: 'ja', nativeName: '日本語', isRtl: false),
+  MenuLanguageOption(code: 'it', nativeName: 'Italiano', isRtl: false),
 ];
 
 class MenuLanguage {
@@ -122,7 +122,7 @@ class MenuTranslations {
       'de': 'Karte',
       'es': 'Mapa',
       'zh': '地图',
-      'ja': '地図',
+      'it': 'Mappa',
     },
 
     // ------------------------------------------------------
@@ -138,7 +138,7 @@ class MenuTranslations {
       'de': 'Gesundheitstourismus',
       'es': 'Turismo de salud',
       'zh': '健康旅游',
-      'ja': 'ヘルスツーリズム',
+      'it': 'Turismo sanitario',
     },
 
     // ------------------------------------------------------
@@ -154,7 +154,7 @@ class MenuTranslations {
       'de': 'Sehenswürdigkeiten',
       'es': 'Atracciones turísticas',
       'zh': '旅游景点',
-      'ja': '観光名所',
+      'it': 'Attrazioni turistiche',
     },
 
     // ------------------------------------------------------
@@ -170,7 +170,7 @@ class MenuTranslations {
       'de': 'Medien',
       'es': 'Medios',
       'zh': '媒体',
-      'ja': 'メディア',
+      'it': 'Media',
     },
 
     // ------------------------------------------------------
@@ -186,7 +186,7 @@ class MenuTranslations {
       'de': 'Unterkunft',
       'es': 'Alojamiento',
       'zh': '住宿',
-      'ja': '宿泊施設',
+      'it': 'Alloggio',
     },
 
     // ------------------------------------------------------
@@ -202,7 +202,7 @@ class MenuTranslations {
       'de': 'Touren',
       'es': 'Tours',
       'zh': '旅游团',
-      'ja': 'ツアー',
+      'it': 'Tour',
     },
 
     // ------------------------------------------------------
@@ -218,7 +218,7 @@ class MenuTranslations {
       'de': 'Reiseplaner',
       'es': 'Planificador de viajes',
       'zh': '行程规划',
-      'ja': '旅程プランナー',
+      'it': 'Pianificatore di viaggio',
     },
 
     // ------------------------------------------------------
@@ -234,7 +234,7 @@ class MenuTranslations {
       'de': 'Profil',
       'es': 'Perfil',
       'zh': '个人资料',
-      'ja': 'プロフィール',
+      'it': 'Profilo',
     },
 
     // ------------------------------------------------------
@@ -250,7 +250,7 @@ class MenuTranslations {
       'de': 'Suche',
       'es': 'Buscar',
       'zh': '搜索',
-      'ja': '検索',
+      'it': 'Cerca',
     },
 
     // ------------------------------------------------------
@@ -266,7 +266,7 @@ class MenuTranslations {
       'de': 'Favoriten',
       'es': 'Favoritos',
       'zh': '收藏',
-      'ja': 'お気に入り',
+      'it': 'Preferiti',
     },
   };
 }
