@@ -8,7 +8,7 @@ import '../pages/residence_register_page.dart';
 /// منطق حساب کاربری و فرم‌های ثبت‌نام در فایل‌های اصلی خودشان باقی می‌مانند.
 ///
 /// زبان‌های پشتیبانی‌شده:
-/// fa, en, ar, tr, ru, fr, de, es, zh, ja
+/// fa, en, ar, tr, ru, fr, de, es, zh, it
 class CyrusHeaderAccountButton extends StatelessWidget {
   const CyrusHeaderAccountButton({
     super.key,
@@ -55,7 +55,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
       'de',
       'es',
       'zh',
-      'ja',
+      'it',
     };
 
     return supported.contains(currentLanguage.toLowerCase())
@@ -71,7 +71,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
       textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: PopupMenuButton<String>(
         tooltip: _tr('حساب کاربری', 'Account', 'الحساب', 'Hesap',
-            'Аккаунт', 'Compte', 'Konto', 'Cuenta', '账户', 'アカウント'),
+            'Аккаунт', 'Compte', 'Konto', 'Cuenta', '账户', 'Account'),
         onSelected: (value) {
           switch (value) {
             case 'account':
@@ -158,7 +158,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                       'Benutzername',
                       'Nombre de usuario',
                       '用户名',
-                      'ユーザー名',
+                      'Nome utente',
                     ),
               subtitle: _tr(
                 'حساب کاربری',
@@ -170,7 +170,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                 'Konto',
                 'Cuenta',
                 '账户',
-                'アカウント',
+                'Account',
               ),
               bold: true,
             ),
@@ -193,7 +193,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                 'Unterkunft registrieren',
                 'Registro de alojamiento',
                 '住宿登记',
-                '宿泊施設登録',
+                'Registrazione alloggio',
               ),
             ),
           ),
@@ -213,7 +213,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                 'Hotelregistrierung',
                 'Registro de hotel',
                 '酒店登记',
-                'ホテル登録',
+                'Registrazione hotel',
               ),
             ),
           ),
@@ -233,7 +233,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                 'Hüttenregistrierung',
                 'Registro de cabaña',
                 '小屋登记',
-                'コテージ登録',
+                'Registrazione cottage',
               ),
             ),
           ),
@@ -253,7 +253,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                 'Gesundheitstourismus registrieren',
                 'Registro de turismo de salud',
                 '医疗旅游登记',
-                '医療ツーリズム登録',
+                'Registrazione turismo sanitario',
               ),
             ),
           ),
@@ -273,7 +273,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
     String de,
     String es,
     String zh,
-    String ja,
+    String it,
   ) {
     switch (_language) {
       case 'en':
@@ -292,8 +292,8 @@ class CyrusHeaderAccountButton extends StatelessWidget {
         return es;
       case 'zh':
         return zh;
-      case 'ja':
-        return ja;
+      case 'it':
+        return it;
       case 'fa':
       default:
         return fa;
