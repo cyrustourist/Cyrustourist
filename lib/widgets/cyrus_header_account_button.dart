@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../pages/residence_register_page.dart';
+
 /// دکمه حساب کاربری در هدر سایروس توریست.
 ///
 /// این فایل فقط رابط کاربری و مسیر‌دهی هدر را مدیریت می‌کند.
@@ -76,20 +78,55 @@ class CyrusHeaderAccountButton extends StatelessWidget {
               onAccountPressed?.call();
               break;
 
+            // هر چهار مسیر ثبت‌نام فعلاً به یک فایل ثبت‌نام
+            // آماده و موجود وصل می‌شوند: residence_register_page.dart
+            // (همان کلیدی که بالای «نمایش فیلم‌ها»، کلید ۴، قرار دارد).
             case 'accommodation':
-              onAccommodationRegistration?.call();
+              if (onAccommodationRegistration != null) {
+                onAccommodationRegistration!();
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ResidenceRegisterPage(),
+                  ),
+                );
+              }
               break;
 
             case 'hotel':
-              onHotelRegistration?.call();
+              if (onHotelRegistration != null) {
+                onHotelRegistration!();
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ResidenceRegisterPage(),
+                  ),
+                );
+              }
               break;
 
             case 'cottage':
-              onCottageRegistration?.call();
+              if (onCottageRegistration != null) {
+                onCottageRegistration!();
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ResidenceRegisterPage(),
+                  ),
+                );
+              }
               break;
 
             case 'health':
-              onHealthTourismRegistration?.call();
+              if (onHealthTourismRegistration != null) {
+                onHealthTourismRegistration!();
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ResidenceRegisterPage(),
+                  ),
+                );
+              }
               break;
           }
         },
