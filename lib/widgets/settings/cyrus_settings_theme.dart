@@ -42,7 +42,7 @@ class CyrusSettingsTheme {
           'Hell',
           'Claro',
           '浅色',
-          'ライト',
+          'Chiaro',
         ),
         subtitle: _text(
           languageCode,
@@ -55,7 +55,7 @@ class CyrusSettingsTheme {
           'Helle Darstellung',
           'Apariencia clara',
           '浅色应用界面',
-          '明るい表示',
+          'Aspetto chiaro',
         ),
         color: const Color(0xffe6a817),
         selected: selectedMode == CyrusThemeMode.light,
@@ -75,7 +75,7 @@ class CyrusSettingsTheme {
           'Dunkel',
           'Oscuro',
           '深色',
-          'ダーク',
+          'Scuro',
         ),
         subtitle: _text(
           languageCode,
@@ -88,7 +88,7 @@ class CyrusSettingsTheme {
           'Dunkle Darstellung für die Nacht',
           'Apariencia oscura para la noche',
           '适合夜间使用的深色界面',
-          '夜間に適したダーク表示',
+          'Aspetto scuro adatto alla notte',
         ),
         color: const Color(0xff536d7a),
         selected: selectedMode == CyrusThemeMode.dark,
@@ -108,7 +108,7 @@ class CyrusSettingsTheme {
           'Cyrus Gold',
           'Dorado Cyrus',
           'Cyrus 金色',
-          'Cyrus ゴールド',
+          'Cyrus Oro',
         ),
         subtitle: _text(
           languageCode,
@@ -121,7 +121,7 @@ class CyrusSettingsTheme {
           'Exklusives CyrusTourist-Gold-Design',
           'Tema dorado exclusivo de CyrusTourist',
           'CyrusTourist 专属金色主题',
-          'CyrusTourist専用ゴールドテーマ',
+          'Tema oro esclusivo di CyrusTourist',
         ),
         color: const Color(0xffc9a227),
         selected: selectedMode == CyrusThemeMode.cyrusGold,
@@ -141,7 +141,7 @@ class CyrusSettingsTheme {
     String de,
     String es,
     String zh,
-    String ja,
+    String it,
   ) {
     final code = languageCode.toLowerCase().split('-').first;
 
@@ -162,8 +162,8 @@ class CyrusSettingsTheme {
         return es;
       case 'zh':
         return zh;
-      case 'ja':
-        return ja;
+      case 'it':
+        return it;
       case 'fa':
       default:
         return fa;
