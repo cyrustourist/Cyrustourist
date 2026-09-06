@@ -497,7 +497,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Sehr intelligente Reise-Werkzeuge',
         'es': 'Caja de herramientas de viaje inteligente',
         'zh': '智能旅行工具箱',
-        'ja': 'スマート旅行ツールボックス',
+        'it': 'Kit di strumenti di viaggio molto intelligente',
       },
       'همراه هوشمند سفر سایروس': {
         'fa': 'همراه هوشمند سفر سایروس',
@@ -509,7 +509,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Cyrus intelligenter Reisebegleiter',
         'es': 'Asistente de viaje inteligente Cyrus',
         'zh': 'Cyrus 智能旅行助手',
-        'ja': 'Cyrus スマート旅行アシスタント',
+        'it': 'Assistente di viaggio intelligente Cyrus',
       },
       'ابزارهای هوشمند و کاربردی برای یک سفر بهتر': {
         'fa': 'ابزارهای هوشمند و کاربردی برای یک سفر بهتر',
@@ -521,7 +521,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Intelligente und nützliche Werkzeuge für eine bessere Reise',
         'es': 'Herramientas inteligentes y útiles para un mejor viaje',
         'zh': '让旅行更美好的智能实用工具',
-        'ja': 'より良い旅行のためのスマートで便利なツール',
+        'it': 'Strumenti intelligenti e utili per un viaggio migliore',
       },
       'هوشمند سفر': {
         'fa': 'هوشمند سفر',
@@ -533,7 +533,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Intelligentes Reisen',
         'es': 'Viaje inteligente',
         'zh': '智能旅行',
-        'ja': 'スマート旅行',
+        'it': 'Viaggio intelligente',
       },
       'اضطراری و ضروری': {
         'fa': 'اضطراری و ضروری',
@@ -545,7 +545,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Notfall und wichtig',
         'es': 'Emergencias y esenciales',
         'zh': '紧急与必备',
-        'ja': '緊急・必需ツール',
+        'it': 'Emergenza ed essenziali',
       },
       'ابزارهای سفر': {
         'fa': 'ابزارهای سفر',
@@ -557,7 +557,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Reisewerkzeuge',
         'es': 'Herramientas de viaje',
         'zh': '旅行工具',
-        'ja': '旅行ツール',
+        'it': 'Strumenti di viaggio',
       },
       'ابزارهای آنلاین': {
         'fa': 'ابزارهای آنلاین',
@@ -569,7 +569,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Online-Werkzeuge',
         'es': 'Herramientas en línea',
         'zh': '在线工具',
-        'ja': 'オンラインツール',
+        'it': 'Strumenti online',
       },
 
       // ---------------------------------------------------------
@@ -586,7 +586,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Intelligenter Reiseassistent',
         'es': 'Asistente de viaje inteligente',
         'zh': '智能旅行助手',
-        'ja': 'スマート旅行アシスタント',
+        'it': 'Assistente di viaggio intelligente',
       },
       'گفتگو با سایروس و دریافت راهنمایی سفر': {
         'fa': 'گفتگو با سایروس و دریافت راهنمایی سفر',
@@ -598,7 +598,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Sprechen Sie mit Cyrus und erhalten Sie Reisetipps',
         'es': 'Habla con Cyrus y recibe consejos de viaje',
         'zh': '与 Cyrus 对话并获取旅行建议',
-        'ja': 'Cyrus と話して旅行のアドバイスを受ける',
+        'it': 'Parla con Cyrus e ricevi consigli di viaggio',
       },
       'سفر شخصی من': {
         'fa': 'سفر شخصی من',
@@ -610,7 +610,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Meine persönliche Reise',
         'es': 'Mi viaje personalizado',
         'zh': '我的个性化旅行',
-        'ja': '私のパーソナル旅行',
+        'it': 'Il mio viaggio personalizzato',
       },
       'پیشنهاد مقصد بر اساس سلیقه، بودجه و شرایط شما': {
         'fa': 'پیشنهاد مقصد بر اساس سلیقه، بودجه و شرایط شما',
@@ -622,7 +622,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Ziele nach Ihren Vorlieben, Ihrem Budget und Ihrer Situation',
         'es': 'Destinos según tus preferencias, presupuesto y situación',
         'zh': '根据您的偏好、预算和情况推荐目的地',
-        'ja': '好み、予算、状況に合わせた目的地',
+        'it': 'Destinazioni in base a preferenze, budget e situazione',
       },
       'برنامه‌ریز هوشمند سفر': {
         'fa': 'برنامه‌ریز هوشمند سفر',
@@ -634,7 +634,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Intelligenter Reiseplaner',
         'es': 'Planificador de viajes inteligente',
         'zh': '智能旅行规划器',
-        'ja': 'スマート旅行プランナー',
+        'it': 'Pianificatore di viaggio intelligente',
       },
       'ساخت برنامه سفر روزانه بر اساس زمان و مقصد': {
         'fa': 'ساخت برنامه سفر روزانه بر اساس زمان و مقصد',
@@ -646,7 +646,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Tagesplan nach Zeit und Ziel erstellen',
         'es': 'Crear un itinerario diario según tiempo y destino',
         'zh': '根据时间和目的地创建每日行程',
-        'ja': '時間と目的地に合わせて毎日の旅程を作成',
+        'it': 'Crea un itinerario giornaliero in base a tempo e destinazione',
       },
       'اطراف من': {
         'fa': 'اطراف من',
@@ -658,7 +658,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'In meiner Nähe',
         'es': 'Cerca de mí',
         'zh': '我附近',
-        'ja': '近くの場所',
+        'it': 'Nei dintorni',
       },
       'پیدا کردن مکان‌ها و خدمات مناسب در اطراف شما': {
         'fa': 'پیدا کردن مکان‌ها و خدمات مناسب در اطراف شما',
@@ -670,7 +670,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Passende Orte und Dienste in Ihrer Nähe finden',
         'es': 'Encuentra lugares y servicios adecuados cerca de ti',
         'zh': '查找您附近合适的地点和服务',
-        'ja': '周辺のおすすめスポットやサービスを検索',
+        'it': 'Trova luoghi e servizi adatti nelle vicinanze',
       },
       'پیشنهاد لحظه‌ای': {
         'fa': 'پیشنهاد لحظه‌ای',
@@ -682,7 +682,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Sofortige Empfehlungen',
         'es': 'Sugerencias instantáneas',
         'zh': '即时推荐',
-        'ja': 'リアルタイムおすすめ',
+        'it': 'Suggerimenti in tempo reale',
       },
       'پیشنهاد مناسب بر اساس زمان، مکان و شرایط': {
         'fa': 'پیشنهاد مناسب بر اساس زمان، مکان و شرایط',
@@ -694,7 +694,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Empfehlungen nach Zeit, Ort und Bedingungen',
         'es': 'Sugerencias según hora, ubicación y condiciones',
         'zh': '根据时间、地点和条件提供推荐',
-        'ja': '時間・場所・状況に応じたおすすめ',
+        'it': 'Suggerimenti in base a orario, luogo e condizioni',
       },
       'مدیریت هزینه سفر': {
         'fa': 'مدیریت هزینه سفر',
@@ -706,7 +706,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Reisekostenverwaltung',
         'es': 'Gestión de gastos de viaje',
         'zh': '旅行费用管理',
-        'ja': '旅行費用管理',
+        'it': 'Gestione spese di viaggio',
       },
       'مدیریت و برآورد هزینه‌های سفر': {
         'fa': 'مدیریت و برآورد هزینه‌های سفر',
@@ -718,7 +718,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Reisekosten verwalten und schätzen',
         'es': 'Gestionar y estimar gastos de viaje',
         'zh': '管理和估算旅行费用',
-        'ja': '旅行費用を管理・見積もり',
+        'it': 'Gestisci e stima le spese di viaggio',
       },
       'نوع سفر': {
         'fa': 'نوع سفر',
@@ -730,7 +730,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Reiseart',
         'es': 'Tipo de viaje',
         'zh': '旅行类型',
-        'ja': '旅行タイプ',
+        'it': 'Tipo di viaggio',
       },
       'خانوادگی، دوستانه، انفرادی، رمانتیک و ماجراجویی': {
         'fa': 'خانوادگی، دوستانه، انفرادی، رمانتیک و ماجراجویی',
@@ -742,7 +742,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Familie, Freunde, allein, romantisch und Abenteuer',
         'es': 'Familiar, amigos, individual, romántico y aventura',
         'zh': '家庭、朋友、独自、浪漫和冒险',
-        'ja': '家族、友人、一人旅、ロマンチック、冒険',
+        'it': 'Famiglia, amici, da solo, romantico e avventura',
       },
 
       // ---------------------------------------------------------
@@ -759,7 +759,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Notfallhilfe auf Reisen',
         'es': 'Ayuda de emergencia en viaje',
         'zh': '旅行紧急帮助',
-        'ja': '旅行中の緊急ヘルプ',
+        'it': 'Aiuto d'emergenza in viaggio',
       },
       'دسترسی سریع به خدمات ضروری و امدادی': {
         'fa': 'دسترسی سریع به خدمات ضروری و امدادی',
@@ -771,7 +771,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Schneller Zugang zu Notfall- und wichtigen Diensten',
         'es': 'Acceso rápido a servicios esenciales y de emergencia',
         'zh': '快速访问必要和紧急服务',
-        'ja': '必要な緊急サービスへすばやくアクセス',
+        'it': 'Accesso rapido ai servizi essenziali e d'emergenza',
       },
       'حالت سفر': {
         'fa': 'حالت سفر',
@@ -783,7 +783,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Reisemodus',
         'es': 'Modo viaje',
         'zh': '旅行模式',
-        'ja': '旅行モード',
+        'it': 'Modalità viaggio',
       },
       'فعال‌سازی ابزارها و اطلاعات مورد نیاز سفر': {
         'fa': 'فعال‌سازی ابزارها و اطلاعات مورد نیاز سفر',
@@ -795,7 +795,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Benötigte Werkzeuge und Informationen aktivieren',
         'es': 'Activar las herramientas e información necesarias durante el viaje',
         'zh': '启用旅行所需的工具和信息',
-        'ja': '旅行に必要なツールと情報を有効化',
+        'it': 'Attiva strumenti e informazioni necessari durante il viaggio',
       },
       'چراغ قوه': {
         'fa': 'چراغ قوه',
@@ -807,7 +807,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Taschenlampe',
         'es': 'Linterna',
         'zh': '手电筒',
-        'ja': '懐中電灯',
+        'it': 'Torcia',
       },
       'استفاده سریع از چراغ قوه تلفن همراه': {
         'fa': 'استفاده سریع از چراغ قوه تلفن همراه',
@@ -819,7 +819,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Taschenlampe des Telefons schnell verwenden',
         'es': 'Usa rápidamente la linterna del teléfono',
         'zh': '快速使用手机手电筒',
-        'ja': 'スマートフォンのライトをすばやく使用',
+        'it': 'Usa rapidamente la torcia del telefono',
       },
       'قطب نما': {
         'fa': 'قطب نما',
@@ -831,7 +831,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Kompass',
         'es': 'Brújula',
         'zh': '指南针',
-        'ja': 'コンパス',
+        'it': 'Bussola',
       },
       'نمایش جهت‌های اصلی و جهت حرکت': {
         'fa': 'نمایش جهت‌های اصلی و جهت حرکت',
@@ -843,7 +843,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Himmelsrichtungen und Bewegungsrichtung anzeigen',
         'es': 'Muestra los puntos cardinales y la dirección',
         'zh': '显示主要方向和移动方向',
-        'ja': '方位と進行方向を表示',
+        'it': 'Mostra i punti cardinali e la direzione',
       },
 
       // ---------------------------------------------------------
@@ -860,7 +860,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Einheitenumrechner',
         'es': 'Conversor de unidades',
         'zh': '单位转换器',
-        'ja': '単位換算',
+        'it': 'Convertitore di unità',
       },
       'تبدیل مسافت، وزن، دما و واحدهای کاربردی': {
         'fa': 'تبدیل مسافت، وزن، دما و واحدهای کاربردی',
@@ -872,7 +872,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Entfernung, Gewicht, Temperatur und weitere Einheiten umrechnen',
         'es': 'Convierte distancia, peso, temperatura y otras unidades',
         'zh': '转换距离、重量、温度等常用单位',
-        'ja': '距離・重量・温度などの単位を変換',
+        'it': 'Converti distanza, peso, temperatura e altre unità utili',
       },
       'محاسبه‌گر سفر': {
         'fa': 'محاسبه‌گر سفر',
@@ -884,7 +884,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Reiserechner',
         'es': 'Calculadora de viaje',
         'zh': '旅行计算器',
-        'ja': '旅行計算機',
+        'it': 'Calcolatore di viaggio',
       },
       'محاسبه زمان، مسافت و هزینه تقریبی سفر': {
         'fa': 'محاسبه زمان، مسافت و هزینه تقریبی سفر',
@@ -896,7 +896,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Reisezeit, Entfernung und geschätzte Kosten berechnen',
         'es': 'Calcula tiempo, distancia y coste estimado',
         'zh': '计算旅行时间、距离和预计费用',
-        'ja': '旅行時間・距離・費用を計算',
+        'it': 'Calcola tempo, distanza e costo stimato del viaggio',
       },
       'خدمات ضروری نزدیک من': {
         'fa': 'خدمات ضروری نزدیک من',
@@ -908,7 +908,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Wichtige Dienste in meiner Nähe',
         'es': 'Servicios esenciales cerca de mí',
         'zh': '附近的必要服务',
-        'ja': '近くの必要なサービス',
+        'it': 'Servizi essenziali nelle vicinanze',
       },
       'بیمارستان، داروخانه، پلیس، ATM و خدمات ضروری': {
         'fa': 'بیمارستان، داروخانه، پلیس، ATM و خدمات ضروری',
@@ -920,7 +920,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Krankenhäuser, Apotheken, Polizei, Geldautomaten und wichtige Dienste',
         'es': 'Hospitales, farmacias, policía, cajeros y servicios esenciales',
         'zh': '医院、药店、警察、ATM和必要服务',
-        'ja': '病院・薬局・警察・ATMなどの必要サービス',
+        'it': 'Ospedali, farmacie, polizia, bancomat e servizi essenziali',
       },
       'حالت کم‌مصرف سفر': {
         'fa': 'حالت کم‌مصرف سفر',
@@ -932,7 +932,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Akku sparen auf Reisen',
         'es': 'Ahorro de batería durante el viaje',
         'zh': '旅行省电模式',
-        'ja': '旅行省電力モード',
+        'it': 'Risparmio batteria in viaggio',
       },
       'کاهش مصرف باتری هنگام سفر': {
         'fa': 'کاهش مصرف باتری هنگام سفر',
@@ -944,7 +944,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Akkuverbrauch während der Reise reduzieren',
         'es': 'Reduce el consumo de batería durante el viaje',
         'zh': '减少旅行时的电池消耗',
-        'ja': '旅行中のバッテリー消費を削減',
+        'it': 'Riduci il consumo della batteria durante il viaggio',
       },
       'سفر آفلاین': {
         'fa': 'سفر آفلاین',
@@ -956,7 +956,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Offline-Reise',
         'es': 'Viaje sin conexión',
         'zh': '离线旅行',
-        'ja': 'オフライン旅行',
+        'it': 'Viaggio offline',
       },
       'دسترسی به اطلاعات ذخیره‌شده در نبود اینترنت': {
         'fa': 'دسترسی به اطلاعات ذخیره‌شده در نبود اینترنت',
@@ -968,7 +968,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Gespeicherte Informationen ohne Internet nutzen',
         'es': 'Accede a la información guardada sin internet',
         'zh': '无网络时访问已保存的信息',
-        'ja': 'インターネットなしで保存情報にアクセス',
+        'it': 'Accedi alle informazioni salvate senza internet',
       },
 
       // ---------------------------------------------------------
@@ -985,7 +985,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Online-Währungsrechner',
         'es': 'Conversor de divisas en línea',
         'zh': '在线货币转换器',
-        'ja': 'オンライン通貨換算',
+        'it': 'Convertitore di valuta online',
       },
       'دریافت نرخ آنلاین و تبدیل ارزهای مختلف': {
         'fa': 'دریافت نرخ آنلاین و تبدیل ارزهای مختلف',
@@ -997,7 +997,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Aktuelle Kurse abrufen und Währungen umrechnen',
         'es': 'Obtén tasas en vivo y convierte diferentes monedas',
         'zh': '获取实时汇率并转换不同货币',
-        'ja': '最新レートを取得して通貨を換算',
+        'it': 'Ottieni tassi aggiornati e converti le valute',
       },
       'آب‌وهوای هوشمند مقصد': {
         'fa': 'آب‌وهوای هوشمند مقصد',
@@ -1009,7 +1009,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Intelligentes Wetter am Reiseziel',
         'es': 'Clima inteligente del destino',
         'zh': '智能目的地天气',
-        'ja': 'スマート目的地天気',
+        'it': 'Meteo intelligente della destinazione',
       },
       'مکان من، جستجوی شهر یا جستجوی مکان با جدول دقیق': {
         'fa': 'مکان من، جستجوی شهر یا جستجوی مکان با جدول دقیق',
@@ -1021,7 +1021,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Mein Standort, Stadt- oder Ortssuche mit detaillierten Tabellen',
         'es': 'Mi ubicación, búsqueda de ciudad o lugar con tablas detalladas',
         'zh': '我的位置、城市或地点搜索及详细天气表',
-        'ja': '現在地・都市・場所検索と詳細な天気表',
+        'it': 'Cerca posizione, città o luogo con tabelle meteo dettagliate',
       },
       'ساعت جهانی': {
         'fa': 'ساعت جهانی',
@@ -1033,7 +1033,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Weltzeituhr',
         'es': 'Reloj mundial',
         'zh': '世界时钟',
-        'ja': '世界時計',
+        'it': 'Orologio mondiale',
       },
       'نمایش ساعت شهرهای مختلف جهان': {
         'fa': 'نمایش ساعت شهرهای مختلف جهان',
@@ -1045,7 +1045,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Uhrzeit in Städten weltweit anzeigen',
         'es': 'Muestra la hora de diferentes ciudades del mundo',
         'zh': '显示世界各地城市的时间',
-        'ja': '世界各都市の時刻を表示',
+        'it': 'Mostra l'ora nelle città del mondo',
       },
       'زمان محلی مقصد': {
         'fa': 'زمان محلی مقصد',
@@ -1057,7 +1057,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Ortszeit am Reiseziel',
         'es': 'Hora local del destino',
         'zh': '目的地当地时间',
-        'ja': '目的地の現地時間',
+        'it': 'Ora locale della destinazione',
       },
       'نمایش زمان محلی و اختلاف ساعت مقصد': {
         'fa': 'نمایش زمان محلی و اختلاف ساعت مقصد',
@@ -1069,7 +1069,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Ortszeit und Zeitunterschied anzeigen',
         'es': 'Muestra la hora local y la diferencia horaria',
         'zh': '显示当地时间和时差',
-        'ja': '現地時間と時差を表示',
+        'it': 'Mostra l'ora locale e il fuso orario',
       },
       'وضعیت اتصال': {
         'fa': 'وضعیت اتصال',
@@ -1081,7 +1081,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Verbindungsstatus',
         'es': 'Estado de conexión',
         'zh': '连接状态',
-        'ja': '接続状態',
+        'it': 'Stato della connessione',
       },
       'بررسی وضعیت اینترنت برای قابلیت‌های آنلاین': {
         'fa': 'بررسی وضعیت اینترنت برای قابلیت‌های آنلاین',
@@ -1093,7 +1093,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Internetstatus für Online-Funktionen prüfen',
         'es': 'Comprueba internet para las funciones en línea',
         'zh': '检查在线功能的网络状态',
-        'ja': 'オンライン機能のインターネット接続を確認',
+        'it': 'Verifica la connessione internet per le funzioni online',
       },
     };
 
