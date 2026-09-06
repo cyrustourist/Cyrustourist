@@ -857,8 +857,8 @@ class _AccountTranslations {
         return _es;
       case 'zh':
         return _zh;
-      case 'ja':
-        return _ja;
+      case 'it':
+        return _it;
       case 'fa':
       default:
         return _fa;
@@ -1357,55 +1357,64 @@ class _AccountTranslations {
     futureMessage: '此功能将在未来的 Cyrus Tourist 更新中提供。',
   );
 
-  static const _ja = _AccountTranslations(
-    title: 'アカウント',
-    account: 'マイアカウント',
-    accountSubtitle: 'アカウントと旅行機能を管理',
-    usernamePlaceholder: 'ユーザー名は未設定です',
-    accountSection: 'アカウント情報',
-    profile: 'プロフィール',
-    profileSubtitle: 'アカウント情報を表示',
-    editProfile: '情報を編集',
-    editProfileSubtitle: 'ユーザー名とアカウント情報を編集',
-    profileImage: 'プロフィール画像',
-    profileImageSubtitle: 'プロフィール画像を選択・管理',
-    registrationSection: '観光サービス登録',
-    accommodationRegistration: '宿泊施設登録',
-    accommodationRegistrationSubtitle: '宿泊施設を登録・紹介',
-    healthTourismRegistration: 'ヘルスツーリズム登録',
-    healthTourismRegistrationSubtitle: 'ヘルスツーリズムサービスを登録',
-    cabinRegistration: 'コテージ登録',
-    cabinRegistrationSubtitle: 'コテージや宿泊施設を登録',
-    activitySection: 'アクティビティと特典',
-    myReviews: '評価とレビュー',
-    myReviewsSubtitle: '評価とレビューを管理',
-    travelStats: '旅行統計',
-    travelStatsSubtitle: '旅行・観光活動を確認',
-    achievements: '旅行の実績',
-    achievementsSubtitle: '観光実績とバッジ',
-    rewards: 'ポイントと特典',
-    rewardsSubtitle: 'ポイントと特典を確認',
-    securitySection: 'アカウントセキュリティ',
-    security: 'アカウントセキュリティ',
-    securitySubtitle: 'セキュリティとログイン設定',
-    devices: '接続済みデバイス',
-    devicesSubtitle: '接続済みデバイスを管理',
-    futureSection: '今後の機能',
-    onlineChat: 'オンラインチャット',
-    createTravelGroup: '旅行グループを作成',
-    joinTravelGroups: '旅行グループに参加',
-    travelCompanion: '旅行仲間を探す',
-    destinationRoom: '目的地ディスカッションルーム',
-    futureSubtitle: '今後のアップデートで提供予定',
-    logout: 'ログアウト',
-    logoutSubtitle: 'ログアウトして端末のアカウント情報を削除',
-    logoutConfirmTitle: 'ログアウト',
+  static const _it = _AccountTranslations(
+    title: 'Account',
+    account: 'Il mio account',
+    accountSubtitle: 'Gestisci le informazioni e le funzioni del tuo account',
+    usernamePlaceholder: 'Nome utente non ancora impostato',
+    accountSection: 'Informazioni account',
+    profile: 'Il mio profilo',
+    profileSubtitle: 'Visualizza le informazioni dell\u2019account',
+    editProfile: 'Modifica informazioni',
+    editProfileSubtitle: 'Modifica nome utente e informazioni account',
+    profileImage: 'Immagine del profilo',
+    profileImageSubtitle: 'Scegli e gestisci l\u2019immagine del profilo',
+    registrationSection: 'Registrazione servizi turistici',
+    accommodationRegistration: 'Registrazione alloggio',
+    accommodationRegistrationSubtitle:
+        'Registra il tuo alloggio e presentalo ai turisti',
+    healthTourismRegistration: 'Registrazione turismo sanitario',
+    healthTourismRegistrationSubtitle:
+        'Registra servizi e centri di turismo sanitario',
+    cabinRegistration: 'Registrazione cottage',
+    cabinRegistrationSubtitle:
+        'Registra il tuo cottage o alloggio esclusivo',
+    activitySection: 'Attività e punteggi',
+    myReviews: 'I miei punteggi e recensioni',
+    myReviewsSubtitle: 'Gestisci punteggi e recensioni registrate',
+    travelStats: 'Statistiche di viaggio',
+    travelStatsSubtitle:
+        'Visualizza statistiche di viaggio e attività turistiche',
+    achievements: 'Traguardi di viaggio',
+    achievementsSubtitle:
+        'I tuoi traguardi e badge turistici',
+    rewards: 'Punti e premi',
+    rewardsSubtitle:
+        'Visualizza punti e premi dell\u2019account',
+    securitySection: 'Sicurezza dell\u2019account',
+    security: 'Sicurezza dell\u2019account',
+    securitySubtitle:
+        'Gestisci sicurezza e impostazioni di accesso',
+    devices: 'Dispositivi connessi',
+    devicesSubtitle:
+        'Gestisci i dispositivi collegati al tuo account',
+    futureSection: 'Funzioni future',
+    onlineChat: 'Chat online',
+    createTravelGroup: 'Crea gruppo di viaggio',
+    joinTravelGroups: 'Unisciti a gruppi di viaggio',
+    travelCompanion: 'Trova un compagno di viaggio',
+    destinationRoom: 'Stanza di discussione sulla destinazione',
+    futureSubtitle: 'Sarà attivato in un futuro aggiornamento',
+    logout: 'Esci dall\u2019account',
+    logoutSubtitle:
+        'Esci e cancella i dati dell\u2019account da questo dispositivo',
+    logoutConfirmTitle: 'Esci dall\u2019account',
     logoutConfirmMessage:
-        'ログアウトすると、この端末のアカウント情報とプロフィール画像が削除されます。',
-    cancel: 'キャンセル',
-    ok: 'OK',
-    futureTitle: '今後のアップデート',
+        'Uscendo, i dati locali dell\u2019account e l\u2019immagine del profilo verranno cancellati da questo dispositivo.',
+    cancel: 'Annulla',
+    ok: 'Ho capito',
+    futureTitle: 'Questa funzione è in arrivo',
     futureMessage:
-        'この機能は今後の Cyrus Tourist アップデートで提供されます。',
+        'Questa funzione sarà disponibile nei prossimi aggiornamenti di Cyrus Tourist. L\u2019infrastruttura dell\u2019account è stata progettata fin dall\u2019inizio per supportare le future comunicazioni sociali e turistiche.',
   );
 }
