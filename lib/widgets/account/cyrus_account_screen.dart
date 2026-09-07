@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../pages/announcements_page.dart';
 import '../../pages/residence_register_page.dart';
+import '../../services/notification_service.dart';
 
 /// کلید شماره ۸ — حساب کاربری سایروس توریست
 ///
@@ -70,6 +72,14 @@ class CyrusAccountScreen extends StatelessWidget {
                   context,
                   title: texts.accountSection,
                   items: [
+                    _AccountItem(
+                      icon: Icons.notifications_active_rounded,
+                      title: texts.announcements,
+                      subtitle: texts.announcementsSubtitle,
+                      iconColor: const Color(0xffffd36a),
+                      actionId: 'announcements',
+                      showNotificationBadge: true,
+                    ),
                     _AccountItem(
                       icon: Icons.person_rounded,
                       title: texts.profile,
@@ -364,12 +374,17 @@ class CyrusAccountScreen extends StatelessWidget {
         ...items.map(
           (item) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: CyrusAccountButton(
-              item: item,
-              onTap: () {
-                _handleAccountItem(context, item);
-              },
-            ),
+            child: item.showNotificationBadge
+                ? _AccountBadgeButton(
+                    item: item,
+                    languageCode: languageCode,
+                  )
+                : CyrusAccountButton(
+                    item: item,
+                    onTap: () {
+                      _handleAccountItem(context, item);
+                    },
+                  ),
           ),
         ),
       ],
@@ -402,6 +417,11 @@ class CyrusAccountScreen extends StatelessWidget {
       _showFutureMessage(context);
       return;
     }
+
+    // نکته: گزینه‌ی «اعلان‌ها» (بج‌دار) ناوبری خودش را مستقل در
+    // _AccountBadgeButton انجام می‌دهد تا بتواند بعد از بازگشت
+    // کاربر، شمارنده‌ی بج را دوباره بخواند؛ به همین دلیل اینجا
+    // نیازی به مسیردهی جداگانه برای آن نیست.
 
     // هر سه گزینه‌ی ثبت‌نام (اقامتگاه، گردشگری سلامت، کلبه) فعلاً
     // به همان یک فایل ثبت‌نام آماده و موجود وصل می‌شوند:
@@ -544,6 +564,7 @@ class _AccountItem {
     this.futureFeature = false,
     this.logout = false,
     this.actionId,
+    this.showNotificationBadge = false,
   });
 
   final IconData icon;
@@ -554,8 +575,114 @@ class _AccountItem {
   final bool logout;
 
   /// شناسه‌ی داخلی برای مسیردهی در `_handleAccountItem`
-  /// (مثلاً 'registration' برای هر سه گزینه‌ی ثبت‌نام).
+  /// (مثلاً 'registration' برای هر سه گزینه‌ی ثبت‌نام،
+  /// یا 'announcements' برای گزینه‌ی اعلان‌ها).
   final String? actionId;
+
+  /// اگر true باشد، تعداد اعلان‌های خوانده‌نشده به‌صورت بج قرمز
+  /// روی آیکون این گزینه نمایش داده می‌شود.
+  final bool showNotificationBadge;
+}
+
+/// نسخه‌ی بج‌دار دکمه‌ی حساب کاربری، مخصوص گزینه‌ی «اعلان‌ها».
+///
+/// تعداد اعلان‌های خوانده‌نشده را از [NotificationService] می‌گیرد
+/// و به‌صورت یک بج قرمز کوچک روی گوشه‌ی آیکون زنگوله نشان می‌دهد.
+class _AccountBadgeButton extends StatefulWidget {
+  const _AccountBadgeButton({
+    required this.item,
+    required this.languageCode,
+  });
+
+  final _AccountItem item;
+  final String languageCode;
+
+  @override
+  State<_AccountBadgeButton> createState() => _AccountBadgeButtonState();
+}
+
+class _AccountBadgeButtonState extends State<_AccountBadgeButton> {
+  late Future<int> _unreadFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _unreadFuture = NotificationService.instance.getUnreadCount();
+  }
+
+  Future<void> _refreshUnreadCount() async {
+    final future = NotificationService.instance.getUnreadCount();
+    if (mounted) {
+      setState(() {
+        _unreadFuture = future;
+      });
+    }
+    await future;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CyrusAccountButton(
+          item: widget.item,
+          onTap: () async {
+            // صفحه‌ی اعلان‌ها را باز می‌کنیم و منتظر بازگشت کاربر می‌مانیم؛
+            // چون خودِ آن صفحه هنگام باز شدن، اعلان‌ها را «خوانده‌شده»
+            // علامت می‌زند، بعد از بازگشت باید بج را دوباره بخوانیم.
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AnnouncementsPage(
+                  languageCode: widget.languageCode,
+                ),
+              ),
+            );
+            await _refreshUnreadCount();
+          },
+        ),
+        Positioned(
+          left: 8,
+          top: 6,
+          child: FutureBuilder<int>(
+            future: _unreadFuture,
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+
+              if (count <= 0) {
+                return const SizedBox.shrink();
+              }
+
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2,
+                ),
+                constraints: const BoxConstraints(minWidth: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xffe0353d),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xff071722),
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  count > 9 ? '9+' : '$count',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// دکمه سه‌بعدی حساب کاربری با سایه طلایی.
@@ -796,6 +923,8 @@ class _AccountTranslations {
   final String accountSubtitle;
   final String usernamePlaceholder;
   final String accountSection;
+  final String announcements;
+  final String announcementsSubtitle;
   final String profile;
   final String profileSubtitle;
   final String editProfile;
@@ -871,6 +1000,8 @@ class _AccountTranslations {
     accountSubtitle: 'مدیریت اطلاعات و امکانات حساب شما',
     usernamePlaceholder: 'نام کاربری هنوز ثبت نشده',
     accountSection: 'اطلاعات حساب',
+    announcements: 'اعلان‌ها',
+    announcementsSubtitle: 'مشاهده آخرین اطلاعیه‌ها و بروزرسانی‌ها',
     profile: 'پروفایل من',
     profileSubtitle: 'مشاهده اطلاعات حساب کاربری',
     editProfile: 'ویرایش اطلاعات',
@@ -932,6 +1063,8 @@ class _AccountTranslations {
     accountSubtitle: 'Manage your account and travel features',
     usernamePlaceholder: 'Username not set yet',
     accountSection: 'Account Information',
+    announcements: 'Announcements',
+    announcementsSubtitle: 'View the latest news and updates',
     profile: 'My Profile',
     profileSubtitle: 'View your account information',
     editProfile: 'Edit Information',
@@ -987,6 +1120,8 @@ class _AccountTranslations {
     accountSubtitle: 'إدارة الحساب وميزات السفر',
     usernamePlaceholder: 'اسم المستخدم غير مسجل بعد',
     accountSection: 'معلومات الحساب',
+    announcements: 'الإشعارات',
+    announcementsSubtitle: 'عرض آخر الأخبار والتحديثات',
     profile: 'ملفي الشخصي',
     profileSubtitle: 'عرض معلومات الحساب',
     editProfile: 'تعديل المعلومات',
@@ -1041,6 +1176,8 @@ class _AccountTranslations {
     accountSubtitle: 'Hesabınızı ve seyahat özelliklerinizi yönetin',
     usernamePlaceholder: 'Kullanıcı adı henüz ayarlanmadı',
     accountSection: 'Hesap Bilgileri',
+    announcements: 'Duyurular',
+    announcementsSubtitle: 'Son haberleri ve güncellemeleri görün',
     profile: 'Profilim',
     profileSubtitle: 'Hesap bilgilerinizi görüntüleyin',
     editProfile: 'Bilgileri Düzenle',
@@ -1096,6 +1233,8 @@ class _AccountTranslations {
     accountSubtitle: 'Управление аккаунтом и функциями путешествий',
     usernamePlaceholder: 'Имя пользователя не задано',
     accountSection: 'Информация аккаунта',
+    announcements: 'Объявления',
+    announcementsSubtitle: 'Смотреть последние новости и обновления',
     profile: 'Мой профиль',
     profileSubtitle: 'Просмотр данных аккаунта',
     editProfile: 'Редактировать данные',
@@ -1148,6 +1287,8 @@ class _AccountTranslations {
     accountSubtitle: 'Gérer votre compte et vos fonctions de voyage',
     usernamePlaceholder: 'Nom d’utilisateur non défini',
     accountSection: 'Informations du compte',
+    announcements: 'Annonces',
+    announcementsSubtitle: 'Voir les dernières actualités et mises à jour',
     profile: 'Mon profil',
     profileSubtitle: 'Voir les informations du compte',
     editProfile: 'Modifier les informations',
@@ -1203,6 +1344,8 @@ class _AccountTranslations {
     accountSubtitle: 'Konto und Reisefunktionen verwalten',
     usernamePlaceholder: 'Benutzername noch nicht festgelegt',
     accountSection: 'Kontoinformationen',
+    announcements: 'Ankündigungen',
+    announcementsSubtitle: 'Neueste Neuigkeiten und Updates ansehen',
     profile: 'Mein Profil',
     profileSubtitle: 'Kontoinformationen anzeigen',
     editProfile: 'Informationen bearbeiten',
@@ -1258,6 +1401,8 @@ class _AccountTranslations {
     accountSubtitle: 'Gestiona tu cuenta y funciones de viaje',
     usernamePlaceholder: 'Nombre de usuario no configurado',
     accountSection: 'Información de la cuenta',
+    announcements: 'Anuncios',
+    announcementsSubtitle: 'Ver las últimas noticias y actualizaciones',
     profile: 'Mi perfil',
     profileSubtitle: 'Ver información de la cuenta',
     editProfile: 'Editar información',
@@ -1313,6 +1458,8 @@ class _AccountTranslations {
     accountSubtitle: '管理账户和旅行功能',
     usernamePlaceholder: '尚未设置用户名',
     accountSection: '账户信息',
+    announcements: '公告',
+    announcementsSubtitle: '查看最新消息和更新',
     profile: '我的资料',
     profileSubtitle: '查看账户信息',
     editProfile: '编辑信息',
@@ -1363,6 +1510,8 @@ class _AccountTranslations {
     accountSubtitle: 'Gestisci le informazioni e le funzioni del tuo account',
     usernamePlaceholder: 'Nome utente non ancora impostato',
     accountSection: 'Informazioni account',
+    announcements: 'Annunci',
+    announcementsSubtitle: 'Visualizza le ultime novità e aggiornamenti',
     profile: 'Il mio profilo',
     profileSubtitle: 'Visualizza le informazioni dell\u2019account',
     editProfile: 'Modifica informazioni',
