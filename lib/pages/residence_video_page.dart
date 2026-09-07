@@ -36,6 +36,8 @@ String get _lang {
       return 'en';
     case AppLanguage.arabic:
       return 'ar';
+    default:
+      return 'en';
   }
 }
 
