@@ -759,7 +759,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Notfallhilfe auf Reisen',
         'es': 'Ayuda de emergencia en viaje',
         'zh': '旅行紧急帮助',
-        'it': 'Aiuto d'emergenza in viaggio',
+        'it': "Aiuto d'emergenza in viaggio",
       },
       'دسترسی سریع به خدمات ضروری و امدادی': {
         'fa': 'دسترسی سریع به خدمات ضروری و امدادی',
@@ -771,7 +771,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Schneller Zugang zu Notfall- und wichtigen Diensten',
         'es': 'Acceso rápido a servicios esenciales y de emergencia',
         'zh': '快速访问必要和紧急服务',
-        'it': 'Accesso rapido ai servizi essenziali e d'emergenza',
+        'it': "Accesso rapido ai servizi essenziali e d'emergenza",
       },
       'حالت سفر': {
         'fa': 'حالت سفر',
@@ -1045,7 +1045,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Uhrzeit in Städten weltweit anzeigen',
         'es': 'Muestra la hora de diferentes ciudades del mundo',
         'zh': '显示世界各地城市的时间',
-        'it': 'Mostra l'ora nelle città del mondo',
+        'it': "Mostra l'ora nelle città del mondo",
       },
       'زمان محلی مقصد': {
         'fa': 'زمان محلی مقصد',
@@ -1069,7 +1069,7 @@ class CyrusSmartToolbox extends StatelessWidget {
         'de': 'Ortszeit und Zeitunterschied anzeigen',
         'es': 'Muestra la hora local y la diferencia horaria',
         'zh': '显示当地时间和时差',
-        'it': 'Mostra l'ora locale e il fuso orario',
+        'it': "Mostra l'ora locale e il fuso orario",
       },
       'وضعیت اتصال': {
         'fa': 'وضعیت اتصال',
