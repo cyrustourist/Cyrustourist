@@ -505,6 +505,7 @@ jobs:
         shell: bash
         env:
           APK_URL: ${{ steps.release.outputs.apk_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -512,12 +513,18 @@ jobs:
           echo "$APK_URL"
           echo ""
 
-          # نکته: بلافاصله بعد از آپلود asset به یک GitHub Release،
+          # نکته ۱: بلافاصله بعد از آپلود asset به یک GitHub Release،
           # حتی اگر GitHub API وضعیت آن را "uploaded" اعلام کند،
           # ممکن است چند ثانیه طول بکشد تا خودِ لینک دانلود
           # (browser_download_url) روی CDN گیت‌هاب فعال/قابل‌دسترس شود.
           # به همین دلیل به‌جای یک تلاش تکی، چند بار با فاصله تلاش
           # می‌کنیم تا این race condition باعث fail شدن بیلد نشود.
+          #
+          # نکته ۲ (مهم‌تر): اگر ریپازیتوری private باشد، درخواست بدون
+          # احراز هویت به browser_download_url همیشه HTTP 404 برمی‌گرداند
+          # — حتی وقتی asset واقعاً آپلود و در دسترس است. برای همین باید
+          # درخواست را با توکن (GITHUB_TOKEN) و هدر Accept مخصوص دانلود
+          # باینری asset احراز هویت کنیم.
 
           MAX_ATTEMPTS=8
           SLEEP_SECONDS=5
@@ -531,6 +538,8 @@ jobs:
                 --location \
                 --silent \
                 --show-error \
+                --header "Authorization: Bearer ${GH_TOKEN}" \
+                --header "Accept: application/octet-stream" \
                 --output /dev/null \
                 --write-out "%{http_code}" \
                 "$APK_URL" \
