@@ -432,6 +432,49 @@ class CyrusSearchItem {
   final String subtitle;
 }
 
+/// مجموعه‌ی همه‌ی گزینه‌های جستجوی هوشمند به همراه عنوان بخش‌ها، برای
+/// یک زبان مشخص. قبلاً این کلاس اصلاً تعریف نشده بود در حالی که
+/// _SearchTranslations.items() آن را برمی‌گرداند — همین باعث خطای
+/// «Method not found: CyrusSearchItems» می‌شد.
+class CyrusSearchItems {
+  const CyrusSearchItems({
+    required this.sectionGeneral,
+    required this.sectionPlaces,
+    required this.sectionSmart,
+    required this.quickSearch,
+    required this.cityProvince,
+    required this.restaurant,
+    required this.cafe,
+    required this.shopping,
+    required this.historical,
+    required this.nature,
+    required this.interests,
+    required this.naturalLanguage,
+    required this.aroundMe,
+    required this.voice,
+    required this.image,
+    required this.suggestions,
+  });
+
+  final String sectionGeneral;
+  final String sectionPlaces;
+  final String sectionSmart;
+
+  final CyrusSearchItem quickSearch;
+  final CyrusSearchItem cityProvince;
+  final CyrusSearchItem restaurant;
+  final CyrusSearchItem cafe;
+  final CyrusSearchItem shopping;
+  final CyrusSearchItem historical;
+  final CyrusSearchItem nature;
+  final CyrusSearchItem interests;
+  final CyrusSearchItem naturalLanguage;
+  final CyrusSearchItem aroundMe;
+  final CyrusSearchItem voice;
+  final CyrusSearchItem image;
+  final CyrusSearchItem suggestions;
+}
+
 /// دکمه سه‌بعدی جستجوی هوشمند.
 class CyrusSmartSearchButton extends StatefulWidget {
   const CyrusSmartSearchButton({
