@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 /// 3. پشتیبانی
 ///
 /// نکته:
-/// این فایل در مرحله فعلی هیچ اتصال مستقیمی به main.dart
-/// یا کلیدهای قدیمی پروژه ندارد.
+/// این فایل از طریق CyrusSettingsFeatureButtons در
+/// cyrus_settings_screen.dart استفاده و به منوی ☰ وصل است.
 ///
 /// زبان‌های آماده:
 /// فارسی، انگلیسی، عربی، ترکی، روسی،
-/// فرانسوی، آلمانی، اسپانیایی، چینی، ژاپنی
+/// فرانسوی، آلمانی، اسپانیایی، چینی، ایتالیایی
 
 class CyrusSettingsSocialAboutSupport {
   CyrusSettingsSocialAboutSupport._();
@@ -37,7 +37,7 @@ class CyrusSettingsSocialAboutSupport {
           'Soziale Netzwerke',
           'Redes sociales',
           '社交网络',
-          'ソーシャルネットワーク',
+          'Social network',
         ),
         subtitle: _text(
           languageCode,
@@ -50,7 +50,7 @@ class CyrusSettingsSocialAboutSupport {
           'Offizielle Seiten von CyrusTourist',
           'Páginas oficiales de CyrusTourist',
           'CyrusTourist 官方页面',
-          'CyrusTourist公式ページ',
+          'Pagine ufficiali di CyrusTourist',
         ),
         iconBackground: const Color(0xff1769aa),
         iconForeground: Colors.white,
@@ -69,7 +69,7 @@ class CyrusSettingsSocialAboutSupport {
           'Über uns',
           'Sobre nosotros',
           '关于我们',
-          '私たちについて',
+          'Chi siamo',
         ),
         subtitle: _text(
           languageCode,
@@ -82,7 +82,7 @@ class CyrusSettingsSocialAboutSupport {
           'Mehr über CyrusTourist erfahren',
           'Conoce más sobre CyrusTourist',
           '了解 CyrusTourist',
-          'CyrusTouristについて',
+          'Scopri di più su CyrusTourist',
         ),
         iconBackground: const Color(0xffb8860b),
         iconForeground: Colors.white,
@@ -101,7 +101,7 @@ class CyrusSettingsSocialAboutSupport {
           'Support',
           'Soporte',
           '支持',
-          'サポート',
+          'Supporto',
         ),
         subtitle: _text(
           languageCode,
@@ -114,7 +114,7 @@ class CyrusSettingsSocialAboutSupport {
           'CyrusTourist-Support kontaktieren',
           'Contactar con el soporte de CyrusTourist',
           '联系 CyrusTourist 支持',
-          'CyrusTouristサポートに連絡',
+          'Contatta il supporto CyrusTourist',
         ),
         iconBackground: const Color(0xff8e244d),
         iconForeground: Colors.white,
@@ -147,7 +147,7 @@ class CyrusSettingsSocialAboutSupport {
     String de,
     String es,
     String zh,
-    String ja,
+    String it,
   ) {
     final code = languageCode.toLowerCase().split('-').first;
 
@@ -176,8 +176,8 @@ class CyrusSettingsSocialAboutSupport {
       case 'zh':
         return zh;
 
-      case 'ja':
-        return ja;
+      case 'it':
+        return it;
 
       case 'fa':
       default:
