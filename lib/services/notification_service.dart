@@ -1,15 +1,168 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+
+import '../models/cyrus_announcement.dart';
+import 'cache_service.dart';
 
 /// سرویس مرکزی اعلان‌های سایروس توریست.
 ///
-/// این سرویس فعلاً یک لایه مستقل برای مدیریت اعلان‌هاست
-/// تا در ادامه بتوانیم اعلان‌های محلی، اطلاع‌رسانی گردشگری
-/// و پیام‌های برنامه را بدون تغییر گسترده در صفحات اضافه کنیم.
+/// این سرویس دو مسئولیت دارد:
+/// 1) دریافت لیست اعلان‌ها (Announcements) از API سرور و نگه‌داشتن
+///    وضعیت «خوانده‌نشده» برای نمایش بج روی کلید ۸ (حساب کاربری).
+/// 2) لایه‌ی نمایش اعلان محلی ساده (show/showWelcome/...) که پیش‌تر
+///    در پروژه وجود داشت و بدون تغییر باقی مانده تا چیزی نشکند.
 class NotificationService {
   NotificationService._();
 
-  static final NotificationService instance =
-      NotificationService._();
+  static final NotificationService instance = NotificationService._();
+
+  /// آدرس API اعلان‌های سایروس توریست.
+  static const String _endpoint =
+      'https://cyrus-tourist-api.cyrustourist.workers.dev/notifications';
+
+  /// کلید ذخیره‌سازی آخرین شناسه‌ی دیده‌شده (برای شمارش خوانده‌نشده‌ها).
+  static const String _lastSeenIdKey = 'cyrus_last_seen_notification_id';
+
+  /// کلید ذخیره‌سازی شناسه‌ی پیام‌هایی که کاربر حذف کرده است.
+  ///
+  /// حذف فقط محلی (روی همان دستگاه) است؛ پیام از سرور پاک نمی‌شود،
+  /// فقط دیگر برای این کاربر نمایش داده نمی‌شود.
+  static const String _dismissedIdsKey = 'cyrus_dismissed_notification_ids';
+
+  // ==========================================================
+  // بخش ۱: دریافت اعلان‌ها از سرور
+  // ==========================================================
+
+  /// دریافت لیست اعلان‌های فعال از سرور، جدیدترین در ابتدا.
+  ///
+  /// پیام‌هایی که کاربر قبلاً حذف کرده (به‌صورت محلی) از نتیجه
+  /// حذف می‌شوند. در صورت هرگونه خطای شبکه/پارس، لیست خالی
+  /// برمی‌گرداند تا رابط کاربری هیچ‌گاه کرش نکند.
+  Future<List<CyrusAnnouncement>> fetchAnnouncements() async {
+    final client = HttpClient();
+
+    try {
+      client.connectionTimeout = const Duration(seconds: 10);
+
+      final uri = Uri.parse(_endpoint);
+      final request = await client.getUrl(uri);
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+
+      final response = await request.close();
+
+      if (response.statusCode != 200) {
+        return const [];
+      }
+
+      final body = await response.transform(const Utf8Decoder()).join();
+      final decoded = jsonDecode(body);
+
+      if (decoded is! Map<String, dynamic>) {
+        return const [];
+      }
+
+      final rawList = decoded['data'];
+
+      if (rawList is! List) {
+        return const [];
+      }
+
+      final dismissedIds = await _getDismissedIds();
+
+      final items = rawList
+          .whereType<Map<String, dynamic>>()
+          .map(CyrusAnnouncement.fromJson)
+          .where((item) => item.isActive)
+          .where((item) => !dismissedIds.contains(item.id))
+          .toList();
+
+      items.sort((a, b) => b.id.compareTo(a.id));
+
+      return items;
+    } catch (error) {
+      debugPrint('Cyrus Tourist Notification fetch error: $error');
+      return const [];
+    } finally {
+      client.close();
+    }
+  }
+
+  /// تعداد اعلان‌های خوانده‌نشده (نسبت به آخرین شناسه‌ی دیده‌شده).
+  ///
+  /// برای نمایش بج قرمز روی گزینه‌ی «اعلان‌ها» در کلید ۸ استفاده می‌شود.
+  Future<int> getUnreadCount() async {
+    final items = await fetchAnnouncements();
+
+    if (items.isEmpty) {
+      return 0;
+    }
+
+    final lastSeenId = await CacheService.instance.getInt(_lastSeenIdKey) ?? 0;
+
+    return items.where((item) => item.id > lastSeenId).length;
+  }
+
+  /// علامت‌گذاری همه‌ی اعلان‌های فعلی به‌عنوان «خوانده‌شده».
+  ///
+  /// معمولاً هنگام باز شدن صفحه‌ی لیست اعلان‌ها فراخوانی می‌شود.
+  Future<void> markAllAsRead(List<CyrusAnnouncement> items) async {
+    if (items.isEmpty) {
+      return;
+    }
+
+    final maxId = items.map((item) => item.id).reduce(
+          (a, b) => a > b ? a : b,
+        );
+
+    final currentLastSeen =
+        await CacheService.instance.getInt(_lastSeenIdKey) ?? 0;
+
+    if (maxId > currentLastSeen) {
+      await CacheService.instance.setInt(_lastSeenIdKey, maxId);
+    }
+  }
+
+  // ==========================================================
+  // حذف محلی یک پیام (طبق درخواست: کاربر بتواند پیام را حذف کند)
+  // ==========================================================
+
+  /// حذف یک پیام به‌صورت محلی؛ از این پس در لیست نمایش داده نمی‌شود.
+  Future<void> dismiss(int id) async {
+    final ids = await _getDismissedIds();
+
+    if (ids.add(id)) {
+      await _saveDismissedIds(ids);
+    }
+  }
+
+  /// خواندن شناسه‌ی پیام‌های حذف‌شده از حافظه‌ی محلی دستگاه.
+  Future<Set<int>> _getDismissedIds() async {
+    final raw = await CacheService.instance.getJson(_dismissedIdsKey);
+
+    if (raw is! List) {
+      return <int>{};
+    }
+
+    return raw.map((value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse('$value') ?? -1;
+    }).where((id) => id >= 0).toSet();
+  }
+
+  /// ذخیره‌ی شناسه‌ی پیام‌های حذف‌شده در حافظه‌ی محلی دستگاه.
+  Future<void> _saveDismissedIds(Set<int> ids) async {
+    await CacheService.instance.setJson(
+      _dismissedIdsKey,
+      ids.toList(),
+    );
+  }
+
+  // ==========================================================
+  // بخش ۲: لایه‌ی نمایش اعلان محلی (بدون تغییر نسبت به قبل)
+  // ==========================================================
 
   /// وضعیت آماده بودن سرویس
   bool _initialized = false;
