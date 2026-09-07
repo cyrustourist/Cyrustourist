@@ -33,6 +33,8 @@ class _FavoritesPageState
         return 'المفضلة';
       case AppLanguage.english:
         return 'Favorites';
+      default:
+        return 'Favorites';
     }
   }
 
@@ -43,6 +45,8 @@ class _FavoritesPageState
       case AppLanguage.arabic:
         return 'لم يتم حفظ أي عنصر مفضل';
       case AppLanguage.english:
+        return 'No favorites saved yet';
+      default:
         return 'No favorites saved yet';
     }
   }
