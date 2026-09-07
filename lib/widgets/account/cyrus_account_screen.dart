@@ -874,6 +874,8 @@ class _AccountTranslations {
     required this.accountSubtitle,
     required this.usernamePlaceholder,
     required this.accountSection,
+    required this.announcements,
+    required this.announcementsSubtitle,
     required this.profile,
     required this.profileSubtitle,
     required this.editProfile,
