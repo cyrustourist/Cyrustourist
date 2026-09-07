@@ -92,6 +92,8 @@ class _CategoryExplorerPageState
         return 'ar';
       case AppLanguage.english:
         return 'en';
+      default:
+        return 'en';
     }
   }
 
