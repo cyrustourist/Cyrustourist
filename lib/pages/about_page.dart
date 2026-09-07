@@ -17,6 +17,8 @@ class AboutPage extends StatelessWidget {
         return ar;
       case AppLanguage.english:
         return en;
+      default:
+        return en;
     }
   }
 
