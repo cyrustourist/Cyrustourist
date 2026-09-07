@@ -509,25 +509,51 @@ jobs:
           set -euo pipefail
 
           echo "Testing APK download URL..."
+          echo "$APK_URL"
+          echo ""
 
-          HTTP_CODE="$(
-            curl \
-              --location \
-              --silent \
-              --show-error \
-              --output /dev/null \
-              --write-out "%{http_code}" \
-              "$APK_URL"
-          )"
+          # نکته: بلافاصله بعد از آپلود asset به یک GitHub Release،
+          # حتی اگر GitHub API وضعیت آن را "uploaded" اعلام کند،
+          # ممکن است چند ثانیه طول بکشد تا خودِ لینک دانلود
+          # (browser_download_url) روی CDN گیت‌هاب فعال/قابل‌دسترس شود.
+          # به همین دلیل به‌جای یک تلاش تکی، چند بار با فاصله تلاش
+          # می‌کنیم تا این race condition باعث fail شدن بیلد نشود.
 
-          echo "HTTP status: $HTTP_CODE"
+          MAX_ATTEMPTS=8
+          SLEEP_SECONDS=5
+          HTTP_CODE="000"
+
+          for ATTEMPT in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
+
+            HTTP_CODE="$(
+              curl \
+                --location \
+                --silent \
+                --show-error \
+                --output /dev/null \
+                --write-out "%{http_code}" \
+                "$APK_URL" \
+                || echo "000"
+            )"
+
+            echo "HTTP status: $HTTP_CODE"
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "APK download URL is working."
+              break
+            fi
+
+            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+              echo "Not ready yet, waiting ${SLEEP_SECONDS}s before retrying..."
+              sleep "$SLEEP_SECONDS"
+            fi
+          done
 
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: APK download URL did not return HTTP 200."
+            echo "ERROR: APK download URL did not return HTTP 200 after $MAX_ATTEMPTS attempts."
             exit 1
           fi
-
-          echo "APK download URL is working."
 
       - name: Verify Release and APK
         shell: bash
