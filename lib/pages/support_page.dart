@@ -11,6 +11,8 @@ String _t(String fa, String en, String ar) {
       return ar;
     case AppLanguage.english:
       return en;
+    default:
+      return en;
   }
 }
 
