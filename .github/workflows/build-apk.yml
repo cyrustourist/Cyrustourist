@@ -402,6 +402,20 @@ jobs:
           echo "APK prepared successfully."
           echo "APK size: $APK_SIZE bytes"
 
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cyrustourist.ir.apk
+          path: build/app/outputs/flutter-apk/Cyrustourist.ir.apk
+          # نگه‌داری کوتاه‌مدت (۵ روز) تا این Artifact خودکار پاک شود و
+          # دوباره باعث پر شدن سهمیه‌ی فضای ذخیره‌سازی Actions نشود —
+          # همان مشکلی که باعث حذف این step در گذشته شده بود.
+          # دانلود دائمی همچنان از طریق GitHub Release (step بعدی) در
+          # دسترس می‌ماند.
+          retention-days: 5
+          compression-level: 0
+          if-no-files-found: error
+
       - name: Create GitHub Release with APK
         id: release
         shell: bash
