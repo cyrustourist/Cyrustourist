@@ -502,67 +502,92 @@ jobs:
           echo "apk_size=$APK_SIZE" >> "$GITHUB_OUTPUT"
 
       - name: Test APK download URL
+        id: test_download
         shell: bash
         env:
           APK_URL: ${{ steps.release.outputs.apk_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v${{ steps.bump.outputs.new_version }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
 
-          echo "Testing APK download URL..."
-          echo "$APK_URL"
+          echo "Testing APK download..."
+          echo "Tag: $TAG"
+          echo "Asset URL (for reference): $APK_URL"
           echo ""
 
-          # نکته ۱: بلافاصله بعد از آپلود asset به یک GitHub Release،
-          # حتی اگر GitHub API وضعیت آن را "uploaded" اعلام کند،
-          # ممکن است چند ثانیه طول بکشد تا خودِ لینک دانلود
-          # (browser_download_url) روی CDN گیت‌هاب فعال/قابل‌دسترس شود.
-          # به همین دلیل به‌جای یک تلاش تکی، چند بار با فاصله تلاش
-          # می‌کنیم تا این race condition باعث fail شدن بیلد نشود.
-          #
-          # نکته ۲ (مهم‌تر): اگر ریپازیتوری private باشد، درخواست بدون
-          # احراز هویت به browser_download_url همیشه HTTP 404 برمی‌گرداند
-          # — حتی وقتی asset واقعاً آپلود و در دسترس است. برای همین باید
-          # درخواست را با توکن (GITHUB_TOKEN) و هدر Accept مخصوص دانلود
-          # باینری asset احراز هویت کنیم.
+          # نکته: به‌جای curl خام روی browser_download_url (که برای
+          # ریپازیتوری‌های private می‌تواند رفتار غیرقابل‌اعتماد داشته
+          # باشد)، از دستور رسمی خودِ GitHub CLI برای دانلود asset
+          # استفاده می‌کنیم. این دستور به‌طور خودکار احراز هویت و
+          # هدرهای لازم را مدیریت می‌کند و روش پیشنهادی خودِ GitHub است.
 
-          MAX_ATTEMPTS=8
+          DOWNLOAD_DIR="$RUNNER_TEMP/apk-download-test"
+          mkdir -p "$DOWNLOAD_DIR"
+
+          MAX_ATTEMPTS=6
           SLEEP_SECONDS=5
-          HTTP_CODE="000"
+          SUCCESS=0
+          LAST_ERROR=""
 
           for ATTEMPT in $(seq 1 "$MAX_ATTEMPTS"); do
-            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS: gh release download..."
 
-            HTTP_CODE="$(
-              curl \
-                --location \
-                --silent \
-                --show-error \
-                --header "Authorization: Bearer ${GH_TOKEN}" \
-                --header "Accept: application/octet-stream" \
-                --output /dev/null \
-                --write-out "%{http_code}" \
-                "$APK_URL" \
-                || echo "000"
-            )"
+            rm -f "$DOWNLOAD_DIR/Cyrustourist.ir.apk"
 
-            echo "HTTP status: $HTTP_CODE"
-
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "APK download URL is working."
-              break
+            if OUTPUT="$(
+              gh release download "$TAG" \
+                --repo "${{ github.repository }}" \
+                --pattern "Cyrustourist.ir.apk" \
+                --dir "$DOWNLOAD_DIR" \
+                --clobber \
+                2>&1
+            )"; then
+              if [ -s "$DOWNLOAD_DIR/Cyrustourist.ir.apk" ]; then
+                DOWNLOADED_SIZE="$(stat -c%s "$DOWNLOAD_DIR/Cyrustourist.ir.apk")"
+                echo "Download succeeded. File size: $DOWNLOADED_SIZE bytes"
+                SUCCESS=1
+                break
+              else
+                LAST_ERROR="gh release download reported success but file is missing or empty."
+                echo "$LAST_ERROR"
+              fi
+            else
+              LAST_ERROR="$OUTPUT"
+              echo "gh release download failed:"
+              echo "$OUTPUT"
             fi
 
             if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
-              echo "Not ready yet, waiting ${SLEEP_SECONDS}s before retrying..."
+              echo "Retrying in ${SLEEP_SECONDS}s..."
               sleep "$SLEEP_SECONDS"
             fi
           done
 
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: APK download URL did not return HTTP 200 after $MAX_ATTEMPTS attempts."
+          {
+            echo "### 🔎 APK Download Test"
+            echo ""
+            if [ "$SUCCESS" -eq 1 ]; then
+              echo "✅ Download succeeded via \`gh release download\` (file size: ${DOWNLOADED_SIZE} bytes)."
+            else
+              echo "❌ Download failed after $MAX_ATTEMPTS attempts."
+              echo ""
+              echo "**Last error:**"
+              echo '```text'
+              echo "$LAST_ERROR"
+              echo '```'
+              echo ""
+              echo "**Asset URL:** \`$APK_URL\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$SUCCESS" -ne 1 ]; then
+            echo "ERROR: Could not download the APK asset after $MAX_ATTEMPTS attempts."
+            echo "See the Summary tab of this run for full diagnostic details."
             exit 1
           fi
+
+          echo "APK download test successful."
 
       - name: Verify Release and APK
         shell: bash
