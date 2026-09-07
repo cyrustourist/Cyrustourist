@@ -27,6 +27,8 @@ class _TravelGuidePageState extends State<TravelGuidePage> {
         return en;
       case AppLanguage.arabic:
         return ar;
+      default:
+        return en;
     }
   }
 
@@ -265,6 +267,8 @@ class _TravelGuidePageState extends State<TravelGuidePage> {
         return en;
       case AppLanguage.arabic:
         return ar;
+      default:
+        return en;
     }
   }
 
