@@ -128,7 +128,7 @@ class LanguageService {
   static String languageName(AppLanguage language) {
     switch (language) {
       case AppLanguage.persian:
-        return 'فارسی';
+        return 'پارسی';
 
       case AppLanguage.english:
         return 'English';
