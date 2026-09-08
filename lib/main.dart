@@ -678,7 +678,11 @@ class _HomePageState extends State<HomePage> {
                     // ==================================================
 
                     Positioned(
-                      top: 14,
+                      // پایین‌تر از نوشته‌ی «CyrusTourist» که داخل خودِ
+                      // عکس پس‌زمینه چاپ شده (تا حدود ۷.۸٪ ارتفاع عکس).
+                      // با نسبت به ارتفاع واقعی صفحه، این آیکون هیچ‌وقت
+                      // روی آن نوشته نمی‌افتد.
+                      top: height * 0.095,
                       left: 14,
                       child: GestureDetector(
                         onTap: () => Navigator.push(
@@ -710,7 +714,10 @@ class _HomePageState extends State<HomePage> {
                     ),
 
                     Positioned(
-                      top: 14,
+                      // همتراز با آیکون منو (بالا) و پایین‌تر از نوشته‌ی
+                      // «CyrusTourist»، تا دیگر آیکون زبان روی آن نوشته
+                      // قرار نگیرد.
+                      top: height * 0.095,
                       right: 14,
                       child: Row(
                         children: [
@@ -893,17 +900,34 @@ class _HomePageState extends State<HomePage> {
                     // عنوان‌های ۱۰ کلید (متن واقعی Flutter، نه پیکسل عکس)
                     // ==================================================
 
-                    caption(1, .02, .50, .18, .14, width, height),
-                    caption(2, .21, .50, .18, .14, width, height),
-                    caption(3, .40, .50, .18, .14, width, height),
-                    caption(4, .59, .50, .18, .14, width, height),
-                    caption(5, .78, .50, .18, .14, width, height),
+                    // نکته: کارت‌های ردیف اول در خودِ عکس، پایین‌تر از چیزی
+                    // تمام می‌شوند که مقدار height=.14 فرض می‌کرد (لبه‌ی
+                    // واقعی کارت حدود .685 است، نه .64). به همین دلیل قبلاً
+                    // نوشته‌ی ردیف اول وسط آیکون می‌افتاد ولی نوشته‌ی ردیف
+                    // دوم پایین‌تر (نزدیک لبه‌ی کارت) بود. حالا با پارامتر
+                    // captionTop، جای هر دو ردیف دقیقاً زیرِ لبه‌ی واقعیِ
+                    // کارت در عکس تنظیم شده تا هر دو ردیف یک‌دست باشند.
+                    caption(1, .02, .50, .18, .14, width, height,
+                        captionTop: .695),
+                    caption(2, .21, .50, .18, .14, width, height,
+                        captionTop: .695),
+                    caption(3, .40, .50, .18, .14, width, height,
+                        captionTop: .695),
+                    caption(4, .59, .50, .18, .14, width, height,
+                        captionTop: .695),
+                    caption(5, .78, .50, .18, .14, width, height,
+                        captionTop: .695),
 
-                    caption(6, .02, .71, .18, .14, width, height),
-                    caption(7, .21, .71, .18, .14, width, height),
-                    caption(8, .40, .71, .18, .14, width, height),
-                    caption(9, .59, .71, .18, .14, width, height),
-                    caption(10, .78, .71, .18, .14, width, height),
+                    caption(6, .02, .71, .18, .14, width, height,
+                        captionTop: .885),
+                    caption(7, .21, .71, .18, .14, width, height,
+                        captionTop: .885),
+                    caption(8, .40, .71, .18, .14, width, height,
+                        captionTop: .885),
+                    caption(9, .59, .71, .18, .14, width, height,
+                        captionTop: .885),
+                    caption(10, .78, .71, .18, .14, width, height,
+                        captionTop: .885),
                   ],
                 ),
               ),
@@ -925,15 +949,22 @@ class _HomePageState extends State<HomePage> {
     double width,
     double height,
     double imageWidth,
-    double imageHeight,
-  ) {
+    double imageHeight, {
+    // موقعیت واقعیِ نوشته (کسری از ارتفاع عکس). اگر داده نشود، مثل قبل
+    // با فرمول قدیمی (top + height*0.90) محاسبه می‌شود؛ اما برای هر ۱۰
+    // کلید یک مقدار دقیق و کالیبره‌شده روی خودِ عکس پاس داده می‌شود تا
+    // نوشته‌ها زیرِ لبه‌ی واقعی کارت بنشینند، نه وسط آیکون.
+    double? captionTop,
+  }) {
     final text = MenuTranslations.title(MenuLanguage.current, number);
 
     final label = text.isNotEmpty ? text : buttonTitle(number);
 
+    final resolvedTop = captionTop ?? (top + height * 0.90);
+
     return Positioned(
       left: imageWidth * left,
-      top: imageHeight * (top + height * 0.90),
+      top: imageHeight * resolvedTop,
       width: imageWidth * width,
       child: IgnorePointer(
         child: Directionality(
@@ -942,7 +973,7 @@ class _HomePageState extends State<HomePage> {
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 6,
-              vertical: 3,
+              vertical: 2,
             ),
             decoration: BoxDecoration(
               color: const Color(0xff0b1826).withValues(alpha: 0.62),
@@ -960,8 +991,8 @@ class _HomePageState extends State<HomePage> {
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 10.5,
-                height: 1.25,
+                fontSize: 9.5,
+                height: 1.15,
               ),
             ),
           ),
