@@ -125,7 +125,31 @@ jobs:
             git commit \
               -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
 
-            git push
+            # نکته: بین لحظه‌ی checkout این Run و همین‌جا، ممکن است
+            # کامیت جدیدی (مثلاً پوش دستی خودتان) روی main نشسته باشد.
+            # به‌جای fail شدن فوری روی push، چند بار rebase روی آخرین
+            # نسخه‌ی remote و تلاش دوباره برای push انجام می‌دهیم.
+
+            MAX_ATTEMPTS=5
+            PUSHED=0
+
+            for ATTEMPT in $(seq 1 "$MAX_ATTEMPTS"); do
+              echo "Push attempt $ATTEMPT of $MAX_ATTEMPTS..."
+
+              if git push; then
+                PUSHED=1
+                break
+              fi
+
+              echo "Push rejected — fetching and rebasing onto latest main..."
+              git fetch origin main
+              git rebase origin/main
+            done
+
+            if [ "$PUSHED" -ne 1 ]; then
+              echo "ERROR: Could not push version bump after $MAX_ATTEMPTS attempts."
+              exit 1
+            fi
           fi
 
       - name: Setup Flutter
