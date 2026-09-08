@@ -283,6 +283,50 @@ class NotificationService {
     _initialized = true;
   }
 
+  /// ⚠️ موقت — فقط برای تست نوتیفیکیشن.
+  ///
+  /// توکن FCM دستگاه را در یک پنجره‌ی قابل‌کپی نشان می‌دهد تا در
+  /// Firebase Console → Cloud Messaging → Send test message استفاده شود.
+  /// بعد از اتمام تست، فراخوانی این متد از main.dart را حذف کنید.
+  Future<void> showDebugTokenDialog(BuildContext context) async {
+    String? token;
+
+    try {
+      token = await FirebaseMessaging.instance.getToken();
+    } catch (error) {
+      token = null;
+      debugPrint('FCM token error: $error');
+    }
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('FCM Token (تست نوتیفیکیشن)'),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            token ?? 'توکن دریافت نشد (اتصال اینترنت/Google Play Services را چک کنید)',
+          ),
+        ),
+        actions: [
+          if (token != null)
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: token!));
+                Navigator.pop(context);
+              },
+              child: const Text('کپی و بستن'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('بستن'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _onForegroundMessage(RemoteMessage message) async {
     final notification = message.notification;
 
