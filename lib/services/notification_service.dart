@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../models/cyrus_announcement.dart';
 import 'cache_service.dart';
@@ -30,6 +32,15 @@ class NotificationService {
   /// حذف فقط محلی (روی همان دستگاه) است؛ پیام از سرور پاک نمی‌شود،
   /// فقط دیگر برای این کاربر نمایش داده نمی‌شود.
   static const String _dismissedIdsKey = 'cyrus_dismissed_notification_ids';
+
+  /// کلید ذخیره‌سازی آخرین تعداد خوانده‌نشده‌ای که برایش افکت صدا
+  /// پخش شده (برای جلوگیری از پخش تکراری صدا برای همان آگهی‌ها).
+  static const String _lastNotifiedCountKey =
+      'cyrus_last_notified_unread_count';
+
+  /// کلید ذخیره‌سازی روشن/خاموش بودن افکت صدای آگهی جدید.
+  static const String _soundEnabledKey =
+      'cyrus_announcement_sound_enabled';
 
   // ==========================================================
   // بخش ۱: دریافت اعلان‌ها از سرور
@@ -121,6 +132,52 @@ class NotificationService {
 
     if (maxId > currentLastSeen) {
       await CacheService.instance.setInt(_lastSeenIdKey, maxId);
+    }
+
+    // چون همه چیز خوانده شد، شمارشگر صدا هم صفر می‌شود تا آگهی‌های
+    // جدیدِ بعدی دوباره بتوانند افکت صدا پخش کنند.
+    await CacheService.instance.setInt(_lastNotifiedCountKey, 0);
+  }
+
+  // ==========================================================
+  // افکت صدای آگهی جدید
+  // ==========================================================
+
+  /// آیا افکت صدای آگهی جدید در تنظیمات فعال است؟ پیش‌فرض: فعال.
+  Future<bool> isAnnouncementSoundEnabled() async {
+    final value = await CacheService.instance.getInt(_soundEnabledKey);
+    return value == null || value == 1;
+  }
+
+  /// روشن/خاموش کردن افکت صدای آگهی جدید.
+  Future<void> setAnnouncementSoundEnabled(bool enabled) async {
+    await CacheService.instance.setInt(_soundEnabledKey, enabled ? 1 : 0);
+  }
+
+  /// اگر از آخرین بار، تعداد آگهی‌های خوانده‌نشده افزایش یافته باشد
+  /// (یعنی آگهی جدیدی رسیده) و افکت صدا در تنظیمات فعال باشد، یک
+  /// افکت صدای کوتاه پخش می‌کند.
+  ///
+  /// نکته: چون فعلاً پکیج پخش صدای اختصاصی (مثل audioplayers) در
+  /// پروژه نصب نیست، از افکت صدای سیستمی خودِ فلاتر استفاده می‌شود.
+  /// برای صدای اختصاصی/برندشده، باید یک فایل صوتی به پروژه اضافه و
+  /// پکیج مربوطه نصب شود.
+  Future<void> maybePlayNewAnnouncementSound() async {
+    final unread = await getUnreadCount();
+
+    final lastNotified =
+        await CacheService.instance.getInt(_lastNotifiedCountKey) ?? 0;
+
+    if (unread > lastNotified) {
+      await CacheService.instance.setInt(_lastNotifiedCountKey, unread);
+
+      final soundOn = await isAnnouncementSoundEnabled();
+
+      if (soundOn) {
+        unawaited(SystemSound.play(SystemSoundType.alert));
+      }
+    } else if (unread < lastNotified) {
+      await CacheService.instance.setInt(_lastNotifiedCountKey, unread);
     }
   }
 
