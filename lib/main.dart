@@ -219,6 +219,12 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     NotificationService.instance.maybePlayNewAnnouncementSound();
+
+    // ⚠️ موقت — فقط برای تست نوتیفیکیشن. بعد از گرفتن توکن و تست
+    // موفق پوش نوتیفیکیشن، این ۳ خط را حذف کنید.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.showDebugTokenDialog(context);
+    });
   }
 
   String get homeImage => 'assets/images/home-hero.jpg';
@@ -556,31 +562,31 @@ class _HomePageState extends State<HomePage> {
                     ),
 
                     // لمس کلیدها (ردیف اول 1 تا 5)
-                    area(1, .02, .50, .18, .15, width, height),
-                    area(2, .21, .50, .18, .15, width, height),
-                    area(3, .40, .50, .18, .15, width, height),
-                    area(4, .59, .50, .18, .15, width, height),
-                    area(5, .78, .50, .18, .15, width, height),
+                    area(1, .02, .44, .18, .19, width, height),
+                    area(2, .21, .44, .18, .19, width, height),
+                    area(3, .40, .44, .18, .19, width, height),
+                    area(4, .59, .44, .18, .19, width, height),
+                    area(5, .78, .44, .18, .19, width, height),
 
                     // لمس کلیدها (ردیف دوم 6 تا 10)
-                    area(6, .02, .71, .18, .15, width, height),
-                    area(7, .21, .71, .18, .15, width, height),
-                    area(8, .40, .71, .18, .15, width, height),
-                    area(9, .59, .71, .18, .15, width, height),
-                    area(10, .78, .71, .18, .15, width, height),
+                    area(6, .02, .64, .18, .175, width, height),
+                    area(7, .21, .64, .18, .175, width, height),
+                    area(8, .40, .64, .18, .175, width, height),
+                    area(9, .59, .64, .18, .175, width, height),
+                    area(10, .78, .64, .18, .175, width, height),
 
                     // زیرنویس‌ها
-                    caption(1, .02, .50, .18, .15, width, height, captionTop: .660),
-                    caption(2, .21, .50, .18, .15, width, height, captionTop: .660),
-                    caption(3, .40, .50, .18, .15, width, height, captionTop: .660),
-                    caption(4, .59, .50, .18, .15, width, height, captionTop: .660),
-                    caption(5, .78, .50, .18, .15, width, height, captionTop: .660),
+                    caption(1, .02, .50, .18, .15, width, height, captionTop: .565),
+                    caption(2, .21, .50, .18, .15, width, height, captionTop: .565),
+                    caption(3, .40, .50, .18, .15, width, height, captionTop: .565),
+                    caption(4, .59, .50, .18, .15, width, height, captionTop: .565),
+                    caption(5, .78, .50, .18, .15, width, height, captionTop: .565),
 
-                    caption(6, .02, .71, .18, .15, width, height, captionTop: .870),
-                    caption(7, .21, .71, .18, .15, width, height, captionTop: .870),
-                    caption(8, .40, .71, .18, .15, width, height, captionTop: .870),
-                    caption(9, .59, .71, .18, .15, width, height, captionTop: .870),
-                    caption(10, .78, .71, .18, .15, width, height, captionTop: .870),
+                    caption(6, .02, .71, .18, .15, width, height, captionTop: .750),
+                    caption(7, .21, .71, .18, .15, width, height, captionTop: .750),
+                    caption(8, .40, .71, .18, .15, width, height, captionTop: .750),
+                    caption(9, .59, .71, .18, .15, width, height, captionTop: .750),
+                    caption(10, .78, .71, .18, .15, width, height, captionTop: .750),
                   ],
                 ),
               ),
