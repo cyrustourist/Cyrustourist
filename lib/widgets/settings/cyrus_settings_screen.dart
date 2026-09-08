@@ -5,6 +5,7 @@ import '../../core/language/menu_translations.dart';
 import '../../pages/about_page.dart' as about_page;
 import '../../pages/support_page.dart';
 import '../../pages/social_media_page.dart';
+import '../../services/notification_service.dart';
 import 'cyrus_settings_social_about_support.dart';
 import 'cyrus_settings_theme.dart';
 import 'cyrus_settings_notifications.dart';
@@ -43,6 +44,7 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
   bool _tourismNotificationsEnabled = true;
   bool _travelSuggestionsEnabled = true;
   bool _supportNotificationsEnabled = true;
+  bool _soundEffectEnabled = true;
 
   bool _loaded = false;
 
@@ -61,6 +63,9 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
 
     final savedTheme = pref.getString(_keyTheme);
 
+    final soundEnabled =
+        await NotificationService.instance.isAnnouncementSoundEnabled();
+
     setState(() {
       _themeMode = _themeFromCode(savedTheme) ?? CyrusThemeMode.cyrusGold;
       _notificationsEnabled = pref.getBool(_keyNotifGeneral) ?? true;
@@ -70,6 +75,7 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
           pref.getBool(_keyNotifTravelSuggestions) ?? true;
       _supportNotificationsEnabled =
           pref.getBool(_keyNotifSupport) ?? true;
+      _soundEffectEnabled = soundEnabled;
       _loaded = true;
     });
   }
@@ -246,6 +252,7 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
                       travelSuggestionsEnabled: _travelSuggestionsEnabled,
                       supportNotificationsEnabled:
                           _supportNotificationsEnabled,
+                      soundEffectEnabled: _soundEffectEnabled,
                       onNotificationsChanged: (value) {
                         setState(() => _notificationsEnabled = value);
                         _saveBool(_keyNotifGeneral, value);
@@ -267,6 +274,11 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
                           () => _supportNotificationsEnabled = value,
                         );
                         _saveBool(_keyNotifSupport, value);
+                      },
+                      onSoundEffectChanged: (value) {
+                        setState(() => _soundEffectEnabled = value);
+                        NotificationService.instance
+                            .setAnnouncementSoundEnabled(value);
                       },
                     ),
                   ],
