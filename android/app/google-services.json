@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "777058902080",
+    "project_id": "cyrustourist-e959e",
+    "storage_bucket": "cyrustourist-e959e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:777058902080:android:3c1789de887a9bd68fbfa5",
+        "android_client_info": {
+          "package_name": "cyrustourist.ir.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtIALceonbWXJh5LaYgSGarngZnlVp6nc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
