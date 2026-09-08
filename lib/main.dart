@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/map_state_service.dart';
+import 'services/notification_service.dart';
 import 'providers/map_state_provider.dart';
 import 'config/map_ir_config.dart';
 import 'config/carto_config.dart';
@@ -217,6 +218,19 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selected = 0;
+
+  /// هر بار که این عدد عوض شود، بج قرمز آیکون هدر دوباره تعداد
+  /// آگهی‌های خوانده‌نشده را می‌خواند (مثلاً بعد از بازگشت از
+  /// صفحه‌ی حساب کاربری/آگهی‌ها).
+  int _headerBadgeTick = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // بررسی آگهی‌های خوانده‌نشده و پخش افکت صدا در صورت وجود آگهی
+    // جدید (اگر افکت صدا در تنظیمات فعال باشد).
+    NotificationService.instance.maybePlayNewAnnouncementSound();
+  }
 
   String get homeImage {
     // یک عکس بدون نوشته برای همه‌ی زبان‌ها — متن ۱۰ کلید با ویجت
@@ -748,8 +762,9 @@ class _HomePageState extends State<HomePage> {
                             ),
                             child: CyrusHeaderAccountButton(
                               currentLanguage: MenuLanguage.current,
-                              onAccountPressed: () {
-                                Navigator.push(
+                              refreshToken: _headerBadgeTick,
+                              onAccountPressed: () async {
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => CyrusAccountScreen(
@@ -757,6 +772,12 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                 );
+
+                                if (mounted) {
+                                  setState(() {
+                                    _headerBadgeTick++;
+                                  });
+                                }
                               },
                             ),
                           ),
