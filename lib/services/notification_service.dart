@@ -4,17 +4,25 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../main.dart' show navigatorKey;
+import '../core/language/menu_translations.dart';
 import '../models/cyrus_announcement.dart';
+import '../pages/announcements_page.dart';
 import 'cache_service.dart';
 
 /// سرویس مرکزی اعلان‌های سایروس توریست.
 ///
-/// این سرویس دو مسئولیت دارد:
+/// این سرویس چند مسئولیت دارد:
 /// 1) دریافت لیست اعلان‌ها (Announcements) از API سرور و نگه‌داشتن
 ///    وضعیت «خوانده‌نشده» برای نمایش بج روی کلید ۸ (حساب کاربری).
-/// 2) لایه‌ی نمایش اعلان محلی ساده (show/showWelcome/...) که پیش‌تر
-///    در پروژه وجود داشت و بدون تغییر باقی مانده تا چیزی نشکند.
+/// 2) نمایش اعلان واقعی سیستم اندروید (نوار بالا، صدا، لرزش، آیکون)
+///    از طریق flutter_local_notifications.
+/// 3) اتصال به Firebase Cloud Messaging (FCM) برای دریافت پوش نوتیفیکیشن
+///    حتی زمانی که اپ بسته یا در پس‌زمینه است، و باز کردن صفحه‌ی
+///    مربوطه با لمس اعلان.
 class NotificationService {
   NotificationService._();
 
@@ -28,9 +36,6 @@ class NotificationService {
   static const String _lastSeenIdKey = 'cyrus_last_seen_notification_id';
 
   /// کلید ذخیره‌سازی شناسه‌ی پیام‌هایی که کاربر حذف کرده است.
-  ///
-  /// حذف فقط محلی (روی همان دستگاه) است؛ پیام از سرور پاک نمی‌شود،
-  /// فقط دیگر برای این کاربر نمایش داده نمی‌شود.
   static const String _dismissedIdsKey = 'cyrus_dismissed_notification_ids';
 
   /// کلید ذخیره‌سازی آخرین تعداد خوانده‌نشده‌ای که برایش افکت صدا
@@ -43,14 +48,21 @@ class NotificationService {
       'cyrus_announcement_sound_enabled';
 
   // ==========================================================
-  // بخش ۱: دریافت اعلان‌ها از سرور
+  // تنظیمات کانال اعلان اندروید
   // ==========================================================
 
-  /// دریافت لیست اعلان‌های فعال از سرور، جدیدترین در ابتدا.
-  ///
-  /// پیام‌هایی که کاربر قبلاً حذف کرده (به‌صورت محلی) از نتیجه
-  /// حذف می‌شوند. در صورت هرگونه خطای شبکه/پارس، لیست خالی
-  /// برمی‌گرداند تا رابط کاربری هیچ‌گاه کرش نکند.
+  static const String _channelId = 'cyrus_default_channel';
+  static const String _channelName = 'Cyrus Tourist';
+  static const String _channelDescription =
+      'اعلان‌ها و پیام‌های سایروس توریست';
+
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  // ==========================================================
+  // بخش ۱: دریافت اعلان‌ها از سرور (بدون تغییر)
+  // ==========================================================
+
   Future<List<CyrusAnnouncement>> fetchAnnouncements() async {
     final client = HttpClient();
 
@@ -100,9 +112,6 @@ class NotificationService {
     }
   }
 
-  /// تعداد اعلان‌های خوانده‌نشده (نسبت به آخرین شناسه‌ی دیده‌شده).
-  ///
-  /// برای نمایش بج قرمز روی گزینه‌ی «اعلان‌ها» در کلید ۸ استفاده می‌شود.
   Future<int> getUnreadCount() async {
     final items = await fetchAnnouncements();
 
@@ -115,9 +124,6 @@ class NotificationService {
     return items.where((item) => item.id > lastSeenId).length;
   }
 
-  /// علامت‌گذاری همه‌ی اعلان‌های فعلی به‌عنوان «خوانده‌شده».
-  ///
-  /// معمولاً هنگام باز شدن صفحه‌ی لیست اعلان‌ها فراخوانی می‌شود.
   Future<void> markAllAsRead(List<CyrusAnnouncement> items) async {
     if (items.isEmpty) {
       return;
@@ -134,34 +140,22 @@ class NotificationService {
       await CacheService.instance.setInt(_lastSeenIdKey, maxId);
     }
 
-    // چون همه چیز خوانده شد، شمارشگر صدا هم صفر می‌شود تا آگهی‌های
-    // جدیدِ بعدی دوباره بتوانند افکت صدا پخش کنند.
     await CacheService.instance.setInt(_lastNotifiedCountKey, 0);
   }
 
   // ==========================================================
-  // افکت صدای آگهی جدید
+  // افکت صدای آگهی جدید (بدون تغییر)
   // ==========================================================
 
-  /// آیا افکت صدای آگهی جدید در تنظیمات فعال است؟ پیش‌فرض: فعال.
   Future<bool> isAnnouncementSoundEnabled() async {
     final value = await CacheService.instance.getInt(_soundEnabledKey);
     return value == null || value == 1;
   }
 
-  /// روشن/خاموش کردن افکت صدای آگهی جدید.
   Future<void> setAnnouncementSoundEnabled(bool enabled) async {
     await CacheService.instance.setInt(_soundEnabledKey, enabled ? 1 : 0);
   }
 
-  /// اگر از آخرین بار، تعداد آگهی‌های خوانده‌نشده افزایش یافته باشد
-  /// (یعنی آگهی جدیدی رسیده) و افکت صدا در تنظیمات فعال باشد، یک
-  /// افکت صدای کوتاه پخش می‌کند.
-  ///
-  /// نکته: چون فعلاً پکیج پخش صدای اختصاصی (مثل audioplayers) در
-  /// پروژه نصب نیست، از افکت صدای سیستمی خودِ فلاتر استفاده می‌شود.
-  /// برای صدای اختصاصی/برندشده، باید یک فایل صوتی به پروژه اضافه و
-  /// پکیج مربوطه نصب شود.
   Future<void> maybePlayNewAnnouncementSound() async {
     final unread = await getUnreadCount();
 
@@ -182,10 +176,9 @@ class NotificationService {
   }
 
   // ==========================================================
-  // حذف محلی یک پیام (طبق درخواست: کاربر بتواند پیام را حذف کند)
+  // حذف محلی یک پیام (بدون تغییر)
   // ==========================================================
 
-  /// حذف یک پیام به‌صورت محلی؛ از این پس در لیست نمایش داده نمی‌شود.
   Future<void> dismiss(int id) async {
     final ids = await _getDismissedIds();
 
@@ -194,7 +187,6 @@ class NotificationService {
     }
   }
 
-  /// خواندن شناسه‌ی پیام‌های حذف‌شده از حافظه‌ی محلی دستگاه.
   Future<Set<int>> _getDismissedIds() async {
     final raw = await CacheService.instance.getJson(_dismissedIdsKey);
 
@@ -209,7 +201,6 @@ class NotificationService {
     }).where((id) => id >= 0).toSet();
   }
 
-  /// ذخیره‌ی شناسه‌ی پیام‌های حذف‌شده در حافظه‌ی محلی دستگاه.
   Future<void> _saveDismissedIds(Set<int> ids) async {
     await CacheService.instance.setJson(
       _dismissedIdsKey,
@@ -218,29 +209,145 @@ class NotificationService {
   }
 
   // ==========================================================
-  // بخش ۲: لایه‌ی نمایش اعلان محلی (بدون تغییر نسبت به قبل)
+  // بخش ۲: نمایش اعلان واقعی سیستم + اتصال FCM
   // ==========================================================
 
-  /// وضعیت آماده بودن سرویس
   bool _initialized = false;
 
-  /// بررسی آماده بودن سرویس
   bool get isInitialized => _initialized;
 
-  /// آماده‌سازی سرویس اعلان‌ها.
+  /// آماده‌سازی سرویس اعلان‌ها: کانال اندروید را می‌سازد، مجوز
+  /// نوتیفیکیشن را می‌گیرد و به پیام‌های FCM گوش می‌دهد.
+  ///
+  /// این متد باید بعد از Firebase.initializeApp() در main() صدا زده شود.
   Future<void> initialize() async {
     if (_initialized) {
       return;
     }
 
-    // محل آماده‌سازی سیستم اعلان در نسخه‌های بعدی.
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettings = InitializationSettings(android: androidInit);
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        _handleTap(response.payload);
+      },
+    );
+
+    const channel = AndroidNotificationChannel(
+      _channelId,
+      _channelName,
+      description: _channelDescription,
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidPlugin?.createNotificationChannel(channel);
+    await androidPlugin?.requestNotificationsPermission();
+
+    // مجوز اعلان از سمت FCM (روی iOS اجباری است؛ روی اندروید ۱۳+ هم
+    // لازم است و از طریق پلاگین بالا هم گرفته شد، این خط بی‌ضرر است).
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    // پیامی که اپ را از حالت killed باز کرده (کاربر روی اعلان زده
+    // در حالی که اپ کاملاً بسته بوده است).
+    final initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+
+    if (initialMessage != null) {
+      _handleTap(jsonEncode(initialMessage.data));
+    }
+
+    // پیامی که وقتی اپ در پس‌زمینه بوده (نه بسته) با لمس اعلان باز شده.
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _handleTap(jsonEncode(message.data));
+    });
+
+    // پیامی که وقتی اپ باز/فعال است می‌رسد. اندروید در این حالت
+    // به‌صورت پیش‌فرض چیزی در نوار بالا نشان نمی‌دهد، پس خودمان با
+    // flutter_local_notifications نمایشش می‌دهیم.
+    FirebaseMessaging.onMessage.listen(_onForegroundMessage);
+
     _initialized = true;
   }
 
-  /// نمایش یک اعلان ساده.
+  Future<void> _onForegroundMessage(RemoteMessage message) async {
+    final notification = message.notification;
+
+    final title = notification?.title ?? 'Cyrus Tourist';
+    final body = notification?.body ?? '';
+
+    if (body.isEmpty) {
+      return;
+    }
+
+    await _localNotifications.show(
+      message.hashCode,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+          playSound: true,
+          enableVibration: true,
+        ),
+      ),
+      payload: jsonEncode(message.data),
+    );
+  }
+
+  /// با لمس اعلان (چه در حالت پس‌زمینه چه killed چه foreground)،
+  /// این متد صفحه‌ی مناسب را باز می‌کند.
   ///
-  /// در حال حاضر پیام را از طریق debugPrint ثبت می‌کند.
-  /// بعداً می‌توان سیستم اعلان واقعی را به این متد متصل کرد.
+  /// سرور باید در payload پوش، کلید "screen" را بفرستد. فعلاً فقط
+  /// "announcements" پشتیبانی می‌شود (باز شدن صفحه‌ی لیست اعلان‌ها)؛
+  /// اگر screen نامشخص/خالی باشد، فقط خودِ اپ باز می‌شود.
+  void _handleTap(String? payload) {
+    if (payload == null || payload.isEmpty) {
+      return;
+    }
+
+    try {
+      final data = jsonDecode(payload);
+
+      if (data is! Map<String, dynamic>) {
+        return;
+      }
+
+      final screen = data['screen'];
+
+      if (screen == 'announcements') {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => AnnouncementsPage(
+              languageCode: MenuLanguage.current,
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      debugPrint('Cyrus Tourist Notification tap parse error: $error');
+    }
+  }
+
+  /// نمایش یک اعلان محلی ساده (برای استفاده‌ی داخلی اپ، مثل
+  /// showWelcome/showTourismUpdate پایین‌تر).
   Future<void> show({
     required String title,
     required String body,
@@ -250,10 +357,23 @@ class NotificationService {
       await initialize();
     }
 
-    debugPrint(
-      'Cyrus Tourist Notification: '
-      '$title - $body'
-      '${payload != null ? ' [$payload]' : ''}',
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+          playSound: true,
+          enableVibration: true,
+        ),
+      ),
+      payload: payload,
     );
   }
 
@@ -299,9 +419,7 @@ class NotificationService {
     );
   }
 
-  /// پاک کردن وضعیت سرویس.
-  ///
-  /// برای تست و راه‌اندازی مجدد سرویس استفاده می‌شود.
+  /// پاک کردن وضعیت سرویس (برای تست).
   Future<void> reset() async {
     _initialized = false;
   }
