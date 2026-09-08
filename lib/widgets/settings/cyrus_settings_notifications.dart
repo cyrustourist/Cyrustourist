@@ -26,10 +26,12 @@ class CyrusSettingsNotifications {
     required bool tourismNotificationsEnabled,
     required bool travelSuggestionsEnabled,
     required bool supportNotificationsEnabled,
+    required bool soundEffectEnabled,
     required ValueChanged<bool> onNotificationsChanged,
     required ValueChanged<bool> onTourismNotificationsChanged,
     required ValueChanged<bool> onTravelSuggestionsChanged,
     required ValueChanged<bool> onSupportNotificationsChanged,
+    required ValueChanged<bool> onSoundEffectChanged,
   }) {
     return [
       CyrusNotificationItem(
@@ -163,6 +165,39 @@ class CyrusSettingsNotifications {
         enabled: notificationsEnabled,
         color: const Color(0xff2f7d5b),
         onChanged: onSupportNotificationsChanged,
+      ),
+      CyrusNotificationItem(
+        icon: Icons.volume_up_rounded,
+        title: _text(
+          languageCode,
+          'افکت صدای آگهی جدید',
+          'New Announcement Sound',
+          'صوت الإعلان الجديد',
+          'Yeni Duyuru Sesi',
+          'Звук нового объявления',
+          'Son de nouvelle annonce',
+          'Sound für neue Ankündigung',
+          'Sonido de nuevo anuncio',
+          '新公告提示音',
+          'Suono nuovo annuncio',
+        ),
+        subtitle: _text(
+          languageCode,
+          'پخش صدا هنگام رسیدن آگهی جدید (خاموش = سکوت)',
+          'Play a sound when a new announcement arrives (off = silent)',
+          'تشغيل صوت عند وصول إعلان جديد (إيقاف = صامت)',
+          'Yeni duyuru geldiğinde ses çal (kapalı = sessiz)',
+          'Воспроизводить звук при новом объявлении (выкл. = тишина)',
+          'Jouer un son à l’arrivée d’une nouvelle annonce (désactivé = silencieux)',
+          'Ton bei neuer Ankündigung abspielen (aus = lautlos)',
+          'Reproducir sonido al llegar un nuevo anuncio (apagado = silencio)',
+          '收到新公告时播放提示音（关闭=静音）',
+          'Riproduci un suono quando arriva un nuovo annuncio (off = silenzioso)',
+        ),
+        value: soundEffectEnabled,
+        enabled: true,
+        color: const Color(0xffc9a227),
+        onChanged: onSoundEffectChanged,
       ),
     ];
   }
@@ -480,11 +515,13 @@ class CyrusNotificationsSelector extends StatelessWidget {
   final bool tourismNotificationsEnabled;
   final bool travelSuggestionsEnabled;
   final bool supportNotificationsEnabled;
+  final bool soundEffectEnabled;
 
   final ValueChanged<bool> onNotificationsChanged;
   final ValueChanged<bool> onTourismNotificationsChanged;
   final ValueChanged<bool> onTravelSuggestionsChanged;
   final ValueChanged<bool> onSupportNotificationsChanged;
+  final ValueChanged<bool> onSoundEffectChanged;
 
   const CyrusNotificationsSelector({
     super.key,
@@ -493,10 +530,12 @@ class CyrusNotificationsSelector extends StatelessWidget {
     required this.tourismNotificationsEnabled,
     required this.travelSuggestionsEnabled,
     required this.supportNotificationsEnabled,
+    required this.soundEffectEnabled,
     required this.onNotificationsChanged,
     required this.onTourismNotificationsChanged,
     required this.onTravelSuggestionsChanged,
     required this.onSupportNotificationsChanged,
+    required this.onSoundEffectChanged,
   });
 
   @override
@@ -510,6 +549,7 @@ class CyrusNotificationsSelector extends StatelessWidget {
           travelSuggestionsEnabled,
       supportNotificationsEnabled:
           supportNotificationsEnabled,
+      soundEffectEnabled: soundEffectEnabled,
       onNotificationsChanged: onNotificationsChanged,
       onTourismNotificationsChanged:
           onTourismNotificationsChanged,
@@ -517,6 +557,7 @@ class CyrusNotificationsSelector extends StatelessWidget {
           onTravelSuggestionsChanged,
       onSupportNotificationsChanged:
           onSupportNotificationsChanged,
+      onSoundEffectChanged: onSoundEffectChanged,
     );
 
     return Column(
