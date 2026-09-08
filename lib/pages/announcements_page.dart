@@ -574,13 +574,13 @@ class _AnnouncementsTranslations {
   }
 
   static const _fa = _AnnouncementsTranslations(
-    title: 'اعلان‌ها',
-    empty: 'در حال حاضر اعلانی وجود ندارد.',
+    title: 'آگهی‌ها',
+    empty: 'در حال حاضر آگهی‌ای وجود ندارد.',
     typeUpdate: 'بروزرسانی',
     typeInfo: 'اطلاعیه',
     typeEvent: 'رویداد',
     typeWarning: 'هشدار',
-    deleteTitle: 'حذف اعلان',
+    deleteTitle: 'حذف آگهی',
     deleteMessage: 'آیا از حذف این پیام مطمئن هستید؟',
     delete: 'حذف',
     cancel: 'انصراف',
