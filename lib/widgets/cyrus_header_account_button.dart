@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../pages/residence_register_page.dart';
+import '../services/notification_service.dart';
 
 /// دکمه حساب کاربری در هدر سایروس توریست.
 ///
@@ -19,6 +20,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
     this.onHotelRegistration,
     this.onCottageRegistration,
     this.onHealthTourismRegistration,
+    this.refreshToken = 0,
   });
 
   /// زبان فعلی برنامه.
@@ -43,6 +45,11 @@ class CyrusHeaderAccountButton extends StatelessWidget {
 
   /// اتصال به فایل/صفحه ثبت‌نام گردشگری سلامت.
   final VoidCallback? onHealthTourismRegistration;
+
+  /// هر بار که این مقدار عوض شود، بج قرمز آیکون هدر دوباره
+  /// تعداد آگهی‌های خوانده‌نشده را از سرور می‌خواند (مثلاً بعد از
+  /// بازگشت کاربر از صفحه‌ی آگهی‌ها/حساب کاربری).
+  final Object refreshToken;
 
   String get _language {
     const supported = <String>{
@@ -258,7 +265,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
             ),
           ),
         ],
-        child: const _HeaderAccountButton(),
+        child: _HeaderAccountButton(key: ValueKey(refreshToken)),
       ),
     );
   }
@@ -301,47 +308,93 @@ class CyrusHeaderAccountButton extends StatelessWidget {
   }
 }
 
-/// ظاهر اصلی دکمه آدمک در هدر.
-class _HeaderAccountButton extends StatelessWidget {
-  const _HeaderAccountButton();
+/// ظاهر اصلی دکمه آدمک در هدر، به‌همراه نقطه‌ی قرمز کوچک
+/// برای نشان‌دادن وجود آگهی خوانده‌نشده.
+class _HeaderAccountButton extends StatefulWidget {
+  const _HeaderAccountButton({super.key});
+
+  @override
+  State<_HeaderAccountButton> createState() => _HeaderAccountButtonState();
+}
+
+class _HeaderAccountButtonState extends State<_HeaderAccountButton> {
+  late Future<int> _unreadFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _unreadFuture = NotificationService.instance.getUnreadCount();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xff173246),
-            Color(0xff081722),
-          ],
-        ),
-        border: Border.all(
-          color: const Color(0xffd6ad4f),
-          width: 1.4,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x66000000),
-            blurRadius: 7,
-            offset: Offset(0, 4),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xff173246),
+                Color(0xff081722),
+              ],
+            ),
+            border: Border.all(
+              color: const Color(0xffd6ad4f),
+              width: 1.4,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x66000000),
+                blurRadius: 7,
+                offset: Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Color(0x55d6ad4f),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-          BoxShadow(
-            color: Color(0x55d6ad4f),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+          child: const Icon(
+            Icons.person_rounded,
+            color: Color(0xffe5bd55),
+            size: 25,
           ),
-        ],
-      ),
-      child: const Icon(
-        Icons.person_rounded,
-        color: Color(0xffe5bd55),
-        size: 25,
-      ),
+        ),
+        Positioned(
+          top: -2,
+          right: -2,
+          child: FutureBuilder<int>(
+            future: _unreadFuture,
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+
+              if (count <= 0) {
+                return const SizedBox.shrink();
+              }
+
+              return Container(
+                width: 13,
+                height: 13,
+                decoration: BoxDecoration(
+                  color: const Color(0xffe0353d),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xff081722),
+                    width: 1.6,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
