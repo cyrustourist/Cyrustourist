@@ -1002,7 +1002,7 @@ class _AccountTranslations {
     accountSubtitle: 'مدیریت اطلاعات و امکانات حساب شما',
     usernamePlaceholder: 'نام کاربری هنوز ثبت نشده',
     accountSection: 'اطلاعات حساب',
-    announcements: 'اعلان‌ها',
+    announcements: 'آگهی‌ها',
     announcementsSubtitle: 'مشاهده آخرین اطلاعیه‌ها و بروزرسانی‌ها',
     profile: 'پروفایل من',
     profileSubtitle: 'مشاهده اطلاعات حساب کاربری',
