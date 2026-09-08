@@ -45,16 +45,8 @@ import 'widgets/settings/cyrus_settings_screen.dart';
 // MAIN
 // ============================================================
 
-/// این کلید به NotificationService اجازه می‌دهد با لمس یک اعلان،
-/// حتی وقتی از بیرون MaterialApp صدا زده می‌شود، صفحه‌ی مربوطه را
-/// باز کند.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-/// این تابع باید سطح بالا (top-level) و دقیقاً با همین امضا باشد؛
-/// FCM آن را در یک Isolate جدا، حتی وقتی اپ کاملاً بسته است،
-/// صدا می‌زند. فعلاً فقط Firebase را آماده می‌کند؛ خودِ نمایش
-/// اعلان در حالت بسته/پس‌زمینه را سیستم‌عامل به‌صورت خودکار
-/// (از روی بخش notification پیام) انجام می‌دهد.
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -93,14 +85,6 @@ class CyrusTouristApp extends StatelessWidget {
 }
 
 // ============================================================
-// LANGUAGE
-// ============================================================
-//
-// AppLanguage و LanguageManager از core/language/app_language.dart
-// می‌آیند تا با video_page.dart و category_explorer_page.dart
-// یکی باشند و تغییر زبان همه‌جا همزمان اعمال شود.
-
-// ============================================================
 // TEXT
 // ============================================================
 
@@ -109,31 +93,22 @@ class AppText {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'نقشه';
-
       case AppLanguage.arabic:
         return 'الخريطة';
-
       case AppLanguage.english:
         return 'Map';
-
       case AppLanguage.german:
         return 'Karte';
-
       case AppLanguage.spanish:
         return 'Mapa';
-
       case AppLanguage.french:
         return 'Carte';
-
       case AppLanguage.italian:
         return 'Mappa';
-
       case AppLanguage.russian:
         return 'Карта';
-
       case AppLanguage.turkish:
         return 'Harita';
-
       case AppLanguage.chinese:
         return '地图';
     }
@@ -147,10 +122,8 @@ class AppText {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'سایروس توریست';
-
       case AppLanguage.arabic:
         return 'سايروس توريست';
-
       case AppLanguage.english:
       case AppLanguage.german:
       case AppLanguage.spanish:
@@ -232,9 +205,7 @@ class _SplashPageState extends State<SplashPage> {
 // ============================================================
 
 class HomePage extends StatefulWidget {
-  const HomePage({
-    super.key,
-  });
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -242,195 +213,49 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selected = 0;
-
-  /// هر بار که این عدد عوض شود، بج قرمز آیکون هدر دوباره تعداد
-  /// آگهی‌های خوانده‌نشده را می‌خواند (مثلاً بعد از بازگشت از
-  /// صفحه‌ی حساب کاربری/آگهی‌ها).
   int _headerBadgeTick = 0;
 
   @override
   void initState() {
     super.initState();
-    // بررسی آگهی‌های خوانده‌نشده و پخش افکت صدا در صورت وجود آگهی
-    // جدید (اگر افکت صدا در تنظیمات فعال باشد).
     NotificationService.instance.maybePlayNewAnnouncementSound();
   }
 
-  String get homeImage {
-    // یک عکس بدون نوشته برای همه‌ی زبان‌ها — متن ۱۰ کلید با ویجت
-    // Text واقعی (از سیستم ترجمه‌ی جدید) روی همین عکس نمایش داده
-    // می‌شود، نه پیکسل‌های ثابت داخل عکس.
-    return 'assets/images/home-hero.jpg';
-  }
-
-  // ==========================================================
-  // LANGUAGE
-  // ==========================================================
-
-  Future<void> openLanguage() async {
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xff071722),
-      builder: (_) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text(
-                  'انتخاب زبان',
-                  style: TextStyle(
-                    color: Color(0xffffd36a),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              ...kMenuLanguages.map(languageItem),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  Widget languageItem(MenuLanguageOption option) {
-    final selected = MenuLanguage.current == option.code;
-
-    return ListTile(
-      title: Text(
-        option.nativeName,
-        style: TextStyle(
-          color: selected ? const Color(0xffffd36a) : Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      trailing: selected
-          ? const Icon(Icons.check_rounded, color: Color(0xffffd36a))
-          : null,
-      onTap: () async {
-        await MenuLanguage.setLanguage(option.code);
-
-        // برای سه زبانی که کل اپ می‌شناسد (فارسی/انگلیسی/عربی)،
-        // زبان اصلی اپ هم هماهنگ می‌شود تا بقیه‌ی صفحات هم همراه
-        // شوند؛ برای ۷ زبان دیگر فقط متن همین ۱۰ کلید تغییر می‌کند.
-        if (option.code == 'fa') {
-          await LanguageManager.setLanguage(AppLanguage.persian);
-        } else if (option.code == 'ar') {
-          await LanguageManager.setLanguage(AppLanguage.arabic);
-        } else if (option.code == 'en') {
-          await LanguageManager.setLanguage(AppLanguage.english);
-        }
-
-        if (mounted) {
-          Navigator.pop(context);
-          setState(() {});
-        }
-      },
-    );
-  }
-
-  // ==========================================================
-  // MENU (هامبورگر) — جای‌گیر تا گزینه‌های واقعی مشخص شود
-  // ==========================================================
-
-  Future<void> openMenu() async {
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xff071722),
-      builder: (_) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.construction_rounded, color: Color(0xffffd36a), size: 30),
-                SizedBox(height: 10),
-                Text(
-                  'به‌زودی',
-                  style: TextStyle(
-                    color: Color(0xffffd36a),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  'گزینه‌های این منو به‌زودی اضافه می‌شود.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ==========================================================
-  // BUTTON TITLES
-  // ==========================================================
+  String get homeImage => 'assets/images/home-hero.jpg';
 
   String buttonTitle(int number) {
     switch (number) {
       case 1:
         return 'نقشه';
-
       case 2:
         return 'گردشگری سلامت';
-
       case 3:
         return 'جاذبه‌های گردشگری';
-
       case 4:
         return 'نمایش فیلم';
-
       case 5:
         return 'اقامتگاه‌ها';
-
       case 6:
         return 'تورها';
-
       case 7:
         return 'برنامه‌ریز سفر';
-
       case 8:
         return 'پروفایل';
-
       case 9:
         return 'جستجو';
-
       case 10:
         return 'علاقه‌مندی‌ها';
-
       default:
         return 'Cyrus Tourist';
     }
   }
-
-  // ==========================================================
-  // TAP
-  // ==========================================================
 
   Future<void> tap(int number) async {
     setState(() {
       selected = number;
     });
 
-    await Future.delayed(
-      const Duration(
-        milliseconds: 150,
-      ),
-    );
+    await Future.delayed(const Duration(milliseconds: 150));
 
     if (!mounted) return;
 
@@ -438,186 +263,93 @@ class _HomePageState extends State<HomePage> {
       selected = 0;
     });
 
-    // ========================================================
-    // کلید 1 = نقشه گردشگری
-    // ========================================================
-
     if (number == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const SmartMapPage(),
-        ),
-      );
-
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartMapPage()));
       return;
     }
-
-    // ========================================================
-    // کلید 2 = گردشگری سلامت
-    // ========================================================
 
     if (number == 2) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const CategoryExplorerPage(
-            initialCategory: PlaceCategory.health,
-          ),
+          builder: (_) => const CategoryExplorerPage(initialCategory: PlaceCategory.health),
         ),
       );
-
       return;
     }
-
-    // ========================================================
-    // کلید 3 = جاذبه‌های گردشگری
-    // ========================================================
 
     if (number == 3) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const CategoryExplorerPage(
-            initialCategory: PlaceCategory.attraction,
-          ),
+          builder: (_) => const CategoryExplorerPage(initialCategory: PlaceCategory.attraction),
         ),
       );
-
       return;
     }
-
-    // ========================================================
-    // کلید 4 = نمایش فیلم‌های گردشگری
-    // ========================================================
 
     if (number == 4) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => VideoPage(),
-        ),
-      );
-
+      Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPage()));
       return;
     }
-
-    // ========================================================
-    // کلید 5 = اقامتگاه‌ها
-    // ========================================================
 
     if (number == 5) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const CategoryExplorerPage(
-            initialCategory: PlaceCategory.accommodation,
-          ),
+          builder: (_) => const CategoryExplorerPage(initialCategory: PlaceCategory.accommodation),
         ),
       );
-
       return;
     }
-
-    // ========================================================
-    // کلید 6 = راهنمای سفر
-    // ========================================================
 
     if (number == 6) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => travel_guide.TravelGuidePage(),
-    ),
-  );
-
-  return;
-}
-
-    // ========================================================
-    // کلید 8 = حساب کاربری / پروفایل
-    // ========================================================
-
-    if (number == 8) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CyrusAccountScreen(
-            languageCode: MenuLanguage.current,
-          ),
-        ),
-      );
-
+      Navigator.push(context, MaterialPageRoute(builder: (_) => travel_guide.TravelGuidePage()));
       return;
     }
-
-    // ========================================================
-    // کلید 9 = جستجوی هوشمند
-    // ========================================================
-
-    if (number == 9) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CyrusSmartSearch(
-            languageCode: MenuLanguage.current,
-          ),
-        ),
-      );
-
-      return;
-    }
-
-    // ========================================================
-    // کلید 7 = جعبه ابزار بسیار هوشمند (برنامه‌ریز سفر)
-    // ========================================================
 
     if (number == 7) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => CyrusSmartToolbox(
-            languageCode: MenuLanguage.current,
-          ),
+          builder: (_) => CyrusSmartToolbox(languageCode: MenuLanguage.current),
         ),
       );
-
       return;
     }
 
-    // ========================================================
-    // کلید 10 = علاقه‌مندی‌ها
-    // ========================================================
-
-    if (number == 10) {
+    if (number == 8) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const FavoritesPage(),
+          builder: (_) => CyrusAccountScreen(languageCode: MenuLanguage.current),
         ),
       );
-
       return;
     }
 
-    // ========================================================
-    // کلیدهای باقی‌مانده
-    // ========================================================
+    if (number == 9) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CyrusSmartSearch(languageCode: MenuLanguage.current),
+        ),
+      );
+      return;
+    }
+
+    if (number == 10) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
+      return;
+    }
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => WorkInProgressPage(
-          number: number,
-          title: buttonTitle(number),
-        ),
+        builder: (_) => WorkInProgressPage(number: number, title: buttonTitle(number)),
       ),
     );
   }
-
-  // ==========================================================
-  // TOUCH AREA
-  // ==========================================================
 
   Widget area(
     int number,
@@ -633,30 +365,28 @@ class _HomePageState extends State<HomePage> {
       top: imageHeight * top,
       width: imageWidth * width,
       height: imageHeight * height,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => tap(number),
-        child: AnimatedScale(
-          scale: selected == number ? 0.92 : 1,
-          duration: const Duration(
-            milliseconds: 120,
-          ),
-          child: AnimatedContainer(
-            duration: const Duration(
-              milliseconds: 120,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: selected == number
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xffffd36a)
-                            .withValues(alpha: 0.8),
-                        blurRadius: 25,
-                        spreadRadius: 5,
-                      ),
-                    ]
-                  : [],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => tap(number),
+          child: AnimatedScale(
+            scale: selected == number ? 0.92 : 1.0,
+            duration: const Duration(milliseconds: 120),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: selected == number
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xffffd36a).withValues(alpha: 0.8),
+                          blurRadius: 25,
+                          spreadRadius: 5,
+                        ),
+                      ]
+                    : [],
+              ),
             ),
           ),
         ),
@@ -664,9 +394,54 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ==========================================================
-  // BUILD
-  // ==========================================================
+  Widget caption(
+    int number,
+    double left,
+    double top,
+    double width,
+    double height,
+    double imageWidth,
+    double imageHeight, {
+    double? captionTop,
+  }) {
+    final text = MenuTranslations.title(MenuLanguage.current, number);
+    final label = text.isNotEmpty ? text : buttonTitle(number);
+    final resolvedTop = captionTop ?? (top + height * 0.90);
+
+    return Positioned(
+      left: imageWidth * left,
+      top: imageHeight * resolvedTop,
+      width: imageWidth * width,
+      child: IgnorePointer(
+        child: Directionality(
+          textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xff0b1826).withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xffffd36a).withValues(alpha: 0.65),
+                width: 0.6,
+              ),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 9.0,
+                height: 1.1,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -677,7 +452,6 @@ class _HomePageState extends State<HomePage> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             double width = constraints.maxWidth;
-
             double height = width * 16 / 9;
 
             if (height > constraints.maxHeight) {
@@ -692,103 +466,69 @@ class _HomePageState extends State<HomePage> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.asset(
-                      homeImage,
-                      fit: BoxFit.cover,
-                    ),
+                    Image.asset(homeImage, fit: BoxFit.cover),
 
-                    // ==================================================
-                    // نوار بالای صفحه: ☰ منو (چپ) — زبان + حساب کاربری (راست)
-                    // ==================================================
-
+                    // دکمه منو
                     Positioned(
-                      // پایین‌تر از نوشته‌ی «CyrusTourist» که داخل خودِ
-                      // عکس پس‌زمینه چاپ شده (تا حدود ۷.۸٪ ارتفاع عکس).
-                      // با نسبت به ارتفاع واقعی صفحه، این آیکون هیچ‌وقت
-                      // روی آن نوشته نمی‌افتد.
-                      top: height * 0.095,
+                      top: height * 0.085,
                       left: 14,
                       child: GestureDetector(
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const CyrusSettingsScreen(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const CyrusSettingsScreen()),
                         ),
                         child: Container(
                           width: 42,
                           height: 42,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: const Color(0xff0b1826)
-                                .withValues(alpha: 0.55),
+                            color: const Color(0xff0b1826).withValues(alpha: 0.65),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xffffd36a)
-                                  .withValues(alpha: 0.85),
+                              color: const Color(0xffffd36a).withValues(alpha: 0.85),
                             ),
                           ),
-                          child: const Icon(
-                            Icons.menu_rounded,
-                            color: Color(0xffffd36a),
-                            size: 22,
-                          ),
+                          child: const Icon(Icons.menu_rounded, color: Color(0xffffd36a), size: 22),
                         ),
                       ),
                     ),
 
+                    // زبان و حساب کاربری
                     Positioned(
-                      // همتراز با آیکون منو (بالا) و پایین‌تر از نوشته‌ی
-                      // «CyrusTourist»، تا دیگر آیکون زبان روی آن نوشته
-                      // قرار نگیرد.
-                      top: height * 0.095,
+                      top: height * 0.085,
                       right: 14,
                       child: Row(
                         children: [
                           Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xff0b1826)
-                                  .withValues(alpha: 0.55),
+                              color: const Color(0xff0b1826).withValues(alpha: 0.65),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: const Color(0xffffd36a)
-                                    .withValues(alpha: 0.85),
+                                color: const Color(0xffffd36a).withValues(alpha: 0.85),
                               ),
                             ),
                             child: CyrusLanguageButton(
                               currentLanguage: MenuLanguage.current,
                               onLanguageChanged: (code) async {
                                 await MenuLanguage.setLanguage(code);
-
-                                // هماهنگی با زبان اصلی برنامه برای
-                                // سه زبانی که کل اپ می‌شناسد.
                                 if (code == 'fa') {
-                                  await LanguageManager.setLanguage(
-                                    AppLanguage.persian,
-                                  );
+                                  await LanguageManager.setLanguage(AppLanguage.persian);
                                 } else if (code == 'ar') {
-                                  await LanguageManager.setLanguage(
-                                    AppLanguage.arabic,
-                                  );
+                                  await LanguageManager.setLanguage(AppLanguage.arabic);
                                 } else if (code == 'en') {
-                                  await LanguageManager.setLanguage(
-                                    AppLanguage.english,
-                                  );
+                                  await LanguageManager.setLanguage(AppLanguage.english);
                                 }
-
                                 if (mounted) setState(() {});
                               },
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xff0b1826)
-                                  .withValues(alpha: 0.55),
+                              color: const Color(0xff0b1826).withValues(alpha: 0.65),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xffffd36a)
-                                    .withValues(alpha: 0.85),
+                                color: const Color(0xffffd36a).withValues(alpha: 0.85),
                               ),
                             ),
                             child: CyrusHeaderAccountButton(
@@ -803,7 +543,6 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                 );
-
                                 if (mounted) {
                                   setState(() {
                                     _headerBadgeTick++;
@@ -816,142 +555,32 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
 
-                    // ردیف اول 1 تا 5
+                    // لمس کلیدها (ردیف اول 1 تا 5)
+                    area(1, .02, .50, .18, .15, width, height),
+                    area(2, .21, .50, .18, .15, width, height),
+                    area(3, .40, .50, .18, .15, width, height),
+                    area(4, .59, .50, .18, .15, width, height),
+                    area(5, .78, .50, .18, .15, width, height),
 
-                    area(
-                      1,
-                      .02,
-                      .50,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
+                    // لمس کلیدها (ردیف دوم 6 تا 10)
+                    area(6, .02, .71, .18, .15, width, height),
+                    area(7, .21, .71, .18, .15, width, height),
+                    area(8, .40, .71, .18, .15, width, height),
+                    area(9, .59, .71, .18, .15, width, height),
+                    area(10, .78, .71, .18, .15, width, height),
 
-                    area(
-                      2,
-                      .21,
-                      .50,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
+                    // زیرنویس‌ها
+                    caption(1, .02, .50, .18, .15, width, height, captionTop: .660),
+                    caption(2, .21, .50, .18, .15, width, height, captionTop: .660),
+                    caption(3, .40, .50, .18, .15, width, height, captionTop: .660),
+                    caption(4, .59, .50, .18, .15, width, height, captionTop: .660),
+                    caption(5, .78, .50, .18, .15, width, height, captionTop: .660),
 
-                    area(
-                      3,
-                      .40,
-                      .50,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
-
-                    area(
-                      4,
-                      .59,
-                      .50,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
-
-                    area(
-                      5,
-                      .78,
-                      .50,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
-
-                    // ردیف دوم 6 تا 10
-
-                    area(
-                      6,
-                      .02,
-                      .71,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
-
-                    area(
-                      7,
-                      .21,
-                      .71,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
-
-                    area(
-                      8,
-                      .40,
-                      .71,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
-
-                    area(
-                      9,
-                      .59,
-                      .71,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
-
-                    area(
-                      10,
-                      .78,
-                      .71,
-                      .18,
-                      .14,
-                      width,
-                      height,
-                    ),
-
-                    // ==================================================
-                    // عنوان‌های ۱۰ کلید (متن واقعی Flutter، نه پیکسل عکس)
-                    // ==================================================
-
-                    // نکته: کارت‌های ردیف اول در خودِ عکس، پایین‌تر از چیزی
-                    // تمام می‌شوند که مقدار height=.14 فرض می‌کرد (لبه‌ی
-                    // واقعی کارت حدود .685 است، نه .64). به همین دلیل قبلاً
-                    // نوشته‌ی ردیف اول وسط آیکون می‌افتاد ولی نوشته‌ی ردیف
-                    // دوم پایین‌تر (نزدیک لبه‌ی کارت) بود. حالا با پارامتر
-                    // captionTop، جای هر دو ردیف دقیقاً زیرِ لبه‌ی واقعیِ
-                    // کارت در عکس تنظیم شده تا هر دو ردیف یک‌دست باشند.
-                    caption(1, .02, .50, .18, .14, width, height,
-                        captionTop: .695),
-                    caption(2, .21, .50, .18, .14, width, height,
-                        captionTop: .695),
-                    caption(3, .40, .50, .18, .14, width, height,
-                        captionTop: .695),
-                    caption(4, .59, .50, .18, .14, width, height,
-                        captionTop: .695),
-                    caption(5, .78, .50, .18, .14, width, height,
-                        captionTop: .695),
-
-                    caption(6, .02, .71, .18, .14, width, height,
-                        captionTop: .885),
-                    caption(7, .21, .71, .18, .14, width, height,
-                        captionTop: .885),
-                    caption(8, .40, .71, .18, .14, width, height,
-                        captionTop: .885),
-                    caption(9, .59, .71, .18, .14, width, height,
-                        captionTop: .885),
-                    caption(10, .78, .71, .18, .14, width, height,
-                        captionTop: .885),
+                    caption(6, .02, .71, .18, .15, width, height, captionTop: .870),
+                    caption(7, .21, .71, .18, .15, width, height, captionTop: .870),
+                    caption(8, .40, .71, .18, .15, width, height, captionTop: .870),
+                    caption(9, .59, .71, .18, .15, width, height, captionTop: .870),
+                    caption(10, .78, .71, .18, .15, width, height, captionTop: .870),
                   ],
                 ),
               ),
@@ -962,91 +591,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ==========================================================
-  // CAPTION (عنوان چندزبانه‌ی هر کلید — روی خودِ عکس بدون‌نوشته)
-  // ==========================================================
-
-  Widget caption(
-    int number,
-    double left,
-    double top,
-    double width,
-    double height,
-    double imageWidth,
-    double imageHeight, {
-    // موقعیت واقعیِ نوشته (کسری از ارتفاع عکس). اگر داده نشود، مثل قبل
-    // با فرمول قدیمی (top + height*0.90) محاسبه می‌شود؛ اما برای هر ۱۰
-    // کلید یک مقدار دقیق و کالیبره‌شده روی خودِ عکس پاس داده می‌شود تا
-    // نوشته‌ها زیرِ لبه‌ی واقعی کارت بنشینند، نه وسط آیکون.
-    double? captionTop,
-  }) {
-    final text = MenuTranslations.title(MenuLanguage.current, number);
-
-    final label = text.isNotEmpty ? text : buttonTitle(number);
-
-    final resolvedTop = captionTop ?? (top + height * 0.90);
-
-    return Positioned(
-      left: imageWidth * left,
-      top: imageHeight * resolvedTop,
-      width: imageWidth * width,
-      child: IgnorePointer(
-        child: Directionality(
-          textDirection:
-              MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 6,
-              vertical: 2,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xff0b1826).withValues(alpha: 0.62),
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(
-                color: const Color(0xffffd36a).withValues(alpha: 0.55),
-                width: 0.6,
-              ),
-            ),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 9.5,
-                height: 1.15,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // DRAWER (منوی ☰ — همان ۱۰ گزینه، به شکل فهرست)
-  // ==========================================================
-
   Widget _buildMenuDrawer() {
     return Drawer(
       backgroundColor: const Color(0xff071722),
       child: SafeArea(
         child: Directionality(
-          textDirection:
-              MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Color(0x33ffd36a),
-                    ),
-                  ),
+                  border: Border(bottom: BorderSide(color: Color(0x33ffd36a))),
                 ),
                 child: const Text(
                   'Cyrus Tourist',
@@ -1057,8 +614,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              for (var number = 1; number <= 10; number++)
-                _drawerItem(number),
+              for (var number = 1; number <= 10; number++) _drawerItem(number),
             ],
           ),
         ),
@@ -1068,24 +624,17 @@ class _HomePageState extends State<HomePage> {
 
   Widget _drawerItem(int number) {
     final text = MenuTranslations.title(MenuLanguage.current, number);
-
     final label = text.isNotEmpty ? text : buttonTitle(number);
 
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: const Color(0xff0b506b),
         foregroundColor: const Color(0xffffd36a),
-        child: Text(
-          '$number',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        child: Text('$number', style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
       title: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
       ),
       onTap: () {
         Navigator.of(context).pop();
@@ -1112,33 +661,20 @@ class WorkInProgressPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection:
-          AppText.rtl
-              ? TextDirection.rtl
-              : TextDirection.ltr,
+      textDirection: AppText.rtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: const Color(0xff071722),
         appBar: AppBar(
           backgroundColor: const Color(0xff071722),
           foregroundColor: Colors.white,
           centerTitle: true,
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
         body: Center(
           child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.construction,
-                color: Color(0xffffd36a),
-                size: 70,
-              ),
+              const Icon(Icons.construction, color: Color(0xffffd36a), size: 70),
               const SizedBox(height: 25),
               Text(
                 title,
@@ -1150,28 +686,15 @@ class WorkInProgressPage extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              const Text(
-                'در حال کار است',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                ),
-              ),
+              const Text('در حال کار است', style: TextStyle(color: Colors.white, fontSize: 18)),
               const SizedBox(height: 12),
               Text(
                 'کلید شماره $number',
-                style: TextStyle(
-                  color: Colors.white.withValues(
-                    alpha: 0.65,
-                  ),
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 14),
               ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+                onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('بازگشت'),
               ),
@@ -1203,52 +726,27 @@ class SmartMapPage extends StatefulWidget {
   const SmartMapPage({super.key});
 
   @override
-  State<SmartMapPage> createState() =>
-      _SmartMapPageState();
+  State<SmartMapPage> createState() => _SmartMapPageState();
 }
 
-class _SmartMapPageState
-    extends State<SmartMapPage>
-    with SingleTickerProviderStateMixin {
-  final MapController mapController =
-      MapController();
-
-  static const LatLng iranCenter = LatLng(
-    32.4279,
-    53.6880,
-  );
+class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderStateMixin {
+  final MapController mapController = MapController();
+  static const LatLng iranCenter = LatLng(32.4279, 53.6880);
 
   LatLng? userLocation;
-
   bool routingInProgress = false;
+  int mapProviderStep = 0;
 
-  // نمایش نقشه: ابتدا Map.ir امتحان می‌شود، اگر خطا داد به CARTO،
-  // و اگر آن هم خطا داد به نقشه‌ی OSM سایت (آخرین راه‌حل).
-  int mapProviderStep = 0; // 0 = Map.ir, 1 = CARTO, 2 = OSM
+  static const String currentLocationLabel = 'موقعیت فعلی من';
 
-  static const String currentLocationLabel =
-      'موقعیت فعلی من';
-
-  final TextEditingController originController =
-      TextEditingController(
-    text: currentLocationLabel,
-  );
-
-  final TextEditingController
-      destinationController =
-      TextEditingController();
-
-  // ==========================================================
-  // SEARCH SUGGESTIONS (پیشنهاد خودکار مبدأ/مقصد)
-  // ==========================================================
+  final TextEditingController originController = TextEditingController(text: currentLocationLabel);
+  final TextEditingController destinationController = TextEditingController();
 
   final FocusNode originFocusNode = FocusNode();
-  final FocusNode destinationFocusNode =
-      FocusNode();
+  final FocusNode destinationFocusNode = FocusNode();
 
   final LayerLink originLayerLink = LayerLink();
-  final LayerLink destinationLayerLink =
-      LayerLink();
+  final LayerLink destinationLayerLink = LayerLink();
 
   OverlayEntry? _suggestionsOverlay;
   Timer? _suggestionsDebounce;
@@ -1273,56 +771,31 @@ class _SmartMapPageState
       duration: const Duration(seconds: 3),
     )..repeat();
 
-    scaleAnimation = Tween<double>(
-      begin: 0.94,
-      end: 1.06,
-    ).animate(
-      CurvedAnimation(
-        parent: animationController,
-        curve: Curves.easeInOut,
-      ),
+    scaleAnimation = Tween<double>(begin: 0.94, end: 1.06).animate(
+      CurvedAnimation(parent: animationController, curve: Curves.easeInOut),
     );
 
-    rotationAnimation = Tween<double>(
-      begin: 0,
-      end: 6.283,
-    ).animate(
-      CurvedAnimation(
-        parent: animationController,
-        curve: Curves.linear,
-      ),
+    rotationAnimation = Tween<double>(begin: 0, end: 6.283).animate(
+      CurvedAnimation(parent: animationController, curve: Curves.linear),
     );
 
-    glowAnimation = Tween<double>(
-      begin: 0.25,
-      end: 0.85,
-    ).animate(
-      CurvedAnimation(
-        parent: animationController,
-        curve: Curves.easeInOut,
-      ),
+    glowAnimation = Tween<double>(begin: 0.25, end: 0.85).animate(
+      CurvedAnimation(parent: animationController, curve: Curves.easeInOut),
     );
 
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       prepareMap();
     });
 
     originFocusNode.addListener(() {
       if (!originFocusNode.hasFocus) {
-        Future.delayed(
-          const Duration(milliseconds: 150),
-          _removeSuggestionsOverlay,
-        );
+        Future.delayed(const Duration(milliseconds: 150), _removeSuggestionsOverlay);
       }
     });
 
     destinationFocusNode.addListener(() {
       if (!destinationFocusNode.hasFocus) {
-        Future.delayed(
-          const Duration(milliseconds: 150),
-          _removeSuggestionsOverlay,
-        );
+        Future.delayed(const Duration(milliseconds: 150), _removeSuggestionsOverlay);
       }
     });
   }
@@ -1341,10 +814,6 @@ class _SmartMapPageState
     super.dispose();
   }
 
-  // ==========================================================
-  // MAP START
-  // ==========================================================
-
   Future<void> prepareMap() async {
     if (!mounted) return;
 
@@ -1359,18 +828,13 @@ class _SmartMapPageState
 
   Future<void> loadLastLocation() async {
     try {
-      final pref =
-          await SharedPreferences.getInstance();
-
+      final pref = await SharedPreferences.getInstance();
       final lat = pref.getDouble('last_lat');
       final lng = pref.getDouble('last_lng');
 
       if (lat == null || lng == null) return;
 
-      final point = LatLng(
-        lat,
-        lng,
-      );
+      final point = LatLng(lat, lng);
 
       if (!mounted) return;
 
@@ -1378,47 +842,24 @@ class _SmartMapPageState
         userLocation = point;
       });
 
-      mapController.move(
-        point,
-        13,
-      );
+      mapController.move(point, 13);
     } catch (_) {}
   }
 
-  // ==========================================================
-  // ROUTING (مبدأ + هدف سفر)
-  // ==========================================================
-  //
-  // متن «مبدأ» و «هدف سفر» هر دو به مختصات واقعی تبدیل می‌شوند
-  // (Nominatim) و سپس مسیریابی واقعی در گوگل‌مپ باز می‌شود.
-  //
-  // اگر کاربر متن مبدأ را تغییر نداده باشد (همان «موقعیت فعلی
-  // من» است)، از موقعیت واقعی GPS استفاده می‌شود؛ در غیر این
-  // صورت متنی که کاربر تایپ کرده جستجو و به مختصات تبدیل می‌شود.
-
   bool get _originIsCurrentLocation {
     final text = originController.text.trim();
-
-    return text.isEmpty ||
-        text == currentLocationLabel;
+    return text.isEmpty || text == currentLocationLabel;
   }
 
-  // مبدأ را به مختصات واقعی تبدیل می‌کند: اگر کاربر متن مبدأ را
-  // عوض نکرده («موقعیت فعلی من» است) موقعیت GPS برگردانده
-  // می‌شود، وگرنه متن تایپ‌شده جستجو و به مختصات تبدیل می‌شود.
-  // در صورت پیدا نشدن مبدأ تایپ‌شده، null برمی‌گردد.
-
   Future<LatLng?> _resolveOrigin() async {
-    final referencePoint =
-        userLocation ?? iranCenter;
+    final referencePoint = userLocation ?? iranCenter;
 
     if (_originIsCurrentLocation) {
       return referencePoint;
     }
 
     try {
-      final originResults =
-          await MapPlacesService().searchPlaces(
+      final originResults = await MapPlacesService().searchPlaces(
         query: originController.text.trim(),
         userLocation: referencePoint,
       );
@@ -1426,29 +867,20 @@ class _SmartMapPageState
       if (originResults.isNotEmpty) {
         return originResults.first.location;
       }
-    } catch (_) {
-      // نادیده گرفته می‌شود، در ادامه null برمی‌گردد
-    }
+    } catch (_) {}
 
     return null;
   }
 
-  Future<void> _openDirections(
-    LatLng origin,
-    LatLng destination,
-  ) async {
-    final url =
-        'https://www.google.com/maps/dir/?api=1'
+  Future<void> _openDirections(LatLng origin, LatLng destination) async {
+    final url = 'https://www.google.com/maps/dir/?api=1'
         '&origin=${origin.latitude},${origin.longitude}'
         '&destination=${destination.latitude},${destination.longitude}';
 
     final uri = Uri.parse(url);
 
     try {
-      final opened = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
       if (!opened && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1481,8 +913,7 @@ class _SmartMapPageState
   }
 
   Future<void> _startRouting() async {
-    final destinationText =
-        destinationController.text.trim();
+    final destinationText = destinationController.text.trim();
 
     if (destinationText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1559,44 +990,21 @@ class _SmartMapPageState
     }
 
     final destination = results.first.location;
-
     await _openDirections(origin, destination);
   }
 
-  // ==========================================================
-  // LOCATION
-  // ==========================================================
-
-  // ==========================================================
-  // LOCALIZATION HELPER
-  // ==========================================================
-
-  String _localize(
-    String fa,
-    String en,
-    String ar,
-  ) {
-    if (LanguageManager.current ==
-        AppLanguage.english) {
-      return en;
-    }
-
-    if (LanguageManager.current ==
-        AppLanguage.arabic) {
-      return ar;
-    }
-
+  String _localize(String fa, String en, String ar) {
+    if (LanguageManager.current == AppLanguage.english) return en;
+    if (LanguageManager.current == AppLanguage.arabic) return ar;
     return fa;
   }
 
   Future<void> getLocation() async {
     if (locationLoading) return;
-
     locationLoading = true;
 
     try {
-      final enabled =
-          await Geolocator.isLocationServiceEnabled();
+      final enabled = await Geolocator.isLocationServiceEnabled();
 
       if (!enabled) {
         if (mounted) {
@@ -1611,19 +1019,14 @@ class _SmartMapPageState
         return;
       }
 
-      LocationPermission permission =
-          await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
 
-      if (permission ==
-          LocationPermission.denied) {
-        permission =
-            await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
       }
 
-      if (permission ==
-              LocationPermission.denied ||
-          permission ==
-              LocationPermission.deniedForever) {
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         if (mounted) {
           setState(() {
             locationWarning = _localize(
@@ -1636,29 +1039,15 @@ class _SmartMapPageState
         return;
       }
 
-      final position =
-          await Geolocator.getCurrentPosition(
-        desiredAccuracy:
-            LocationAccuracy.high,
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
       );
 
-      final point = LatLng(
-        position.latitude,
-        position.longitude,
-      );
+      final point = LatLng(position.latitude, position.longitude);
 
-      final pref =
-          await SharedPreferences.getInstance();
-
-      await pref.setDouble(
-        'last_lat',
-        point.latitude,
-      );
-
-      await pref.setDouble(
-        'last_lng',
-        point.longitude,
-      );
+      final pref = await SharedPreferences.getInstance();
+      await pref.setDouble('last_lat', point.latitude);
+      await pref.setDouble('last_lng', point.longitude);
 
       if (!mounted) return;
 
@@ -1667,10 +1056,7 @@ class _SmartMapPageState
         locationWarning = null;
       });
 
-      mapController.move(
-        point,
-        15,
-      );
+      mapController.move(point, 15);
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -1686,10 +1072,6 @@ class _SmartMapPageState
     }
   }
 
-  // ==========================================================
-  // MARKERS
-  // ==========================================================
-
   List<Marker> markers() {
     final items = <Marker>[];
 
@@ -1702,19 +1084,10 @@ class _SmartMapPageState
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.blue.withValues(
-                alpha: 0.25,
-              ),
-              border: Border.all(
-                color: Colors.blue,
-                width: 2,
-              ),
+              color: Colors.blue.withValues(alpha: 0.25),
+              border: Border.all(color: Colors.blue, width: 2),
             ),
-            child: const Icon(
-              Icons.my_location,
-              color: Colors.blue,
-              size: 35,
-            ),
+            child: const Icon(Icons.my_location, color: Colors.blue, size: 35),
           ),
         ),
       );
@@ -1723,39 +1096,26 @@ class _SmartMapPageState
     return items;
   }
 
-  // ==========================================================
-  // TEXTS
-  // ==========================================================
-
   String get loadingTitle {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'در حال آماده‌سازی نقشه گردشگری...';
-
       case AppLanguage.arabic:
         return 'جارٍ إعداد الخريطة السياحية...';
-
       case AppLanguage.english:
         return 'Preparing Tourism Map...';
-
       case AppLanguage.german:
         return 'Reisekarte wird vorbereitet...';
-
       case AppLanguage.spanish:
         return 'Preparando el mapa turístico...';
-
       case AppLanguage.french:
         return 'Préparation de la carte touristique...';
-
       case AppLanguage.italian:
         return 'Preparazione della mappa turistica...';
-
       case AppLanguage.russian:
         return 'Подготовка туристической карты...';
-
       case AppLanguage.turkish:
         return 'Turizm haritası hazırlanıyor...';
-
       case AppLanguage.chinese:
         return '正在准备旅游地图...';
     }
@@ -1765,73 +1125,26 @@ class _SmartMapPageState
     switch (LanguageManager.current) {
       case AppLanguage.persian:
         return 'لطفاً چند لحظه صبر کنید';
-
       case AppLanguage.arabic:
         return 'يرجى الانتظار لحظة';
-
       case AppLanguage.english:
         return 'Please wait a moment';
-
       case AppLanguage.german:
         return 'Bitte einen Moment warten';
-
       case AppLanguage.spanish:
         return 'Por favor, espera un momento';
-
       case AppLanguage.french:
         return 'Veuillez patienter un instant';
-
       case AppLanguage.italian:
         return 'Attendere un momento, per favore';
-
       case AppLanguage.russian:
         return 'Пожалуйста, подождите немного';
-
       case AppLanguage.turkish:
         return 'Lütfen bir an bekleyin';
-
       case AppLanguage.chinese:
         return '请稍候';
     }
   }
-
-  String get locationText {
-    switch (LanguageManager.current) {
-      case AppLanguage.persian:
-        return 'در حال بررسی موقعیت شما...';
-
-      case AppLanguage.arabic:
-        return 'جارٍ تحديد موقعك...';
-
-      case AppLanguage.english:
-        return 'Checking your location...';
-
-      case AppLanguage.german:
-        return 'Dein Standort wird überprüft...';
-
-      case AppLanguage.spanish:
-        return 'Comprobando tu ubicación...';
-
-      case AppLanguage.french:
-        return 'Vérification de votre position...';
-
-      case AppLanguage.italian:
-        return 'Verifica della tua posizione...';
-
-      case AppLanguage.russian:
-        return 'Проверка вашего местоположения...';
-
-      case AppLanguage.turkish:
-        return 'Konumunuz kontrol ediliyor...';
-
-      case AppLanguage.chinese:
-        return '正在检查您的位置...';
-    }
-  }
-
-  // ==========================================================
-  // PROFESSIONAL LOADING SCREEN
-  // ==========================================================
 
   Widget loadingScreen() {
     return Container(
@@ -1841,8 +1154,7 @@ class _SmartMapPageState
           animation: animationController,
           builder: (context, child) {
             return Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
                   width: 210,
@@ -1851,30 +1163,22 @@ class _SmartMapPageState
                     alignment: Alignment.center,
                     children: [
                       Transform.rotate(
-                        angle:
-                            rotationAnimation.value,
+                        angle: rotationAnimation.value,
                         child: Container(
                           width: 190,
                           height: 190,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xffffd36a,
-                              ).withValues(
-                                alpha:
-                                    glowAnimation.value,
+                              color: const Color(0xffffd36a).withValues(
+                                alpha: glowAnimation.value,
                               ),
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(
-                                  0xffffd36a,
-                                ).withValues(
-                                  alpha:
-                                      glowAnimation.value *
-                                          .5,
+                                color: const Color(0xffffd36a).withValues(
+                                  alpha: glowAnimation.value * .5,
                                 ),
                                 blurRadius: 25,
                               ),
@@ -1883,32 +1187,24 @@ class _SmartMapPageState
                         ),
                       ),
                       Transform.scale(
-                        scale:
-                            scaleAnimation.value,
+                        scale: scaleAnimation.value,
                         child: Container(
                           width: 115,
                           height: 115,
-                          padding:
-                              const EdgeInsets.all(8),
-                          decoration:
-                              const BoxDecoration(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
                           ),
                           child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/logo-new.jpg',
-                              fit: BoxFit.cover,
-                            ),
+                            child: Image.asset('assets/images/logo-new.jpg', fit: BoxFit.cover),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
                 Text(
                   AppText.title(),
                   style: const TextStyle(
@@ -1917,40 +1213,20 @@ class _SmartMapPageState
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 15),
-
-                Text(
-                  loadingTitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                  ),
-                ),
-
+                Text(loadingTitle, style: const TextStyle(color: Colors.white, fontSize: 15)),
                 const SizedBox(height: 8),
-
                 Text(
                   loadingSubtitle,
-                  style: TextStyle(
-                    color: Colors.white.withValues(
-                      alpha: .7,
-                    ),
-                  ),
+                  style: TextStyle(color: Colors.white.withValues(alpha: .7)),
                 ),
-
                 const SizedBox(height: 25),
-
                 const SizedBox(
                   width: 180,
                   child: LinearProgressIndicator(
                     minHeight: 4,
-                    backgroundColor:
-                        Color(0xff183746),
-                    valueColor:
-                        AlwaysStoppedAnimation(
-                      Color(0xffffd36a),
-                    ),
+                    backgroundColor: Color(0xff183746),
+                    valueColor: AlwaysStoppedAnimation(Color(0xffffd36a)),
                   ),
                 ),
               ],
@@ -1960,10 +1236,6 @@ class _SmartMapPageState
       ),
     );
   }
-
-  // ==========================================================
-  // MAP SEARCH BOX
-  // ==========================================================
 
   Widget mapSearchBox() {
     return Positioned(
@@ -1994,47 +1266,27 @@ class _SmartMapPageState
             width: double.infinity,
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: routingInProgress
-                  ? null
-                  : _startRouting,
+              onPressed: routingInProgress ? null : _startRouting,
               icon: routingInProgress
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child:
-                          CircularProgressIndicator(
+                      child: CircularProgressIndicator(
                         strokeWidth: 2.4,
                         color: Color(0xff071722),
                       ),
                     )
-                  : const Icon(
-                      Icons.directions_rounded,
-                      size: 24,
-                    ),
+                  : const Icon(Icons.directions_rounded, size: 24),
               label: Text(
-                routingInProgress
-                    ? 'در حال جستجو...'
-                    : 'مسیریابی',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                routingInProgress ? 'در حال جستجو...' : 'مسیریابی',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(
-                  0xffffe39a,
-                ),
-                foregroundColor: const Color(
-                  0xff071722,
-                ),
+                backgroundColor: const Color(0xffffe39a),
+                foregroundColor: const Color(0xff071722),
                 elevation: 6,
-                shadowColor: const Color(
-                  0xffffd36a,
-                ).withValues(alpha: 0.6),
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(16),
-                ),
+                shadowColor: const Color(0xffffd36a).withValues(alpha: 0.6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
           ),
@@ -2055,42 +1307,30 @@ class _SmartMapPageState
       link: layerLink,
       child: Material(
         elevation: 8,
-        borderRadius:
-            BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18),
         child: TextField(
           controller: controller,
           focusNode: focusNode,
-          onChanged: (text) => _onSearchTextChanged(
-            text,
-            isOrigin: isOrigin,
-          ),
+          onChanged: (text) => _onSearchTextChanged(text, isOrigin: isOrigin),
           decoration: InputDecoration(
             prefixIcon: isOrigin
                 ? IconButton(
                     icon: Icon(icon),
-                    tooltip: _localize(
-                      'استفاده از موقعیت فعلی',
-                      'Use current location',
-                      'استخدام الموقع الحالي',
-                    ),
+                    tooltip: _localize('استفاده از موقعیت فعلی', 'Use current location', 'استخدام الموقع الحالي'),
                     onPressed: () {
                       setState(() {
-                        originController.text =
-                            currentLocationLabel;
+                        originController.text = currentLocationLabel;
                       });
                       _removeSuggestionsOverlay();
-                      FocusScope.of(context)
-                          .unfocus();
+                      FocusScope.of(context).unfocus();
                     },
                   )
                 : Icon(icon),
             hintText: hint,
             filled: true,
             border: OutlineInputBorder(
-              borderRadius:
-                  BorderRadius.circular(18),
-              borderSide:
-                  BorderSide.none,
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide.none,
             ),
           ),
         ),
@@ -2098,19 +1338,7 @@ class _SmartMapPageState
     );
   }
 
-  // ==========================================================
-  // SEARCH SUGGESTIONS (پیشنهاد خودکار)
-  // ==========================================================
-  //
-  // با تایپ در فیلد مبدأ/مقصد، پس از یک مکث کوتاه، چند پیشنهاد
-  // از Nominatim به‌صورت یک پنجرهٔ شناور (Overlay) درست زیر همان
-  // فیلد نمایش داده می‌شود؛ چون از Overlay استفاده می‌شود، بقیهٔ
-  // نقشه/فیلدها جابه‌جا یا بالا-پایین نمی‌شوند.
-
-  void _onSearchTextChanged(
-    String text, {
-    required bool isOrigin,
-  }) {
+  void _onSearchTextChanged(String text, {required bool isOrigin}) {
     _suggestionsDebounce?.cancel();
 
     final query = text.trim();
@@ -2122,19 +1350,12 @@ class _SmartMapPageState
 
     _suggestionsDebounce = Timer(
       const Duration(milliseconds: 450),
-      () => _fetchSuggestions(
-        query,
-        isOrigin: isOrigin,
-      ),
+      () => _fetchSuggestions(query, isOrigin: isOrigin),
     );
   }
 
-  Future<void> _fetchSuggestions(
-    String query, {
-    required bool isOrigin,
-  }) async {
-    final referencePoint =
-        userLocation ?? iranCenter;
+  Future<void> _fetchSuggestions(String query, {required bool isOrigin}) async {
+    final referencePoint = userLocation ?? iranCenter;
 
     List<MapPlace> results = [];
 
@@ -2149,32 +1370,20 @@ class _SmartMapPageState
 
     if (!mounted) return;
 
-    // اگر کاربر همچنان در همان فیلد تایپ می‌کند نتیجه را نشان بده
-    final currentText = isOrigin
-        ? originController.text.trim()
-        : destinationController.text.trim();
+    final currentText = isOrigin ? originController.text.trim() : destinationController.text.trim();
 
     if (currentText != query) return;
 
-    _showSuggestionsOverlay(
-      results.take(6).toList(),
-      isOrigin: isOrigin,
-    );
+    _showSuggestionsOverlay(results.take(6).toList(), isOrigin: isOrigin);
   }
 
-  void _showSuggestionsOverlay(
-    List<MapPlace> results, {
-    required bool isOrigin,
-  }) {
+  void _showSuggestionsOverlay(List<MapPlace> results, {required bool isOrigin}) {
     _removeSuggestionsOverlay();
 
     if (results.isEmpty) return;
 
-    final layerLink =
-        isOrigin ? originLayerLink : destinationLayerLink;
-
-    final width =
-        MediaQuery.of(context).size.width - 24;
+    final layerLink = isOrigin ? originLayerLink : destinationLayerLink;
+    final width = MediaQuery.of(context).size.width - 24;
 
     _suggestionsOverlay = OverlayEntry(
       builder: (context) => Positioned(
@@ -2185,44 +1394,25 @@ class _SmartMapPageState
           offset: const Offset(0, 56),
           child: Material(
             elevation: 8,
-            borderRadius:
-                BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(14),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxHeight: 240,
-              ),
+              constraints: const BoxConstraints(maxHeight: 240),
               child: ListView.separated(
                 padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 itemCount: results.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 1),
+                separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final place = results[index];
 
                   return ListTile(
                     dense: true,
-                    leading: const Icon(
-                      Icons.place_outlined,
-                    ),
-                    title: Text(
-                      place.name,
-                      maxLines: 1,
-                      overflow:
-                          TextOverflow.ellipsis,
-                    ),
+                    leading: const Icon(Icons.place_outlined),
+                    title: Text(place.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                     subtitle: place.address != null
-                        ? Text(
-                            place.address!,
-                            maxLines: 1,
-                            overflow:
-                                TextOverflow.ellipsis,
-                          )
+                        ? Text(place.address!, maxLines: 1, overflow: TextOverflow.ellipsis)
                         : null,
-                    onTap: () => _selectSuggestion(
-                      place,
-                      isOrigin: isOrigin,
-                    ),
+                    onTap: () => _selectSuggestion(place, isOrigin: isOrigin),
                   );
                 },
               ),
@@ -2232,15 +1422,10 @@ class _SmartMapPageState
       ),
     );
 
-    Overlay.of(context).insert(
-      _suggestionsOverlay!,
-    );
+    Overlay.of(context).insert(_suggestionsOverlay!);
   }
 
-  void _selectSuggestion(
-    MapPlace place, {
-    required bool isOrigin,
-  }) {
+  void _selectSuggestion(MapPlace place, {required bool isOrigin}) {
     if (isOrigin) {
       originController.text = place.name;
     } else {
@@ -2256,106 +1441,56 @@ class _SmartMapPageState
     _suggestionsOverlay = null;
   }
 
-  // ==========================================================
-  // MAP TOOLS
-  // ==========================================================
-
-  // ==========================================================
-  // QUICK SERVICES (زیر نقشه)
-  // ==========================================================
-  //
-  // اقامتگاه (کلید ۵)، جاذبه‌ها (کلید ۳) و سلامت (کلید ۲) در
-  // خانهٔ اصلی کلید مستقل خودشان را دارند، پس اینجا تکرار
-  // نمی‌شوند. این نوار برای نیازهای رایج مسافر روی خودِ نقشه است:
-  // با زدن هر گزینه، نزدیک‌ترین نمونه از مبدأ فعلی پیدا و
-  // مسیریابی به آن باز می‌شود.
-
-  // ==========================================================
-  // NEAREST POI (Overpass) — برای گزینه‌های سریع زیر نقشه
-  // ==========================================================
-  //
-  // Nominatim برای پیدا کردن آدرس/اسم مکان خوب است اما برای
-  // «نزدیک‌ترین پمپ‌بنزین/خودپرداز/...» ساخته نشده. برای همین
-  // گزینه‌های سریع از Overpass API استفاده می‌کنند که مستقیماً
-  // بر اساس نوع (amenity) و شعاع جستجو می‌کند و نتیجهٔ دقیق‌تری
-  // نسبت به موقعیت واقعی کاربر می‌دهد.
-
   Future<LatLng?> _findNearestAmenity(
     String amenityTag,
     LatLng center, {
     double radiusMeters = 5000,
   }) async {
-    final query =
-        '[out:json][timeout:20];'
-        '(node["amenity"="$amenityTag"]'
-        '(around:$radiusMeters,${center.latitude},${center.longitude});'
-        'way["amenity"="$amenityTag"]'
-        '(around:$radiusMeters,${center.latitude},${center.longitude});'
+    final query = '[out:json][timeout:20];'
+        '(node["amenity"="$amenityTag"](around:$radiusMeters,${center.latitude},${center.longitude});'
+        'way["amenity"="$amenityTag"](around:$radiusMeters,${center.latitude},${center.longitude});'
         ');out center 30;';
 
-    final uri = Uri.https(
-      'overpass-api.de',
-      '/api/interpreter',
-      {'data': query},
-    );
+    final uri = Uri.https('overpass-api.de', '/api/interpreter', {'data': query});
 
     HttpClient? client;
 
     try {
       client = HttpClient();
-      client.userAgent =
-          'CyrusTourist/1.0 (cyrustourist app)';
-      client.connectionTimeout =
-          const Duration(seconds: 15);
+      client.userAgent = 'CyrusTourist/1.0 (cyrustourist app)';
+      client.connectionTimeout = const Duration(seconds: 15);
 
       final request = await client.getUrl(uri);
       final response = await request.close();
 
-      if (response.statusCode != 200) {
-        return null;
-      }
+      if (response.statusCode != 200) return null;
 
-      final body = await response
-          .transform(const Utf8Decoder())
-          .join();
-
-      final data =
-          json.decode(body) as Map<String, dynamic>;
-
-      final elements =
-          (data['elements'] as List<dynamic>?) ??
-              [];
+      final body = await response.transform(const Utf8Decoder()).join();
+      final data = json.decode(body) as Map<String, dynamic>;
+      final elements = (data['elements'] as List<dynamic>?) ?? [];
 
       if (elements.isEmpty) return null;
 
       const distanceCalculator = Distance();
-
       LatLng? nearest;
       double bestDistance = double.infinity;
 
       for (final element in elements) {
         final map = element as Map<String, dynamic>;
 
-        double? lat =
-            (map['lat'] as num?)?.toDouble();
-        double? lon =
-            (map['lon'] as num?)?.toDouble();
+        double? lat = (map['lat'] as num?)?.toDouble();
+        double? lon = (map['lon'] as num?)?.toDouble();
 
         if (lat == null || lon == null) {
-          final centerTag =
-              map['center'] as Map<String, dynamic>?;
-
-          lat = (centerTag?['lat'] as num?)
-              ?.toDouble();
-          lon = (centerTag?['lon'] as num?)
-              ?.toDouble();
+          final centerTag = map['center'] as Map<String, dynamic>?;
+          lat = (centerTag?['lat'] as num?)?.toDouble();
+          lon = (centerTag?['lon'] as num?)?.toDouble();
         }
 
         if (lat == null || lon == null) continue;
 
         final point = LatLng(lat, lon);
-        final d =
-            distanceCalculator(center, point);
+        final d = distanceCalculator(center, point);
 
         if (d < bestDistance) {
           bestDistance = d;
@@ -2371,9 +1506,7 @@ class _SmartMapPageState
     }
   }
 
-  Future<void> _quickService(
-    _QuickServiceTool tool,
-  ) async {
+  Future<void> _quickService(_QuickServiceTool tool) async {
     setState(() {
       routingInProgress = true;
     });
@@ -2401,10 +1534,7 @@ class _SmartMapPageState
       return;
     }
 
-    final nearest = await _findNearestAmenity(
-      tool.amenityTag,
-      origin,
-    );
+    final nearest = await _findNearestAmenity(tool.amenityTag, origin);
 
     if (!mounted) return;
 
@@ -2430,53 +1560,34 @@ class _SmartMapPageState
     await _openDirections(origin, nearest);
   }
 
-  Widget mapServiceButton(
-    _QuickServiceTool tool,
-  ) {
+  Widget mapServiceButton(_QuickServiceTool tool) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: InkWell(
         onTap: () => _quickService(tool),
-        borderRadius:
-            BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           width: 78,
           height: 68,
           decoration: BoxDecoration(
             color: const Color(0xff0b506b),
-            borderRadius:
-                BorderRadius.circular(14),
-            border: Border.all(
-              color: const Color(
-                0xffffd36a,
-              ).withValues(alpha: 0.65),
-            ),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xffffd36a).withValues(alpha: 0.65)),
           ),
           child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                tool.icon,
-                color:
-                    const Color(0xffffd36a),
-                size: 22,
-              ),
+              Icon(tool.icon, color: const Color(0xffffd36a), size: 22),
               const SizedBox(height: 3),
               Text(
                 tool.title,
                 maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
-                textAlign:
-                    TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 11,
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
@@ -2485,13 +1596,6 @@ class _SmartMapPageState
       ),
     );
   }
-
-  // ==========================================================
-  // SIDE CONTROLS (کنار نقشه، سمت راست) — مانند گوگل‌مپ
-  // ==========================================================
-  //
-  // بزرگ‌نمایی/کوچک‌نمایی، قطب‌نما (بازگشت شمال به بالا) و
-  // دکمهٔ «موقعیت من» کنار نقشه، بالای نوار خدمات سریع.
 
   Widget _mapSideButton({
     required IconData icon,
@@ -2506,10 +1610,7 @@ class _SmartMapPageState
         elevation: 4,
         child: IconButton(
           tooltip: tooltip,
-          icon: Icon(
-            icon,
-            color: const Color(0xffffd36a),
-          ),
+          icon: Icon(icon, color: const Color(0xffffd36a)),
           onPressed: onPressed,
         ),
       ),
@@ -2525,56 +1626,30 @@ class _SmartMapPageState
         children: [
           _mapSideButton(
             icon: Icons.add,
-            tooltip: _localize(
-              'بزرگ‌نمایی',
-              'Zoom in',
-              'تكبير',
-            ),
+            tooltip: _localize('بزرگ‌نمایی', 'Zoom in', 'تكبير'),
             onPressed: () {
-              final camera =
-                  mapController.camera;
-
-              mapController.move(
-                camera.center,
-                camera.zoom + 1,
-              );
+              final camera = mapController.camera;
+              mapController.move(camera.center, camera.zoom + 1);
             },
           ),
           _mapSideButton(
             icon: Icons.remove,
-            tooltip: _localize(
-              'کوچک‌نمایی',
-              'Zoom out',
-              'تصغير',
-            ),
+            tooltip: _localize('کوچک‌نمایی', 'Zoom out', 'تصغير'),
             onPressed: () {
-              final camera =
-                  mapController.camera;
-
-              mapController.move(
-                camera.center,
-                camera.zoom - 1,
-              );
+              final camera = mapController.camera;
+              mapController.move(camera.center, camera.zoom - 1);
             },
           ),
           _mapSideButton(
             icon: Icons.explore_outlined,
-            tooltip: _localize(
-              'قطب‌نما (بازگشت به شمال)',
-              'Compass (reset to north)',
-              'البوصلة (إعادة للشمال)',
-            ),
+            tooltip: _localize('قطب‌نما (بازگشت به شمال)', 'Compass (reset to north)', 'البوصلة (إعادة للشمال)'),
             onPressed: () {
               mapController.rotate(0);
             },
           ),
           _mapSideButton(
             icon: Icons.my_location,
-            tooltip: _localize(
-              'موقعیت من',
-              'My location',
-              'موقعي الحالي',
-            ),
+            tooltip: _localize('موقعیت من', 'My location', 'موقعي الحالي'),
             onPressed: getLocation,
           ),
         ],
@@ -2584,134 +1659,47 @@ class _SmartMapPageState
 
   Widget mapTools() {
     final tools = <_QuickServiceTool>[
-      _QuickServiceTool(
-        icon: Icons.local_gas_station_rounded,
-        title: _localize(
-          'پمپ بنزین',
-          'Fuel',
-          'محطة وقود',
-        ),
-        amenityTag: 'fuel',
-      ),
-      _QuickServiceTool(
-        icon: Icons.restaurant_rounded,
-        title: _localize(
-          'رستوران',
-          'Food',
-          'مطعم',
-        ),
-        amenityTag: 'restaurant',
-      ),
-      _QuickServiceTool(
-        icon: Icons.atm_rounded,
-        title: _localize(
-          'خودپرداز',
-          'ATM',
-          'صراف آلي',
-        ),
-        amenityTag: 'atm',
-      ),
-      _QuickServiceTool(
-        icon: Icons.local_parking_rounded,
-        title: _localize(
-          'پارکینگ',
-          'Parking',
-          'موقف سيارات',
-        ),
-        amenityTag: 'parking',
-      ),
-      _QuickServiceTool(
-        icon: Icons.local_pharmacy_rounded,
-        title: _localize(
-          'داروخانه',
-          'Pharmacy',
-          'صيدلية',
-        ),
-        amenityTag: 'pharmacy',
-      ),
-      _QuickServiceTool(
-        icon: Icons.local_taxi_rounded,
-        title: _localize(
-          'تاکسی',
-          'Taxi',
-          'سيارة أجرة',
-        ),
-        amenityTag: 'taxi',
-      ),
-      _QuickServiceTool(
-        icon: Icons.wc_rounded,
-        title: _localize(
-          'سرویس',
-          'Restroom',
-          'دورة مياه',
-        ),
-        amenityTag: 'toilets',
-      ),
-      _QuickServiceTool(
-        icon: Icons.emergency_rounded,
-        title: _localize(
-          'اورژانس',
-          'Emergency',
-          'طوارئ',
-        ),
-        amenityTag: 'hospital',
-      ),
+      _QuickServiceTool(icon: Icons.local_gas_station_rounded, title: _localize('پمپ بنزین', 'Fuel', 'محطة وقود'), amenityTag: 'fuel'),
+      _QuickServiceTool(icon: Icons.restaurant_rounded, title: _localize('رستوران', 'Food', 'مطعم'), amenityTag: 'restaurant'),
+      _QuickServiceTool(icon: Icons.atm_rounded, title: _localize('خودپرداز', 'ATM', 'صراف آلي'), amenityTag: 'atm'),
+      _QuickServiceTool(icon: Icons.local_parking_rounded, title: _localize('پارکینگ', 'Parking', 'موقف سيارات'), amenityTag: 'parking'),
+      _QuickServiceTool(icon: Icons.local_pharmacy_rounded, title: _localize('داروخانه', 'Pharmacy', 'صيدلية'), amenityTag: 'pharmacy'),
+      _QuickServiceTool(icon: Icons.local_taxi_rounded, title: _localize('تاکسی', 'Taxi', 'سيارة أجرة'), amenityTag: 'taxi'),
+      _QuickServiceTool(icon: Icons.wc_rounded, title: _localize('سرویس', 'Restroom', 'دورة مياه'), amenityTag: 'toilets'),
+      _QuickServiceTool(icon: Icons.emergency_rounded, title: _localize('اورژانس', 'Emergency', 'طوارئ'), amenityTag: 'hospital'),
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       color: const Color(0xff071722),
       child: SizedBox(
         height: 78,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 6,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
           itemCount: tools.length,
           itemBuilder: (context, index) {
-            return mapServiceButton(
-              tools[index],
-            );
+            return mapServiceButton(tools[index]);
           },
         ),
       ),
     );
   }
 
-  // ==========================================================
-  // BUILD MAP
-  // ==========================================================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xff071722),
+      backgroundColor: const Color(0xff071722),
       appBar: AppBar(
-        backgroundColor:
-            const Color(0xff071722),
+        backgroundColor: const Color(0xff071722),
         foregroundColor: Colors.white,
         centerTitle: true,
-        title: Text(
-          AppText.map(),
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: Text(AppText.map(), style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            tooltip: _localize(
-              'موقعیت من',
-              'My location',
-              'موقعي',
-            ),
+            tooltip: _localize('موقعیت من', 'My location', 'موقعي'),
             onPressed: getLocation,
-            icon: const Icon(
-              Icons.my_location,
-            ),
+            icon: const Icon(Icons.my_location),
           ),
         ],
       ),
@@ -2719,7 +1707,7 @@ class _SmartMapPageState
         children: [
           FlutterMap(
             mapController: mapController,
-            options: MapOptions(
+            options: const MapOptions(
               initialCenter: iranCenter,
               initialZoom: 5.2,
               minZoom: 3,
@@ -2735,18 +1723,10 @@ class _SmartMapPageState
                     format: 'image/png',
                     version: '1.1.1',
                     transparent: false,
-                    otherParameters: {
-                      'width': '256',
-                      'height': '256',
-                    },
+                    otherParameters: {'width': '256', 'height': '256'},
                   ),
-                  tileProvider: NetworkTileProvider(
-                    headers: {
-                      'x-api-key': MapIrConfig.apiKey,
-                    },
-                  ),
-                  userAgentPackageName:
-                      'com.cyrustourist.app',
+                  tileProvider: NetworkTileProvider(headers: {'x-api-key': MapIrConfig.apiKey}),
+                  userAgentPackageName: 'com.cyrustourist.app',
                   errorTileCallback: (_, __, ___) {
                     if (!mounted || mapProviderStep != 0) return;
                     setState(() {
@@ -2757,8 +1737,7 @@ class _SmartMapPageState
               else if (mapProviderStep == 1)
                 TileLayer(
                   urlTemplate: CartoConfig.tileUrlWithKey,
-                  userAgentPackageName:
-                      'com.cyrustourist.app',
+                  userAgentPackageName: 'com.cyrustourist.app',
                   errorTileCallback: (_, __, ___) {
                     if (!mounted || mapProviderStep != 1) return;
                     setState(() {
@@ -2767,18 +1746,12 @@ class _SmartMapPageState
                   },
                 )
               else
-                // آخرین راه‌حل: همان نقشه‌ی OSM که سایت استفاده
-                // می‌کند (بدون کلید، ساب‌دامین‌های چرخشی a/b/c).
                 TileLayer(
-                  urlTemplate:
-                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                   subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName:
-                      'com.cyrustourist.app',
+                  userAgentPackageName: 'com.cyrustourist.app',
                 ),
-              MarkerLayer(
-                markers: markers(),
-              ),
+              MarkerLayer(markers: markers()),
             ],
           ),
 
@@ -2794,49 +1767,24 @@ class _SmartMapPageState
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                  padding:
-                      const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(
-                      0xff071722,
-                    ).withValues(
-                      alpha: 0.94,
-                    ),
-                    borderRadius:
-                        BorderRadius.circular(
-                      14,
-                    ),
-                    border: Border.all(
-                      color: const Color(
-                        0xffffd36a,
-                      ),
-                    ),
+                    color: const Color(0xff071722).withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xffffd36a)),
                   ),
                   child: Text(
                     locationWarning!,
-                    textAlign:
-                        TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                    ),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
                 ),
               ),
             ),
 
-          if (loading)
-            Positioned.fill(
-              child: loadingScreen(),
-            ),
+          if (loading) Positioned.fill(child: loadingScreen()),
 
-          if (!loading)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: mapTools(),
-            ),
+          if (!loading) Positioned(left: 0, right: 0, bottom: 0, child: mapTools()),
         ],
       ),
     );
