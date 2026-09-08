@@ -38,8 +38,8 @@ class CyrusLanguageButton extends StatelessWidget {
   static const List<CyrusLanguage> languages = [
     CyrusLanguage(
       code: 'fa',
-      name: 'فارسی',
-      nativeName: 'فارسی',
+      name: 'پارسی',
+      nativeName: 'پارسی',
       flag: '🇮🇷',
       isRtl: true,
     ),
