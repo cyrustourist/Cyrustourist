@@ -912,7 +912,7 @@ class _HomePageState extends State<HomePage> {
 
     return Positioned(
       left: imageWidth * left,
-      top: imageHeight * (top + height) + 3,
+      top: imageHeight * (top + height * 0.90),
       width: imageWidth * width,
       child: IgnorePointer(
         child: Directionality(
