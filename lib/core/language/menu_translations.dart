@@ -45,7 +45,7 @@ class MenuLanguageOption {
 }
 
 const List<MenuLanguageOption> kMenuLanguages = [
-  MenuLanguageOption(code: 'fa', nativeName: 'فارسی', isRtl: true),
+  MenuLanguageOption(code: 'fa', nativeName: 'پارسی', isRtl: true),
   MenuLanguageOption(code: 'en', nativeName: 'English', isRtl: false),
   MenuLanguageOption(code: 'ar', nativeName: 'العربية', isRtl: true),
   MenuLanguageOption(code: 'tr', nativeName: 'Türkçe', isRtl: false),
