@@ -386,6 +386,10 @@ class _HomePageState extends State<HomePage> {
                   duration: const Duration(milliseconds: 120),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0xffffd36a).withValues(alpha: 0.35),
+                      width: 1.2,
+                    ),
                     boxShadow: selected == number
                         ? [
                             BoxShadow(
