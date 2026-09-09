@@ -1649,7 +1649,7 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       right: 12,
       bottom: 110,
       child: Column(
-        mainAxisSize: MinAxisSize.min,
+        mainAxisSize: MainAxisSize.min,
         children: [
           _mapSideButton(
             icon: Icons.add,
