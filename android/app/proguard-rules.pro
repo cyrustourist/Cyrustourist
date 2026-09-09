@@ -6,6 +6,17 @@
 -keep class io.flutter.embedding.** { *; }
 -keep class io.flutter.plugin.** { *; }
 
+# ------------------------------------------------------------
+# Flutter plugin implementations (io.flutter.plugins — با "s")
+# ------------------------------------------------------------
+# این با io.flutter.plugin.** بالا فرق دارد؛ کلاسی که پیام FCM را
+# در حالت پس‌زمینه/بسته واقعاً دریافت و به سیستم تحویل می‌دهد
+# (io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingService)
+# دقیقاً همین‌جاست. بدون این قانون، R8 می‌تواند این کلاس را در
+# بیلد Release حذف/خراب کند و پیام هرگز به اپ بسته نرسد.
+-keep class io.flutter.plugins.** { *; }
+-dontwarn io.flutter.plugins.**
+
 # Flutter Play Store deferred components
 -dontwarn com.google.android.play.core.**
 -keep class com.google.android.play.core.** { *; }
