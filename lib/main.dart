@@ -594,17 +594,20 @@ class _HomePageState extends State<HomePage> {
                     area(10, .78, .64, .18, .175, width, height),
 
                     // زیرنویس‌ها با درصد موقعیت اختصاصی
+
+// کلیدهای ۱ تا ۵
 caption(1, .02, .50, .18, .15, width, height, captionTop: .578),
 caption(2, .21, .50, .18, .15, width, height, captionTop: .578),
 caption(3, .40, .50, .18, .15, width, height, captionTop: .578),
-caption(4, .59, .50, .18, .15, width, height, captionTop: .578),
-caption(5, .78, .50, .18, .15, width, height, captionTop: .578),
+caption(4, .50, .50, .18, .15, width, height, captionTop: .578),
+caption(5, .50, .50, .18, .15, width, height, captionTop: .578),
 
-caption(6, .02, .71, .18, .15, width, height, captionTop: .788),
-caption(7, .21, .71, .18, .15, width, height, captionTop: .788),
-caption(8, .40, .71, .18, .15, width, height, captionTop: .788),
-caption(9, .59, .71, .18, .15, width, height, captionTop: .788),
-caption(10, .78, .71, .18, .15, width, height, captionTop: .788),
+// کلیدهای ۶ تا ۱۰
+caption(6, .02, .71, .18, .15, width, height, captionTop: .808),
+caption(7, .18, .71, .18, .15, width, height, captionTop: .808),
+caption(8, .37, .71, .18, .15, width, height, captionTop: .808),
+caption(9, .56, .71, .18, .15, width, height, captionTop: .808),
+caption(10, .75, .71, .18, .15, width, height, captionTop: .808),
                   ],
                 ),
               ),
