@@ -6,6 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/app_language.dart';
+import '../models/cyrus_movie_entry.dart';
+import '../widgets/movies/cyrus_movie_cover_card.dart';
+import '../widgets/movies/cyrus_movie_search_bar.dart';
+import 'movie_detail_page.dart';
 import 'residence_register_page.dart';
 import 'residence_video_page.dart';
 
@@ -25,6 +29,7 @@ class VideoPage extends StatefulWidget {
 
 class _VideoPageState extends State<VideoPage> {
   bool _showSelectedVideos = true;
+  String _movieSearchQuery = '';
   final Map<String, String> _resolvedAparatTitles = {};
 
   static const String aparatChannel =
@@ -634,6 +639,33 @@ class _VideoPageState extends State<VideoPage> {
                   child: Column(
                     children: [
                       _buildHeaderImage(),
+                      const SizedBox(height: 14),
+                      CyrusMovieSearchBar(
+                        onChanged: (q) => setState(() {
+                          _movieSearchQuery = q;
+                        }),
+                      ),
+                      const SizedBox(height: 14),
+                      Builder(
+                        builder: (context) {
+                          final filtered = filterMovieEntries(
+                            kDefaultMovieEntries,
+                            _movieSearchQuery,
+                          );
+                          if (filtered.isEmpty) {
+                            return const CyrusMovieSearchEmptyState();
+                          }
+                          return CyrusMovieCoverGrid(
+                            entries: filtered,
+                            languageCode: _languageCode,
+                            onTapEntry: (entry) => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => MovieDetailPage(entry: entry),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                       const SizedBox(height: 20),
                       Material(
                         color: Colors.transparent,
