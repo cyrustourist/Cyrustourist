@@ -13,7 +13,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'services/map_state_service.dart';
 import 'services/notification_service.dart';
-import 'services/fcm_debug_token_service.dart';
 import 'providers/map_state_provider.dart';
 import 'config/map_ir_config.dart';
 import 'config/carto_config.dart';
@@ -220,12 +219,6 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     NotificationService.instance.maybePlayNewAnnouncementSound();
-
-    // ⚠️ موقت — فقط برای تست نوتیفیکیشن. بعد از گرفتن توکن و تست
-    // موفق پوش نوتیفیکیشن، این ۳ خط را حذف کنید.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FcmDebugTokenService.showTokenDialog(context);
-    });
   }
 
   String get homeImage => 'assets/images/home-hero.jpg';
@@ -416,6 +409,7 @@ class _HomePageState extends State<HomePage> {
     double imageWidth,
     double imageHeight, {
     double? captionTop,
+    double boxHeight = 0.065,
   }) {
     final text = MenuTranslations.title(MenuLanguage.current, number);
     final label = text.isNotEmpty ? text : buttonTitle(number);
@@ -425,29 +419,33 @@ class _HomePageState extends State<HomePage> {
       left: imageWidth * left,
       top: imageHeight * resolvedTop,
       width: imageWidth * width,
+      height: imageHeight * boxHeight,
       child: IgnorePointer(
         child: Directionality(
           textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xff0b1826).withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(8),
+              color: const Color(0xff0b1826).withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: const Color(0xffffd36a).withValues(alpha: 0.65),
-                width: 0.6,
+                color: const Color(0xffffd36a).withValues(alpha: 0.95),
+                width: 1.6,
               ),
             ),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 9.0,
-                height: 1.1,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10.5,
+                  height: 1.15,
+                ),
               ),
             ),
           ),
@@ -583,17 +581,17 @@ class _HomePageState extends State<HomePage> {
                     area(10, .78, .64, .18, .175, width, height),
 
                     // زیرنویس‌ها
-                    caption(1, .02, .50, .18, .15, width, height, captionTop: .570),
-                    caption(2, .21, .50, .18, .15, width, height, captionTop: .570),
-                    caption(3, .40, .50, .18, .15, width, height, captionTop: .570),
-                    caption(4, .59, .50, .18, .15, width, height, captionTop: .570),
-                    caption(5, .78, .50, .18, .15, width, height, captionTop: .570),
+                    caption(1, .02, .50, .18, .15, width, height, captionTop: .559),
+                    caption(2, .21, .50, .18, .15, width, height, captionTop: .559),
+                    caption(3, .40, .50, .18, .15, width, height, captionTop: .559),
+                    caption(4, .59, .50, .18, .15, width, height, captionTop: .559),
+                    caption(5, .78, .50, .18, .15, width, height, captionTop: .559),
 
-                    caption(6, .02, .71, .18, .15, width, height, captionTop: .800),
-                    caption(7, .21, .71, .18, .15, width, height, captionTop: .800),
-                    caption(8, .40, .71, .18, .15, width, height, captionTop: .800),
-                    caption(9, .59, .71, .18, .15, width, height, captionTop: .800),
-                    caption(10, .78, .71, .18, .15, width, height, captionTop: .800),
+                    caption(6, .02, .71, .18, .15, width, height, captionTop: .750),
+                    caption(7, .21, .71, .18, .15, width, height, captionTop: .750),
+                    caption(8, .40, .71, .18, .15, width, height, captionTop: .750),
+                    caption(9, .59, .71, .18, .15, width, height, captionTop: .750),
+                    caption(10, .78, .71, .18, .15, width, height, captionTop: .750),
                   ],
                 ),
               ),
