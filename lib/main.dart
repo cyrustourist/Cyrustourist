@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart0:convert';
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -226,7 +226,7 @@ class _HomePageState extends State<HomePage> {
   String buttonTitle(int number) {
     switch (number) {
       case 1:
-        return 'نقشه';
+        return 'نقشه گردشگری';
       case 2:
         return 'گردشگری سلامت';
       case 3:
@@ -236,13 +236,13 @@ class _HomePageState extends State<HomePage> {
       case 5:
         return 'اقامتگاه‌ها';
       case 6:
-        return 'تورها';
+        return 'راهنمای سفر';
       case 7:
-        return 'برنامه‌ریز سفر';
+        return 'جعبه ابزار';
       case 8:
-        return 'پروفایل';
+        return 'حساب کاربری';
       case 9:
-        return 'جستجو';
+        return 'جستجوی هوشمند';
       case 10:
         return 'علاقه‌مندی‌ها';
       default:
@@ -408,16 +408,15 @@ class _HomePageState extends State<HomePage> {
     double height,
     double imageWidth,
     double imageHeight, {
-    double? captionTop,
-    double boxHeight = 0.065,
+    required double captionTop,
+    double boxHeight = 0.038,
   }) {
     final text = MenuTranslations.title(MenuLanguage.current, number);
     final label = text.isNotEmpty ? text : buttonTitle(number);
-    final resolvedTop = captionTop ?? (top + height * 0.90);
 
     return Positioned(
       left: imageWidth * left,
-      top: imageHeight * resolvedTop,
+      top: imageHeight * captionTop,
       width: imageWidth * width,
       height: imageHeight * boxHeight,
       child: IgnorePointer(
@@ -425,15 +424,7 @@ class _HomePageState extends State<HomePage> {
           textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
           child: Container(
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xff0b1826).withValues(alpha: 0.78),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xffffd36a).withValues(alpha: 0.95),
-                width: 1.6,
-              ),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
@@ -441,10 +432,17 @@ class _HomePageState extends State<HomePage> {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10.5,
-                  height: 1.15,
+                  color: Color(0xfffff4be),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 11.5,
+                  height: 1.1,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 2.5,
+                      color: Colors.black,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -580,18 +578,18 @@ class _HomePageState extends State<HomePage> {
                     area(9, .59, .64, .18, .175, width, height),
                     area(10, .78, .64, .18, .175, width, height),
 
-                    // زیرنویس‌ها
-                    caption(1, .02, .50, .18, .15, width, height, captionTop: .559),
-                    caption(2, .21, .50, .18, .15, width, height, captionTop: .559),
-                    caption(3, .40, .50, .18, .15, width, height, captionTop: .559),
-                    caption(4, .59, .50, .18, .15, width, height, captionTop: .559),
-                    caption(5, .78, .50, .18, .15, width, height, captionTop: .559),
+                    // زیرنویس‌ها با درصد موقعیت اختصاصی دقیق
+                    caption(1, .02, .50, .18, .15, width, height, captionTop: .558),
+                    caption(2, .21, .50, .18, .15, width, height, captionTop: .558),
+                    caption(3, .40, .50, .18, .15, width, height, captionTop: .558),
+                    caption(4, .59, .50, .18, .15, width, height, captionTop: .558),
+                    caption(5, .78, .50, .18, .15, width, height, captionTop: .558),
 
-                    caption(6, .02, .71, .18, .15, width, height, captionTop: .750),
-                    caption(7, .21, .71, .18, .15, width, height, captionTop: .750),
-                    caption(8, .40, .71, .18, .15, width, height, captionTop: .750),
-                    caption(9, .59, .71, .18, .15, width, height, captionTop: .750),
-                    caption(10, .78, .71, .18, .15, width, height, captionTop: .750),
+                    caption(6, .02, .71, .18, .15, width, height, captionTop: .748),
+                    caption(7, .21, .71, .18, .15, width, height, captionTop: .748),
+                    caption(8, .40, .71, .18, .15, width, height, captionTop: .748),
+                    caption(9, .59, .71, .18, .15, width, height, captionTop: .748),
+                    caption(10, .78, .71, .18, .15, width, height, captionTop: .748),
                   ],
                 ),
               ),
@@ -664,7 +662,7 @@ class WorkInProgressPage extends StatelessWidget {
   final String title;
 
   const WorkInProgressPage({
-    super.key,
+    super,
     required this.number,
     required this.title,
   });
