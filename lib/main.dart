@@ -364,10 +364,11 @@ class _HomePageState extends State<HomePage> {
     double height,
     double imageWidth,
     double imageHeight,
+    {double topOffset = 0},
   ) {
     return Positioned(
       left: imageWidth * left,
-      top: imageHeight * top,
+      top: topOffset + imageHeight * top,
       width: imageWidth * width,
       height: imageHeight * height,
       child: Material(
@@ -417,6 +418,7 @@ class _HomePageState extends State<HomePage> {
     double height,
     double imageWidth,
     double imageHeight, {
+    double topOffset = 0,
     required double captionTop,
     double boxHeight = 0.038,
   }) {
@@ -425,7 +427,7 @@ class _HomePageState extends State<HomePage> {
 
     return Positioned(
       left: imageWidth * left,
-      top: imageHeight * captionTop,
+      top: topOffset + imageHeight * captionTop,
       width: imageWidth * width,
       height: imageHeight * boxHeight,
       child: IgnorePointer(
@@ -466,36 +468,35 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.black,
       drawer: _buildMenuDrawer(),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            double width = constraints.maxWidth;
-            double height = width * 16 / 9;
+      // صفحه اصلی بدون کادر اجباری 9:16؛ کل فضای گوشی را استفاده می‌کند.
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double width = constraints.maxWidth;
+          final double height = constraints.maxHeight;
+          final EdgeInsets viewPadding = MediaQuery.of(context).padding;
+          final double contentHeight =
+              (height - viewPadding.top - viewPadding.bottom).clamp(0.0, double.infinity);
 
-            if (height > constraints.maxHeight) {
-              height = constraints.maxHeight;
-              width = height * 9 / 16;
-            }
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // تصویر بدون Stretch و بدون کادر اجباری 9:16.
+              // در نسبت‌های غیر 9:16، BoxFit.cover فقط به اندازه لازم Crop می‌کند
+              // تا صفحه کاملاً پر شود و نسبت واقعی تصویر حفظ شود.
+              Image.asset(
+                homeImage,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xff071722),
+                ),
+              ),
 
-            return Center(
-              child: SizedBox(
-                width: width,
-                height: height,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      homeImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: const Color(0xff071722),
-                      ),
-                    ),
-
-                    // دکمه منو
-                    Positioned(
-                      top: height * 0.085,
-                      left: 14,
+              // لایه اصلی کنترل‌ها؛ موقعیت‌ها همچنان بر اساس کل صفحه محاسبه می‌شوند.
+              // دکمه منو
+              Positioned(
+                top: viewPadding.top + contentHeight * 0.085,
+                left: 14,
                       child: GestureDetector(
                         onTap: () => Navigator.push(
                           context,
@@ -518,10 +519,10 @@ class _HomePageState extends State<HomePage> {
                     ),
 
                     // زبان و حساب کاربری
-                    Positioned(
-                      top: height * 0.085,
-                      right: 14,
-                      child: Row(
+              Positioned(
+                top: viewPadding.top + contentHeight * 0.085,
+                right: 14,
+                child: Row(
                         children: [
                           Container(
                             decoration: BoxDecoration(
@@ -580,40 +581,38 @@ class _HomePageState extends State<HomePage> {
                     ),
 
                     // لمس کلیدها (ردیف اول 1 تا 5)
-                    area(1, .02, .44, .18, .19, width, height),
-                    area(2, .21, .44, .18, .19, width, height),
-                    area(3, .40, .44, .18, .19, width, height),
-                    area(4, .59, .44, .18, .19, width, height),
-                    area(5, .78, .44, .18, .19, width, height),
+                    area(1, .02, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
+                    area(2, .21, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
+                    area(3, .40, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
+                    area(4, .59, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
+                    area(5, .78, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
 
                     // لمس کلیدها (ردیف دوم 6 تا 10)
-                    area(6, .02, .64, .18, .175, width, height),
-                    area(7, .21, .64, .18, .175, width, height),
-                    area(8, .40, .64, .18, .175, width, height),
-                    area(9, .59, .64, .18, .175, width, height),
-                    area(10, .78, .64, .18, .175, width, height),
+                    area(6, .02, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
+                    area(7, .21, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
+                    area(8, .40, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
+                    area(9, .59, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
+                    area(10, .78, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
 
                      // زیرنویس‌ها با درصد موقعیت اختصاصی
 
 // کلیدهای ۱ تا ۵
-caption(1, .02, .50, .18, .15, width, height, captionTop: .578),
-caption(2, .21, .50, .18, .15, width, height, captionTop: .578),
-caption(3, .40, .50, .18, .15, width, height, captionTop: .578),
-caption(4, .59, .50, .18, .15, width, height, captionTop: .578),
-caption(5, .78, .50, .18, .15, width, height, captionTop: .578),
+caption(1, .02, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
+caption(2, .21, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
+caption(3, .40, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
+caption(4, .59, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
+caption(5, .78, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
 
 // کلیدهای ۶ تا ۱۰
-caption(6, .02, .71, .18, .15, width, height, captionTop: .788),
-caption(7, .21, .71, .18, .15, width, height, captionTop: .788),
-caption(8, .40, .71, .18, .15, width, height, captionTop: .788),
-caption(9, .59, .71, .18, .15, width, height, captionTop: .788),
-caption(10, .78, .71, .18, .15, width, height, captionTop: .788),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+caption(6, .02, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
+caption(7, .21, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
+caption(8, .40, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
+caption(9, .59, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
+caption(10, .78, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
+
+            ],
+          );
+        },
       ),
     );
   }
