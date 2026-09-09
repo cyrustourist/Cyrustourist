@@ -13,6 +13,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'services/map_state_service.dart';
 import 'services/notification_service.dart';
+import 'services/fcm_debug_token_service.dart';
 import 'providers/map_state_provider.dart';
 import 'config/map_ir_config.dart';
 import 'config/carto_config.dart';
@@ -223,7 +224,7 @@ class _HomePageState extends State<HomePage> {
     // ⚠️ موقت — فقط برای تست نوتیفیکیشن. بعد از گرفتن توکن و تست
     // موفق پوش نوتیفیکیشن، این ۳ خط را حذف کنید.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService.instance.showDebugTokenDialog(context);
+      FcmDebugTokenService.showTokenDialog(context);
     });
   }
 
