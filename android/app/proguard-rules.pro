@@ -17,10 +17,27 @@
 # Geolocator plugin
 -keep class com.baseflow.geolocator.** { *; }
 
+# ------------------------------------------------------------
+# Firebase Cloud Messaging (FCM)
+# ------------------------------------------------------------
+# بدون این بخش، R8 در بیلد Release ممکن است کلاس‌های لازم برای
+# دریافت و نمایش پیام پوش (نه فقط گرفتن توکن) را حذف کند — دقیقاً
+# همان مشکلی که باعث می‌شد توکن بگیریم ولی نوتیفیکیشن نرسد.
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# ------------------------------------------------------------
+# flutter_local_notifications
+# ------------------------------------------------------------
+-keep class com.dexterous.flutterlocalnotifications.** { *; }
+-dontwarn com.dexterous.flutterlocalnotifications.**
+
 # Keep annotations
 -keepattributes *Annotation*
 -keepattributes InnerClasses
 -keepattributes EnclosingMethod
+-keepattributes Signature
 
 # Preserve native methods
 -keepclasseswithmembernames class * {
