@@ -485,7 +485,7 @@ class _HomePageState extends State<HomePage> {
               // تا صفحه کاملاً پر شود و نسبت واقعی تصویر حفظ شود.
               Image.asset(
                 homeImage,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 alignment: Alignment.center,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: const Color(0xff071722),
