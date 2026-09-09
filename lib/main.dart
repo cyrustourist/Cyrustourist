@@ -357,15 +357,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget area(
-    int number,
-    double left,
-    double top,
-    double width,
-    double height,
-    double imageWidth,
-    double imageHeight,
-    {double topOffset = 0},
-  ) {
+  int number,
+  double left,
+  double top,
+  double width,
+  double height,
+  double imageWidth,
+  double imageHeight, {
+  double topOffset = 0,
+}) {
     return Positioned(
       left: imageWidth * left,
       top: topOffset + imageHeight * top,
