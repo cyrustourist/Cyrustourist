@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart0:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1631,7 +1631,7 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       right: 12,
       bottom: 110,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MinAxisSize.min,
         children: [
           _mapSideButton(
             icon: Icons.add,
