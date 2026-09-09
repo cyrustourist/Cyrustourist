@@ -377,22 +377,28 @@ class _HomePageState extends State<HomePage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: () => tap(number),
-          child: AnimatedScale(
-            scale: selected == number ? 0.92 : 1.0,
-            duration: const Duration(milliseconds: 120),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: selected == number
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xffffd36a).withValues(alpha: 0.8),
-                          blurRadius: 25,
-                          spreadRadius: 5,
-                        ),
-                      ]
-                    : [],
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: FractionallySizedBox(
+              heightFactor: 0.63,
+              child: AnimatedScale(
+                scale: selected == number ? 0.92 : 1.0,
+                duration: const Duration(milliseconds: 120),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 120),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: selected == number
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xffffd36a).withValues(alpha: 0.8),
+                              blurRadius: 25,
+                              spreadRadius: 5,
+                            ),
+                          ]
+                        : [],
+                  ),
+                ),
               ),
             ),
           ),
@@ -577,17 +583,17 @@ class _HomePageState extends State<HomePage> {
                     area(10, .78, .64, .18, .175, width, height),
 
                     // زیرنویس‌ها
-                    caption(1, .02, .50, .18, .15, width, height, captionTop: .580),
-                    caption(2, .21, .50, .18, .15, width, height, captionTop: .580),
-                    caption(3, .40, .50, .18, .15, width, height, captionTop: .580),
-                    caption(4, .59, .50, .18, .15, width, height, captionTop: .580),
-                    caption(5, .78, .50, .18, .15, width, height, captionTop: .580),
+                    caption(1, .02, .50, .18, .15, width, height, captionTop: .570),
+                    caption(2, .21, .50, .18, .15, width, height, captionTop: .570),
+                    caption(3, .40, .50, .18, .15, width, height, captionTop: .570),
+                    caption(4, .59, .50, .18, .15, width, height, captionTop: .570),
+                    caption(5, .78, .50, .18, .15, width, height, captionTop: .570),
 
-                    caption(6, .02, .71, .18, .15, width, height, captionTop: .780),
-                    caption(7, .21, .71, .18, .15, width, height, captionTop: .780),
-                    caption(8, .40, .71, .18, .15, width, height, captionTop: .780),
-                    caption(9, .59, .71, .18, .15, width, height, captionTop: .780),
-                    caption(10, .78, .71, .18, .15, width, height, captionTop: .780),
+                    caption(6, .02, .71, .18, .15, width, height, captionTop: .800),
+                    caption(7, .21, .71, .18, .15, width, height, captionTop: .800),
+                    caption(8, .40, .71, .18, .15, width, height, captionTop: .800),
+                    caption(9, .59, .71, .18, .15, width, height, captionTop: .800),
+                    caption(10, .78, .71, .18, .15, width, height, captionTop: .800),
                   ],
                 ),
               ),
