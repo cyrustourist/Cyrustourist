@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show HttpClient;
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/material.dart';
@@ -11,9 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-import 'services/map_state_service.dart';
 import 'services/notification_service.dart';
-import 'providers/map_state_provider.dart';
 import 'config/map_ir_config.dart';
 import 'config/carto_config.dart';
 
@@ -32,7 +31,7 @@ import 'pages/video_page.dart';
 import 'pages/travel/travel_guide_page.dart' as travel_guide;
 
 // ------------------------------------------------------------
-// فایل‌های جدید هدر و کلیدهای ۷/۸/۹ (اتصال نهایی)
+// فایل‌های هدر و کلیدهای ۷/۸/۹ (اتصال نهایی)
 // ------------------------------------------------------------
 import 'widgets/cyrus_language_button.dart';
 import 'widgets/cyrus_header_account_button.dart';
@@ -55,8 +54,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint('Firebase init ignored on web/unsupported platforms: $e');
+  }
 
   await NotificationService.instance.initialize();
 
@@ -85,7 +88,7 @@ class CyrusTouristApp extends StatelessWidget {
 }
 
 // ============================================================
-// TEXT
+// TEXT & MULTI-LANGUAGE MANAGEMENT
 // ============================================================
 
 class AppText {
@@ -142,7 +145,7 @@ class AppText {
 }
 
 // ============================================================
-// SPLASH
+// SPLASH PAGE
 // ============================================================
 
 class SplashPage extends StatefulWidget {
@@ -187,9 +190,11 @@ class _SplashPageState extends State<SplashPage> {
           errorBuilder: (context, error, stackTrace) {
             return const Center(
               child: Text(
-                'Splash image not found',
+                'Cyrus Tourist',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xffffd36a),
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             );
@@ -475,7 +480,13 @@ class _HomePageState extends State<HomePage> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.asset(homeImage, fit: BoxFit.cover),
+                    Image.asset(
+                      homeImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: const Color(0xff071722),
+                      ),
+                    ),
 
                     // دکمه منو
                     Positioned(
@@ -578,7 +589,7 @@ class _HomePageState extends State<HomePage> {
                     area(9, .59, .64, .18, .175, width, height),
                     area(10, .78, .64, .18, .175, width, height),
 
-                    // زیرنویس‌ها با درصد موقعیت اختصاصی دقیق
+                    // زیرنویس‌ها با درصد موقعیت اختصاصی
                     caption(1, .02, .50, .18, .15, width, height, captionTop: .558),
                     caption(2, .21, .50, .18, .15, width, height, captionTop: .558),
                     caption(3, .40, .50, .18, .15, width, height, captionTop: .558),
@@ -654,7 +665,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 // ============================================================
-// TEMPORARY WORK IN PROGRESS PAGE
+// WORK IN PROGRESS PAGE
 // ============================================================
 
 class WorkInProgressPage extends StatelessWidget {
@@ -695,7 +706,7 @@ class WorkInProgressPage extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              const Text('در حال کار است', style: TextStyle(color: Colors.white, fontSize: 18)),
+              const Text('در حال ساخت و بروزرسانی', style: TextStyle(color: Colors.white, fontSize: 18)),
               const SizedBox(height: 12),
               Text(
                 'کلید شماره $number',
@@ -1206,7 +1217,12 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
                             shape: BoxShape.circle,
                           ),
                           child: ClipOval(
-                            child: Image.asset('assets/images/logo-new.jpg', fit: BoxFit.cover),
+                            child: Image.asset(
+                              'assets/images/logo-new.jpg',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.map, size: 50, color: Color(0xff071722)),
+                            ),
                           ),
                         ),
                       ),
@@ -1465,11 +1481,13 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
     HttpClient? client;
 
     try {
-      client = HttpClient();
-      client.userAgent = 'CyrusTourist/1.0 (cyrustourist app)';
-      client.connectionTimeout = const Duration(seconds: 15);
+      if (!kIsWeb) {
+        client = HttpClient();
+        client.userAgent = 'CyrusTourist/1.0 (cyrustourist app)';
+        client.connectionTimeout = const Duration(seconds: 15);
+      }
 
-      final request = await client.getUrl(uri);
+      final request = await (client != null ? client.getUrl(uri) : HttpClient().getUrl(uri));
       final response = await request.close();
 
       if (response.statusCode != 200) return null;
