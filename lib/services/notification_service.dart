@@ -15,15 +15,6 @@ import '../pages/announcements_page.dart';
 import 'cache_service.dart';
 
 /// سرویس مرکزی اعلان‌های سایروس توریست.
-///
-/// این سرویس چند مسئولیت دارد:
-/// 1) دریافت لیست اعلان‌ها (Announcements) از API سرور و نگه‌داشتن
-///    وضعیت «خوانده‌نشده» برای نمایش بج روی کلید ۸ (حساب کاربری).
-/// 2) نمایش اعلان واقعی سیستم اندروید (نوار بالا، صدا، لرزش، آیکون)
-///    از طریق flutter_local_notifications.
-/// 3) اتصال به Firebase Cloud Messaging (FCM) برای دریافت پوش نوتیفیکیشن
-///    حتی زمانی که اپ بسته یا در پس‌زمینه است، و باز کردن صفحه‌ی
-///    مربوطه با لمس اعلان.
 class NotificationService {
   NotificationService._();
 
@@ -39,8 +30,7 @@ class NotificationService {
   /// کلید ذخیره‌سازی شناسه‌ی پیام‌هایی که کاربر حذف کرده است.
   static const String _dismissedIdsKey = 'cyrus_dismissed_notification_ids';
 
-  /// کلید ذخیره‌سازی آخرین تعداد خوانده‌نشده‌ای که برایش افکت صدا
-  /// پخش شده (برای جلوگیری از پخش تکراری صدا برای همان آگهی‌ها).
+  /// کلید ذخیره‌سازی آخرین تعداد خوانده‌نشده‌ای که برایش افکت صدا پخش شده.
   static const String _lastNotifiedCountKey =
       'cyrus_last_notified_unread_count';
 
@@ -61,7 +51,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   // ==========================================================
-  // بخش ۱: دریافت اعلان‌ها از سرور (بدون تغییر)
+  // بخش ۱: دریافت اعلان‌ها از سرور
   // ==========================================================
 
   Future<List<CyrusAnnouncement>> fetchAnnouncements() async {
@@ -145,7 +135,7 @@ class NotificationService {
   }
 
   // ==========================================================
-  // افکت صدای آگهی جدید (بدون تغییر)
+  // افکت صدای آگهی جدید
   // ==========================================================
 
   Future<bool> isAnnouncementSoundEnabled() async {
@@ -177,7 +167,7 @@ class NotificationService {
   }
 
   // ==========================================================
-  // حذف محلی یک پیام (بدون تغییر)
+  // حذف محلی یک پیام
   // ==========================================================
 
   Future<void> dismiss(int id) async {
@@ -217,10 +207,7 @@ class NotificationService {
 
   bool get isInitialized => _initialized;
 
-  /// آماده‌سازی سرویس اعلان‌ها: کانال اندروید را می‌سازد، مجوز
-  /// نوتیفیکیشن را می‌گیرد و به پیام‌های FCM گوش می‌دهد.
-  ///
-  /// این متد باید بعد از Firebase.initializeApp() در main() صدا زده شود.
+  /// آماده‌سازی سرویس اعلان‌ها
   Future<void> initialize() async {
     if (_initialized) {
       return;
@@ -253,16 +240,22 @@ class NotificationService {
     await androidPlugin?.createNotificationChannel(channel);
     await androidPlugin?.requestNotificationsPermission();
 
-    // مجوز اعلان از سمت FCM (روی iOS اجباری است؛ روی اندروید ۱۳+ هم
-    // لازم است و از طریق پلاگین بالا هم گرفته شد، این خط بی‌ضرر است).
     await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
 
-    // پیامی که اپ را از حالت killed باز کرده (کاربر روی اعلان زده
-    // در حالی که اپ کاملاً بسته بوده است).
+    // چاپ توکن FCM در Terminal / Logcat بدون باز کردن دیالوگ مزاحم روی صفحه
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      debugPrint('=== CYRUS TOURIST FCM TOKEN ===');
+      debugPrint(token);
+      debugPrint('================================');
+    } catch (e) {
+      debugPrint('FCM Token Fetch Error: $e');
+    }
+
     final initialMessage =
         await FirebaseMessaging.instance.getInitialMessage();
 
@@ -270,17 +263,56 @@ class NotificationService {
       _handleTap(jsonEncode(initialMessage.data));
     }
 
-    // پیامی که وقتی اپ در پس‌زمینه بوده (نه بسته) با لمس اعلان باز شده.
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       _handleTap(jsonEncode(message.data));
     });
 
-    // پیامی که وقتی اپ باز/فعال است می‌رسد. اندروید در این حالت
-    // به‌صورت پیش‌فرض چیزی در نوار بالا نشان نمی‌دهد، پس خودمان با
-    // flutter_local_notifications نمایشش می‌دهیم.
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
 
     _initialized = true;
+  }
+
+  /// دریافت دستی توکن FCM (جهت استفاده در پنل تنظیمات یا دیباگ اختیاری)
+  Future<String?> getFcmToken() async {
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (error) {
+      debugPrint('FCM token error: $error');
+      return null;
+    }
+  }
+
+  /// متد نمایش پاپ‌آپ توکن به درخواست کاربر (اختیاری)
+  Future<void> showDebugTokenDialog(BuildContext context) async {
+    final token = await getFcmToken();
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('FCM Token (تست نوتیفیکیشن)'),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            token ?? 'توکن دریافت نشد (اتصال اینترنت/Google Play Services را چک کنید)',
+          ),
+        ),
+        actions: [
+          if (token != null)
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: token));
+                Navigator.pop(context);
+              },
+              child: const Text('کپی و بستن'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('بستن'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
@@ -313,12 +345,6 @@ class NotificationService {
     );
   }
 
-  /// با لمس اعلان (چه در حالت پس‌زمینه چه killed چه foreground)،
-  /// این متد صفحه‌ی مناسب را باز می‌کند.
-  ///
-  /// سرور باید در payload پوش، کلید "screen" را بفرستد. فعلاً فقط
-  /// "announcements" پشتیبانی می‌شود (باز شدن صفحه‌ی لیست اعلان‌ها)؛
-  /// اگر screen نامشخص/خالی باشد، فقط خودِ اپ باز می‌شود.
   void _handleTap(String? payload) {
     if (payload == null || payload.isEmpty) {
       return;
@@ -347,8 +373,6 @@ class NotificationService {
     }
   }
 
-  /// نمایش یک اعلان محلی ساده (برای استفاده‌ی داخلی اپ، مثل
-  /// showWelcome/showTourismUpdate پایین‌تر).
   Future<void> show({
     required String title,
     required String body,
@@ -378,7 +402,6 @@ class NotificationService {
     );
   }
 
-  /// ارسال اعلان خوش‌آمدگویی.
   Future<void> showWelcome({
     String languageCode = 'fa',
   }) async {
@@ -407,7 +430,6 @@ class NotificationService {
     }
   }
 
-  /// اعلان مربوط به یک جاذبه یا محتوای گردشگری.
   Future<void> showTourismUpdate({
     required String title,
     required String body,
@@ -420,7 +442,6 @@ class NotificationService {
     );
   }
 
-  /// پاک کردن وضعیت سرویس (برای تست).
   Future<void> reset() async {
     _initialized = false;
   }
