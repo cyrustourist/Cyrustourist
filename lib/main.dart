@@ -673,7 +673,7 @@ class WorkInProgressPage extends StatelessWidget {
   final String title;
 
   const WorkInProgressPage({
-    super,
+    super.key,
     required this.number,
     required this.title,
   });
