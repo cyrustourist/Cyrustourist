@@ -1405,7 +1405,7 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
   void _showSuggestionsOverlay(List<MapPlace> results, {required bool isOrigin}) {
     _removeSuggestionsOverlay();
 
-    if (results.isEmpty) return;
+    if (results.isEmpty || !mounted) return;
 
     final layerLink = isOrigin ? originLayerLink : destinationLayerLink;
     final width = MediaQuery.of(context).size.width - 24;
@@ -1745,20 +1745,21 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
                 TileLayer(
                   wmsOptions: WMSTileLayerOptions(
                     baseUrl: 'https://map.ir/shiveh',
-                    layers: ['Shiveh:Shiveh'],
-                    styles: [],
+                    layers: const ['Shiveh:Shiveh'],
+                    styles: const [],
                     format: 'image/png',
                     version: '1.1.1',
                     transparent: false,
-                    otherParameters: {'width': '256', 'height': '256'},
+                    otherParameters: const {'width': '256', 'height': '256'},
                   ),
                   tileProvider: NetworkTileProvider(headers: {'x-api-key': MapIrConfig.apiKey}),
                   userAgentPackageName: 'com.cyrustourist.app',
                   errorTileCallback: (_, __, ___) {
-                    if (!mounted || mapProviderStep != 0) return;
-                    setState(() {
-                      mapProviderStep = 1;
-                    });
+                    if (mounted && mapProviderStep == 0) {
+                      setState(() {
+                        mapProviderStep = 1;
+                      });
+                    }
                   },
                 )
               else if (mapProviderStep == 1)
@@ -1766,10 +1767,11 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
                   urlTemplate: CartoConfig.tileUrlWithKey,
                   userAgentPackageName: 'com.cyrustourist.app',
                   errorTileCallback: (_, __, ___) {
-                    if (!mounted || mapProviderStep != 1) return;
-                    setState(() {
-                      mapProviderStep = 2;
-                    });
+                    if (mounted && mapProviderStep == 1) {
+                      setState(() {
+                        mapProviderStep = 2;
+                      });
+                    }
                   },
                 )
               else
