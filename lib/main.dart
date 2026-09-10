@@ -1780,16 +1780,7 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
             children: [
               if (mapProviderStep == 0)
                 TileLayer(
-                  wmsOptions: WMSTileLayerOptions(
-                    baseUrl: 'https://map.ir/shiveh',
-                    layers: const ['Shiveh:Shiveh'],
-                    styles: const [],
-                    format: 'image/png',
-                    version: '1.1.1',
-                    transparent: false,
-                    otherParameters: const {'width': '256', 'height': '256'},
-                  ),
-                  tileProvider: NetworkTileProvider(headers: {'x-api-key': MapIrConfig.apiKey}),
+                  urlTemplate: CartoConfig.tileUrlWithKey,
                   userAgentPackageName: 'com.cyrustourist.app',
                   errorTileCallback: (_, __, ___) {
                     if (mounted && mapProviderStep == 0) {
@@ -1801,7 +1792,16 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
                 )
               else if (mapProviderStep == 1)
                 TileLayer(
-                  urlTemplate: CartoConfig.tileUrlWithKey,
+                  wmsOptions: WMSTileLayerOptions(
+                    baseUrl: 'https://map.ir/shiveh',
+                    layers: const ['Shiveh:Shiveh'],
+                    styles: const [],
+                    format: 'image/png',
+                    version: '1.1.1',
+                    transparent: false,
+                    otherParameters: const {'width': '256', 'height': '256'},
+                  ),
+                  tileProvider: NetworkTileProvider(headers: {'x-api-key': MapIrConfig.apiKey}),
                   userAgentPackageName: 'com.cyrustourist.app',
                   errorTileCallback: (_, __, ___) {
                     if (mounted && mapProviderStep == 1) {
