@@ -98,6 +98,55 @@ class CategoryNearbyService {
         )
         .toList();
   }
+
+  /// جستجوی هر دسته‌ای از خدمات سریع کلید ۱ (رستوران، کافه، مراکز
+  /// خرید، آثار تاریخی، طبیعت و ...) اطراف یک نقطه مشخص — برای
+  /// استفاده در کلید ۹ (جستجوی هوشمند).
+  ///
+  /// برخلاف [nearby]، اینجا نوع Overpass به‌طور مستقیم داده می‌شود
+  /// چون این دسته‌ها معادل مستقیمی در enum PlaceCategory ندارند؛
+  /// displayCategory فقط برای نمایش (رنگ/آیکون) در کارت‌ها استفاده
+  /// می‌شود.
+  Future<List<MapPlace>> nearbyByRemoteType({
+    required remote.MapPlaceType remoteType,
+    required PlaceCategory displayCategory,
+    required LatLng center,
+    double radiusMeters = 15000,
+    String language = 'fa',
+  }) async {
+    final results =
+        await remote.MapPlacesService.instance.searchNearby(
+      center: center,
+      type: remoteType,
+      radiusMeters: radiusMeters,
+      language: language,
+    );
+
+    final places = results.map((item) {
+      return MapPlace(
+        id: item.id,
+        name: item.name,
+        location: item.point,
+        category: displayCategory,
+        address: item.address,
+        phone: item.phone,
+        website: item.website,
+        distanceMeters: _distance.as(
+          LengthUnit.Meter,
+          center,
+          item.point,
+        ),
+        source: 'openstreetmap',
+      );
+    }).toList();
+
+    places.sort(
+      (a, b) => (a.distanceMeters ?? 0)
+          .compareTo(b.distanceMeters ?? 0),
+    );
+
+    return places;
+  }
 }
 
 /// نتیجه جستجوی شهر یا مکان، فقط شامل نام و مختصات.
