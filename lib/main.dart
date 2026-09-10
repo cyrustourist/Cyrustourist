@@ -186,7 +186,7 @@ class _SplashPageState extends State<SplashPage> {
       body: SizedBox.expand(
         child: Image.asset(
           'assets/images/splash.jpg',
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) {
             return const Center(
               child: Text(
