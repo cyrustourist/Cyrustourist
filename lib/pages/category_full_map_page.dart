@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../map_place.dart';
+import '../config/carto_config.dart';
 import '../widgets/map_markers_layer.dart';
 import '../widgets/map_place_details_sheet.dart';
 
@@ -98,7 +99,7 @@ class _CategoryFullMapPageState
           children: [
             TileLayer(
               urlTemplate:
-                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  CartoConfig.tileUrlWithKey,
               userAgentPackageName: 'com.cyrustourist.app',
             ),
             MapMarkersLayer(
