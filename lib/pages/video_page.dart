@@ -6,10 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/app_language.dart';
-import '../models/cyrus_movie_entry.dart';
-import '../widgets/movies/cyrus_movie_cover_card.dart';
-import '../widgets/movies/cyrus_movie_search_bar.dart';
-import 'movie_detail_page.dart';
+import 'movie_video_page.dart';
 import 'residence_register_page.dart';
 import 'residence_video_page.dart';
 
@@ -29,7 +26,6 @@ class VideoPage extends StatefulWidget {
 
 class _VideoPageState extends State<VideoPage> {
   bool _showSelectedVideos = true;
-  String _movieSearchQuery = '';
   final Map<String, String> _resolvedAparatTitles = {};
 
   static const String aparatChannel =
@@ -490,25 +486,25 @@ class _VideoPageState extends State<VideoPage> {
   String get _leftHeaderText {
     switch (LanguageManager.current) {
       case AppLanguage.persian:
-        return 'فیلم‌های اقامتی';
+        return 'گالری فیلم‌ها';
       case AppLanguage.arabic:
-        return 'فيديوهات الإقامة';
+        return 'معرض الفيديوهات';
       case AppLanguage.english:
-        return 'Accommodation Videos';
+        return 'Video Gallery';
       case AppLanguage.german:
-        return 'Unterkunftsvideos';
+        return 'Videogalerie';
       case AppLanguage.spanish:
-        return 'Vídeos de alojamiento';
+        return 'Galería de vídeos';
       case AppLanguage.french:
-        return "Vidéos d'hébergement";
+        return 'Galerie de vidéos';
       case AppLanguage.italian:
-        return 'Video degli alloggi';
+        return 'Galleria video';
       case AppLanguage.russian:
-        return 'Видео о жилье';
+        return 'Видеогалерея';
       case AppLanguage.turkish:
-        return 'Konaklama Videoları';
+        return 'Video Galerisi';
       case AppLanguage.chinese:
-        return '住宿视频';
+        return '视频画廊';
     }
   }
 
@@ -639,33 +635,6 @@ class _VideoPageState extends State<VideoPage> {
                   child: Column(
                     children: [
                       _buildHeaderImage(),
-                      const SizedBox(height: 14),
-                      CyrusMovieSearchBar(
-                        onChanged: (q) => setState(() {
-                          _movieSearchQuery = q;
-                        }),
-                      ),
-                      const SizedBox(height: 14),
-                      Builder(
-                        builder: (context) {
-                          final filtered = filterMovieEntries(
-                            kDefaultMovieEntries,
-                            _movieSearchQuery,
-                          );
-                          if (filtered.isEmpty) {
-                            return const CyrusMovieSearchEmptyState();
-                          }
-                          return CyrusMovieCoverGrid(
-                            entries: filtered,
-                            languageCode: _languageCode,
-                            onTapEntry: (entry) => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => MovieDetailPage(entry: entry),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
                       const SizedBox(height: 20),
                       Material(
                         color: Colors.transparent,
@@ -878,7 +847,7 @@ class _VideoPageState extends State<VideoPage> {
                 text: _leftHeaderText,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const ResidenceSlotGalleryPage(),
+                    builder: (_) => const MovieSlotGalleryPage(),
                   ),
                 ),
               ),
