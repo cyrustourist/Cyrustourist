@@ -29,6 +29,7 @@ const List<Color> _brandGradient = [
 const List<Color> _callGradient = [Color(0xff00b09b), Color(0xff96c93d)];
 const List<Color> _telegramGradient = [Color(0xff229ed9), Color(0xff2aabee)];
 const List<Color> _whatsappGradient = [Color(0xff25d366), Color(0xff128c7e)];
+const List<Color> _eitaaGradient = [Color(0xff0e8f7e), Color(0xfff5a623)];
 
 Color _goldA(double a) => _gold.withValues(alpha: a);
 
@@ -38,6 +39,7 @@ class _SupportInfo {
   static const String telegram = 'https://t.me/Cyrustourist';
   static const String telegramLabel = '@Cyrustourist';
   static const String whatsapp = 'https://wa.me/989153448818';
+  static const String eitaa = 'https://eitaa.com/cyrustourist';
   static const String instagramUrl =
       'https://www.instagram.com/cyrustourist?igsi=aDc3end6dTNqNW1o';
   static const String websiteUrl =
@@ -972,6 +974,13 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
                 title: 'پشتیبانی واتساپ',
                 subtitle: _SupportInfo.phone,
                 onTap: () => _openUrl(context, _SupportInfo.whatsapp),
+              ),
+              _contactRow(
+                icon: Icons.mark_unread_chat_alt_rounded,
+                gradient: _eitaaGradient,
+                title: 'پشتیبانی ایتا',
+                subtitle: '@cyrustourist',
+                onTap: () => _openUrl(context, _SupportInfo.eitaa),
               ),
               const SizedBox(height: 8),
               SizedBox(
