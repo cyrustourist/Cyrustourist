@@ -534,15 +534,15 @@ class _HomePageState extends State<HomePage> {
                             // جدول‌های آبی خودِ تصویر اندازه‌گیری شده
                             // (ردیف اول مرکز ≈.592 ، ردیف دوم مرکز ≈.8185)
                             caption(1, .02, .44, .18, .19, imgW, imgH, captionTop: .573),
-                            caption(2, .225, .44, .18, .19, imgW, imgH, captionTop: .573),
-                            caption(3, .415, .44, .18, .19, imgW, imgH, captionTop: .573),
-                            caption(4, .615, .44, .18, .19, imgW, imgH, captionTop: .573),
-                            caption(5, .805, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            caption(2, .224, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            caption(3, .414, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            caption(4, .605, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            caption(5, .795, .44, .18, .19, imgW, imgH, captionTop: .573),
 
                             caption(6, .02, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
-                            caption(7, .24, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
-                            caption(8, .43, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
-                            caption(9, .61, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(7, .23, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(8, .42, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(9, .60, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
                             caption(10, .805, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
                           ],
                         ),
