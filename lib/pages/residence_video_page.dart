@@ -8,6 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/app_language.dart';
 import '../main.dart' show SmartMapPage;
+import 'residence_amenities_page.dart';
 import 'residence_register_page.dart';
 
 // ===================== رنگ‌ها و برند =====================
@@ -118,6 +119,19 @@ class ResidenceVideoData {
     this.longitude,
     this.rating,
     this.ratingCount,
+    this.hasParking = false,
+    this.hasWesternToilet = false,
+    this.hasIranianToilet = false,
+    this.bedroomCount,
+    this.hasInternet = false,
+    this.hasKitchen = false,
+    this.hasAc = false,
+    this.hasHeating = false,
+    this.hasHotWater = false,
+    this.hasBreakfast = false,
+    this.hasElevator = false,
+    this.hasYardOrBalcony = false,
+    this.isPetFriendly = false,
   });
 
   /// کد یکتای جایگاه (۱ تا ۲۰ فعلاً)
@@ -157,6 +171,24 @@ class ResidenceVideoData {
 
   final double? rating;
   final int? ratingCount;
+
+  // ---------------- امکانات اقامتگاه (گزینه‌های ثابت) ----------------
+  final bool hasParking;
+  final bool hasWesternToilet;
+  final bool hasIranianToilet;
+
+  /// تعداد اتاق‌خواب — اگر null باشد یعنی هنوز مشخص نشده
+  final int? bedroomCount;
+
+  final bool hasInternet;
+  final bool hasKitchen;
+  final bool hasAc;
+  final bool hasHeating;
+  final bool hasHotWater;
+  final bool hasBreakfast;
+  final bool hasElevator;
+  final bool hasYardOrBalcony;
+  final bool isPetFriendly;
 
   bool get hasAnyPhone =>
       mobilePhone != null || landlinePhone != null || supportPhone != null;
@@ -220,6 +252,19 @@ const List<ResidenceVideoData> kResidenceSlots = [
     longitude: 59.6062,
     rating: 4.7,
     ratingCount: 128,
+    hasParking: true,
+    hasWesternToilet: true,
+    hasIranianToilet: true,
+    bedroomCount: 3,
+    hasInternet: true,
+    hasKitchen: true,
+    hasAc: true,
+    hasHeating: true,
+    hasHotWater: true,
+    hasBreakfast: true,
+    hasElevator: false,
+    hasYardOrBalcony: true,
+    isPetFriendly: false,
   ),
   ResidenceVideoData(code: 2),
   ResidenceVideoData(code: 3),
@@ -587,6 +632,20 @@ class _ResidenceVideoPageState extends State<ResidenceVideoPage> {
                         colors: const [_teal, _tealBright],
                         textColor: const Color(0xff03202a),
                         onTap: _openRoute,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: _outlinedIconButton(
+                        icon: Icons.checklist_rounded,
+                        label: t('امکانات اقامتگاه', 'Residence amenities',
+                            'مرافق الإقامة'),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ResidenceAmenitiesPage(data: _d),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
