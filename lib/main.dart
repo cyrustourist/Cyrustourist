@@ -382,7 +382,7 @@ class _HomePageState extends State<HomePage> {
             child: Transform.translate(
               offset: Offset(0, imageHeight * 0.008 + imageHeight * height * glassDownFactor),
               child: FractionallySizedBox(
-                heightFactor: 0.63,
+                heightFactor: 0.63 - glassDownFactor,
                 child: AnimatedScale(
                   scale: selected == number ? 0.92 : 1.0,
                   duration: const Duration(milliseconds: 120),
