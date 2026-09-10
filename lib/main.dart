@@ -356,16 +356,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget area(
-  int number,
-  double left,
-  double top,
-  double width,
-  double height,
-  double imageWidth,
-  double imageHeight, {
-  double topOffset = 0,
-}) {
+    Widget area(
+    int number,
+    double left,
+    double top,
+    double width,
+    double height,
+    double imageWidth,
+    double imageHeight, {
+    double topOffset = 0,
+  }) {
     return Positioned(
       left: imageWidth * left,
       top: topOffset + imageHeight * top,
@@ -378,28 +378,31 @@ class _HomePageState extends State<HomePage> {
           onTap: () => tap(number),
           child: Align(
             alignment: Alignment.topCenter,
-            child: FractionallySizedBox(
-              heightFactor: 0.63,
-              child: AnimatedScale(
-                scale: selected == number ? 0.92 : 1.0,
-                duration: const Duration(milliseconds: 120),
-                child: AnimatedContainer(
+            child: Transform.translate(
+              offset: Offset(0, -imageHeight * 0.02),
+              child: FractionallySizedBox(
+                heightFactor: 0.63,
+                child: AnimatedScale(
+                  scale: selected == number ? 0.92 : 1.0,
                   duration: const Duration(milliseconds: 120),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xffffd36a).withValues(alpha: 0.35),
-                      width: 1.2,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 120),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(0xffffd36a).withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
+                      boxShadow: selected == number
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xffffd36a).withValues(alpha: 0.8),
+                                blurRadius: 25,
+                                spreadRadius: 5,
+                              ),
+                            ]
+                          : [],
                     ),
-                    boxShadow: selected == number
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xffffd36a).withValues(alpha: 0.8),
-                              blurRadius: 25,
-                              spreadRadius: 5,
-                            ),
-                          ]
-                        : [],
                   ),
                 ),
               ),
@@ -594,21 +597,19 @@ class _HomePageState extends State<HomePage> {
                     area(9, .59, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
                     area(10, .78, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
 
-                     // زیرنویس‌ها با درصد موقعیت اختصاصی
+                     // لمس کلیدها (ردیف اول 1 تا 5)
+area(1, .04, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
+area(2, .23, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
+area(3, .42, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
+area(4, .61, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
+area(5, .80, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
 
-// کلیدهای ۱ تا ۵
-caption(1, .02, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
-caption(2, .21, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
-caption(3, .40, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
-caption(4, .59, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
-caption(5, .78, .50, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .578),
-
-// کلیدهای ۶ تا ۱۰
-caption(6, .02, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
-caption(7, .21, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
-caption(8, .40, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
-caption(9, .59, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
-caption(10, .78, .71, .18, .15, width, contentHeight, topOffset: viewPadding.top, captionTop: .788),
+// لمس کلیدها (ردیف دوم 6 تا 10)
+area(6, .04, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
+area(7, .23, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
+area(8, .42, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
+area(9, .61, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
+area(10, .80, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
 
             ],
           );
