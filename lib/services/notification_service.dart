@@ -39,6 +39,14 @@ class NotificationService {
       'cyrus_announcement_sound_enabled';
 
   // ==========================================================
+  // Topic اعلان‌های عمومی (برای ارسال Push از سمت دیتابیس/سرور)
+  // ==========================================================
+
+  /// نام Topic ای که همه‌ی دستگاه‌ها به‌صورت خودکار در آن عضو می‌شوند.
+  /// سمت سرور باید پیام FCM را دقیقاً به همین Topic ارسال کند.
+  static const String notificationTopic = 'cyrus_all_users';
+
+  // ==========================================================
   // تنظیمات کانال اعلان اندروید
   // ==========================================================
 
@@ -245,6 +253,16 @@ class NotificationService {
       badge: true,
       sound: true,
     );
+
+    // عضویت خودکار در Topic عمومی — از این پس سرور با ارسال پیام به
+    // Topic زیر، بدون نیاز به ذخیره‌ی توکن هر دستگاه، به همه‌ی
+    // کاربران Push واقعی (حتی وقتی اپ بسته یا در پس‌زمینه است) می‌فرستد.
+    try {
+      await FirebaseMessaging.instance.subscribeToTopic(notificationTopic);
+      debugPrint('Subscribed to FCM topic: $notificationTopic');
+    } catch (e) {
+      debugPrint('FCM topic subscribe error: $e');
+    }
 
     // چاپ توکن FCM در Terminal / Logcat بدون باز کردن دیالوگ مزاحم روی صفحه
     try {
