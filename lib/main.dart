@@ -378,31 +378,28 @@ class _HomePageState extends State<HomePage> {
           onTap: () => tap(number),
           child: Align(
             alignment: Alignment.topCenter,
-            child: Transform.translate(
-              offset: Offset(0, -imageHeight * 0.02),
-              child: FractionallySizedBox(
-                heightFactor: 0.63,
-                child: AnimatedScale(
-                  scale: selected == number ? 0.92 : 1.0,
+            child: FractionallySizedBox(
+              heightFactor: 0.63,
+              child: AnimatedScale(
+                scale: selected == number ? 0.92 : 1.0,
+                duration: const Duration(milliseconds: 120),
+                child: AnimatedContainer(
                   duration: const Duration(milliseconds: 120),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 120),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: const Color(0xffffd36a).withValues(alpha: 0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: selected == number
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xffffd36a).withValues(alpha: 0.8),
-                                blurRadius: 25,
-                                spreadRadius: 5,
-                              ),
-                            ]
-                          : [],
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0xffffd36a).withValues(alpha: 0.35),
+                      width: 1.2,
                     ),
+                    boxShadow: selected == number
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xffffd36a).withValues(alpha: 0.8),
+                              blurRadius: 25,
+                              spreadRadius: 5,
+                            ),
+                          ]
+                        : [],
                   ),
                 ),
               ),
@@ -483,15 +480,72 @@ class _HomePageState extends State<HomePage> {
           return Stack(
             fit: StackFit.expand,
             children: [
-              // تصویر بدون Stretch و بدون کادر اجباری 9:16.
-              // در نسبت‌های غیر 9:16، BoxFit.cover فقط به اندازه لازم Crop می‌کند
-              // تا صفحه کاملاً پر شود و نسبت واقعی تصویر حفظ شود.
-              Image.asset(
-                homeImage,
-                fit: BoxFit.contain,
-                alignment: Alignment.center,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: const Color(0xff071722),
+              // تصویر و کلیدهای خانه، داخل یک قاب هم‌نسبت با خودِ تصویر
+              // (9:16) قرار می‌گیرند تا مختصات کسری area()/caption() دقیقاً
+              // روی همان پیکسل‌های واقعی تصویر بیفتد؛ قبلاً تصویر با
+              // BoxFit.contain داخل کل صفحه رندر می‌شد ولی area()/caption()
+              // با ارتفاع کل صفحه (contentHeight) محاسبه می‌شدند، در نتیجه
+              // با حاشیه‌ی letterbox واقعی تصویر هم‌خوان نبودند.
+              Positioned(
+                left: 0,
+                right: 0,
+                top: viewPadding.top,
+                bottom: viewPadding.bottom,
+                child: Builder(
+                  builder: (context) {
+                    double imgW = width;
+                    double imgH = imgW * 1280 / 720;
+                    if (imgH > contentHeight) {
+                      imgH = contentHeight;
+                      imgW = imgH * 720 / 1280;
+                    }
+                    return Center(
+                      child: SizedBox(
+                        width: imgW,
+                        height: imgH,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.asset(
+                              homeImage,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(color: const Color(0xff071722)),
+                            ),
+
+                            // لمس کلیدها (ردیف اول 1 تا 5)
+                            area(1, .02, .44, .18, .19, imgW, imgH),
+                            area(2, .21, .44, .18, .19, imgW, imgH),
+                            area(3, .40, .44, .18, .19, imgW, imgH),
+                            area(4, .59, .44, .18, .19, imgW, imgH),
+                            area(5, .78, .44, .18, .19, imgW, imgH),
+
+                            // لمس کلیدها (ردیف دوم 6 تا 10)
+                            area(6, .02, .64, .18, .175, imgW, imgH),
+                            area(7, .21, .64, .18, .175, imgW, imgH),
+                            area(8, .40, .64, .18, .175, imgW, imgH),
+                            area(9, .59, .64, .18, .175, imgW, imgH),
+                            area(10, .78, .64, .18, .175, imgW, imgH),
+
+                            // زیرنویس‌ها — captionTop از روی پیکسل واقعی
+                            // جدول‌های آبی خودِ تصویر اندازه‌گیری شده
+                            // (ردیف اول مرکز ≈.592 ، ردیف دوم مرکز ≈.8185)
+                            caption(1, .02, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            caption(2, .21, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            caption(3, .40, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            caption(4, .59, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            caption(5, .78, .44, .18, .19, imgW, imgH, captionTop: .573),
+
+                            caption(6, .02, .64, .18, .175, imgW, imgH, captionTop: .800),
+                            caption(7, .21, .64, .18, .175, imgW, imgH, captionTop: .800),
+                            caption(8, .40, .64, .18, .175, imgW, imgH, captionTop: .800),
+                            caption(9, .59, .64, .18, .175, imgW, imgH, captionTop: .800),
+                            caption(10, .78, .64, .18, .175, imgW, imgH, captionTop: .800),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
 
@@ -582,34 +636,6 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
-
-                    // لمس کلیدها (ردیف اول 1 تا 5)
-                    area(1, .02, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-                    area(2, .21, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-                    area(3, .40, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-                    area(4, .59, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-                    area(5, .78, .44, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-
-                    // لمس کلیدها (ردیف دوم 6 تا 10)
-                    area(6, .02, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-                    area(7, .21, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-                    area(8, .40, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-                    area(9, .59, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-                    area(10, .78, .64, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-
-                     // لمس کلیدها (ردیف اول 1 تا 5)
-area(1, .04, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-area(2, .23, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-area(3, .42, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-area(4, .61, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-area(5, .80, .41, .18, .19, width, contentHeight, topOffset: viewPadding.top),
-
-// لمس کلیدها (ردیف دوم 6 تا 10)
-area(6, .04, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-area(7, .23, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-area(8, .42, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-area(9, .61, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
-area(10, .80, .60, .18, .175, width, contentHeight, topOffset: viewPadding.top),
 
             ],
           );
