@@ -365,6 +365,7 @@ class _HomePageState extends State<HomePage> {
     double imageWidth,
     double imageHeight, {
     double topOffset = 0,
+    double glassDownFactor = 0,
   }) {
     return Positioned(
       left: imageWidth * left,
@@ -379,7 +380,7 @@ class _HomePageState extends State<HomePage> {
           child: Align(
             alignment: Alignment.topCenter,
             child: Transform.translate(
-              offset: Offset(0, imageHeight * 0.008),
+              offset: Offset(0, imageHeight * 0.008 + imageHeight * height * glassDownFactor),
               child: FractionallySizedBox(
                 heightFactor: 0.63,
                 child: AnimatedScale(
@@ -524,11 +525,11 @@ class _HomePageState extends State<HomePage> {
                             area(5, .78, .44, .18, .19, imgW, imgH),
 
                             // لمس کلیدها (ردیف دوم 6 تا 10)
-                            area(6, .02, .64, .18, .175, imgW, imgH),
-                            area(7, .21, .64, .18, .175, imgW, imgH),
-                            area(8, .40, .64, .18, .175, imgW, imgH),
-                            area(9, .59, .64, .18, .175, imgW, imgH),
-                            area(10, .78, .64, .18, .175, imgW, imgH),
+                            area(6, .02, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
+                            area(7, .21, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
+                            area(8, .40, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
+                            area(9, .59, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
+                            area(10, .78, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
 
                             // زیرنویس‌ها — captionTop از روی پیکسل واقعی
                             // جدول‌های آبی خودِ تصویر اندازه‌گیری شده
