@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'tools/currency_converter_screen.dart';
+import 'tools/weather_screen.dart';
+import 'tools/world_clock_screen.dart';
+import 'tools/connection_status_screen.dart';
+
 /// ===============================================================
 /// Cyrus Tourist
 /// کلید ۷ — جعبه ابزار بسیار هوشمند
@@ -57,6 +62,7 @@ class CyrusSmartToolbox extends StatelessWidget {
               const SizedBox(height: 22),
 
               _buildSection(
+                context: context,
                 title: _tr('هوشمند سفر'),
                 icon: Icons.auto_awesome,
                 children: _smartItems(),
@@ -65,6 +71,7 @@ class CyrusSmartToolbox extends StatelessWidget {
               const SizedBox(height: 18),
 
               _buildSection(
+                context: context,
                 title: _tr('اضطراری و ضروری'),
                 icon: Icons.health_and_safety_rounded,
                 children: _essentialItems(),
@@ -73,6 +80,7 @@ class CyrusSmartToolbox extends StatelessWidget {
               const SizedBox(height: 18),
 
               _buildSection(
+                context: context,
                 title: _tr('ابزارهای سفر'),
                 icon: Icons.build_rounded,
                 children: _travelToolItems(),
@@ -81,6 +89,7 @@ class CyrusSmartToolbox extends StatelessWidget {
               const SizedBox(height: 18),
 
               _buildSection(
+                context: context,
                 title: _tr('ابزارهای آنلاین'),
                 icon: Icons.public_rounded,
                 children: _onlineItems(),
@@ -180,6 +189,7 @@ class CyrusSmartToolbox extends StatelessWidget {
   // =============================================================
 
   Widget _buildSection({
+    required BuildContext context,
     required String title,
     required IconData icon,
     required List<CyrusToolItem> children,
@@ -222,7 +232,7 @@ class CyrusSmartToolbox extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: CyrusSmartToolButton(
               item: item,
-              onTap: () => _toolTapped(item),
+              onTap: () => _toolTapped(context, item),
             ),
           ),
         ),
@@ -459,26 +469,78 @@ class CyrusSmartToolbox extends StatelessWidget {
   // Tool action
   // =============================================================
 
-  void _toolTapped(CyrusToolItem item) {
+  void _toolTapped(BuildContext context, CyrusToolItem item) {
     // -----------------------------------------------------------
-    // اتصال واقعی هر ابزار در مرحله بعد انجام می‌شود.
+    // ابزارهای «آنلاین» زیر با سرویس‌های رایگان و همگانی وصل شده‌اند:
+    // - currency      -> Frankfurter.app (نرخ ارز جهانی، رایگان، بدون کلید)
+    // - weather       -> Open-Meteo (آب‌وهوا و geocoding، رایگان، بدون کلید)
+    // - world_clock   -> پایگاه داده آفلاین IANA Timezone (بدون نیاز به اینترنت)
+    // - local_time    -> همان صفحه ساعت جهانی، تب «جستجوی مقصد»
+    // - connection    -> بررسی محلی اتصال اینترنت (بدون سرویس بیرونی)
     //
-    // نکته:
-    // weather ساختار اختصاصی خود را خواهد داشت:
-    // - موقعیت خودکار
-    // - جستجوی شهر
-    // - جستجوی مکان
-    // - وضعیت فعلی
-    // - جدول ساعتی
-    // - پیش‌بینی چندروزه
-    // - دمای احساس‌شده
-    // - رطوبت
-    // - باد
-    // - بارش
-    // - UV
-    // - طلوع و غروب
-    // - پیشنهاد بهترین زمان گردش
+    // بقیه ابزارها (دستیار هوشمند، برنامه‌ریز سفر و ...) نیاز به
+    // زیرساخت اختصاصی (هوش مصنوعی، پایگاه داده مکان‌ها و ...) دارند
+    // که باید در مرحله بعد و با تصمیم شما درباره سرویس/کلید مربوطه
+    // متصل شوند؛ فعلاً پیام «به‌روزرسانی آینده» نمایش داده می‌شود.
     // -----------------------------------------------------------
+
+    switch (item.id) {
+      case 'currency':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const CurrencyConverterScreen(),
+          ),
+        );
+        return;
+
+      case 'weather':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const WeatherScreen()),
+        );
+        return;
+
+      case 'world_clock':
+      case 'local_time':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const WorldClockScreen()),
+        );
+        return;
+
+      case 'connection':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const ConnectionStatusScreen(),
+          ),
+        );
+        return;
+
+      default:
+        _showComingSoon(context, item);
+    }
+  }
+
+  void _showComingSoon(BuildContext context, CyrusToolItem item) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xff173747),
+        content: Row(
+          children: [
+            Icon(item.icon, color: const Color(0xffffd76a)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _tr('این قابلیت در به‌روزرسانی آینده فعال می‌شود'),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+    );
   }
 
   // =============================================================
