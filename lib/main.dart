@@ -378,28 +378,31 @@ class _HomePageState extends State<HomePage> {
           onTap: () => tap(number),
           child: Align(
             alignment: Alignment.topCenter,
-            child: FractionallySizedBox(
-              heightFactor: 0.63,
-              child: AnimatedScale(
-                scale: selected == number ? 0.92 : 1.0,
-                duration: const Duration(milliseconds: 120),
-                child: AnimatedContainer(
+            child: Transform.translate(
+              offset: Offset(0, imageHeight * 0.008),
+              child: FractionallySizedBox(
+                heightFactor: 0.63,
+                child: AnimatedScale(
+                  scale: selected == number ? 0.92 : 1.0,
                   duration: const Duration(milliseconds: 120),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xffffd36a).withValues(alpha: 0.35),
-                      width: 1.2,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 120),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(0xffffd36a).withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
+                      boxShadow: selected == number
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xffffd36a).withValues(alpha: 0.8),
+                                blurRadius: 25,
+                                spreadRadius: 5,
+                              ),
+                            ]
+                          : [],
                     ),
-                    boxShadow: selected == number
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xffffd36a).withValues(alpha: 0.8),
-                              blurRadius: 25,
-                              spreadRadius: 5,
-                            ),
-                          ]
-                        : [],
                   ),
                 ),
               ),
@@ -435,7 +438,7 @@ class _HomePageState extends State<HomePage> {
           textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
           child: Container(
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
@@ -445,8 +448,8 @@ class _HomePageState extends State<HomePage> {
                 style: const TextStyle(
                   color: Color(0xfffff4be),
                   fontWeight: FontWeight.w900,
-                  fontSize: 11.5,
-                  height: 1.1,
+                  fontSize: 8.5,
+                  height: 1.05,
                   shadows: [
                     Shadow(
                       offset: Offset(0, 1),
@@ -536,11 +539,11 @@ class _HomePageState extends State<HomePage> {
                             caption(4, .59, .44, .18, .19, imgW, imgH, captionTop: .573),
                             caption(5, .78, .44, .18, .19, imgW, imgH, captionTop: .573),
 
-                            caption(6, .02, .64, .18, .175, imgW, imgH, captionTop: .800),
-                            caption(7, .21, .64, .18, .175, imgW, imgH, captionTop: .800),
-                            caption(8, .40, .64, .18, .175, imgW, imgH, captionTop: .800),
-                            caption(9, .59, .64, .18, .175, imgW, imgH, captionTop: .800),
-                            caption(10, .78, .64, .18, .175, imgW, imgH, captionTop: .800),
+                            caption(6, .02, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(7, .21, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(8, .40, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(9, .59, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(10, .78, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
                           ],
                         ),
                       ),
