@@ -21,6 +21,14 @@ enum MapPlaceType {
   market,
   carService,
   simCard,
+
+  // ============================================================
+  // کلید ۹ (جستجوی هوشمند) — دسته‌های اختصاصی که در خدمات سریع
+  // کلید ۱ وجود نداشتند
+  // ============================================================
+  cafe,
+  historicalSite,
+  natureSite,
 }
 
 /// سرویس مرکزی اطلاعات مکان‌های گردشگری.
@@ -315,6 +323,38 @@ class MapPlacesService {
         return const [
           'shop=mobile_phone',
           'office=telecommunication',
+        ];
+
+      case MapPlaceType.cafe:
+        return const [
+          'amenity=cafe',
+          'amenity=ice_cream',
+          'shop=coffee',
+          'shop=pastry',
+        ];
+
+      case MapPlaceType.historicalSite:
+        return const [
+          'historic=monument',
+          'historic=castle',
+          'historic=archaeological_site',
+          'historic=ruins',
+          'historic=memorial',
+          'historic=fort',
+          'historic=tomb',
+          'tourism=museum',
+        ];
+
+      case MapPlaceType.natureSite:
+        return const [
+          'leisure=park',
+          'leisure=nature_reserve',
+          'natural=forest',
+          'natural=water',
+          'natural=peak',
+          'natural=beach',
+          'tourism=viewpoint',
+          'waterway=waterfall',
         ];
     }
   }
@@ -702,6 +742,15 @@ tags['addr:district'] ?? '',
 
       case MapPlaceType.simCard:
         return 'sim_card';
+
+      case MapPlaceType.cafe:
+        return 'cafe';
+
+      case MapPlaceType.historicalSite:
+        return 'historical';
+
+      case MapPlaceType.natureSite:
+        return 'nature';
     }
   }
 }
