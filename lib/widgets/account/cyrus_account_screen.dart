@@ -6,8 +6,12 @@ import '../../services/notification_service.dart';
 
 /// کلید شماره ۸ — حساب کاربری سایروس توریست
 ///
-/// این فایل به‌صورت مستقل طراحی شده است و فعلاً به main.dart
-/// یا سایر فایل‌های پروژه متصل نمی‌شود.
+/// این صفحه از main.dart (کلید ۸) صدا زده می‌شود و متصل است.
+/// گزینه‌های «اعلان‌ها» و «ثبت‌نام اقامتگاه/گردشگری سلامت/کلبه»
+/// واقعی و کاربردی هستند. بقیه‌ی گزینه‌ها (پروفایل، بازخوردها،
+/// امنیت، دستگاه‌ها و بخش «قابلیت‌های آینده») چون هنوز هیچ سیستم
+/// ورود/حساب کاربری واقعی در پروژه وجود ندارد، با لمس یک پیام
+/// «این قابلیت در راه است» نشان می‌دهند تا کاربر گیج نشود.
 ///
 /// ساختار حساب کاربری برای توسعه آینده، از جمله چت آنلاین،
 /// گروه‌های گردشگری و همسفریابی نیز در نظر گرفته شده است.
@@ -85,18 +89,21 @@ class CyrusAccountScreen extends StatelessWidget {
                       title: texts.profile,
                       subtitle: texts.profileSubtitle,
                       iconColor: const Color(0xffffd36a),
+                      futureFeature: true,
                     ),
                     _AccountItem(
                       icon: Icons.edit_rounded,
                       title: texts.editProfile,
                       subtitle: texts.editProfileSubtitle,
                       iconColor: const Color(0xff66d9ff),
+                      futureFeature: true,
                     ),
                     _AccountItem(
                       icon: Icons.photo_camera_rounded,
                       title: texts.profileImage,
                       subtitle: texts.profileImageSubtitle,
                       iconColor: const Color(0xffc89cff),
+                      futureFeature: true,
                     ),
                   ],
                 ),
@@ -145,24 +152,28 @@ class CyrusAccountScreen extends StatelessWidget {
                       title: texts.myReviews,
                       subtitle: texts.myReviewsSubtitle,
                       iconColor: const Color(0xffffd36a),
+                      futureFeature: true,
                     ),
                     _AccountItem(
                       icon: Icons.analytics_rounded,
                       title: texts.travelStats,
                       subtitle: texts.travelStatsSubtitle,
                       iconColor: const Color(0xff66d9ff),
+                      futureFeature: true,
                     ),
                     _AccountItem(
                       icon: Icons.emoji_events_rounded,
                       title: texts.achievements,
                       subtitle: texts.achievementsSubtitle,
                       iconColor: const Color(0xffffc857),
+                      futureFeature: true,
                     ),
                     _AccountItem(
                       icon: Icons.card_giftcard_rounded,
                       title: texts.rewards,
                       subtitle: texts.rewardsSubtitle,
                       iconColor: const Color(0xffff8fc7),
+                      futureFeature: true,
                     ),
                   ],
                 ),
@@ -178,12 +189,14 @@ class CyrusAccountScreen extends StatelessWidget {
                       title: texts.security,
                       subtitle: texts.securitySubtitle,
                       iconColor: const Color(0xff8fc7ff),
+                      futureFeature: true,
                     ),
                     _AccountItem(
                       icon: Icons.devices_rounded,
                       title: texts.devices,
                       subtitle: texts.devicesSubtitle,
                       iconColor: const Color(0xffa9e6c4),
+                      futureFeature: true,
                     ),
                   ],
                 ),
