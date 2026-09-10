@@ -1,11 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../map_place.dart';
+import '../../pages/category_full_map_page.dart';
+import '../../pages/map/map_places_service.dart' as remote;
+import '../../services/category_nearby_service.dart';
+import '../../services/location_manager.dart';
+import '../../services/map_place_favorites_service.dart';
 
 /// کلید ۹ — جستجوی هوشمند سایروس توریست.
 ///
-/// این فایل مستقل است و فعلاً هیچ وابستگی به main.dart یا صفحات
-/// اصلی برنامه ندارد.
-/// اتصال نهایی در مرحله یکپارچه‌سازی انجام خواهد شد.
-class CyrusSmartSearch extends StatelessWidget {
+/// به موتور واقعی نقشه وصل است:
+/// - جستجوی شهر/مکان از طریق Nominatim (CategoryNearbyService.searchPlaceOrCity)
+/// - جستجوی دسته‌ای (رستوران، کافه، خرید، تاریخی، طبیعت، اطراف من)
+///   از طریق Overpass (CategoryNearbyService.nearbyByRemoteType)
+/// نتیجه‌ها روی همان نقشه مشترک برنامه (CategoryFullMapPage) نمایش
+/// داده می‌شوند.
+class CyrusSmartSearch extends StatefulWidget {
   const CyrusSmartSearch({
     super.key,
     this.languageCode = 'fa',
@@ -13,9 +27,40 @@ class CyrusSmartSearch extends StatelessWidget {
 
   final String languageCode;
 
+  @override
+  State<CyrusSmartSearch> createState() => _CyrusSmartSearchState();
+}
+
+class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
+  static const LatLng _iranCenter = LatLng(32.4279, 53.6880);
+
+  // نگه‌داشتن نام قدیمی به‌عنوان getter تا متدهای موجود (که languageCode
+  // را مستقیم صدا می‌زدند) بدون تغییر کار کنند.
+  String get languageCode => widget.languageCode;
+
   bool get _isRtl =>
       languageCode.toLowerCase() == 'fa' ||
       languageCode.toLowerCase() == 'ar';
+
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  final CategoryNearbyService _nearbyService = CategoryNearbyService.instance;
+  final MapPlaceFavoritesService _favoritesService =
+      MapPlaceFavoritesService();
+
+  Timer? _debounce;
+  List<SearchedLocation> _citySuggestions = [];
+  bool _searchingCities = false;
+  Set<String> _favoriteIds = {};
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +79,8 @@ class CyrusSmartSearch extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                   children: [
                     _buildSearchBox(),
+                    if (_searchingCities || _citySuggestions.isNotEmpty)
+                      _buildSuggestionsList(),
                     const SizedBox(height: 18),
 
                     _buildSectionTitle(
@@ -44,12 +91,11 @@ class CyrusSmartSearch extends StatelessWidget {
 
                     CyrusSmartSearchButton(
                       item: items.quickSearch,
-                      onTap: () => _searchTapped(context, items.quickSearch),
+                      onTap: _focusSearchBox,
                     ),
                     CyrusSmartSearchButton(
                       item: items.cityProvince,
-                      onTap: () =>
-                          _searchTapped(context, items.cityProvince),
+                      onTap: _focusSearchBox,
                     ),
 
                     const SizedBox(height: 18),
@@ -62,26 +108,43 @@ class CyrusSmartSearch extends StatelessWidget {
 
                     CyrusSmartSearchButton(
                       item: items.restaurant,
-                      onTap: () =>
-                          _searchTapped(context, items.restaurant),
+                      onTap: () => _searchCategory(
+                        remoteType: remote.MapPlaceType.restaurant,
+                        displayCategory: PlaceCategory.restaurant,
+                        title: items.restaurant.title,
+                      ),
                     ),
                     CyrusSmartSearchButton(
                       item: items.cafe,
-                      onTap: () => _searchTapped(context, items.cafe),
+                      onTap: () => _searchCategory(
+                        remoteType: remote.MapPlaceType.cafe,
+                        displayCategory: PlaceCategory.restaurant,
+                        title: items.cafe.title,
+                      ),
                     ),
                     CyrusSmartSearchButton(
                       item: items.shopping,
-                      onTap: () =>
-                          _searchTapped(context, items.shopping),
+                      onTap: () => _searchCategory(
+                        remoteType: remote.MapPlaceType.market,
+                        displayCategory: PlaceCategory.service,
+                        title: items.shopping.title,
+                      ),
                     ),
                     CyrusSmartSearchButton(
                       item: items.historical,
-                      onTap: () =>
-                          _searchTapped(context, items.historical),
+                      onTap: () => _searchCategory(
+                        remoteType: remote.MapPlaceType.historicalSite,
+                        displayCategory: PlaceCategory.culture,
+                        title: items.historical.title,
+                      ),
                     ),
                     CyrusSmartSearchButton(
                       item: items.nature,
-                      onTap: () => _searchTapped(context, items.nature),
+                      onTap: () => _searchCategory(
+                        remoteType: remote.MapPlaceType.natureSite,
+                        displayCategory: PlaceCategory.attraction,
+                        title: items.nature.title,
+                      ),
                     ),
 
                     const SizedBox(height: 18),
@@ -94,33 +157,26 @@ class CyrusSmartSearch extends StatelessWidget {
 
                     CyrusSmartSearchButton(
                       item: items.interests,
-                      onTap: () =>
-                          _searchTapped(context, items.interests),
+                      onTap: () => _openInterestsSheet(items),
                     ),
                     CyrusSmartSearchButton(
                       item: items.naturalLanguage,
-                      onTap: () =>
-                          _searchTapped(context, items.naturalLanguage),
+                      onTap: () => _openNaturalLanguageSheet(items),
                     ),
                     CyrusSmartSearchButton(
                       item: items.aroundMe,
-                      onTap: () =>
-                          _searchTapped(context, items.aroundMe),
+                      onTap: () => _searchAroundMe(items),
                     ),
                     CyrusSmartSearchButton(
                       item: items.voice,
-                      onTap: () => _searchTapped(context, items.voice),
+                      futureFeature: true,
+                      onTap: () => _futureFeatureTapped(context, items.voice),
                     ),
                     CyrusSmartSearchButton(
                       item: items.image,
                       futureFeature: true,
                       onTap: () =>
                           _futureFeatureTapped(context, items.image),
-                    ),
-                    CyrusSmartSearchButton(
-                      item: items.suggestions,
-                      onTap: () =>
-                          _searchTapped(context, items.suggestions),
                     ),
                   ],
                 ),
@@ -255,6 +311,8 @@ class CyrusSmartSearch extends StatelessWidget {
         ],
       ),
       child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
         textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
         style: const TextStyle(
           color: Colors.white,
@@ -270,20 +328,154 @@ class CyrusSmartSearch extends StatelessWidget {
             Icons.search_rounded,
             color: Color(0xffffd56d),
           ),
-          suffixIcon: const Icon(
-            Icons.tune_rounded,
-            color: Color(0xffc99b3b),
-          ),
+          suffixIcon: _searchController.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: Color(0xffc99b3b),
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged('');
+                  },
+                ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 17,
           ),
         ),
-        onSubmitted: (value) {
-          // موتور جستجوی واقعی در مرحله اتصال به داده‌ها فعال خواهد شد.
-        },
+        onChanged: _onSearchChanged,
+        onSubmitted: (value) => _submitFreeTextSearch(value),
       ),
+    );
+  }
+
+  /// لیست پیش‌بینی‌شده زیر باکس جستجو — مستقیم از روی نقشه واقعی
+  /// (Nominatim) پر می‌شود؛ همان موتوری که «جستجوی شهر و استان»
+  /// هم از آن استفاده می‌کند، پس دو گزینه تکراری نیستند، فقط یک
+  /// ورودی مشترک دارند.
+  Widget _buildSuggestionsList() {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: _searchingCities
+          ? const EdgeInsets.all(16)
+          : EdgeInsets.zero,
+      decoration: BoxDecoration(
+        color: const Color(0xff102532),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xffc99b3b).withOpacity(0.4),
+        ),
+      ),
+      child: _searchingCities
+          ? const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _citySuggestions.map((location) {
+                return ListTile(
+                  leading: const Icon(
+                    Icons.place_rounded,
+                    color: Color(0xffffd56d),
+                  ),
+                  title: Text(
+                    location.name,
+                    textDirection:
+                        _isRtl ? TextDirection.rtl : TextDirection.ltr,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                  onTap: () => _openSearchedPlace(location),
+                );
+              }).toList(),
+            ),
+    );
+  }
+
+  void _focusSearchBox() {
+    FocusScope.of(context).requestFocus(_searchFocusNode);
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+
+    final query = value.trim();
+
+    if (query.length < 2) {
+      setState(() {
+        _citySuggestions = [];
+        _searchingCities = false;
+      });
+      return;
+    }
+
+    setState(() => _searchingCities = true);
+
+    _debounce = Timer(const Duration(milliseconds: 450), () async {
+      final results = await _nearbyService.searchPlaceOrCity(
+        query,
+        language: languageCode,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _citySuggestions = results;
+        _searchingCities = false;
+      });
+    });
+  }
+
+  Future<void> _submitFreeTextSearch(String value) async {
+    final query = value.trim();
+    if (query.length < 2) return;
+
+    final results = await _nearbyService.searchPlaceOrCity(
+      query,
+      language: languageCode,
+    );
+
+    if (!mounted) return;
+
+    if (results.isEmpty) {
+      _showSnack(_noResultsMessage());
+      return;
+    }
+
+    await _openSearchedPlace(results.first);
+  }
+
+  Future<void> _openSearchedPlace(SearchedLocation location) async {
+    _searchFocusNode.unfocus();
+    _searchController.text = location.name;
+
+    setState(() {
+      _citySuggestions = [];
+    });
+
+    final place = MapPlace(
+      id: '${location.point.latitude},${location.point.longitude}',
+      name: location.name,
+      location: location.point,
+      category: PlaceCategory.other,
+      source: 'nominatim',
+    );
+
+    await _openResults(
+      places: [place],
+      center: location.point,
+      title: location.name,
     );
   }
 
@@ -324,17 +516,14 @@ class CyrusSmartSearch extends StatelessWidget {
     );
   }
 
-  void _searchTapped(
-    BuildContext context,
-    CyrusSearchItem item,
-  ) {
+  void _showSnack(String message) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          item.title,
-          textDirection: _isRtl
-              ? TextDirection.rtl
-              : TextDirection.ltr,
+          message,
+          textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
         ),
         backgroundColor: const Color(0xff173444),
         behavior: SnackBarBehavior.floating,
@@ -346,6 +535,434 @@ class CyrusSmartSearch extends StatelessWidget {
     );
   }
 
+  String _noResultsMessage() {
+    switch (languageCode.toLowerCase()) {
+      case 'en':
+        return 'No results found nearby.';
+      case 'ar':
+        return 'لم يتم العثور على نتائج قريبة.';
+      default:
+        return 'نتیجه‌ای در این نزدیکی پیدا نشد.';
+    }
+  }
+
+  String _locationDeniedMessage() {
+    switch (languageCode.toLowerCase()) {
+      case 'en':
+        return 'Location access is unavailable; showing results around Iran\'s center instead.';
+      case 'ar':
+        return 'تعذّر الوصول إلى الموقع؛ يتم عرض النتائج حول مركز إيران بدلاً من ذلك.';
+      default:
+        return 'دسترسی به موقعیت مکانی ممکن نشد؛ نتایج اطراف مرکز ایران نشان داده می‌شود.';
+    }
+  }
+
+  // ============================================================
+  // جستجوی دسته‌ای (رستوران، کافه، خرید، تاریخی، طبیعت)
+  // ============================================================
+
+  Future<void> _searchCategory({
+    required remote.MapPlaceType remoteType,
+    required PlaceCategory displayCategory,
+    required String title,
+  }) async {
+    _showLoadingDialog();
+
+    final location = await LocationManager.getCurrentLocation();
+    final center = location ?? _iranCenter;
+
+    final places = await _nearbyService.nearbyByRemoteType(
+      remoteType: remoteType,
+      displayCategory: displayCategory,
+      center: center,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (location == null) {
+      _showSnack(_locationDeniedMessage());
+    }
+
+    await _openResults(places: places, center: center, title: title);
+  }
+
+  // ============================================================
+  // اطراف من — ترکیب چند دسته با هم، مرتب بر اساس فاصله
+  // ============================================================
+
+  Future<void> _searchAroundMe(CyrusSearchItems items) async {
+    _showLoadingDialog();
+
+    final location = await LocationManager.getCurrentLocation();
+    final center = location ?? _iranCenter;
+
+    final results = await Future.wait([
+      _nearbyService.nearbyByRemoteType(
+        remoteType: remote.MapPlaceType.touristAttraction,
+        displayCategory: PlaceCategory.attraction,
+        center: center,
+      ),
+      _nearbyService.nearbyByRemoteType(
+        remoteType: remote.MapPlaceType.restaurant,
+        displayCategory: PlaceCategory.restaurant,
+        center: center,
+      ),
+      _nearbyService.nearbyByRemoteType(
+        remoteType: remote.MapPlaceType.accommodation,
+        displayCategory: PlaceCategory.accommodation,
+        center: center,
+      ),
+    ]);
+
+    final merged = results.expand((list) => list).toList()
+      ..sort(
+        (a, b) => (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0),
+      );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (location == null) {
+      _showSnack(_locationDeniedMessage());
+    }
+
+    await _openResults(
+      places: merged.take(40).toList(),
+      center: center,
+      title: items.aroundMe.title,
+    );
+  }
+
+  // ============================================================
+  // جستجوی هوشمند با جمله طبیعی — فعلاً همان متن کامل به موتور
+  // جستجوی مکان/شهر داده می‌شود؛ تحلیل واقعی جمله (تشخیص مکان و
+  // دسته از داخل متن) در فاز بعد اضافه خواهد شد.
+  // ============================================================
+
+  void _openNaturalLanguageSheet(CyrusSearchItems items) {
+    final controller = TextEditingController();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xff102532),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 18,
+            right: 18,
+            top: 18,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 18,
+          ),
+          child: Directionality(
+            textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  items.naturalLanguage.title,
+                  style: const TextStyle(
+                    color: Color(0xffffd978),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: items.naturalLanguage.subtitle,
+                    hintStyle: const TextStyle(color: Color(0xff8fa4ad)),
+                    filled: true,
+                    fillColor: const Color(0xff0b1b26),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xffffd56d),
+                      foregroundColor: const Color(0xff071722),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      _submitFreeTextSearch(controller.text);
+                    },
+                    child: Text(
+                      _SearchTranslations.text(languageCode, 'searchHint'),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // جستجو بر اساس علاقه — انتخاب چند دسته با هم
+  // ============================================================
+
+  void _openInterestsSheet(CyrusSearchItems items) {
+    final options = <String, ({remote.MapPlaceType type, PlaceCategory category})>{
+      items.restaurant.title: (
+        type: remote.MapPlaceType.restaurant,
+        category: PlaceCategory.restaurant,
+      ),
+      items.cafe.title: (
+        type: remote.MapPlaceType.cafe,
+        category: PlaceCategory.restaurant,
+      ),
+      items.shopping.title: (
+        type: remote.MapPlaceType.market,
+        category: PlaceCategory.service,
+      ),
+      items.historical.title: (
+        type: remote.MapPlaceType.historicalSite,
+        category: PlaceCategory.culture,
+      ),
+      items.nature.title: (
+        type: remote.MapPlaceType.natureSite,
+        category: PlaceCategory.attraction,
+      ),
+    };
+
+    final selected = <String>{};
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xff102532),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                top: 18,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 18,
+              ),
+              child: Directionality(
+                textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      items.interests.title,
+                      style: const TextStyle(
+                        color: Color(0xffffd978),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: options.keys.map((label) {
+                        final isSelected = selected.contains(label);
+                        return FilterChip(
+                          label: Text(label),
+                          selected: isSelected,
+                          onSelected: (value) {
+                            setSheetState(() {
+                              if (value) {
+                                selected.add(label);
+                              } else {
+                                selected.remove(label);
+                              }
+                            });
+                          },
+                          selectedColor: const Color(0xffffd56d),
+                          backgroundColor: const Color(0xff0b1b26),
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? const Color(0xff071722)
+                                : Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xffffd56d),
+                          foregroundColor: const Color(0xff071722),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: selected.isEmpty
+                            ? null
+                            : () {
+                                Navigator.of(sheetContext).pop();
+                                _searchByInterests(
+                                  selected
+                                      .map((label) => options[label]!)
+                                      .toList(),
+                                  items.interests.title,
+                                );
+                              },
+                        child: Text(
+                          _SearchTranslations.text(languageCode, 'searchHint'),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _searchByInterests(
+    List<({remote.MapPlaceType type, PlaceCategory category})> selections,
+    String title,
+  ) async {
+    _showLoadingDialog();
+
+    final location = await LocationManager.getCurrentLocation();
+    final center = location ?? _iranCenter;
+
+    final results = await Future.wait(
+      selections.map(
+        (selection) => _nearbyService.nearbyByRemoteType(
+          remoteType: selection.type,
+          displayCategory: selection.category,
+          center: center,
+        ),
+      ),
+    );
+
+    final merged = results.expand((list) => list).toList()
+      ..sort(
+        (a, b) => (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0),
+      );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (location == null) {
+      _showSnack(_locationDeniedMessage());
+    }
+
+    await _openResults(places: merged, center: center, title: title);
+  }
+
+  // ============================================================
+  // نمایش نتایج روی نقشه مشترک برنامه
+  // ============================================================
+
+  void _showLoadingDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xffffd56d)),
+      ),
+    );
+  }
+
+  bool _isFavorite(MapPlace place) => _favoriteIds.contains(place.id);
+
+  Future<void> _toggleFavorite(MapPlace place) async {
+    final added = await _favoritesService.toggleFavorite(place);
+
+    if (!mounted) return;
+
+    setState(() {
+      if (added) {
+        _favoriteIds.add(place.id);
+      } else {
+        _favoriteIds.remove(place.id);
+      }
+    });
+  }
+
+  Future<void> _openRoute(MapPlace place) async {
+    final lat = place.location.latitude;
+    final lon = place.location.longitude;
+
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lon',
+    );
+
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // نادیده گرفته می‌شود؛ در بدترین حالت فقط مسیریاب باز نمی‌شود.
+    }
+  }
+
+  Future<void> _openResults({
+    required List<MapPlace> places,
+    required LatLng center,
+    required String title,
+  }) async {
+    _favoriteIds = await _favoritesService.loadFavoriteIds();
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoryFullMapPage(
+          places: places,
+          initialCenter: center,
+          title: title,
+          isRtl: _isRtl,
+          isFavorite: _isFavorite,
+          onFavorite: _toggleFavorite,
+          onRoute: _openRoute,
+        ),
+      ),
+    );
+  }
+
+  String _futureFeatureMessage(String featureTitle) {
+    switch (languageCode.toLowerCase()) {
+      case 'en':
+        return '$featureTitle will be available in a future Cyrus Tourist update.';
+      case 'ar':
+        return 'ستتوفر ميزة "$featureTitle" في أحد تحديثات سايروس توريست القادمة.';
+      default:
+        return 'قابلیت «$featureTitle» در یکی از به‌روزرسانی‌های آینده سایروس توریست فعال خواهد شد.';
+    }
+  }
+
   void _futureFeatureTapped(
     BuildContext context,
     CyrusSearchItem item,
@@ -355,10 +972,7 @@ class CyrusSmartSearch extends StatelessWidget {
       'futureTitle',
     );
 
-    final message = _SearchTranslations.text(
-      languageCode,
-      'futureMessage',
-    );
+    final message = _futureFeatureMessage(item.title);
 
     showDialog<void>(
       context: context,
