@@ -30,15 +30,7 @@ jobs:
           echo "File size (bytes): $(stat -c%s "$FILE" 2>/dev/null || echo 0)"
           echo "First 30 chars: $(head -c 30 "$FILE" 2>/dev/null)"
           echo "Contains project_info key: $(grep -o '"project_info"' "$FILE" || echo NOT_FOUND)"
-          python3 -c "
-import json
-try:
-    data = json.load(open('$FILE'))
-    print('Valid JSON: yes')
-    print('Top-level keys:', list(data.keys()))
-except Exception as e:
-    print('Valid JSON: NO —', e)
-"
+          python3 -c "import json,sys; data=json.load(open('$FILE')); print('Valid JSON: yes'); print('Top-level keys:', list(data.keys()))" || echo "Valid JSON: NO"
 
       - name: Bump version
         id: bump
