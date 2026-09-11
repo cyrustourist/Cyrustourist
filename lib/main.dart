@@ -525,11 +525,11 @@ class _HomePageState extends State<HomePage> {
                             area(5, .78, .44, .18, .19, imgW, imgH),
 
                             // لمس کلیدها (ردیف دوم 6 تا 10)
-                            area(6, .02, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
-                            area(7, .21, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
-                            area(8, .40, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
-                            area(9, .59, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
-                            area(10, .78, .64, .18, .175, imgW, imgH, glassDownFactor: 0.25),
+                            area(6, .02, .64, .18, .175, imgW, imgH),
+                            area(7, .21, .64, .18, .175, imgW, imgH),
+                            area(8, .40, .64, .18, .175, imgW, imgH),
+                            area(9, .59, .64, .18, .175, imgW, imgH),
+                            area(10, .78, .64, .18, .175, imgW, imgH),
 
                             // زیرنویس‌ها — captionTop از روی پیکسل واقعی
                             // جدول‌های آبی خودِ تصویر اندازه‌گیری شده
