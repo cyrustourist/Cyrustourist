@@ -21,6 +21,25 @@ jobs:
         run: |
           echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > android/app/google-services.json
 
+      - name: Debug Firebase configuration file
+        shell: bash
+        run: |
+          set -uo pipefail
+          FILE="android/app/google-services.json"
+          echo "File exists: $(test -f "$FILE" && echo yes || echo no)"
+          echo "File size (bytes): $(stat -c%s "$FILE" 2>/dev/null || echo 0)"
+          echo "First 30 chars: $(head -c 30 "$FILE" 2>/dev/null)"
+          echo "Contains project_info key: $(grep -o '"project_info"' "$FILE" || echo NOT_FOUND)"
+          python3 -c "
+import json
+try:
+    data = json.load(open('$FILE'))
+    print('Valid JSON: yes')
+    print('Top-level keys:', list(data.keys()))
+except Exception as e:
+    print('Valid JSON: NO —', e)
+"
+
       - name: Bump version
         id: bump
         shell: bash
