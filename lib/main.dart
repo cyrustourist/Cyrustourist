@@ -366,6 +366,8 @@ class _HomePageState extends State<HomePage> {
     double imageHeight, {
     double topOffset = 0,
     double glassDownFactor = 0,
+    double glassExtraDx = 0,
+    double glassExtraDy = 0,
   }) {
     return Positioned(
       left: imageWidth * left,
@@ -380,7 +382,7 @@ class _HomePageState extends State<HomePage> {
           child: Align(
             alignment: Alignment.topCenter,
             child: Transform.translate(
-              offset: Offset(0, imageHeight * 0.008 + imageHeight * height * glassDownFactor),
+              offset: Offset(glassExtraDx, imageHeight * 0.008 + imageHeight * height * glassDownFactor + glassExtraDy),
               child: FractionallySizedBox(
                 heightFactor: 0.63 - glassDownFactor,
                 child: AnimatedScale(
@@ -525,11 +527,11 @@ class _HomePageState extends State<HomePage> {
                             area(5, .78, .44, .18, .19, imgW, imgH),
 
                             // لمس کلیدها (ردیف دوم 6 تا 10)
-                            area(6, .02, .64, .18, .175, imgW, imgH),
-                            area(7, .21, .64, .18, .175, imgW, imgH),
-                            area(8, .40, .64, .18, .175, imgW, imgH),
-                            area(9, .59, .64, .18, .175, imgW, imgH),
-                            area(10, .78, .64, .18, .175, imgW, imgH),
+                            area(6, .02, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
+                            area(7, .21, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
+                            area(8, .40, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
+                            area(9, .59, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
+                            area(10, .78, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
 
                             // زیرنویس‌ها — captionTop از روی پیکسل واقعی
                             // جدول‌های آبی خودِ تصویر اندازه‌گیری شده
