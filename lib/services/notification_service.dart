@@ -221,7 +221,7 @@ class NotificationService {
       return;
     }
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@drawable/ic_stat_notify');
     const initSettings = InitializationSettings(android: androidInit);
 
     await _localNotifications.initialize(
@@ -354,7 +354,7 @@ class NotificationService {
           channelDescription: _channelDescription,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/ic_stat_notify',
           playSound: true,
           enableVibration: true,
         ),
@@ -411,7 +411,7 @@ class NotificationService {
           channelDescription: _channelDescription,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/ic_stat_notify',
           playSound: true,
           enableVibration: true,
         ),
