@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show HttpClient;
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,7 +22,7 @@ import 'core/language/app_language.dart';
 import 'core/language/menu_translations.dart';
 import 'services/map_places_service.dart';
 import 'pages/category_explorer_page.dart';
-import 'pages/favorites_page.dart';
+
 
 // ============================================================
 // NEW PAGES
@@ -35,10 +36,11 @@ import 'pages/travel/travel_guide_page.dart' as travel_guide;
 // ------------------------------------------------------------
 import 'widgets/cyrus_language_button.dart';
 import 'widgets/cyrus_header_account_button.dart';
-import 'widgets/toolbox/cyrus_smart_toolbox.dart';
+import 'pages/tourism_tour_page.dart';
 import 'widgets/account/cyrus_account_screen.dart';
 import 'widgets/search/cyrus_smart_search.dart';
 import 'widgets/settings/cyrus_settings_screen.dart';
+import 'pages/favorites_page.dart';
 
 // ============================================================
 // MAIN
@@ -228,6 +230,9 @@ class _HomePageState extends State<HomePage> {
 
   String get homeImage => 'assets/images/home-hero.jpg';
 
+  // ساختار جدید صفحه اصلی: ۸ کلید، ۲ ردیف ۴تایی.
+  // کلیدهای «حساب کاربری» و «علاقه‌مندی‌ها» دیگر کلید مستقل نیستند
+  // (دسترسی از طریق آیکون حساب کاربری در هدر انجام می‌شود).
   String buttonTitle(int number) {
     switch (number) {
       case 1:
@@ -237,19 +242,15 @@ class _HomePageState extends State<HomePage> {
       case 3:
         return 'جاذبه‌های گردشگری';
       case 4:
-        return 'نمایش فیلم';
-      case 5:
         return 'اقامتگاه‌ها';
-      case 6:
+      case 5:
         return 'راهنمای سفر';
+      case 6:
+        return 'نمایش فیلم‌های ویژه';
       case 7:
-        return 'جعبه ابزار';
-      case 8:
-        return 'حساب کاربری';
-      case 9:
         return 'جستجوی هوشمند';
-      case 10:
-        return 'علاقه‌مندی‌ها';
+      case 8:
+        return 'تور گردشگری';
       default:
         return 'Cyrus Tourist';
     }
@@ -294,11 +295,6 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (number == 4) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPage()));
-      return;
-    }
-
-    if (number == 5) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -308,32 +304,17 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    if (number == 6) {
+    if (number == 5) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => travel_guide.TravelGuidePage()));
       return;
     }
 
+    if (number == 6) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPage()));
+      return;
+    }
+
     if (number == 7) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CyrusSmartToolbox(languageCode: MenuLanguage.current),
-        ),
-      );
-      return;
-    }
-
-    if (number == 8) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CyrusAccountScreen(languageCode: MenuLanguage.current),
-        ),
-      );
-      return;
-    }
-
-    if (number == 9) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -343,8 +324,15 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    if (number == 10) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
+    if (number == 8) {
+      // جایگزین «جعبه ابزار» قدیم — کلید فعال «تور گردشگری».
+      // گزینه‌های این صفحه به ترتیب در به‌روزرسانی‌های بعدی اضافه می‌شوند.
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TourismTourPage(languageCode: MenuLanguage.current),
+        ),
+      );
       return;
     }
 
@@ -519,34 +507,33 @@ class _HomePageState extends State<HomePage> {
                                   Container(color: const Color(0xff071722)),
                             ),
 
-                            // لمس کلیدها (ردیف اول 1 تا 5)
-                            area(1, .02, .44, .18, .19, imgW, imgH),
-                            area(2, .21, .44, .18, .19, imgW, imgH),
-                            area(3, .40, .44, .18, .19, imgW, imgH),
-                            area(4, .59, .44, .18, .19, imgW, imgH),
-                            area(5, .78, .44, .18, .19, imgW, imgH),
+                            // لمس کلیدها (ردیف اول 1 تا 4)
+                            area(1, .02, .44, .22, .19, imgW, imgH),
+                            area(2, .26, .44, .22, .19, imgW, imgH),
+                            area(3, .50, .44, .22, .19, imgW, imgH),
+                            area(4, .74, .44, .22, .19, imgW, imgH),
 
-                            // لمس کلیدها (ردیف دوم 6 تا 10)
-                            area(6, .02, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
-                            area(7, .21, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
-                            area(8, .40, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
-                            area(9, .59, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
-                            area(10, .78, .64, .18, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
+                            // لمس کلیدها (ردیف دوم 5 تا 8)
+                            area(5, .02, .64, .22, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
+                            area(6, .26, .64, .22, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
+                            area(7, .50, .64, .22, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
+                            area(8, .74, .64, .22, .175, imgW, imgH, glassExtraDx: 5, glassExtraDy: 14),
 
                             // زیرنویس‌ها — captionTop از روی پیکسل واقعی
                             // جدول‌های آبی خودِ تصویر اندازه‌گیری شده
                             // (ردیف اول مرکز ≈.592 ، ردیف دوم مرکز ≈.8185)
-                            caption(1, .02, .44, .18, .19, imgW, imgH, captionTop: .573),
-                            caption(2, .224, .44, .18, .19, imgW, imgH, captionTop: .573),
-                            caption(3, .414, .44, .18, .19, imgW, imgH, captionTop: .573),
-                            caption(4, .605, .44, .18, .19, imgW, imgH, captionTop: .573),
-                            caption(5, .795, .44, .18, .19, imgW, imgH, captionTop: .573),
+                            // نکته: با تصویر جدید (۴ ستون) ممکن است لازم شود
+                            // captionTop/left برای تراز دقیق‌تر با گرافیک واقعی
+                            // کمی fine-tune شود.
+                            caption(1, .02, .44, .22, .19, imgW, imgH, captionTop: .573),
+                            caption(2, .26, .44, .22, .19, imgW, imgH, captionTop: .573),
+                            caption(3, .50, .44, .22, .19, imgW, imgH, captionTop: .573),
+                            caption(4, .74, .44, .22, .19, imgW, imgH, captionTop: .573),
 
-                            caption(6, .02, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
-                            caption(7, .23, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
-                            caption(8, .42, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
-                            caption(9, .60, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
-                            caption(10, .805, .64, .18, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(5, .02, .64, .22, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(6, .26, .64, .22, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(7, .50, .64, .22, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
+                            caption(8, .74, .64, .22, .175, imgW, imgH, captionTop: .781, boxHeight: .045),
                           ],
                         ),
                       ),
@@ -560,58 +547,18 @@ class _HomePageState extends State<HomePage> {
               Positioned(
                 top: viewPadding.top + contentHeight * 0.085,
                 left: 14,
-                      child: GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const CyrusSettingsScreen()),
-                        ),
-                        child: Container(
-                          width: 42,
-                          height: 42,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xff0b1826).withValues(alpha: 0.65),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xffffd36a).withValues(alpha: 0.85),
-                            ),
+                      child: HeaderGlassPress(
+                        child: Tooltip(
+                          message: 'منو',
+                          child: GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const CyrusSettingsScreen()),
                           ),
-                          child: const Icon(Icons.menu_rounded, color: Color(0xffffd36a), size: 22),
-                        ),
-                      ),
-                    ),
-
-                    // زبان و حساب کاربری
-              Positioned(
-                top: viewPadding.top + contentHeight * 0.085,
-                right: 14,
-                child: Row(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xff0b1826).withValues(alpha: 0.65),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xffffd36a).withValues(alpha: 0.85),
-                              ),
-                            ),
-                            child: CyrusLanguageButton(
-                              currentLanguage: MenuLanguage.current,
-                              onLanguageChanged: (code) async {
-                                await MenuLanguage.setLanguage(code);
-                                if (code == 'fa') {
-                                  await LanguageManager.setLanguage(AppLanguage.persian);
-                                } else if (code == 'ar') {
-                                  await LanguageManager.setLanguage(AppLanguage.arabic);
-                                } else if (code == 'en') {
-                                  await LanguageManager.setLanguage(AppLanguage.english);
-                                }
-                                if (mounted) setState(() {});
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: const Color(0xff0b1826).withValues(alpha: 0.65),
                               shape: BoxShape.circle,
@@ -619,24 +566,106 @@ class _HomePageState extends State<HomePage> {
                                 color: const Color(0xffffd36a).withValues(alpha: 0.85),
                               ),
                             ),
-                            child: CyrusHeaderAccountButton(
-                              currentLanguage: MenuLanguage.current,
-                              refreshToken: _headerBadgeTick,
-                              onAccountPressed: () async {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => CyrusAccountScreen(
-                                      languageCode: MenuLanguage.current,
-                                    ),
+                            child: const Icon(Icons.menu_rounded, color: Color(0xffffd36a), size: 22),
+                          ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // زبان، برگزیده‌ها و حساب کاربری
+              Positioned(
+                top: viewPadding.top + contentHeight * 0.085,
+                right: 14,
+                child: Row(
+                        children: [
+                          HeaderGlassPress(
+                            borderRadius: BorderRadius.circular(20),
+                            shape: BoxShape.rectangle,
+                            child: Tooltip(
+                              message: 'زبان',
+                              child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xff0b1826).withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xffffd36a).withValues(alpha: 0.85),
+                                ),
+                              ),
+                              child: CyrusLanguageButton(
+                                currentLanguage: MenuLanguage.current,
+                                onLanguageChanged: (code) async {
+                                  await MenuLanguage.setLanguage(code);
+                                  if (code == 'fa') {
+                                    await LanguageManager.setLanguage(AppLanguage.persian);
+                                  } else if (code == 'ar') {
+                                    await LanguageManager.setLanguage(AppLanguage.arabic);
+                                  } else if (code == 'en') {
+                                    await LanguageManager.setLanguage(AppLanguage.english);
+                                  }
+                                  if (mounted) setState(() {});
+                                },
+                              ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          HeaderGlassPress(
+                            child: Tooltip(
+                              message: 'برگزیده‌ها',
+                              child: GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                              ),
+                              child: Container(
+                                width: 42,
+                                height: 42,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xff0b1826).withValues(alpha: 0.65),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xffffd36a).withValues(alpha: 0.85),
                                   ),
-                                );
-                                if (mounted) {
-                                  setState(() {
-                                    _headerBadgeTick++;
-                                  });
-                                }
-                              },
+                                ),
+                                child: const Icon(Icons.favorite_rounded, color: Color(0xffffd36a), size: 20),
+                              ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          HeaderGlassPress(
+                            child: Tooltip(
+                              message: 'حساب کاربری',
+                              child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xff0b1826).withValues(alpha: 0.65),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xffffd36a).withValues(alpha: 0.85),
+                                ),
+                              ),
+                              child: CyrusHeaderAccountButton(
+                                currentLanguage: MenuLanguage.current,
+                                refreshToken: _headerBadgeTick,
+                                onAccountPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => CyrusAccountScreen(
+                                        languageCode: MenuLanguage.current,
+                                      ),
+                                    ),
+                                  );
+                                  if (mounted) {
+                                    setState(() {
+                                      _headerBadgeTick++;
+                                    });
+                                  }
+                                },
+                              ),
+                              ),
                             ),
                           ),
                         ],
@@ -673,7 +702,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              for (var number = 1; number <= 10; number++) _drawerItem(number),
+              for (var number = 1; number <= 8; number++) _drawerItem(number),
             ],
           ),
         ),
@@ -706,6 +735,73 @@ class _HomePageState extends State<HomePage> {
 // ============================================================
 // WORK IN PROGRESS PAGE
 // ============================================================
+
+// ================================================================
+// آیکون‌های بالای کلیدها (منو، زبان، حساب کاربری، علاقه‌مندی‌ها):
+// پوسته شیشه‌ای (بلور) + درخشش طلایی هنگام لمس.
+// ================================================================
+class HeaderGlassPress extends StatefulWidget {
+  const HeaderGlassPress({
+    super.key,
+    required this.child,
+    this.shape = BoxShape.circle,
+    this.borderRadius,
+  });
+
+  final Widget child;
+  final BoxShape shape;
+  final BorderRadius? borderRadius;
+
+  @override
+  State<HeaderGlassPress> createState() => _HeaderGlassPressState();
+}
+
+class _HeaderGlassPressState extends State<HeaderGlassPress> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCircle = widget.shape == BoxShape.circle;
+    final radius = widget.borderRadius ?? BorderRadius.circular(999);
+
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          shape: widget.shape,
+          borderRadius: isCircle ? null : radius,
+          boxShadow: _pressed
+              ? [
+                  BoxShadow(
+                    color: const Color(0xffffd36a).withValues(alpha: 0.9),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+        ),
+        child: ClipRRect(
+          borderRadius: isCircle ? BorderRadius.circular(999) : radius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class WorkInProgressPage extends StatelessWidget {
   final int number;
