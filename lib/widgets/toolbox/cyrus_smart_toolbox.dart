@@ -4,6 +4,8 @@ import 'tools/currency_converter_screen.dart';
 import 'tools/weather_screen.dart';
 import 'tools/world_clock_screen.dart';
 import 'tools/connection_status_screen.dart';
+import '../../pages/leaders/leaders_list_page.dart';
+import '../../pages/leaders/leader_registration_intro_page.dart';
 
 /// ===============================================================
 /// Cyrus Tourist
@@ -61,11 +63,30 @@ class CyrusSmartToolbox extends StatelessWidget {
               _buildHeader(),
               const SizedBox(height: 22),
 
-              _buildSection(
+              _buildAccordionSection(
                 context: context,
-                title: _tr('هوشمند سفر'),
-                icon: Icons.auto_awesome,
-                children: _smartItems(),
+                title: _tr('برنامه‌ریزی سفر'),
+                icon: Icons.event_note_rounded,
+                children: _planningItems(),
+              ),
+
+              const SizedBox(height: 14),
+
+              _buildAccordionSection(
+                context: context,
+                title: _tr('راهنمای مقصد'),
+                icon: Icons.explore_rounded,
+                children: _destinationGuideItems(),
+              ),
+
+              const SizedBox(height: 14),
+
+              _buildAccordionSection(
+                context: context,
+                title: _tr('لیدرها و تورها'),
+                icon: Icons.groups_2_rounded,
+                children: _leadersAndToursItems(),
+                initiallyExpanded: true,
               ),
 
               const SizedBox(height: 18),
@@ -188,6 +209,78 @@ class CyrusSmartToolbox extends StatelessWidget {
   // Sections
   // =============================================================
 
+  // =============================================================
+  // بخش آسانسوری (باز/بسته‌شونده) — برای گروه‌های جدید گزینه‌ها
+  // =============================================================
+
+  Widget _buildAccordionSection({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required List<CyrusToolItem> children,
+    bool initiallyExpanded = false,
+  }) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        dividerColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xff102838), Color(0xff081722)],
+          ),
+          border: Border.all(
+            color: const Color(0xffffd76a).withOpacity(0.30),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          iconColor: const Color(0xffffd76a),
+          collapsedIconColor: const Color(0xffffd76a),
+          leading: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xffffd76a).withOpacity(0.12),
+              border: Border.all(
+                color: const Color(0xffffd76a).withOpacity(0.40),
+              ),
+            ),
+            child: Icon(icon, size: 20, color: const Color(0xffffd76a)),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          children: [
+            ...children.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: CyrusSmartToolButton(
+                  item: item,
+                  onTap: () => _toolTapped(context, item),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSection({
     required BuildContext context,
     required String title,
@@ -241,73 +334,109 @@ class CyrusSmartToolbox extends StatelessWidget {
   }
 
   // =============================================================
-  // 1. Smart Travel
+  // 1. برنامه‌ریزی سفر
   // =============================================================
 
-  List<CyrusToolItem> _smartItems() {
+  List<CyrusToolItem> _planningItems() {
     return [
       CyrusToolItem(
-        id: 'ai_assistant',
-        icon: Icons.smart_toy_rounded,
-        title: _tr('دستیار هوشمند سفر'),
+        id: 'packing_checklist',
+        icon: Icons.checklist_rounded,
+        title: _tr('چک‌لیست سفر'),
         subtitle: _tr(
-          'گفتگو با سایروس و دریافت راهنمایی سفر',
-        ),
-        iconColor: const Color(0xffffd76a),
-      ),
-      CyrusToolItem(
-        id: 'personal_trip',
-        icon: Icons.favorite_rounded,
-        title: _tr('سفر شخصی من'),
-        subtitle: _tr(
-          'پیشنهاد مقصد بر اساس سلیقه، بودجه و شرایط شما',
-        ),
-        iconColor: const Color(0xffff7f9f),
-      ),
-      CyrusToolItem(
-        id: 'trip_planner',
-        icon: Icons.route_rounded,
-        title: _tr('برنامه‌ریز هوشمند سفر'),
-        subtitle: _tr(
-          'ساخت برنامه سفر روزانه بر اساس زمان و مقصد',
+          'لیست وسایل و کارهای پیش از سفر',
         ),
         iconColor: const Color(0xff72d6ff),
       ),
       CyrusToolItem(
-        id: 'nearby',
-        icon: Icons.location_on_rounded,
-        title: _tr('اطراف من'),
+        id: 'trip_notes',
+        icon: Icons.note_alt_rounded,
+        title: _tr('یادداشت‌های سفر'),
         subtitle: _tr(
-          'پیدا کردن مکان‌ها و خدمات مناسب در اطراف شما',
-        ),
-        iconColor: const Color(0xff75e0a0),
-      ),
-      CyrusToolItem(
-        id: 'instant_suggestion',
-        icon: Icons.bolt_rounded,
-        title: _tr('پیشنهاد لحظه‌ای'),
-        subtitle: _tr(
-          'پیشنهاد مناسب بر اساس زمان، مکان و شرایط',
+          'ثبت یادداشت، بلیت و مدارک مهم سفر',
         ),
         iconColor: const Color(0xffffc857),
       ),
       CyrusToolItem(
-        id: 'travel_budget',
-        icon: Icons.account_balance_wallet_rounded,
-        title: _tr('مدیریت هزینه سفر'),
+        id: 'saved_trips',
+        icon: Icons.bookmark_rounded,
+        title: _tr('سفرهای ذخیره‌شده من'),
         subtitle: _tr(
-          'مدیریت و برآورد هزینه‌های سفر',
-        ),
-        iconColor: const Color(0xff72e6b0),
-      ),
-      CyrusToolItem(
-        id: 'travel_type',
-        icon: Icons.groups_rounded,
-        title: _tr('نوع سفر'),
-        subtitle: _tr(
-          'خانوادگی، دوستانه، انفرادی، رمانتیک و ماجراجویی',
+          'دسترسی سریع به مقصدها و برنامه‌های ذخیره‌شده',
         ),
         iconColor: const Color(0xffc9a7ff),
+      ),
+    ];
+  }
+
+  // =============================================================
+  // 2. راهنمای مقصد
+  // =============================================================
+
+  List<CyrusToolItem> _destinationGuideItems() {
+    return [
+      CyrusToolItem(
+        id: 'local_customs',
+        icon: Icons.diversity_3_rounded,
+        title: _tr('آداب و رسوم محلی'),
+        subtitle: _tr(
+          'نکات فرهنگی و رفتاری مهم برای هر مقصد',
+        ),
+        iconColor: const Color(0xff75e0a0),
+      ),
+      CyrusToolItem(
+        id: 'travel_phrases',
+        icon: Icons.translate_rounded,
+        title: _tr('عبارات کاربردی سفر'),
+        subtitle: _tr(
+          'جملات پرکاربرد به زبان محلی مقصد',
+        ),
+        iconColor: const Color(0xffff7f9f),
+      ),
+      CyrusToolItem(
+        id: 'public_holidays',
+        icon: Icons.event_available_rounded,
+        title: _tr('تعطیلات و مناسبت‌های رسمی'),
+        subtitle: _tr(
+          'تقویم تعطیلات مقصد پیش از برنامه‌ریزی سفر',
+        ),
+        iconColor: const Color(0xffffd76a),
+      ),
+    ];
+  }
+
+  // =============================================================
+  // 3. لیدرها و تورها
+  // =============================================================
+
+  List<CyrusToolItem> _leadersAndToursItems() {
+    return [
+      CyrusToolItem(
+        id: 'leaders_directory',
+        icon: Icons.groups_2_rounded,
+        title: _tr('لیدرهای گردشگری'),
+        subtitle: _tr(
+          'مشاهده لیدرهای تأییدشده و پروفایل آن‌ها',
+        ),
+        iconColor: const Color(0xff72d6ff),
+      ),
+      CyrusToolItem(
+        id: 'leader_registration',
+        icon: Icons.badge_rounded,
+        title: _tr('ثبت‌نام به عنوان لیدر'),
+        subtitle: _tr(
+          'ساخت پروفایل لیدر و ارسال درخواست همکاری',
+        ),
+        iconColor: const Color(0xffffc857),
+      ),
+      CyrusToolItem(
+        id: 'suggested_tours',
+        icon: Icons.tour_rounded,
+        title: _tr('تورهای پیشنهادی'),
+        subtitle: _tr(
+          'تورهای گردشگری معرفی‌شده توسط لیدرها',
+        ),
+        iconColor: const Color(0xff75e0a0),
       ),
     ];
   }
@@ -510,6 +639,20 @@ class CyrusSmartToolbox extends StatelessWidget {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => const ConnectionStatusScreen(),
+          ),
+        );
+        return;
+
+      case 'leaders_directory':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LeadersListPage()),
+        );
+        return;
+
+      case 'leader_registration':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const LeaderRegistrationIntroPage(),
           ),
         );
         return;
