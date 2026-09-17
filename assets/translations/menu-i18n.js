@@ -1,6 +1,10 @@
-// CyrusTourist - 10 Menu Keys
+// CyrusTourist - 8 Menu Keys
 // Translation bridge for menu titles only.
 // No other page content is modified.
+//
+// 'account' and 'favorites' are no longer standalone home keys;
+// they are reached from the header account icon instead.
+// 'travel_toolbox' (old key 7) was replaced by 'tourism_tour' (key 8).
 
 (function () {
   'use strict';
@@ -9,13 +13,11 @@
     'tourism_map',
     'health_tourism',
     'tourist_attractions',
-    'tourism_films',
     'accommodations',
     'travel_guide',
-    'travel_toolbox',
-    'account',
+    'featured_videos',
     'smart_search',
-    'favorites'
+    'tourism_tour'
   ];
 
   window.CyrusTouristMenuI18n = {
