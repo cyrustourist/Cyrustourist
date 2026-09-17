@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/app_language.dart';
+import '../services/video_favorites_service.dart';
+import 'leaders/leaders_list_page.dart';
 import 'movie_video_page.dart';
 import 'residence_register_page.dart';
 import 'residence_video_page.dart';
@@ -27,6 +29,47 @@ class VideoPage extends StatefulWidget {
 class _VideoPageState extends State<VideoPage> {
   bool _showSelectedVideos = true;
   final Map<String, String> _resolvedAparatTitles = {};
+
+  final VideoFavoritesService _favoritesService = VideoFavoritesService();
+  Set<String> _favoriteVideoIds = {};
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedCategory = 'all';
+
+  String _videoId(Map<String, String> video) =>
+      video['url'] ?? video['title_fa'] ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavoriteVideos();
+  }
+
+  Future<void> _loadFavoriteVideos() async {
+    final ids = await _favoritesService.loadFavoriteIds();
+    if (!mounted) return;
+    setState(() => _favoriteVideoIds = ids);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleFavoriteVideo(Map<String, String> video) async {
+    final added = await _favoritesService.toggleFavorite(video);
+    if (!mounted) return;
+    setState(() {
+      final id = _videoId(video);
+      if (added) {
+        _favoriteVideoIds.add(id);
+      } else {
+        _favoriteVideoIds.remove(id);
+      }
+    });
+  }
 
   static const String aparatChannel =
       'https://www.aparat.com/Cyrustourist';
@@ -381,6 +424,183 @@ class _VideoPageState extends State<VideoPage> {
     return video['${key}_$_languageCode'] ??
         video['${key}_fa'] ??
         '';
+  }
+
+  // -----------------------------------------------------------
+  // جست‌وجوی پیشرفته + فیلتر دسته‌بندی
+  // -----------------------------------------------------------
+
+  List<String> get _categories {
+    final seen = <String>{};
+    final list = <String>[];
+    for (final video in selectedVideos) {
+      final cat = _text(video, 'category');
+      if (cat.isNotEmpty && seen.add(cat)) {
+        list.add(cat);
+      }
+    }
+    return list;
+  }
+
+  List<Map<String, String>> get _filteredVideos {
+    final query = _searchQuery.trim().toLowerCase();
+
+    return selectedVideos.where((video) {
+      final matchesCategory =
+          _selectedCategory == 'all' || _text(video, 'category') == _selectedCategory;
+
+      if (!matchesCategory) return false;
+      if (query.isEmpty) return true;
+
+      final haystack = [
+        _text(video, 'title'),
+        _text(video, 'location'),
+        _text(video, 'category'),
+      ].join(' ').toLowerCase();
+
+      return haystack.contains(query);
+    }).toList();
+  }
+
+  String get _searchHint {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'جست‌وجو با نام فیلم، شهر یا استان...';
+      case AppLanguage.arabic:
+        return 'ابحث بالاسم أو المدينة أو المحافظة...';
+      case AppLanguage.english:
+      default:
+        return 'Search by title, city or province...';
+    }
+  }
+
+  String get _allChipLabel {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'همه';
+      case AppLanguage.arabic:
+        return 'الكل';
+      case AppLanguage.english:
+      default:
+        return 'All';
+    }
+  }
+
+  String get _leaderTourChipLabel {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'لیدر تور 🧭';
+      case AppLanguage.arabic:
+        return 'قائد الجولة 🧭';
+      case AppLanguage.english:
+      default:
+        return 'Tour Leader 🧭';
+    }
+  }
+
+  Widget _buildSearchAndFilters() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 4, 10, 4),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: (value) => setState(() => _searchQuery = value),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: _searchHint,
+              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
+              prefixIcon: Icon(Icons.search_rounded, color: appGoldColor.withValues(alpha: 0.8)),
+              filled: true,
+              fillColor: appCardColor,
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: appGoldColor.withValues(alpha: 0.25)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: appGoldColor.withValues(alpha: 0.25)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: appGoldColor, width: 1.4),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _filterChip(label: _allChipLabel, value: 'all'),
+                const SizedBox(width: 8),
+                for (final cat in _categories) ...[
+                  _filterChip(label: cat, value: cat),
+                  const SizedBox(width: 8),
+                ],
+                // «لیدر تور» — کلید ثابت و همیشه‌حاضر، در همه نوارهای
+                // فیلتر اپ نمایش داده می‌شود (مطابق سایت).
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LeadersListPage()),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: appGoldColor.withValues(alpha: 0.7),
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                    child: Text(
+                      _leaderTourChipLabel,
+                      style: TextStyle(
+                        color: appGoldColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterChip({required String label, required String value}) {
+    final selected = _selectedCategory == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCategory = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: selected
+              ? const LinearGradient(colors: [Color(0xff29e0ad), Color(0xff3ff0a8)])
+              : null,
+          color: selected ? null : appCardColor,
+          border: selected ? null : Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? const Color(0xff06121d) : Colors.white70,
+            fontWeight: FontWeight.bold,
+            fontSize: 12.5,
+          ),
+        ),
+      ),
+    );
   }
 
   String get _pageTitle {
@@ -778,15 +998,17 @@ class _VideoPageState extends State<VideoPage> {
                 ),
               ),
               if (_showSelectedVideos)
+                SliverToBoxAdapter(child: _buildSearchAndFilters()),
+              if (_showSelectedVideos)
                 SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     return _buildVideoCard(
-                      selectedVideos[index],
+                      _filteredVideos[index],
                       index,
                     );
                   },
-                  childCount: selectedVideos.length,
+                  childCount: _filteredVideos.length,
                 ),
               ),
               SliverToBoxAdapter(
@@ -947,6 +1169,31 @@ class _VideoPageState extends State<VideoPage> {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => _toggleFavoriteVideo(video),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: appCardColor,
+                      border: Border.all(
+                        color: appGoldColor.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: Icon(
+                      _favoriteVideoIds.contains(_videoId(video))
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: _favoriteVideoIds.contains(_videoId(video))
+                          ? const Color(0xffff6b81)
+                          : appGoldColor,
+                      size: 19,
                     ),
                   ),
                 ),
