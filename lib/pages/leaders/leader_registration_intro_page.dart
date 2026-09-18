@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/registration_direct_contact.dart';
 import '../../models/leader.dart';
 import 'leader_profile_page.dart';
 import 'leader_registration_form_page.dart';
@@ -198,6 +199,10 @@ class _LeaderRegistrationIntroPageState extends State<LeaderRegistrationIntroPag
                   ),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              RegistrationDirectContact(subject: 'لیدرها'),
             ],
           ),
         ),
