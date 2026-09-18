@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -180,9 +180,6 @@ jobs:
           set -euo pipefail
 
           flutter --version
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
 
       - name: Verify project assets
         shell: bash
