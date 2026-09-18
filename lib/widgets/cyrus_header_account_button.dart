@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../pages/agencies/agency_registration_intro_page.dart';
+import '../pages/leaders/leader_registration_intro_page.dart';
 import '../pages/residence_register_page.dart';
 import '../services/notification_service.dart';
 
@@ -20,6 +22,8 @@ class CyrusHeaderAccountButton extends StatelessWidget {
     this.onHotelRegistration,
     this.onCottageRegistration,
     this.onHealthTourismRegistration,
+    this.onLeaderRegistration,
+    this.onAgencyRegistration,
     this.refreshToken = 0,
     this.width,
     this.height,
@@ -51,6 +55,12 @@ class CyrusHeaderAccountButton extends StatelessWidget {
 
   /// اتصال به فایل/صفحه ثبت‌نام گردشگری سلامت.
   final VoidCallback? onHealthTourismRegistration;
+
+  /// ثبت‌نام لیدرها (پیش‌فرض: صفحه معرفی ثبت‌نام لیدر).
+  final VoidCallback? onLeaderRegistration;
+
+  /// ثبت‌نام آژانس مسافرتی (پیش‌فرض: صفحه معرفی ثبت‌نام آژانس).
+  final VoidCallback? onAgencyRegistration;
 
   /// هر بار که این مقدار عوض شود، بج قرمز آیکون هدر دوباره
   /// تعداد آگهی‌های خوانده‌نشده را از سرور می‌خواند (مثلاً بعد از
@@ -137,6 +147,30 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const ResidenceRegisterPage(),
+                  ),
+                );
+              }
+              break;
+
+            case 'leader':
+              if (onLeaderRegistration != null) {
+                onLeaderRegistration!();
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const LeaderRegistrationIntroPage(),
+                  ),
+                );
+              }
+              break;
+
+            case 'agency':
+              if (onAgencyRegistration != null) {
+                onAgencyRegistration!();
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AgencyRegistrationIntroPage(),
                   ),
                 );
               }
@@ -267,6 +301,48 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                 'Registro de turismo de salud',
                 '医疗旅游登记',
                 'Registrazione turismo sanitario',
+              ),
+            ),
+          ),
+
+          const PopupMenuDivider(),
+
+          PopupMenuItem<String>(
+            value: 'leader',
+            child: _HeaderAccountMenuItem(
+              icon: Icons.groups_2_rounded,
+              iconColor: const Color(0xffd6ad4f),
+              title: _tr(
+                'ثبت‌نام لیدرها',
+                'Leader Registration',
+                'تسجيل قادة الرحلات',
+                'Lider Kaydı',
+                'Регистрация лидеров',
+                'Inscription des guides',
+                'Leiter registrieren',
+                'Registro de líderes',
+                '领队登记',
+                'Registrazione leader',
+              ),
+            ),
+          ),
+
+          PopupMenuItem<String>(
+            value: 'agency',
+            child: _HeaderAccountMenuItem(
+              icon: Icons.business_center_rounded,
+              iconColor: const Color(0xffd6ad4f),
+              title: _tr(
+                'ثبت‌نام آژانس مسافرتی',
+                'Travel Agency Registration',
+                'تسجيل وكالة السفر',
+                'Seyahat Acentesi Kaydı',
+                'Регистрация турагентства',
+                'Inscription agence de voyage',
+                'Reisebüro registrieren',
+                'Registro de agencia de viajes',
+                '旅行社登记',
+                'Registrazione agenzia di viaggio',
               ),
             ),
           ),
