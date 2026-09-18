@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/registration_direct_contact.dart';
 import '../../models/agency.dart';
 import 'agency_profile_page.dart';
 import 'agency_registration_form_page.dart';
@@ -198,6 +199,10 @@ class _AgencyRegistrationIntroPageState extends State<AgencyRegistrationIntroPag
                   ),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              RegistrationDirectContact(subject: 'آژانس‌های مسافرتی'),
             ],
           ),
         ),
