@@ -107,6 +107,119 @@ class MenuTranslations {
     return table[code] ?? table['fa'] ?? '';
   }
 
+  /// عنوان آیکون‌های نوار پایین صفحه اصلی و متن نوار جستجو (۱۰ زبان).
+  /// کلیدها: home, map, favorites, films, account
+  static String tab(String languageCode, String key) {
+    final table = _tabs[key];
+    if (table == null) return '';
+    final code = languageCode.toLowerCase().trim();
+    return table[code] ?? table['fa'] ?? '';
+  }
+
+  static String searchHint(String languageCode) {
+    final code = languageCode.toLowerCase().trim();
+    return _searchHint[code] ?? _searchHint['fa']!;
+  }
+
+  /// راهنمای (tooltip) دکمه‌های هدر. کلیدها: menu, language, account
+  static String tooltip(String languageCode, String key) {
+    final table = _tooltips[key];
+    if (table == null) return '';
+    final code = languageCode.toLowerCase().trim();
+    return table[code] ?? table['fa'] ?? '';
+  }
+
+  static const Map<String, Map<String, String>> _tabs = {
+    'home': {
+      'fa': 'خانه',
+      'en': 'Home',
+      'ar': 'الرئيسية',
+      'tr': 'Ana Sayfa',
+      'ru': 'Главная',
+      'fr': 'Accueil',
+      'de': 'Start',
+      'es': 'Inicio',
+      'zh': '首页',
+      'it': 'Home',
+    },
+    'map': {
+      'fa': 'نقشه',
+      'en': 'Map',
+      'ar': 'الخريطة',
+      'tr': 'Harita',
+      'ru': 'Карта',
+      'fr': 'Carte',
+      'de': 'Karte',
+      'es': 'Mapa',
+      'zh': '地图',
+      'it': 'Mappa',
+    },
+    'favorites': {
+      'fa': 'علاقه‌مندی‌ها',
+      'en': 'Favorites',
+      'ar': 'المفضلة',
+      'tr': 'Favoriler',
+      'ru': 'Избранное',
+      'fr': 'Favoris',
+      'de': 'Favoriten',
+      'es': 'Favoritos',
+      'zh': '收藏',
+      'it': 'Preferiti',
+    },
+    'films': {
+      'fa': 'فیلم‌های ویژه',
+      'en': 'Featured Films',
+      'ar': 'أفلام مميزة',
+      'tr': 'Özel Filmler',
+      'ru': 'Спецфильмы',
+      'fr': 'Films à la une',
+      'de': 'Top-Filme',
+      'es': 'Películas',
+      'zh': '精选影片',
+      'it': 'Film',
+    },
+    'account': {
+      'fa': 'حساب کاربری',
+      'en': 'Account',
+      'ar': 'الحساب',
+      'tr': 'Hesap',
+      'ru': 'Аккаунт',
+      'fr': 'Compte',
+      'de': 'Konto',
+      'es': 'Cuenta',
+      'zh': '账户',
+      'it': 'Account',
+    },
+  };
+
+  static const Map<String, String> _searchHint = {
+    'fa': 'کجا می‌خواهید بروید؟',
+    'en': 'Where do you want to go?',
+    'ar': 'إلى أين تريد الذهاب؟',
+    'tr': 'Nereye gitmek istersiniz?',
+    'ru': 'Куда вы хотите поехать?',
+    'fr': 'Où voulez-vous aller ?',
+    'de': 'Wohin möchten Sie reisen?',
+    'es': '¿A dónde quiere ir?',
+    'zh': '您想去哪里？',
+    'it': 'Dove vuoi andare?',
+  };
+
+  static const Map<String, Map<String, String>> _tooltips = {
+    'menu': {
+      'fa': 'منو',
+      'en': 'Menu',
+      'ar': 'القائمة',
+      'tr': 'Menü',
+      'ru': 'Меню',
+      'fr': 'Menu',
+      'de': 'Menü',
+      'es': 'Menú',
+      'zh': '菜单',
+      'it': 'Menu',
+    },
+  };
+
   static const Map<int, Map<String, String>> _titles = {
     // ------------------------------------------------------
     // کلید ۱ — نقشه
