@@ -21,7 +21,13 @@ class CyrusHeaderAccountButton extends StatelessWidget {
     this.onCottageRegistration,
     this.onHealthTourismRegistration,
     this.refreshToken = 0,
+    this.width,
+    this.height,
   });
+
+  /// اندازه دلخواه آیکون هدر؛ اگر null باشد ۴۴×۴۴ (پیش‌فرض قبلی).
+  final double? width;
+  final double? height;
 
   /// زبان فعلی برنامه.
   final String currentLanguage;
@@ -265,7 +271,11 @@ class CyrusHeaderAccountButton extends StatelessWidget {
             ),
           ),
         ],
-        child: _HeaderAccountButton(key: ValueKey(refreshToken)),
+        child: _HeaderAccountButton(
+          key: ValueKey(refreshToken),
+          width: width,
+          height: height,
+        ),
       ),
     );
   }
@@ -311,7 +321,10 @@ class CyrusHeaderAccountButton extends StatelessWidget {
 /// ظاهر اصلی دکمه آدمک در هدر، به‌همراه نقطه‌ی قرمز کوچک
 /// برای نشان‌دادن وجود آگهی خوانده‌نشده.
 class _HeaderAccountButton extends StatefulWidget {
-  const _HeaderAccountButton({super.key});
+  const _HeaderAccountButton({super.key, this.width, this.height});
+
+  final double? width;
+  final double? height;
 
   @override
   State<_HeaderAccountButton> createState() => _HeaderAccountButtonState();
@@ -332,8 +345,8 @@ class _HeaderAccountButtonState extends State<_HeaderAccountButton> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: 44,
-          height: 44,
+          width: widget.width ?? 44,
+          height: widget.height ?? 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             gradient: const LinearGradient(
@@ -361,10 +374,10 @@ class _HeaderAccountButtonState extends State<_HeaderAccountButton> {
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.person_rounded,
-            color: Color(0xffe5bd55),
-            size: 25,
+            color: const Color(0xffe5bd55),
+            size: widget.height != null ? widget.height! * 0.62 : 25,
           ),
         ),
         Positioned(
