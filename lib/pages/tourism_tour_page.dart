@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'leaders/leaders_list_page.dart';
 import 'agencies/agencies_list_page.dart';
+import 'agencies/agency_registration_intro_page.dart';
+import 'leaders/leader_registration_intro_page.dart';
 import '../widgets/toolbox/cyrus_smart_toolbox.dart';
 
 /// ===============================================================
@@ -84,6 +86,30 @@ class TourismTourPage extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const AgenciesListPage()),
+        ),
+      ),
+      _TourOption(
+        title: _tr('ثبت‌نام لیدرها', 'Leader Registration'),
+        subtitle: _tr(
+          'ثبت‌نام به‌عنوان لیدر — همراه با تماس مستقیم با پشتیبانی',
+          'Register as a tour leader — with direct contact to support',
+        ),
+        icon: Icons.how_to_reg_rounded,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LeaderRegistrationIntroPage()),
+        ),
+      ),
+      _TourOption(
+        title: _tr('ثبت‌نام آژانس مسافرتی', 'Travel Agency Registration'),
+        subtitle: _tr(
+          'ثبت‌نام آژانس مسافرتی — همراه با تماس مستقیم با پشتیبانی',
+          'Register your travel agency — with direct contact to support',
+        ),
+        icon: Icons.business_center_rounded,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AgencyRegistrationIntroPage()),
         ),
       ),
       // گزینه‌های بعدی به ترتیب اینجا اضافه می‌شوند.
