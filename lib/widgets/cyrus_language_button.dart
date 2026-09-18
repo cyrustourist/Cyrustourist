@@ -22,7 +22,13 @@ class CyrusLanguageButton extends StatelessWidget {
     this.currentLanguage = 'fa',
     this.onLanguageChanged,
     this.showLabel = true,
+    this.width,
+    this.height,
   });
+
+  /// اندازه دلخواه دکمه هدر؛ اگر null باشد اندازه پیش‌فرض قبلی استفاده می‌شود.
+  final double? width;
+  final double? height;
 
   final String currentLanguage;
 
@@ -181,6 +187,8 @@ class CyrusLanguageButton extends StatelessWidget {
       child: _LanguageHeaderButton(
         language: _current,
         showLabel: showLabel,
+        width: width,
+        height: height,
       ),
     );
   }
@@ -234,22 +242,58 @@ class _LanguageHeaderButton extends StatelessWidget {
   const _LanguageHeaderButton({
     required this.language,
     required this.showLabel,
+    this.width,
+    this.height,
   });
 
   final CyrusLanguage language;
   final bool showLabel;
+  final double? width;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
+    final sized = width != null && height != null;
+
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(
+          Icons.language_rounded,
+          color: Color(0xff071722),
+          size: 23,
+        ),
+        if (showLabel) ...[
+          const SizedBox(width: 5),
+          Text(
+            language.code.toUpperCase(),
+            style: const TextStyle(
+              color: Color(0xff071722),
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ],
+    );
+
     return Container(
-      constraints: const BoxConstraints(
-        minWidth: 48,
-        minHeight: 44,
-      ),
-      padding: EdgeInsets.symmetric(
-        horizontal: showLabel ? 9 : 6,
-        vertical: 7,
-      ),
+      width: width,
+      height: height,
+      alignment: sized ? Alignment.center : null,
+      constraints: sized
+          ? null
+          : const BoxConstraints(
+              minWidth: 48,
+              minHeight: 44,
+            ),
+      padding: sized
+          ? const EdgeInsets.symmetric(horizontal: 8, vertical: 5)
+          : EdgeInsets.symmetric(
+              horizontal: showLabel ? 9 : 6,
+              vertical: 7,
+            ),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
@@ -277,28 +321,9 @@ class _LanguageHeaderButton extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.language_rounded,
-            color: Color(0xff071722),
-            size: 23,
-          ),
-          if (showLabel) ...[
-            const SizedBox(width: 5),
-            Text(
-              language.code.toUpperCase(),
-              style: const TextStyle(
-                color: Color(0xff071722),
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.4,
-              ),
-            ),
-          ],
-        ],
-      ),
+      child: sized
+          ? FittedBox(fit: BoxFit.contain, child: content)
+          : content,
     );
   }
 }
