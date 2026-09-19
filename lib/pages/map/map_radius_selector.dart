@@ -6,11 +6,16 @@ class MapRadiusSelector extends StatelessWidget {
     required this.selectedRadius,
     required this.onChanged,
     this.language = 'fa',
+    this.topAction,
   });
 
   final double selectedRadius;
   final ValueChanged<double> onChanged;
   final String language;
+
+  /// دکمه‌ی اختیاری نیم‌دایره‌ای که روی لبه‌ی بالای پنل، وسط، می‌نشیند
+  /// (مثلاً «نمایش»). بالای پنل قرار می‌گیرد و عنوان/کیلومتر را نمی‌پوشاند.
+  final Widget? topAction;
 
   static const List<double> radiuses = [
     5,
@@ -58,11 +63,29 @@ class MapRadiusSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rtl = language != 'en';
+    final panel = _buildPanel();
 
     return Directionality(
       textDirection:
           rtl ? TextDirection.rtl : TextDirection.ltr,
-      child: Container(
+      child: topAction == null
+          ? panel
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ۶ پیکسل پایین‌تر تا دقیقاً روی لبه‌ی پنل بنشیند
+                Transform.translate(
+                  offset: const Offset(0, 6),
+                  child: topAction!,
+                ),
+                panel,
+              ],
+            ),
+    );
+  }
+
+  Widget _buildPanel() {
+    return Container(
         margin: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 6,
@@ -198,7 +221,6 @@ class MapRadiusSelector extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
