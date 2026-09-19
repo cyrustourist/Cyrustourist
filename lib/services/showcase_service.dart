@@ -10,21 +10,23 @@ import '../pages/movie_video_page.dart' show MovieSlotData, kMovieSlots;
 import '../pages/residence_video_page.dart'
     show ResidenceVideoData, kResidenceSlots;
 import '../pages/showcase/showcase_kinds.dart';
+import '../config/api_config.dart';
 
 /// تنظیمات اتصال به سرور.
 ///
-/// تا وقتی [apiBaseUrl] خالی است، فقط داده‌های محلی (لینک فیلم‌های فعلی و
-/// لیست‌های دستی) نمایش داده می‌شود. برای اتصال دیتابیس، فقط آدرس را بگذارید:
-///   static const String apiBaseUrl = 'https://api.cyrustourist.ir';
+/// آدرس واقعی از تنظیمات مرکزی [ApiConfig] خوانده می‌شود (طبق «دستور کار
+/// فنی Android» — Base URL فقط یک محل دارد). اگر بک‌اند این Endpoint را
+/// هنوز نداشته باشد، درخواست با خطا مواجه و به‌صورت خودکار از Cache یا
+/// داده‌ی محلی همین فایل استفاده می‌شود؛ چیزی Crash نمی‌کند.
 class ShowcaseConfig {
   ShowcaseConfig._();
 
-  static const String apiBaseUrl = '';
+  static const String apiBaseUrl = ApiConfig.baseUrl;
 
   /// کلید عمومی اختیاری (هدر X-Api-Key)
-  static const String apiKey = '';
+  static const String apiKey = ApiConfig.apiKey;
 
-  static const Duration timeout = Duration(seconds: 8);
+  static const Duration timeout = ApiConfig.timeout;
 }
 
 enum ShowcaseSource { local, server, cache }
