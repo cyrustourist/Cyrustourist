@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'leaders/leaders_list_page.dart';
-import 'agencies/agencies_list_page.dart';
+import '../models/showcase_item.dart';
+import 'showcase/showcase_gallery_page.dart';
 import 'agencies/agency_registration_intro_page.dart';
 import 'leaders/leader_registration_intro_page.dart';
 import '../widgets/toolbox/cyrus_smart_toolbox.dart';
@@ -53,13 +53,15 @@ class TourismTourPage extends StatelessWidget {
       _TourOption(
         title: _tr('لیدرها', 'Tour Leaders'),
         subtitle: _tr(
-          'راهنماهای گردشگری تأییدشده — مشاهده پروفایل یا ثبت‌نام به‌عنوان لیدر',
-          'Verified tour leaders — view profiles or register as a leader',
+          'راهنماهای گردشگری تأییدشده — جست‌وجو، مشاهده پروفایل یا ثبت‌نام',
+          'Verified tour leaders — search, view profiles or register',
         ),
         icon: Icons.groups_2_rounded,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const LeadersListPage()),
+          MaterialPageRoute(
+            builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.leader),
+          ),
         ),
       ),
       _TourOption(
@@ -79,13 +81,15 @@ class TourismTourPage extends StatelessWidget {
       _TourOption(
         title: _tr('آژانس‌های مسافرتی و گردشگری', 'Travel Agencies'),
         subtitle: _tr(
-          'آژانس‌های تأییدشده — مشاهده پروفایل یا ثبت‌نام آژانس',
-          'Verified travel agencies — view profiles or register your agency',
+          'آژانس‌های تأییدشده — جست‌وجو، مشاهده پروفایل یا ثبت‌نام',
+          'Verified travel agencies — search, view profiles or register',
         ),
         icon: Icons.apartment_rounded,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const AgenciesListPage()),
+          MaterialPageRoute(
+            builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.agency),
+          ),
         ),
       ),
       _TourOption(
