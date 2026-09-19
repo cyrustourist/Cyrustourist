@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../pages/showcase/showcase_kinds.dart';
+import '../models/showcase_item.dart';
 
 /// بنر تصویری بالای صفحه‌ی «نمایش فیلم»: عکس ثابت هاب (۴ کارت + نوار پایین)
 /// را می‌گیرد و چهار ناحیه‌ی نامرئیِ قابل‌لمس روی آن می‌کشد که هرکدام با
@@ -30,7 +30,7 @@ class ShowcaseHubBanner extends StatelessWidget {
   /// (مثلاً برای نشان دادن این‌که کاربر همین الان در همین بخش است).
   final ShowcaseKind? highlight;
 
-  static const String _asset = 'assets/images/showcase-hub.jpg';
+  static const String _asset = 'assets/images/video_menu_header.png';
   static const double _aspect = 1280 / 853;
 
   // مستطیل‌های نسبی [left, top, width, height] برگرفته از تصویر مرجع.
