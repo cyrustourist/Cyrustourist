@@ -12,6 +12,7 @@ import '../agencies/agency_registration_intro_page.dart';
 import '../leaders/leader_profile_page.dart';
 import '../leaders/leader_registration_intro_page.dart';
 import '../residence_register_page.dart';
+import '../../widgets/showcase_hub_banner.dart';
 import 'showcase_cover.dart';
 import 'showcase_kinds.dart';
 import 'showcase_navigator.dart';
@@ -39,12 +40,17 @@ class ShowcaseGalleryPage extends StatefulWidget {
     super.key,
     required this.kind,
     this.initialFilter,
+    this.showHubBanner = false,
   });
 
   final ShowcaseKind kind;
 
   /// کلید فیلتری که از ابتدا انتخاب شود (مثلاً health از نقشه سلامت)
   final String? initialFilter;
+
+  /// اگر true باشد، بالای صفحه بنر تصویریِ «هاب ۴ کلید» (اقامتی/جاذبه/سلامت/لیدر)
+  /// نمایش داده می‌شود و بقیه‌ی محتوا (جست‌وجو، فیلترها، فهرست) پایین‌تر می‌آید.
+  final bool showHubBanner;
 
   @override
   State<ShowcaseGalleryPage> createState() => _ShowcaseGalleryPageState();
@@ -118,8 +124,29 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
     super.dispose();
   }
 
+  /// لمس یکی از ۴ کلید بنر بالای صفحه: اگر همان بخش فعلی باشد کاری نمی‌کند،
+  /// در غیر این صورت گالری همان دسته را باز می‌کند (با همان بنر بالای صفحه).
+  void _openHubSection(ShowcaseKind kind) {
+    if (kind == widget.kind) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ShowcaseGalleryPage(kind: kind, showHubBanner: true),
+      ),
+    );
+  }
+
   Future<void> _load() async {
-    final result = await ShowcaseService.load(widget.kind, lang: _lang);
+    var result = await ShowcaseService.load(widget.kind, lang: _lang);
+
+    // تا وقتی داده‌ی واقعیِ لیدر/گردشگری سلامت از سرور نرسیده، برای اینکه
+    // صفحه‌ی هاب خالی به‌نظر نرسد، همان فیلم‌های نمایشیِ موجود را به‌عنوان
+    // نمونه‌ی موقت نشان می‌دهیم (به محض رسیدن داده‌ی واقعی، همین‌جا حذف شود).
+    if (result.items.isEmpty &&
+        (widget.kind == ShowcaseKind.leader || widget.kind == ShowcaseKind.health)) {
+      final fallback = await ShowcaseService.load(ShowcaseKind.video, lang: _lang);
+      result = ShowcaseLoad(items: fallback.items, filters: result.filters);
+    }
+
     Set<String> favs = {};
     if (widget.kind.isVideoLike) {
       try {
@@ -450,6 +477,13 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
+                if (widget.showHubBanner)
+                  SliverToBoxAdapter(
+                    child: ShowcaseHubBanner(
+                      highlight: widget.kind,
+                      onSelect: _openHubSection,
+                    ),
+                  ),
                 SliverToBoxAdapter(child: _searchBar()),
                 SliverToBoxAdapter(child: _chips()),
                 if (_loading)
