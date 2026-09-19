@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 /// ===============================================================
@@ -19,5 +20,28 @@ class ConnectionStatusService {
     } catch (_) {
       return false;
     }
+  }
+
+  static Timer? _watchTimer;
+  static bool _lastKnown = true;
+
+  /// شروع پایش دوره‌ای اتصال؛ هر بار که از قطع به وصل برمی‌گردد،
+  /// [onReconnected] صدا زده می‌شود (برای Sync خودکار Cache/صف آفلاین).
+  /// چند بار صدا زدن این متد بی‌خطر است (تایمر قبلی جایگزین می‌شود).
+  static void startWatching({
+    Duration interval = const Duration(seconds: 20),
+    required void Function() onReconnected,
+  }) {
+    _watchTimer?.cancel();
+    _watchTimer = Timer.periodic(interval, (_) async {
+      final now = await hasInternet();
+      if (now && !_lastKnown) onReconnected();
+      _lastKnown = now;
+    });
+  }
+
+  static void stopWatching() {
+    _watchTimer?.cancel();
+    _watchTimer = null;
   }
 }
