@@ -15,7 +15,7 @@ class ApiConfig {
   static const String baseUrl = 'https://cyrus-tourist-api.cyrustourist.workers.dev';
 
   /// مسیر بررسی سلامت سرور (اگر بک‌اند مسیر دیگری داشت، فقط همین را عوض کنید).
-  static const String healthPath = '/health';
+  static const String healthPath = '/';
 
   /// کلید عمومی اختیاری (هدر X-Api-Key) — هرگز Secret واقعی/حساس اینجا نگذارید.
   static const String apiKey = '';
