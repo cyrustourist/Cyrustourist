@@ -11,6 +11,7 @@ import '../pages/residence_video_page.dart'
     show ResidenceVideoData, kResidenceSlots;
 import '../pages/showcase/showcase_kinds.dart';
 import '../config/api_config.dart';
+import '../core/network/api_service.dart';
 
 /// تنظیمات اتصال به سرور.
 ///
@@ -51,8 +52,11 @@ class ShowcaseService {
   static Future<ShowcaseLoad> load(ShowcaseKind kind,
       {String lang = 'fa'}) async {
     final local = ShowcaseLoad(items: localItems(kind));
+    final endpoint = _endpointFor(kind);
 
-    if (ShowcaseConfig.apiBaseUrl.isEmpty) return local;
+    // فقط Endpointهایی که در Worker فعلی وجود دارند از سرور خوانده می‌شوند.
+    // برای بخش‌های هنوز آماده‌نشده، مستقیم از Cache/Fallback محلی استفاده می‌شود.
+    if (endpoint == null) return local;
 
     final cacheKey = 'showcase_cache_${kind.apiName}';
     SharedPreferences? prefs;
@@ -61,18 +65,18 @@ class ShowcaseService {
     } catch (_) {}
 
     try {
-      final body = await _get(kind, lang);
-      final parsed = _parse(kind, body, ShowcaseSource.server);
+      final json = await ApiService.getJson(endpoint);
+      final parsed = _parse(kind, json, ShowcaseSource.server);
       if (parsed.items.isNotEmpty) {
-        await prefs?.setString(cacheKey, body);
+        await prefs?.setString(cacheKey, jsonEncode(json));
         return parsed;
       }
     } catch (_) {}
 
     final cached = prefs?.getString(cacheKey);
-    if (cached != null) {
+    if (cached != null && cached.isNotEmpty) {
       try {
-        final parsed = _parse(kind, cached, ShowcaseSource.cache);
+        final parsed = _parse(kind, jsonDecode(cached), ShowcaseSource.cache);
         if (parsed.items.isNotEmpty) return parsed;
       } catch (_) {}
     }
@@ -80,56 +84,88 @@ class ShowcaseService {
     return local;
   }
 
-  static Future<String> _get(ShowcaseKind kind, String lang) async {
-    final client = HttpClient()..connectionTimeout = ShowcaseConfig.timeout;
-    try {
-      final uri = Uri.parse(
-          '${ShowcaseConfig.apiBaseUrl}/api/v1/showcase/${kind.apiName}?lang=$lang');
-      final request = await client.getUrl(uri);
-      request.headers.set('Accept', 'application/json');
-      if (ShowcaseConfig.apiKey.isNotEmpty) {
-        request.headers.set('X-Api-Key', ShowcaseConfig.apiKey);
-      }
-      final response = await request.close().timeout(ShowcaseConfig.timeout);
-      if (response.statusCode != 200) {
-        throw HttpException('HTTP ${response.statusCode}');
-      }
-      return await response
-          .transform(utf8.decoder)
-          .join()
-          .timeout(ShowcaseConfig.timeout);
-    } finally {
-      client.close();
+  /// Endpointهای واقعی Worker فعلی.
+  /// عمداً /api/v1/showcase/* استفاده نمی‌شود؛ آن مسیر در Worker فعلی وجود ندارد.
+  static String? _endpointFor(ShowcaseKind kind) {
+    switch (kind) {
+      case ShowcaseKind.video:
+        return '/tourism-videos';
+      case ShowcaseKind.attraction:
+        return '/attractions';
+      case ShowcaseKind.accommodation:
+        return '/accommodations';
+      case ShowcaseKind.health:
+        return '/health-tourism';
+      case ShowcaseKind.leader:
+      case ShowcaseKind.agency:
+        // این دو ماژول هنوز Endpoint عمومی نهایی در Worker فعلی ندارند.
+        return null;
     }
   }
 
   static ShowcaseLoad _parse(
-      ShowcaseKind kind, String body, ShowcaseSource source) {
-    final decoded = jsonDecode(body);
-    final map = decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
-
+      ShowcaseKind kind, dynamic decoded, ShowcaseSource source) {
     final items = <ShowcaseItem>[];
-    final rawItems = map['items'];
-    if (rawItems is List) {
-      for (final e in rawItems) {
-        if (e is Map<String, dynamic>) {
-          final item = ShowcaseItem.fromJson(kind, e);
-          if (!item.isExpired) items.add(item);
-        }
+    List<dynamic> rawItems = const [];
+
+    if (decoded is List) {
+      rawItems = decoded;
+    } else if (decoded is Map) {
+      final raw = decoded['items'] ?? decoded['data'] ?? decoded['results'];
+      if (raw is List) rawItems = raw;
+    }
+
+    for (final raw in rawItems) {
+      if (raw is! Map) continue;
+      final row = Map<String, dynamic>.from(raw);
+      try {
+        final item = _fromServerRow(kind, row);
+        if (!item.isExpired) items.add(item);
+      } catch (_) {
+        // یک رکورد خراب نباید کل لیست را از کار بیندازد.
       }
     }
 
-    List<ShowcaseFilter>? filters;
-    final rawFilters = map['filters'];
-    if (rawFilters is List) {
-      filters = rawFilters
-          .whereType<Map<String, dynamic>>()
-          .map(ShowcaseFilter.fromJson)
-          .where((f) => f.key.isNotEmpty)
-          .toList();
-    }
+    return ShowcaseLoad(items: items, source: source);
+  }
 
-    return ShowcaseLoad(items: items, filters: filters, source: source);
+  static ShowcaseItem _fromServerRow(
+      ShowcaseKind kind, Map<String, dynamic> j) {
+    String? s(dynamic v) => v?.toString().trim().isEmpty == true
+        ? null
+        : v?.toString();
+    double? d(dynamic v) => v == null ? null : double.tryParse(v.toString());
+    int code() => int.tryParse((j['id'] ?? j['code'] ?? 0).toString()) ?? 0;
+
+    final fa = s(j['name_fa'] ?? j['title_fa'] ?? j['title'] ?? j['name']);
+    final en = s(j['name_en'] ?? j['title_en']);
+    final ar = s(j['name_ar'] ?? j['title_ar']);
+    final cityFa = s(j['city_name'] ?? j['city_fa'] ?? j['city']);
+    final cityEn = s(j['city_en']);
+    final cityAr = s(j['city_ar']);
+    final descFa = s(j['description_fa'] ?? j['message']);
+    final descEn = s(j['description_en']);
+    final descAr = s(j['description_ar']);
+
+    return ShowcaseItem(
+      kind: kind,
+      code: code(),
+      titles: _m(fa, en, ar),
+      locations: _m(cityFa, cityEn, cityAr),
+      descriptions: _m(descFa, descEn, descAr),
+      categoryLabels: _m(s(j['category_fa'] ?? j['category']),
+          s(j['category_en']), s(j['category_ar'])),
+      videoUrl: s(j['video_url'] ?? j['video']),
+      coverUrl: s(j['image_url'] ?? j['image'] ?? j['cover_url']),
+      phone: s(j['phone_mobile'] ?? j['phone'] ?? j['mobile_phone']),
+      instagramUrl: s(j['instagram_url'] ?? j['instagram']),
+      websiteUrl: s(j['website_url'] ?? j['website']),
+      latitude: d(j['latitude'] ?? j['lat']),
+      longitude: d(j['longitude'] ?? j['lng']),
+      rating: d(j['rating']),
+      ratingCount: int.tryParse((j['rating_count'] ?? 0).toString()),
+      native: j,
+    );
   }
 
   // ------------------------------------------------------------
