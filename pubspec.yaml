@@ -2,7 +2,7 @@ name: cyrustourist_app3
 description: CyrusTourist base app - splash, home and tourist map.
 publish_to: "none"
 
-version: 5.8.321+6121
+version: 5.8.304+6104
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -40,4 +40,12 @@ flutter:
     - assets/images/home-hero.jpg
     - assets/images/logo-new.jpg
     - assets/images/video_menu_header.png
+    - assets/images/showcase-hub.jpg
+    - assets/fallback/cities.json
+    - assets/fallback/accommodations.json
+    - assets/fallback/attractions.json
+    - assets/fallback/guides.json
+    - assets/fallback/health_tourism.json
+    - assets/fallback/notifications.json
+    - assets/fallback/settings.json
     - assets/translations/
