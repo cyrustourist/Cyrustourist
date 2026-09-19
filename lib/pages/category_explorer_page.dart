@@ -12,6 +12,9 @@ import '../services/map_place_favorites_service.dart';
 import '../widgets/map_markers_layer.dart';
 import '../widgets/map_place_details_sheet.dart';
 import '../widgets/map_search_bar.dart';
+import '../widgets/showcase_dome_button.dart';
+import '../models/showcase_item.dart';
+import 'showcase/showcase_gallery_page.dart';
 import 'map/tourist_map_category_config.dart';
 import 'map/map_radius_selector.dart';
 import 'map/tourist_places_list.dart';
@@ -442,6 +445,37 @@ class _CategoryExplorerPageState
   }
 
   // ============================================================
+  // دکمه‌ی نیم‌دایره‌ی «نمایش» (VIP) — روی لبه‌ی بالای پنل شعاع جستجو
+  // سلامت + جاذبه‌ها → نمایش جاذبه‌ها (سلامت با فیلتر مخصوص خودش)
+  // اقامتگاه → نمایش اقامتگاه‌ها
+  // ============================================================
+
+  Widget _buildShowcaseButton() {
+    final isStay = widget.initialCategory == PlaceCategory.accommodation;
+
+    return ShowcaseDomeButton(
+      icon: isStay ? Icons.hotel_rounded : Icons.auto_awesome_rounded,
+      label: isStay
+          ? _text('نمایش اقامتگاه', 'Stays Showcase', 'عرض الإقامات')
+          : _text('نمایش ویژه', 'VIP Showcase', 'العرض المميز'),
+      onTap: _openShowcase,
+    );
+  }
+
+  void _openShowcase() {
+    final category = widget.initialCategory;
+
+    final Widget page = category == PlaceCategory.accommodation
+        ? const ShowcaseGalleryPage(kind: ShowcaseKind.accommodation)
+        : ShowcaseGalleryPage(
+            kind: ShowcaseKind.attraction,
+            initialFilter: category == PlaceCategory.health ? 'health' : null,
+          );
+
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  }
+
+  // ============================================================
   // BUILD
   // ============================================================
 
@@ -636,6 +670,7 @@ class _CategoryExplorerPageState
                         selectedRadius: _radiusKm,
                         onChanged: _onRadiusChanged,
                         language: _langCode,
+                        topAction: _buildShowcaseButton(),
                       ),
                     ),
 
