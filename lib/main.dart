@@ -14,6 +14,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'services/notification_service.dart';
+import 'services/connection_status_service.dart';
+import 'services/pending_queue_service.dart';
+import 'core/network/api_service.dart';
 import 'config/map_ir_config.dart';
 import 'config/carto_config.dart';
 
@@ -281,6 +284,23 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     NotificationService.instance.maybePlayNewAnnouncementSound();
+    // بررسی سلامت سرور در پس‌زمینه (بدون قفل‌کردن UI) طبق دستور کار Android:
+    // اگر API در دسترس نبود، بقیه‌ی سرویس‌ها (که خودشان API → Cache → محلی
+    // را مدیریت می‌کنند) بدون تغییر رفتار عادی ادامه می‌دهند.
+    ApiService.isHealthy();
+    ConnectionStatusService.startWatching(
+      onReconnected: () {
+        // TODO: وقتی Endpointهای نوشتنی سرور مشخص شد، اینجا هر PendingAction
+        // را واقعاً با ApiService بفرستید و true/false واقعی برگردانید.
+        PendingQueueService.instance.trySync((action) async => false);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    ConnectionStatusService.stopWatching();
+    super.dispose();
   }
 
   String get homeImage => 'assets/images/home-hero.jpg';
@@ -362,7 +382,12 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (number == 6) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.video)));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.video, showHubBanner: true),
+        ),
+      );
       return;
     }
 
