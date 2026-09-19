@@ -28,7 +28,8 @@ import 'pages/category_explorer_page.dart';
 // NEW PAGES
 // ============================================================
 
-import 'pages/video_page.dart';
+import 'models/showcase_item.dart';
+import 'pages/showcase/showcase_gallery_page.dart';
 import 'pages/travel/travel_guide_page.dart' as travel_guide;
 
 // ------------------------------------------------------------
@@ -361,7 +362,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (number == 6) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPage()));
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.video)));
       return;
     }
 
@@ -616,7 +617,7 @@ class _HomePageState extends State<HomePage> {
         Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
         break;
       case 'films':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPage()));
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.video)));
         break;
       case 'account':
         _openAccount();
