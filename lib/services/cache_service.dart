@@ -2,6 +2,30 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// یک رکورد Cache همراه با زمان ذخیره و منبع، طبق «دستور کار فنی Android»:
+/// هر Cache باید data / updatedAt / source داشته باشد.
+class CacheEntry {
+  const CacheEntry({required this.data, required this.updatedAt, required this.source});
+
+  final dynamic data;
+  final DateTime updatedAt;
+
+  /// 'api' | 'cache' | 'fallback'
+  final String source;
+
+  Map<String, dynamic> toJson() => {
+        'data': data,
+        'updatedAt': updatedAt.toIso8601String(),
+        'source': source,
+      };
+
+  factory CacheEntry.fromJson(Map<String, dynamic> j) => CacheEntry(
+        data: j['data'],
+        updatedAt: DateTime.tryParse(j['updatedAt']?.toString() ?? '') ?? DateTime.now(),
+        source: j['source']?.toString() ?? 'cache',
+      );
+}
+
 /// سرویس مرکزی Cache سایروس توریست.
 ///
 /// برای ذخیره موقت داده‌های متنی و JSON استفاده می‌شود.
@@ -14,6 +38,10 @@ class CacheService {
 
   SharedPreferences? _prefs;
 
+  /// پیشوند مخصوص رکوردهای data/updatedAt/source (برای جدا ماندن از
+  /// کلیدهای ساده‌ی قدیمی که با setString/setJson ذخیره می‌شوند).
+  static const String _entryPrefix = 'entry_v1_';
+
   /// آماده‌سازی سرویس
   Future<void> initialize() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -23,6 +51,20 @@ class CacheService {
   Future<SharedPreferences> get _storage async {
     await initialize();
     return _prefs!;
+  }
+
+  /// ذخیره‌ی یک رکورد کامل به همراه زمان و منبع (برای Repositoryهای جدید).
+  Future<bool> setEntry(String key, dynamic data, {required String source}) async {
+    final entry = CacheEntry(data: data, updatedAt: DateTime.now(), source: source);
+    return setJson('$_entryPrefix$key', entry.toJson());
+  }
+
+  /// خواندن رکورد ذخیره‌شده با [setEntry]؛ اگر وجود نداشت null برمی‌گرداند.
+  Future<CacheEntry?> getEntry(String key) async {
+    final raw = await getJson('$_entryPrefix$key');
+    if (raw is Map<String, dynamic>) return CacheEntry.fromJson(raw);
+    if (raw is Map) return CacheEntry.fromJson(Map<String, dynamic>.from(raw));
+    return null;
   }
 
   /// ذخیره متن
