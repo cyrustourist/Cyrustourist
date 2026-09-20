@@ -220,7 +220,7 @@ class ShowcaseItem {
         'category_ar': pick(categoryLabels, 'ar'),
         'kind': kind.apiName,
         'code': code.toString(),
-        'image': coverUrl ?? coverAsset ?? 'assets/images/video_attraction.jpg',
+        'image': coverUrl ?? coverAsset ?? 'assets/images/showcase-hub.jpg',
         'url': videoUrl ?? id,
       };
 
