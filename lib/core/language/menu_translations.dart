@@ -257,16 +257,16 @@ class MenuTranslations {
     // کلید ۳ — جاذبه‌های گردشگری
     // ------------------------------------------------------
     3: {
-      'fa': 'جاذبه‌های گردشگری',
+      'fa': 'جاذبه‌ها',
       'en': 'Attractions',
-      'ar': 'المعالم السياحية',
+      'ar': 'المعالم',
       'tr': 'Turistik Yerler',
       'ru': 'Достопримечательности',
-      'fr': 'Attractions touristiques',
+      'fr': 'Attractions',
       'de': 'Sehenswürdigkeiten',
-      'es': 'Atracciones turísticas',
-      'zh': '旅游景点',
-      'it': 'Attrazioni turistiche',
+      'es': 'Atracciones',
+      'zh': '景点',
+      'it': 'Attrazioni',
     },
 
     // ------------------------------------------------------
@@ -305,11 +305,11 @@ class MenuTranslations {
     // کلید ۶ — نمایش فیلم‌های ویژه
     // ------------------------------------------------------
     6: {
-      'fa': 'نمایش فیلم‌های ویژه',
+      'fa': 'فیلم‌های ویژه',
       'en': 'Featured Videos',
-      'ar': 'عرض الأفلام المميزة',
-      'tr': 'Öne Çıkan Videolar',
-      'ru': 'Специальные видео',
+      'ar': 'أفلام مميزة',
+      'tr': 'Özel Videolar',
+      'ru': 'Спецвидео',
       'fr': 'Vidéos à la une',
       'de': 'Ausgewählte Videos',
       'es': 'Vídeos destacados',
