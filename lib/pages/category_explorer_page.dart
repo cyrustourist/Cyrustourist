@@ -465,12 +465,13 @@ class _CategoryExplorerPageState
   void _openShowcase() {
     final category = widget.initialCategory;
 
+    // دکمه‌ی «نمایش ویژه» برای اقامتگاه به گالری همان بخش می‌رود؛
+    // برای بقیه (جاذبه/سلامت) طبق درخواست به همان «فیلم‌های ویژه»ی
+    // کلید ۶ صفحه‌ی اصلی وصل می‌شود (با بنر هاب چهار کلید بالای صفحه)
+    // نه به گالری جاذبه‌ها.
     final Widget page = category == PlaceCategory.accommodation
         ? const ShowcaseGalleryPage(kind: ShowcaseKind.accommodation)
-        : ShowcaseGalleryPage(
-            kind: ShowcaseKind.attraction,
-            initialFilter: category == PlaceCategory.health ? 'health' : null,
-          );
+        : const ShowcaseGalleryPage(kind: ShowcaseKind.video, showHubBanner: true);
 
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
