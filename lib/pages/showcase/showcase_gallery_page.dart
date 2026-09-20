@@ -147,12 +147,11 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
       result = ShowcaseLoad(items: fallback.items, filters: result.filters);
     }
 
+    // قلب علاقه‌مندی در همه‌ی بخش‌ها (اقامتگاه، سلامت، لیدر، آژانس، ...)
     Set<String> favs = {};
-    if (widget.kind.isVideoLike) {
-      try {
-        favs = await _favService.loadFavoriteIds();
-      } catch (_) {}
-    }
+    try {
+      favs = await _favService.loadFavoriteIds();
+    } catch (_) {}
     if (!mounted) return;
     setState(() {
       _items = result.items;
@@ -676,7 +675,7 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
   }
 
   Widget _cardFor(ShowcaseItem item, int rank) {
-    final showHeart = widget.kind.isVideoLike && item.hasVideo;
+    const showHeart = true;
     final favId = item.videoUrl ?? item.id;
     return _ShowcaseCard(
       item: item,
