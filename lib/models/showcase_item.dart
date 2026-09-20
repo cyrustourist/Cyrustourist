@@ -25,7 +25,11 @@ extension ShowcaseKindX on ShowcaseKind {
 
   /// آیا آیتم‌های این بخش فیلم دارند (قلب علاقه‌مندی و دکمه پخش)
   bool get isVideoLike =>
-      this == ShowcaseKind.video || this == ShowcaseKind.attraction;
+      this == ShowcaseKind.video ||
+      this == ShowcaseKind.attraction ||
+      this == ShowcaseKind.accommodation ||
+      this == ShowcaseKind.health ||
+      this == ShowcaseKind.leader;
 }
 
 /// سطح نمایش (درآمدزایی): سرور تعیین می‌کند، اپ فقط نمایش می‌دهد.
@@ -209,6 +213,7 @@ class ShowcaseItem {
 
   /// ساختار سازگار با VideoFavoritesService (صفحه علاقه‌مندی‌ها)
   Map<String, String> toFavoriteMap() => {
+        'kind': kind.apiName,
         'title_fa': pick(titles, 'fa'),
         'title_en': pick(titles, 'en'),
         'title_ar': pick(titles, 'ar'),
