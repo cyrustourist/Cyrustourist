@@ -68,7 +68,7 @@ class _ShowcaseCoverState extends State<ShowcaseCover> {
   Widget _placeholder() {
     if (widget.item.kind.isVideoLike || widget.item.hasVideo) {
       return Image.asset(
-        'assets/images/video_menu_header.png',
+        'assets/images/showcase-hub.jpg',
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _iconBox(),
       );
