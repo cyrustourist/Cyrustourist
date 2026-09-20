@@ -14,7 +14,7 @@ const Color _gold = Color(0xffffd36a);
 const Color _goldBright = Color(0xffffe39a);
 const Color _teal = Color(0xff29e0ad);
 
-enum _FavCategory { accommodation, video }
+enum _FavCategory { all, accommodation, video, attraction, health, leader }
 
 /// ------------------------------------------------------------
 /// متن‌های صفحه «برگزیده‌ها» — هر ۱۰ زبان اپ.
@@ -133,7 +133,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   List<Map<String, String>> _favoriteVideos = [];
 
   bool _loading = true;
-  _FavCategory _selected = _FavCategory.video;
+  _FavCategory _selected = _FavCategory.all;
 
   String get _lang => MenuLanguage.current;
   bool get _isRtl => MenuLanguage.isRtl;
@@ -206,10 +206,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     const SizedBox(height: 16),
                     _categoryChips(),
                     const SizedBox(height: 20),
-                    if (_selected == _FavCategory.accommodation)
-                      _accommodationList(context)
-                    else
-                      _videoList(context),
+                    _favoritesContent(context),
                   ],
                 ),
         ),
@@ -270,24 +267,176 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   Widget _categoryChips() {
-    return Row(
+    final chips = <(_FavCategory, String)>[
+      (_FavCategory.all, 'همه'),
+      (_FavCategory.accommodation, 'اقامتگاه‌ها 🏡'),
+      (_FavCategory.video, 'فیلم‌ها 🎬'),
+      (_FavCategory.attraction, 'جاذبه‌ها 📍'),
+      (_FavCategory.health, 'سلامت 🏥'),
+      (_FavCategory.leader, 'لیدرها 🧭'),
+    ];
+    return SizedBox(
+      height: 52,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: chips.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final (category, label) = chips[i];
+          return _chip(
+            label: label,
+            selected: _selected == category,
+            onTap: () => setState(() => _selected = category),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _favoritesContent(BuildContext context) {
+    final places = _selected == _FavCategory.all
+        ? _favoritePlaces
+        : _favoritePlaces.where((p) => _placeCategoryMatches(p, _selected)).toList();
+    final videos = _selected == _FavCategory.all || _selected == _FavCategory.video
+        ? _favoriteVideos
+        : _favoriteVideos.where((v) => _videoCategoryMatches(v, _selected)).toList();
+
+    final showPlaces = _selected == _FavCategory.all ||
+        _selected == _FavCategory.accommodation ||
+        _selected == _FavCategory.attraction ||
+        _selected == _FavCategory.health;
+    final showVideos = _selected == _FavCategory.all ||
+        _selected == _FavCategory.video ||
+        _selected == _FavCategory.accommodation ||
+        _selected == _FavCategory.attraction ||
+        _selected == _FavCategory.health ||
+        _selected == _FavCategory.leader;
+
+    if ((!showPlaces || places.isEmpty) && (!showVideos || videos.isEmpty)) {
+      return _emptyState(
+        message: 'هنوز موردی در این دسته به برگزیده‌ها اضافه نشده است',
+        ctaLabel: _tr('ctaVideos'),
+        onCta: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const VideoPage()),
+        ),
+      );
+    }
+
+    return Column(
       children: [
-        Expanded(
-          child: _chip(
-            label: _tr('chipAccommodation'),
-            selected: _selected == _FavCategory.accommodation,
-            onTap: () => setState(() => _selected = _FavCategory.accommodation),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _chip(
-            label: _tr('chipVideos'),
-            selected: _selected == _FavCategory.video,
-            onTap: () => setState(() => _selected = _FavCategory.video),
-          ),
-        ),
+        if (showPlaces && places.isNotEmpty)
+          ...places.map((place) => _placeFavoriteCard(context, place)),
+        if (showVideos && videos.isNotEmpty)
+          ...videos.map((video) => _videoFavoriteCard(context, video)),
       ],
+    );
+  }
+
+  bool _placeCategoryMatches(MapPlace place, _FavCategory category) {
+    switch (category) {
+      case _FavCategory.accommodation:
+        return place.category == PlaceCategory.accommodation;
+      case _FavCategory.attraction:
+        return place.category == PlaceCategory.attraction;
+      case _FavCategory.health:
+        return place.category == PlaceCategory.health;
+      default:
+        return false;
+    }
+  }
+
+  bool _videoCategoryMatches(Map<String, String> video, _FavCategory category) {
+    final kind = (video['kind'] ?? '').toLowerCase();
+    switch (category) {
+      case _FavCategory.accommodation:
+        return kind == 'accommodation';
+      case _FavCategory.attraction:
+        return kind == 'attraction';
+      case _FavCategory.health:
+        return kind == 'health';
+      case _FavCategory.leader:
+        return kind == 'leader';
+      case _FavCategory.video:
+        return kind == 'video' || kind.isEmpty;
+      default:
+        return false;
+    }
+  }
+
+  Widget _placeFavoriteCard(BuildContext context, MapPlace place) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _gold.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46, height: 46,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: _gold.withValues(alpha: 0.12)),
+            child: Icon(
+              place.category == PlaceCategory.health
+                  ? Icons.health_and_safety_rounded
+                  : place.category == PlaceCategory.attraction
+                      ? Icons.landscape_rounded
+                      : Icons.home_work_rounded,
+              color: _gold,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(place.name, style: const TextStyle(color: _goldBright, fontWeight: FontWeight.bold, fontSize: 14))),
+          IconButton(
+            onPressed: () => _removePlace(place),
+            icon: const Icon(Icons.favorite_rounded, color: Color(0xffff6b81)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _videoFavoriteCard(BuildContext context, Map<String, String> video) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _gold.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46, height: 46,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: _gold.withValues(alpha: 0.12)),
+            child: Icon(
+              (video['kind'] ?? '') == 'leader' ? Icons.groups_2_rounded :
+              (video['kind'] ?? '') == 'health' ? Icons.health_and_safety_rounded :
+              (video['kind'] ?? '') == 'accommodation' ? Icons.home_work_rounded :
+              (video['kind'] ?? '') == 'attraction' ? Icons.landscape_rounded : Icons.play_circle_fill_rounded,
+              color: _gold,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _openVideo(video['url'] ?? ''),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_videoText(video, 'title'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _goldBright, fontWeight: FontWeight.bold, fontSize: 13)),
+                  if (_videoText(video, 'location').isNotEmpty)
+                    Padding(padding: const EdgeInsets.only(top: 3), child: Text(_videoText(video, 'location'), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11))),
+                ],
+              ),
+            ),
+          ),
+          IconButton(onPressed: () => _removeVideo(video), icon: const Icon(Icons.favorite_rounded, color: Color(0xffff6b81))),
+        ],
+      ),
     );
   }
 
@@ -319,179 +468,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
     );
   }
 
-  // ---------------------------------------------------------
-  // اقامتگاه‌ها
-  // ---------------------------------------------------------
-
-  Widget _accommodationList(BuildContext context) {
-    if (_favoritePlaces.isEmpty) {
-      return _emptyState(
-        message: _tr('emptyAccommodation'),
-        ctaLabel: _tr('ctaAccommodation'),
-        onCta: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                const CategoryExplorerPage(initialCategory: PlaceCategory.accommodation),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: _favoritePlaces
-          .map(
-            (place) => Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _gold.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _gold.withValues(alpha: 0.12),
-                    ),
-                    child: const Icon(Icons.home_work_rounded, color: _gold),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CategoryExplorerPage(initialCategory: place.category),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            place.name,
-                            style: const TextStyle(
-                              color: _goldBright,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          if (place.address != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 3),
-                              child: Text(
-                                place.address!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.6),
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _removePlace(place),
-                    icon: const Icon(Icons.favorite_rounded, color: Color(0xffff6b81)),
-                  ),
-                ],
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  // ---------------------------------------------------------
-  // فیلم‌های گردشگری
-  // ---------------------------------------------------------
-
-  Widget _videoList(BuildContext context) {
-    if (_favoriteVideos.isEmpty) {
-      return _emptyState(
-        message: _tr('emptyVideos'),
-        ctaLabel: _tr('ctaVideos'),
-        onCta: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const VideoPage()),
-        ),
-      );
-    }
-
-    return Column(
-      children: _favoriteVideos
-          .map(
-            (video) => Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _gold.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _gold.withValues(alpha: 0.12),
-                    ),
-                    child: const Icon(Icons.play_circle_fill_rounded, color: _gold),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => _openVideo(video['url'] ?? ''),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _videoText(video, 'title'),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: _goldBright,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          if (_videoText(video, 'location').isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 3),
-                              child: Text(
-                                _videoText(video, 'location'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.6),
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _removeVideo(video),
-                    icon: const Icon(Icons.favorite_rounded, color: Color(0xffff6b81)),
-                  ),
-                ],
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
+  // لیست‌های قدیمی برای سازگاری داخلی؛ رندر اصلی اکنون در _favoritesContent انجام می‌شود.
+  Widget _accommodationList(BuildContext context) => _favoritesContent(context);
+  Widget _videoList(BuildContext context) => _favoritesContent(context);
 
   // ---------------------------------------------------------
   // حالت خالی مشترک
