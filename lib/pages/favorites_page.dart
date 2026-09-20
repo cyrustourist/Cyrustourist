@@ -6,7 +6,9 @@ import '../map_place.dart';
 import '../models/showcase_item.dart';
 import '../services/map_place_favorites_service.dart';
 import '../services/video_favorites_service.dart';
+import '../models/leader.dart';
 import 'category_explorer_page.dart';
+import 'leaders/leader_profile_page.dart';
 import 'showcase/showcase_gallery_page.dart';
 
 const Color _bg = Color(0xff06121d);
@@ -365,6 +367,22 @@ class _FavoritesPageState extends State<FavoritesPage> {
       );
       return;
     }
+    // لیدر ذخیره‌شده → مستقیم پروفایل همان لیدر (کد = شماره در فهرست تأییدشده‌ها)
+    if (e.category == _FavCategory.leader) {
+      final code = int.tryParse(e.video?['code'] ?? '') ?? 0;
+      if (code >= 1 && code <= approvedLeaders.length) {
+        final leader = approvedLeaders[code - 1];
+        final favId = leader.introVideoUrl ?? 'leader:$code';
+        if ((e.video?['url'] ?? '') == favId) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => LeaderProfilePage(leader: leader)),
+          );
+          return;
+        }
+      }
+    }
+
     final url = e.video?['url'] ?? '';
     final uri = Uri.tryParse(url);
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && await canLaunchUrl(uri)) {
