@@ -2247,7 +2247,7 @@ class _MovieCoverThumbState extends State<_MovieCoverThumb> {
 
     if (coverUrl == null) {
       return Image.asset(
-        'assets/images/video_menu_header.png',
+        'assets/images/showcase-hub.jpg',
         fit: BoxFit.cover,
       );
     }
@@ -2258,12 +2258,12 @@ class _MovieCoverThumbState extends State<_MovieCoverThumb> {
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
         return Image.asset(
-          'assets/images/video_menu_header.png',
+          'assets/images/showcase-hub.jpg',
           fit: BoxFit.cover,
         );
       },
       errorBuilder: (_, __, ___) => Image.asset(
-        'assets/images/video_menu_header.png',
+        'assets/images/showcase-hub.jpg',
         fit: BoxFit.cover,
       ),
     );
