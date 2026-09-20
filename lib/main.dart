@@ -312,13 +312,13 @@ class _HomePageState extends State<HomePage> {
       case 2:
         return 'گردشگری سلامت';
       case 3:
-        return 'جاذبه‌های گردشگری';
+        return 'جاذبه‌ها';
       case 4:
         return 'اقامتگاه‌ها';
       case 5:
         return 'راهنمای سفر';
       case 6:
-        return 'نمایش فیلم‌های ویژه';
+        return 'فیلم‌های ویژه';
       case 7:
         return 'جستجوی هوشمند';
       case 8:
@@ -556,7 +556,7 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
-                  fontSize: imgW * 0.031,
+                  fontSize: imgW * ((number == 3 || number == 6) ? 0.037 : 0.031),
                   height: 1.05,
                   shadows: const [
                     Shadow(offset: Offset(0, 1), blurRadius: 2.5, color: Colors.black),
