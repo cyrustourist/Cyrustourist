@@ -6,116 +6,38 @@ import '../map_place.dart';
 import '../services/map_place_favorites_service.dart';
 import '../services/video_favorites_service.dart';
 import 'category_explorer_page.dart';
-import 'video_page.dart';
+import 'showcase/showcase_gallery_page.dart';
+import 'showcase/showcase_kinds.dart';
 
 const Color _bg = Color(0xff06121d);
 const Color _card = Color(0xff0b2636);
 const Color _gold = Color(0xffffd36a);
 const Color _goldBright = Color(0xffffe39a);
-const Color _teal = Color(0xff29e0ad);
 
-enum _FavCategory { all, accommodation, video, attraction, health, leader }
+/// صفحه مرکزی «برگزیده‌ها».
+///
+/// مهم: این صفحه از همان ذخیره‌سازی‌های فعلی استفاده می‌کند تا علاقه‌مندی‌های
+/// نقشه و فیلم‌های قبلی از بین نروند. Login/Notifications و Worker دست‌نخورده‌اند.
+enum _FavCategory { all, accommodation, video, attraction, health, leader, agency }
 
-/// ------------------------------------------------------------
-/// متن‌های صفحه «برگزیده‌ها» — هر ۱۰ زبان اپ.
-/// ------------------------------------------------------------
 const Map<String, Map<String, String>> _t = {
-  'title': {
-    'fa': 'برگزیده‌ها',
-    'en': 'Selected',
-    'ar': 'المختارة',
-    'tr': 'Seçilenler',
-    'ru': 'Избранное',
-    'fr': 'Sélectionnés',
-    'de': 'Ausgewählte',
-    'es': 'Seleccionados',
-    'zh': '精选',
-    'it': 'Selezionati',
-  },
+  'title': {'fa': 'برگزیده‌های من', 'en': 'My Favorites', 'ar': 'المفضلة لدي'},
   'subtitle': {
-    'fa': 'فیلم‌های گردشگری و اقامتگاه‌هایی که به علاقه‌مندی‌ها اضافه کرده‌اید',
-    'en': "Tourism videos and accommodations you've added to your favorites",
-    'ar': 'مقاطع الفيديو السياحية وأماكن الإقامة التي أضفتها إلى المفضلة',
-    'tr': 'Favorilerinize eklediğiniz turizm videoları ve konaklama yerleri',
-    'ru': 'Туристические видео и места проживания, добавленные в избранное',
-    'fr': 'Vidéos touristiques et hébergements ajoutés à vos favoris',
-    'de': 'Tourismusvideos und Unterkünfte, die Sie zu Ihren Favoriten hinzugefügt haben',
-    'es': 'Vídeos turísticos y alojamientos que has añadido a tus favoritos',
-    'zh': '您添加到收藏夹的旅游视频和住宿',
-    'it': 'Video turistici e alloggi che hai aggiunto ai preferiti',
+    'fa': 'همه علاقه‌مندی‌های شما در یک صفحه',
+    'en': 'All your favorites in one place',
+    'ar': 'كل المفضلات الخاصة بك في مكان واحد',
   },
-  'chipAccommodation': {
-    'fa': 'اقامتگاه‌ها 🏡',
-    'en': 'Accommodations 🏡',
-    'ar': 'أماكن الإقامة 🏡',
-    'tr': 'Konaklamalar 🏡',
-    'ru': 'Жильё 🏡',
-    'fr': 'Hébergements 🏡',
-    'de': 'Unterkünfte 🏡',
-    'es': 'Alojamientos 🏡',
-    'zh': '住宿 🏡',
-    'it': 'Alloggi 🏡',
-  },
-  'chipVideos': {
-    'fa': 'فیلم‌های گردشگری 🎬',
-    'en': 'Tourism Videos 🎬',
-    'ar': 'مقاطع الفيديو السياحية 🎬',
-    'tr': 'Turizm Videoları 🎬',
-    'ru': 'Туристические видео 🎬',
-    'fr': 'Vidéos touristiques 🎬',
-    'de': 'Tourismusvideos 🎬',
-    'es': 'Vídeos turísticos 🎬',
-    'zh': '旅游视频 🎬',
-    'it': 'Video turistici 🎬',
-  },
-  'emptyAccommodation': {
-    'fa': 'هنوز اقامتگاهی به علاقه‌مندی‌ها اضافه نکرده‌اید',
-    'en': "You haven't added any accommodation to favorites yet",
-    'ar': 'لم تقم بإضافة أي مكان إقامة إلى المفضلة بعد',
-    'tr': 'Henüz favorilere bir konaklama eklemediniz',
-    'ru': 'Вы ещё не добавили жильё в избранное',
-    'fr': "Vous n'avez pas encore ajouté d'hébergement aux favoris",
-    'de': 'Sie haben noch keine Unterkunft zu den Favoriten hinzugefügt',
-    'es': 'Aún no has añadido ningún alojamiento a favoritos',
-    'zh': '您还没有将任何住宿添加到收藏夹',
-    'it': 'Non hai ancora aggiunto alcun alloggio ai preferiti',
-  },
-  'emptyVideos': {
-    'fa': 'هنوز فیلم گردشگری به علاقه‌مندی‌ها اضافه نکرده‌اید',
-    'en': "You haven't added any tourism video to favorites yet",
-    'ar': 'لم تقم بإضافة أي مقطع فيديو سياحي إلى المفضلة بعد',
-    'tr': 'Henüz favorilere bir turizm videosu eklemediniz',
-    'ru': 'Вы ещё не добавили туристическое видео в избранное',
-    'fr': "Vous n'avez pas encore ajouté de vidéo touristique aux favoris",
-    'de': 'Sie haben noch kein Tourismusvideo zu den Favoriten hinzugefügt',
-    'es': 'Aún no has añadido ningún vídeo turístico a favoritos',
-    'zh': '您还没有将任何旅游视频添加到收藏夹',
-    'it': 'Non hai ancora aggiunto alcun video turistico ai preferiti',
-  },
-  'ctaAccommodation': {
-    'fa': 'مشاهده اقامتگاه‌ها',
-    'en': 'View Accommodations',
-    'ar': 'مشاهدة أماكن الإقامة',
-    'tr': 'Konaklamaları Görüntüle',
-    'ru': 'Смотреть жильё',
-    'fr': 'Voir les hébergements',
-    'de': 'Unterkünfte ansehen',
-    'es': 'Ver alojamientos',
-    'zh': '查看住宿',
-    'it': 'Vedi alloggi',
-  },
-  'ctaVideos': {
-    'fa': 'مشاهده فیلم‌های گردشگری',
-    'en': 'View Tourism Videos',
-    'ar': 'مشاهدة مقاطع الفيديو السياحية',
-    'tr': 'Turizm Videolarını Görüntüle',
-    'ru': 'Смотреть туристические видео',
-    'fr': 'Voir les vidéos touristiques',
-    'de': 'Tourismusvideos ansehen',
-    'es': 'Ver vídeos turísticos',
-    'zh': '查看旅游视频',
-    'it': 'Guarda i video turistici',
-  },
+  'all': {'fa': 'همه', 'en': 'All', 'ar': 'الكل'},
+  'accommodation': {'fa': 'اقامتگاه', 'en': 'Stays', 'ar': 'الإقامة'},
+  'video': {'fa': 'فیلم', 'en': 'Videos', 'ar': 'الفيديو'},
+  'attraction': {'fa': 'جاذبه', 'en': 'Attractions', 'ar': 'المعالم'},
+  'health': {'fa': 'سلامت', 'en': 'Health', 'ar': 'الصحة'},
+  'leader': {'fa': 'لیدر', 'en': 'Leaders', 'ar': 'المرشدون'},
+  'agency': {'fa': 'آژانس', 'en': 'Agencies', 'ar': 'الوكالات'},
+  'empty': {'fa': 'هنوز موردی در این بخش ذخیره نشده است', 'en': 'No saved items in this section yet', 'ar': 'لا توجد عناصر محفوظة في هذا القسم بعد'},
+  'open': {'fa': 'مشاهده', 'en': 'View', 'ar': 'عرض'},
+  'maps': {'fa': 'مکان روی نقشه', 'en': 'Map place', 'ar': 'المكان على الخريطة'},
+  'videoLabel': {'fa': 'فیلم گردشگری', 'en': 'Tourism video', 'ar': 'فيديو سياحي'},
 };
 
 class FavoritesPage extends StatefulWidget {
@@ -129,16 +51,18 @@ class _FavoritesPageState extends State<FavoritesPage> {
   final MapPlaceFavoritesService _placeFavorites = MapPlaceFavoritesService();
   final VideoFavoritesService _videoFavorites = VideoFavoritesService();
 
-  List<MapPlace> _favoritePlaces = [];
-  List<Map<String, String>> _favoriteVideos = [];
-
+  List<MapPlace> _places = [];
+  List<Map<String, String>> _videos = [];
   bool _loading = true;
   _FavCategory _selected = _FavCategory.all;
 
   String get _lang => MenuLanguage.current;
-  bool get _isRtl => MenuLanguage.isRtl;
+  bool get _rtl => MenuLanguage.isRtl;
 
-  String _tr(String key) => _t[key]?[_lang] ?? _t[key]?['fa'] ?? '';
+  String _tr(String key) {
+    final map = _t[key] ?? const {};
+    return map[_lang] ?? map['en'] ?? map['fa'] ?? '';
+  }
 
   @override
   void initState() {
@@ -151,8 +75,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
     final videos = await _videoFavorites.loadFavorites();
     if (!mounted) return;
     setState(() {
-      _favoritePlaces = places;
-      _favoriteVideos = videos;
+      _places = places;
+      _videos = videos;
       _loading = false;
     });
   }
@@ -167,348 +91,284 @@ class _FavoritesPageState extends State<FavoritesPage> {
     await _loadAll();
   }
 
-  Future<void> _openVideo(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  String _videoText(Map<String, String> video, String key) {
+    return video['${key}_$_lang'] ?? video['${key}_fa'] ?? video['${key}_en'] ?? '';
+  }
+
+  String _videoKind(Map<String, String> video) {
+    final kind = (video['kind'] ?? '').toLowerCase().trim();
+    if (kind.isNotEmpty) return kind;
+    final text = '${video['category_fa'] ?? ''} ${video['category_en'] ?? ''} ${video['category_ar'] ?? ''}'.toLowerCase();
+    if (text.contains('leader') || text.contains('لیدر') || text.contains('قائد')) return 'leader';
+    if (text.contains('health') || text.contains('سلامت') || text.contains('صحة') || text.contains('علاج')) return 'health';
+    if (text.contains('accommodation') || text.contains('اقامت') || text.contains('hotel') || text.contains('هتل')) return 'accommodation';
+    if (text.contains('agency') || text.contains('آژانس')) return 'agency';
+    if (text.contains('attraction') || text.contains('جاذبه') || text.contains('معلم')) return 'attraction';
+    return 'video';
+  }
+
+  bool _placeMatches(MapPlace p, _FavCategory category) {
+    switch (category) {
+      case _FavCategory.all:
+        return true;
+      case _FavCategory.accommodation:
+        return p.category == PlaceCategory.accommodation;
+      case _FavCategory.attraction:
+        return p.category == PlaceCategory.attraction;
+      case _FavCategory.health:
+        return p.category == PlaceCategory.health;
+      default:
+        return false;
     }
   }
 
-  String _videoText(Map<String, String> video, String key) {
-    return video['${key}_$_lang'] ??
-        video['${key}_fa'] ??
-        video['${key}_en'] ??
-        '';
+  bool _videoMatches(Map<String, String> v, _FavCategory category) {
+    final kind = _videoKind(v);
+    switch (category) {
+      case _FavCategory.all:
+        return true;
+      case _FavCategory.video:
+        return kind == 'video';
+      case _FavCategory.leader:
+        return kind == 'leader';
+      case _FavCategory.health:
+        return kind == 'health';
+      case _FavCategory.accommodation:
+        return kind == 'accommodation';
+      case _FavCategory.attraction:
+        return kind == 'attraction';
+      case _FavCategory.agency:
+        return kind == 'agency';
+    }
+  }
+
+  bool get _hasItems {
+    if (_selected == _FavCategory.all) return _places.isNotEmpty || _videos.isNotEmpty;
+    final placeHit = _places.any((p) => _placeMatches(p, _selected));
+    final videoHit = _videos.any((v) => _videoMatches(v, _selected));
+    return placeHit || videoHit;
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
+      textDirection: _rtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: _bg,
         body: SafeArea(
           child: _loading
               ? const Center(child: CircularProgressIndicator(color: _gold))
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
-                  children: [
-                    _headerBanner(context),
-                    const SizedBox(height: 14),
-                    Text(
-                      _tr('subtitle'),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 13,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _categoryChips(),
-                    const SizedBox(height: 20),
-                    _favoritesContent(context),
-                  ],
+              : RefreshIndicator(
+                  color: _gold,
+                  backgroundColor: _card,
+                  onRefresh: _loadAll,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+                    children: [
+                      _header(),
+                      const SizedBox(height: 14),
+                      Text(_tr('subtitle'), style: TextStyle(color: Colors.white.withValues(alpha: .68), fontSize: 13)),
+                      const SizedBox(height: 16),
+                      _categoryButtons(),
+                      const SizedBox(height: 18),
+                      if (!_hasItems) _emptyState() else ..._buildFilteredContent(context),
+                    ],
+                  ),
                 ),
         ),
       ),
     );
   }
 
-  Widget _headerBanner(BuildContext context) {
+  Widget _header() {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xff123244), Color(0xff081722)],
-        ),
-        border: Border.all(color: _gold.withValues(alpha: 0.25)),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xff123244), Color(0xff081722)]),
+        border: Border.all(color: _gold.withValues(alpha: .42)),
+        boxShadow: [BoxShadow(color: _gold.withValues(alpha: .08), blurRadius: 18)],
       ),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.of(context).maybePop(),
             child: Container(
-              width: 52,
-              height: 52,
+              width: 50,
+              height: 50,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [_gold, _gold.withValues(alpha: 0.15)],
-                ),
-                boxShadow: [
-                  BoxShadow(color: _gold.withValues(alpha: 0.55), blurRadius: 18),
-                ],
+                gradient: const RadialGradient(colors: [_gold, Color(0xff6e5520)]),
+                boxShadow: [BoxShadow(color: _gold.withValues(alpha: .42), blurRadius: 15)],
               ),
-              child: Icon(
-                _isRtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
-                color: const Color(0xff06121d),
-                size: 24,
-              ),
+              child: Icon(_rtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded, color: _bg, size: 24),
             ),
           ),
           const Spacer(),
-          Text(
-            _tr('title'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(_tr('title'), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 4),
+              Row(children: [
+                const Icon(Icons.favorite_rounded, color: _gold, size: 20),
+                const SizedBox(width: 5),
+                Text('${_places.length + _videos.length}', style: const TextStyle(color: _goldBright, fontWeight: FontWeight.w800)),
+              ]),
+            ],
           ),
-          const SizedBox(width: 10),
-          const Icon(Icons.favorite_rounded, color: _gold, size: 26),
         ],
       ),
     );
   }
 
-  Widget _categoryChips() {
-    final chips = <(_FavCategory, String)>[
-      (_FavCategory.all, 'همه'),
-      (_FavCategory.accommodation, 'اقامتگاه‌ها 🏡'),
-      (_FavCategory.video, 'فیلم‌ها 🎬'),
-      (_FavCategory.attraction, 'جاذبه‌ها 📍'),
-      (_FavCategory.health, 'سلامت 🏥'),
-      (_FavCategory.leader, 'لیدرها 🧭'),
+  Widget _categoryButtons() {
+    final buttons = <(_FavCategory, String)>[
+      (_FavCategory.all, 'all'),
+      (_FavCategory.accommodation, 'accommodation'),
+      (_FavCategory.video, 'video'),
+      (_FavCategory.attraction, 'attraction'),
+      (_FavCategory.health, 'health'),
+      (_FavCategory.leader, 'leader'),
+      (_FavCategory.agency, 'agency'),
     ];
     return SizedBox(
-      height: 52,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: chips.length,
+        itemCount: buttons.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
-          final (category, label) = chips[i];
-          return _chip(
-            label: label,
-            selected: _selected == category,
+          final category = buttons[i].$1;
+          final key = buttons[i].$2;
+          final selected = _selected == category;
+          return GestureDetector(
             onTap: () => setState(() => _selected = category),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                gradient: selected ? const LinearGradient(colors: [_gold, Color(0xffffe39a)]) : const LinearGradient(colors: [Color(0xff102b3a), Color(0xff0a1d29)]),
+                border: Border.all(color: selected ? const Color(0xffffefb0) : _gold.withValues(alpha: .78), width: 1.4),
+                boxShadow: [
+                  BoxShadow(color: _gold.withValues(alpha: selected ? .35 : .18), blurRadius: selected ? 12 : 7, offset: const Offset(0, 3)),
+                  BoxShadow(color: Colors.black.withValues(alpha: .35), blurRadius: 4, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Text(_tr(key), style: TextStyle(color: selected ? _bg : Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _favoritesContent(BuildContext context) {
-    final places = _selected == _FavCategory.all
-        ? _favoritePlaces
-        : _favoritePlaces.where((p) => _placeCategoryMatches(p, _selected)).toList();
-    final videos = _selected == _FavCategory.all || _selected == _FavCategory.video
-        ? _favoriteVideos
-        : _favoriteVideos.where((v) => _videoCategoryMatches(v, _selected)).toList();
+  List<Widget> _buildFilteredContent(BuildContext context) {
+    final widgets = <Widget>[];
+    final places = _places.where((p) => _placeMatches(p, _selected)).toList();
+    final videos = _videos.where((v) => _videoMatches(v, _selected)).toList();
 
-    final showPlaces = _selected == _FavCategory.all ||
-        _selected == _FavCategory.accommodation ||
-        _selected == _FavCategory.attraction ||
-        _selected == _FavCategory.health;
-    final showVideos = _selected == _FavCategory.all ||
-        _selected == _FavCategory.video ||
-        _selected == _FavCategory.accommodation ||
-        _selected == _FavCategory.attraction ||
-        _selected == _FavCategory.health ||
-        _selected == _FavCategory.leader;
-
-    if ((!showPlaces || places.isEmpty) && (!showVideos || videos.isEmpty)) {
-      return _emptyState(
-        message: 'هنوز موردی در این دسته به برگزیده‌ها اضافه نشده است',
-        ctaLabel: _tr('ctaVideos'),
-        onCta: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const VideoPage()),
-        ),
-      );
+    if (places.isNotEmpty) {
+      widgets.addAll(places.map((p) => _placeCard(context, p)));
     }
+    if (videos.isNotEmpty) {
+      widgets.addAll(videos.map((v) => _videoCard(context, v)));
+    }
+    return widgets;
+  }
 
-    return Column(
-      children: [
-        if (showPlaces && places.isNotEmpty)
-          ...places.map((place) => _placeFavoriteCard(context, place)),
-        if (showVideos && videos.isNotEmpty)
-          ...videos.map((video) => _videoFavoriteCard(context, video)),
-      ],
+  Widget _placeCard(BuildContext context, MapPlace place) {
+    final icon = place.category == PlaceCategory.health
+        ? Icons.local_hospital_rounded
+        : place.category == PlaceCategory.attraction
+            ? Icons.landscape_rounded
+            : Icons.hotel_rounded;
+    return _cardShell(
+      icon: icon,
+      title: place.name,
+      subtitle: place.address ?? _tr('maps'),
+      onOpen: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CategoryExplorerPage(initialCategory: place.category))),
+      onRemove: () => _removePlace(place),
     );
   }
 
-  bool _placeCategoryMatches(MapPlace place, _FavCategory category) {
-    switch (category) {
-      case _FavCategory.accommodation:
-        return place.category == PlaceCategory.accommodation;
-      case _FavCategory.attraction:
-        return place.category == PlaceCategory.attraction;
-      case _FavCategory.health:
-        return place.category == PlaceCategory.health;
-      default:
-        return false;
-    }
+  Widget _videoCard(BuildContext context, Map<String, String> video) {
+    final kind = _videoKind(video);
+    final title = _videoText(video, 'title');
+    final label = kind == 'leader'
+        ? _tr('leader')
+        : kind == 'health'
+            ? _tr('health')
+            : kind == 'accommodation'
+                ? _tr('accommodation')
+                : kind == 'attraction'
+                    ? _tr('attraction')
+                    : _tr('videoLabel');
+    return _cardShell(
+      icon: kind == 'leader' ? Icons.person_pin_circle_rounded : Icons.play_circle_fill_rounded,
+      title: title.isEmpty ? label : title,
+      subtitle: '${label}${_videoText(video, 'location').isNotEmpty ? ' • ${_videoText(video, 'location')}' : ''}',
+      onOpen: () async {
+        final url = video['url'] ?? '';
+        if (url.isEmpty) return;
+        final uri = Uri.tryParse(url);
+        if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (!context.mounted) return;
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.video)));
+        }
+      },
+      onRemove: () => _removeVideo(video),
+    );
   }
 
-  bool _videoCategoryMatches(Map<String, String> video, _FavCategory category) {
-    final kind = (video['kind'] ?? '').toLowerCase();
-    switch (category) {
-      case _FavCategory.accommodation:
-        return kind == 'accommodation';
-      case _FavCategory.attraction:
-        return kind == 'attraction';
-      case _FavCategory.health:
-        return kind == 'health';
-      case _FavCategory.leader:
-        return kind == 'leader';
-      case _FavCategory.video:
-        return kind == 'video' || kind.isEmpty;
-      default:
-        return false;
-    }
-  }
-
-  Widget _placeFavoriteCard(BuildContext context, MapPlace place) {
+  Widget _cardShell({required IconData icon, required String title, required String subtitle, required VoidCallback onOpen, required VoidCallback onRemove}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _gold.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _gold.withValues(alpha: .24)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .24), blurRadius: 10, offset: const Offset(0, 5))],
       ),
       child: Row(
         children: [
-          Container(
-            width: 46, height: 46,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: _gold.withValues(alpha: 0.12)),
-            child: Icon(
-              place.category == PlaceCategory.health
-                  ? Icons.health_and_safety_rounded
-                  : place.category == PlaceCategory.attraction
-                      ? Icons.landscape_rounded
-                      : Icons.home_work_rounded,
-              color: _gold,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(place.name, style: const TextStyle(color: _goldBright, fontWeight: FontWeight.bold, fontSize: 14))),
-          IconButton(
-            onPressed: () => _removePlace(place),
-            icon: const Icon(Icons.favorite_rounded, color: Color(0xffff6b81)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _videoFavoriteCard(BuildContext context, Map<String, String> video) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _gold.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46, height: 46,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: _gold.withValues(alpha: 0.12)),
-            child: Icon(
-              (video['kind'] ?? '') == 'leader' ? Icons.groups_2_rounded :
-              (video['kind'] ?? '') == 'health' ? Icons.health_and_safety_rounded :
-              (video['kind'] ?? '') == 'accommodation' ? Icons.home_work_rounded :
-              (video['kind'] ?? '') == 'attraction' ? Icons.landscape_rounded : Icons.play_circle_fill_rounded,
-              color: _gold,
-            ),
-          ),
+          Container(width: 48, height: 48, decoration: BoxDecoration(shape: BoxShape.circle, color: _gold.withValues(alpha: .12)), child: Icon(icon, color: _gold)),
           const SizedBox(width: 12),
           Expanded(
-            child: GestureDetector(
-              onTap: () => _openVideo(video['url'] ?? ''),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_videoText(video, 'title'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _goldBright, fontWeight: FontWeight.bold, fontSize: 13)),
-                  if (_videoText(video, 'location').isNotEmpty)
-                    Padding(padding: const EdgeInsets.only(top: 3), child: Text(_videoText(video, 'location'), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11))),
-                ],
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: onOpen,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _goldBright, fontWeight: FontWeight.w900, fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: .58), fontSize: 11)),
+                ]),
               ),
             ),
           ),
-          IconButton(onPressed: () => _removeVideo(video), icon: const Icon(Icons.favorite_rounded, color: Color(0xffff6b81))),
+          IconButton(onPressed: onRemove, tooltip: _tr('open'), icon: const Icon(Icons.favorite_rounded, color: Color(0xffff6b81))),
         ],
       ),
     );
   }
 
-  Widget _chip({required String label, required bool selected, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: selected
-              ? const LinearGradient(colors: [_teal, Color(0xff3ff0a8)])
-              : null,
-          color: selected ? null : _card,
-          border: selected ? null : Border.all(color: Colors.white.withValues(alpha: 0.12)),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: selected ? const Color(0xff06121d) : Colors.white70,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // لیست‌های قدیمی برای سازگاری داخلی؛ رندر اصلی اکنون در _favoritesContent انجام می‌شود.
-  Widget _accommodationList(BuildContext context) => _favoritesContent(context);
-  Widget _videoList(BuildContext context) => _favoritesContent(context);
-
-  // ---------------------------------------------------------
-  // حالت خالی مشترک
-  // ---------------------------------------------------------
-
-  Widget _emptyState({
-    required String message,
-    required String ctaLabel,
-    required VoidCallback onCta,
-  }) {
+  Widget _emptyState() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
-        children: [
-          const Icon(Icons.favorite_rounded, size: 64, color: Color(0xff5a6672)),
-          const SizedBox(height: 18),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: onCta,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _teal,
-              foregroundColor: const Color(0xff06121d),
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            child: Text(ctaLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 55),
+      child: Column(children: [
+        const Icon(Icons.favorite_border_rounded, size: 68, color: Color(0xff667581)),
+        const SizedBox(height: 18),
+        Text(_tr('empty'), textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: .78), fontSize: 14, fontWeight: FontWeight.w700)),
+      ]),
     );
   }
 }
