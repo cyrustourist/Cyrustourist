@@ -36,8 +36,11 @@ class ShowcaseHubBanner extends StatelessWidget {
   // مستطیل‌های نسبی [left, top, width, height] برگرفته از تصویر مرجع.
   static const Rect _accommodation = Rect.fromLTWH(0.025, 0.035, 0.455, 0.42);
   static const Rect _attraction = Rect.fromLTWH(0.515, 0.035, 0.455, 0.42);
-  static const Rect _health = Rect.fromLTWH(0.025, 0.475, 0.455, 0.40);
-  static const Rect _leader = Rect.fromLTWH(0.515, 0.475, 0.455, 0.40);
+  static const Rect _health = Rect.fromLTWH(0.025, 0.455, 0.455, 0.325);
+  static const Rect _leader = Rect.fromLTWH(0.515, 0.455, 0.455, 0.325);
+
+  // نوار پایین تصویر «نمایش فیلم ویژه» → همان کلید ۶ صفحه‌ی اصلی (فیلم‌ها)
+  static const Rect _showcaseStrip = Rect.fromLTWH(0.165, 0.795, 0.675, 0.16);
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +67,7 @@ class ShowcaseHubBanner extends StatelessWidget {
                   _quadrant(w, h, _attraction, ShowcaseKind.attraction),
                   _quadrant(w, h, _health, ShowcaseKind.health),
                   _quadrant(w, h, _leader, ShowcaseKind.leader),
+                  _quadrant(w, h, _showcaseStrip, ShowcaseKind.video, radius: 30),
                 ],
               );
             },
@@ -73,7 +77,7 @@ class ShowcaseHubBanner extends StatelessWidget {
     );
   }
 
-  Widget _quadrant(double w, double h, Rect r, ShowcaseKind kind) {
+  Widget _quadrant(double w, double h, Rect r, ShowcaseKind kind, {double radius = 18}) {
     return Positioned(
       left: r.left * w,
       top: r.top * h,
@@ -81,6 +85,7 @@ class ShowcaseHubBanner extends StatelessWidget {
       height: r.height * h,
       child: _GlassKey(
         selected: kind == highlight,
+        radius: radius,
         onTap: () => onSelect(kind),
       ),
     );
@@ -90,10 +95,11 @@ class ShowcaseHubBanner extends StatelessWidget {
 /// ناحیه‌ی تک: هنگام فشرده‌شدن یک لایه‌ی شیشه‌ایِ نیمه‌شفاف با بلور روی
 /// خودش نشان می‌دهد (حس دکمه‌ی شیشه‌ای) و بعد onTap را صدا می‌زند.
 class _GlassKey extends StatefulWidget {
-  const _GlassKey({required this.onTap, required this.selected});
+  const _GlassKey({required this.onTap, required this.selected, this.radius = 18});
 
   final VoidCallback onTap;
   final bool selected;
+  final double radius;
 
   @override
   State<_GlassKey> createState() => _GlassKeyState();
@@ -113,7 +119,7 @@ class _GlassKeyState extends State<_GlassKey> {
       onTapUp: (_) => _set(false),
       onTap: widget.onTap,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(widget.radius),
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 140),
           opacity: _pressed ? 1 : 0,
@@ -121,7 +127,7 @@ class _GlassKeyState extends State<_GlassKey> {
             filter: ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(widget.radius),
                 border: Border.all(
                   color: const Color(0xffffe39a).withValues(alpha: 0.9),
                   width: 1.6,
