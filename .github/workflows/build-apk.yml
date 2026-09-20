@@ -194,7 +194,7 @@ jobs:
             "assets/images/splash.jpg"
             "assets/images/home-hero.jpg"
             "assets/images/logo-new.jpg"
-            "assets/images/video_menu_header.png"
+            "assets/images/showcase-hub.jpg"
           )
 
           FAILED=0
@@ -351,6 +351,8 @@ jobs:
             --release \
             --target-platform android-arm64 \
             --android-skip-build-dependency-validation \
+            --split-debug-info="$RUNNER_TEMP/debug-symbols" \
+            --obfuscate \
             2>&1 | tee "$LOG_FILE"
 
           BUILD_EXIT=${PIPESTATUS[0]}
@@ -398,6 +400,14 @@ jobs:
           test -s build/app/outputs/flutter-apk/app-release.apk
 
           echo "APK file exists and is not empty."
+
+      - name: Upload debug symbols (for future crash symbolication)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-symbols
+          path: ${{ runner.temp }}/debug-symbols
+          retention-days: 90
 
       - name: Verify APK signature
         shell: bash
