@@ -642,7 +642,13 @@ class _HomePageState extends State<HomePage> {
         Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
         break;
       case 'films':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.video)));
+        // همان مقصد کلید ۶ صفحه‌ی اصلی (فیلم‌های ویژه)
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.video, showHubBanner: true),
+          ),
+        );
         break;
       case 'account':
         _openAccount();
