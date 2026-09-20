@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/language/menu_translations.dart';
 import '../map_place.dart';
+import '../models/showcase_item.dart';
 import '../services/map_place_favorites_service.dart';
 import '../services/video_favorites_service.dart';
 import 'category_explorer_page.dart';
