@@ -254,7 +254,12 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
       _sort != _Sort.recommended || _province != null || _onlyVip;
 
   Future<void> _toggleFav(ShowcaseItem item) async {
-    final added = await _favService.toggleFavorite(item.toFavoriteMap());
+    final fav = item.toFavoriteMap();
+    // اگر این صفحه به‌جای داده‌ی واقعی، فیلم‌های نمونه نشان می‌دهد (لیدر/سلامت
+    // هنوز بدون داده)، مورد را زیر همین بخش ذخیره کن تا در «برگزیده‌ها»
+    // در تب همین بخش (لیدر/سلامت/...) دیده شود.
+    if (item.kind != widget.kind) fav['kind'] = widget.kind.apiName;
+    final added = await _favService.toggleFavorite(fav);
     if (!mounted) return;
     final id = item.videoUrl ?? item.id;
     setState(() {
