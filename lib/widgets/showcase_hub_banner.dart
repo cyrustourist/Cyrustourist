@@ -30,7 +30,7 @@ class ShowcaseHubBanner extends StatelessWidget {
   /// (مثلاً برای نشان دادن این‌که کاربر همین الان در همین بخش است).
   final ShowcaseKind? highlight;
 
-  static const String _asset = 'assets/images/video_menu_header.png';
+  static const String _asset = 'assets/images/showcase-hub.jpg';
   static const double _aspect = 1280 / 853;
 
   // مستطیل‌های نسبی [left, top, width, height] برگرفته از تصویر مرجع.
@@ -54,7 +54,12 @@ class ShowcaseHubBanner extends StatelessWidget {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(_asset, fit: BoxFit.cover),
+                  Image.asset(
+                    _asset,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        const ColoredBox(color: Color(0xff0b2636)),
+                  ),
                   _quadrant(w, h, _accommodation, ShowcaseKind.accommodation),
                   _quadrant(w, h, _attraction, ShowcaseKind.attraction),
                   _quadrant(w, h, _health, ShowcaseKind.health),
