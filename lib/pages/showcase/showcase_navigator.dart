@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/agency.dart';
 import '../../models/leader.dart';
 import '../../models/showcase_item.dart';
+import '../../services/public_link_service.dart';
 import '../agencies/agency_profile_page.dart';
 import '../leaders/leader_profile_page.dart';
 import '../movie_video_page.dart' show MovieSlotData, MovieVideoPage;
@@ -27,7 +28,10 @@ class ShowcaseNavigator {
     Widget page;
 
     if (n is MovieSlotData) {
-      page = MovieVideoPage(data: n);
+      page = MovieVideoPage(
+        data: n,
+        shareType: PublicLinkService.typeForShowcaseKind(item.kind),
+      );
     } else if (n is ResidenceVideoData) {
       page = ResidenceVideoPage(data: n);
     } else if (n is Leader) {
@@ -35,7 +39,10 @@ class ShowcaseNavigator {
     } else if (n is Agency) {
       page = AgencyProfilePage(agency: n);
     } else if (item.kind.isVideoLike && item.aparatHash != null) {
-      page = MovieVideoPage(data: _toMovie(item));
+      page = MovieVideoPage(
+        data: _toMovie(item),
+        shareType: PublicLinkService.typeForShowcaseKind(item.kind),
+      );
     } else if (item.kind == ShowcaseKind.accommodation &&
         item.aparatHash != null) {
       page = ResidenceVideoPage(data: _toResidence(item));
