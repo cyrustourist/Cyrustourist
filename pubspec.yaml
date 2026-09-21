@@ -2,7 +2,7 @@ name: cyrustourist_app3
 description: CyrusTourist base app - splash, home and tourist map.
 publish_to: "none"
 
-version: 5.8.354+6154
+version: 5.8.352+6152
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -22,6 +22,9 @@ dependencies:
   # اشتراک‌گذاری و QR (کلید ۶ و ۸)
   share_plus: ^10.1.4
   qr_flutter: ^4.1.0
+
+  # باز شدن مستقیم لینک‌های عمومی داخل برنامه (Deep Link)
+  app_links: ^6.3.3
 
   firebase_core: ^3.8.0
   firebase_messaging: ^15.1.5
