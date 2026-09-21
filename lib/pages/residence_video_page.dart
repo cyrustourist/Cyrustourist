@@ -8,6 +8,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/app_language.dart';
 import '../main.dart' show SmartMapPage;
+import '../services/public_link_service.dart';
+import '../widgets/share_sheet.dart';
 import 'residence_amenities_page.dart';
 import 'residence_register_page.dart';
 
@@ -685,6 +687,15 @@ class _ResidenceVideoPageState extends State<ResidenceVideoPage> {
                           onTap: () => _openUrl(context, _d.websiteUrl!),
                         ),
                       ),
+                    const SizedBox(height: 14),
+                    // اشتراک‌گذاری: با لمس، برگه‌ی QR / کپی لینک / اشتراک باز می‌شود
+                    ShareButton(
+                      wide: true,
+                      entityType: PublicLinkService.accommodation,
+                      entityId: '${_d.code}',
+                      title: _d.displayName,
+                      label: t('اشتراک‌گذاری', 'Share', 'مشاركة'),
+                    ),
                   ],
                 ),
               ),
