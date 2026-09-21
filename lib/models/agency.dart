@@ -59,9 +59,13 @@ class Agency {
     this.introVideoUrl,
     this.tours = const [],
     this.status = AgencyStatus.active,
+    this.code = '',
   });
 
   final String id;
+
+  /// کد آژانس (مثلاً AGENCY-00007) — فقط نمایش؛ از سیستم مرکزی می‌آید
+  final String code;
   final String name;
   final String city;
   final String services; // مثلاً: تور خارجی، بلیط، اقامتگاه
@@ -86,7 +90,41 @@ class Agency {
 /// هنوز آژانس تأییدشده‌ای ثبت نشده؛ به‌محض تأیید هر آژانس، یک
 /// آیتم Agency دیگر به همین لیست اضافه می‌شود.
 /// -------------------------------------------------------------
-const List<Agency> approvedAgencies = [];
+const List<Agency> approvedAgencies = [sampleAgency];
+
+/// شماره‌ی آژانس در فهرست تأییدشده‌ها (از ۱)؛ ۰ یعنی در فهرست نیست.
+/// همین عدد در لینک عمومی (cyrustourist.ir/agency/<عدد>) و «نمایش» استفاده می‌شود.
+int agencyCodeOf(Agency agency) {
+  final i = approvedAgencies.indexWhere((a) => a.id == agency.id);
+  return i < 0 ? 0 : i + 1;
+}
+
+/// آژانس آزمایشی (مقادیر نمونه) — تا وقتی آژانس واقعی تأیید نشده، کلید ۸
+/// خالی نماند. با تأیید اولین آژانس واقعی، این آیتم را از فهرست بردارید.
+const Agency sampleAgency = Agency(
+  id: 'AGENCY-00007',
+  code: 'AGENCY-00007',
+  name: 'آژانس پارس سفر (نمونه)',
+  city: 'مشهد',
+  services: 'تور داخلی و خارجی، بلیط، اقامتگاه، ترانسفر',
+  rating: 4.8,
+  reviewCount: 0,
+  experienceText: '۱۰ سال سابقه فعالیت',
+  isVerifiedPartner: true,
+  isLicensed: true,
+  bio: 'آژانس نمونه برای نمایش قالب کامل پروفایل آژانس در سایروس توریست؛ '
+      'برگزاری تورهای گروهی و اختصاصی، رزرو اقامت و بلیط.',
+  regions: ['مشهد', 'خراسان رضوی', 'مقاصد گردشگری ایران'],
+  phone: '09153448818',
+  website: 'https://www.cyrustourist.com',
+  introVideoUrl: 'https://www.aparat.com/v/w8lOg',
+  tours: [
+    AgencyTour(title: 'تور یک‌روزه قنات قصبه گناباد'),
+    AgencyTour(title: 'چشمه گراب و طبیعت‌گردی خراسان رضوی'),
+    AgencyTour(title: 'طبیعت‌گردی آبشار شیرآباد گلستان'),
+  ],
+  status: AgencyStatus.active,
+);
 
 /// نمونه‌ی نمایشی پروفایل آژانس — فقط برای صفحه معرفی امکانات پنل
 /// (پیش از ثبت‌نام). این یک آژانس واقعی نیست.
