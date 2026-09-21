@@ -9,6 +9,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../core/language/app_language.dart';
 import '../services/location_service.dart';
 import 'movie_amenities_page.dart';
+import '../services/public_link_service.dart';
+import '../widgets/share_sheet.dart';
 
 // ===================== رنگ‌ها — هماهنگ با residence_video_page.dart =====================
 
@@ -1105,6 +1107,14 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            ShareIconButton(
+              entityType: PublicLinkService.video,
+              entityId: '${_d.code}',
+              title: _d.displayName,
+              color: Colors.white,
+            ),
+          ],
         ),
         body: SafeArea(
           top: false,
@@ -1124,6 +1134,14 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _titleBlock(),
+                    const SizedBox(height: 16),
+
+                    // اشتراک‌گذاری: اشتراک، کپی لینک، QR، باز کردن صفحه، اشتراک QR
+                    ShareCard(
+                      entityType: PublicLinkService.video,
+                      entityId: '${_d.code}',
+                      title: _d.displayName,
+                    ),
                     const SizedBox(height: 16),
 
                     // آب‌وهوا — بر اساس موقعیت فعلی کاربر
