@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/network/api_service.dart';
+import 'agency.dart';
 import 'leader.dart';
 
 /// ===============================================================
@@ -109,6 +110,7 @@ class Tour {
     this.services = const [],
     this.aparatHash,
     this.leader,
+    this.agency,
     this.agencyName,
     this.agencyCode,
     this.agencyCity,
@@ -146,6 +148,9 @@ class Tour {
 
   /// ارائه‌دهندگان: اول لیدر، بعد آژانس
   final Leader? leader;
+
+  /// آژانس کامل (نمونه‌ی داخلی)؛ برای تورهای API فقط نام/کد/شهر می‌آید
+  final Agency? agency;
   final String? agencyName;
   final String? agencyCode;
   final String? agencyCity;
@@ -238,10 +243,7 @@ const List<Tour> sampleTours = [
     services: ['حمل‌ونقل', 'لیدر', 'ناهار', 'بیمه'],
     aparatHash: 't346o2k',
     leader: sampleLeader,
-    agencyName: 'آژانس پارس سفر (نمونه)',
-    agencyCode: 'AGENCY-00007',
-    agencyCity: 'مشهد',
-    agencyRating: 4.8,
+    agency: sampleAgency,
     featured: true,
     vip: true,
     reservationEnabled: true,
@@ -267,10 +269,7 @@ const List<Tour> sampleTours = [
     services: ['حمل‌ونقل', 'لیدر', 'ناهار'],
     aparatHash: 'xvo5q9c',
     leader: sampleLeader,
-    agencyName: 'آژانس پارس سفر (نمونه)',
-    agencyCode: 'AGENCY-00007',
-    agencyCity: 'مشهد',
-    agencyRating: 4.8,
+    agency: sampleAgency,
     featured: true,
     reservationEnabled: true,
   ),
@@ -312,10 +311,7 @@ const List<Tour> sampleTours = [
     rules: 'لغو تا ۷۲ ساعت قبل بدون جریمه',
     services: ['حمل‌ونقل', 'اقامت', 'صبحانه و شام', 'لیدر'],
     aparatHash: 'w8lOg',
-    agencyName: 'آژانس پارس سفر (نمونه)',
-    agencyCode: 'AGENCY-00007',
-    agencyCity: 'مشهد',
-    agencyRating: 4.8,
+    agency: sampleAgency,
     reservationEnabled: true,
   ),
 ];
