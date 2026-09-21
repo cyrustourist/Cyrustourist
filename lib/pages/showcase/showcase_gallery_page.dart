@@ -16,6 +16,8 @@ import '../../widgets/showcase_hub_banner.dart';
 import 'showcase_cover.dart';
 import 'showcase_kinds.dart';
 import 'showcase_navigator.dart';
+import '../../services/public_link_service.dart';
+import '../../widgets/share_sheet.dart';
 
 const Color _bg = Color(0xff06121d);
 const Color _card = Color(0xff0b2636);
@@ -691,6 +693,12 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
       isFav: _favIds.contains(favId),
       onTap: () => ShowcaseNavigator.open(context, item),
       onFav: () => _toggleFav(item),
+      onShare: () => ShareSheet.show(
+        context,
+        entityType: PublicLinkService.typeForShowcaseKind(item.kind),
+        entityId: '${item.code}',
+        title: item.title(_lang),
+      ),
     );
   }
 
@@ -845,6 +853,7 @@ class _ShowcaseCard extends StatelessWidget {
     required this.isFav,
     required this.onTap,
     required this.onFav,
+    required this.onShare,
   });
 
   final ShowcaseItem item;
@@ -855,6 +864,7 @@ class _ShowcaseCard extends StatelessWidget {
   final bool isFav;
   final VoidCallback onTap;
   final VoidCallback onFav;
+  final VoidCallback onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -946,6 +956,23 @@ class _ShowcaseCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                    PositionedDirectional(
+                      bottom: 5,
+                      start: 5,
+                      child: GestureDetector(
+                        onTap: onShare,
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black.withValues(alpha: 0.5),
+                            border: Border.all(color: _gold.withValues(alpha: 0.7)),
+                          ),
+                          child: const Icon(Icons.ios_share_rounded, color: Colors.white, size: 16),
+                        ),
+                      ),
+                    ),
                     if (item.tier != ShowcaseTier.normal)
                       PositionedDirectional(
                         bottom: 6,
