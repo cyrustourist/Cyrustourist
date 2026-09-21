@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../pages/announcements_page.dart';
 import '../../pages/residence_register_page.dart';
 import '../../services/notification_service.dart';
+import '../../services/public_link_service.dart';
+import '../share_sheet.dart';
 
 /// کلید شماره ۸ — حساب کاربری سایروس توریست
 ///
@@ -30,6 +32,7 @@ class CyrusAccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final texts = _AccountTranslations.get(languageCode);
+    final invite = _InviteTexts.of(languageCode);
 
     return Directionality(
       textDirection: _isRtl
@@ -83,6 +86,13 @@ class CyrusAccountScreen extends StatelessWidget {
                       iconColor: const Color(0xffffd36a),
                       actionId: 'announcements',
                       showNotificationBadge: true,
+                    ),
+                    _AccountItem(
+                      icon: Icons.group_add_rounded,
+                      title: invite.title,
+                      subtitle: invite.subtitle,
+                      iconColor: const Color(0xff29e0ad),
+                      actionId: 'invite',
                     ),
                     _AccountItem(
                       icon: Icons.person_rounded,
@@ -441,6 +451,11 @@ class CyrusAccountScreen extends StatelessWidget {
     // residence_register_page.dart (همان کلیدی که بالای «نمایش
     // فیلم‌ها»، کلید ۴، قرار دارد). بقیه‌ی گزینه‌های حساب کاربری
     // در مرحله نهایی اتصال کلید ۸ انجام خواهد شد.
+    if (item.actionId == 'invite') {
+      _openInvite(context);
+      return;
+    }
+
     if (item.actionId == 'registration') {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -449,6 +464,19 @@ class CyrusAccountScreen extends StatelessWidget {
       );
       return;
     }
+  }
+
+  /// «معرفی به دوستان»: برگه‌ی اشتراک با QR لینک کافه‌بازار؛ دکمه‌ی
+  /// «اشتراک‌گذاری» متن کامل را به تلگرام، واتساپ، اینستاگرام و ... می‌فرستد.
+  void _openInvite(BuildContext context) {
+    final t = _InviteTexts.of(languageCode);
+    ShareSheet.showLink(
+      context,
+      url: PublicLinkService.bazaarUrl,
+      title: t.appName,
+      heading: t.heading,
+      shareText: t.message,
+    );
   }
 
   void _handleLogout(
@@ -1581,4 +1609,60 @@ class _AccountTranslations {
     futureMessage:
         'Questa funzione sarà disponibile nei prossimi aggiornamenti di Cyrus Tourist. L\u2019infrastruttura dell\u2019account è stata progettata fin dall\u2019inizio per supportare le future comunicazioni sociali e turistiche.',
   );
+}
+
+/// متن‌های «معرفی به دوستان» (زبان‌های دیگر فعلاً انگلیسی نمایش داده می‌شوند).
+class _InviteTexts {
+  const _InviteTexts({
+    required this.title,
+    required this.subtitle,
+    required this.heading,
+    required this.appName,
+    required this.message,
+  });
+
+  final String title;
+  final String subtitle;
+  final String heading;
+  final String appName;
+  final String message;
+
+  static String get _links =>
+      '${PublicLinkService.bazaarUrl}\n\n'
+      '${PublicLinkService.directDownloadUrl}';
+
+  static _InviteTexts of(String lang) {
+    switch (lang) {
+      case 'fa':
+        return _InviteTexts(
+          title: 'معرفی به دوستان',
+          subtitle: 'برنامه را با لینک کافه‌بازار در شبکه‌های اجتماعی به اشتراک بگذارید',
+          heading: 'معرفی سایروس توریست',
+          appName: 'سایروس توریست',
+          message: '🌍 سایروس توریست — همراه سفرهای شما\n'
+              'فیلم‌های گردشگری، اقامتگاه، جاذبه‌ها، تور و لیدر در یک برنامه.\n\n'
+              'دانلود از کافه‌بازار و سایر روش‌های نصب:\n$_links',
+        );
+      case 'ar':
+        return _InviteTexts(
+          title: 'دعوة الأصدقاء',
+          subtitle: 'شارك التطبيق عبر رابط كافه بازار على وسائل التواصل',
+          heading: 'التعريف بسايروس توريست',
+          appName: 'سايروس توريست',
+          message: '🌍 سايروس توريست — رفيق رحلاتك\n'
+              'أفلام سياحية وإقامات ومعالم وجولات ومرشدون في تطبيق واحد.\n\n'
+              'التحميل من كافه بازار وطرق التثبيت الأخرى:\n$_links',
+        );
+      default:
+        return _InviteTexts(
+          title: 'Invite friends',
+          subtitle: 'Share the app on social media with the Cafe Bazaar link',
+          heading: 'Invite friends to Cyrus Tourist',
+          appName: 'Cyrus Tourist',
+          message: '🌍 Cyrus Tourist — your travel companion\n'
+              'Travel videos, stays, attractions, tours and leaders in one app.\n\n'
+              'Download from Cafe Bazaar and other install options:\n$_links',
+        );
+    }
+  }
 }
