@@ -5,6 +5,7 @@ import '../../models/tour.dart';
 import '../../services/public_link_service.dart';
 import '../../widgets/aparat_embed_player.dart';
 import '../../widgets/share_sheet.dart';
+import '../agencies/agency_profile_page.dart';
 import '../leaders/leader_profile_page.dart';
 
 const Color _bg = Color(0xff06121d);
@@ -69,7 +70,7 @@ class TourDetailPage extends StatelessWidget {
                 const SizedBox(height: 14),
                 _videoCard(),
               ],
-              if (t.leader != null || (t.agencyName ?? '').isNotEmpty) ...[
+              if (t.leader != null || t.agency != null || (t.agencyName ?? '').isNotEmpty) ...[
                 const SizedBox(height: 14),
                 _providers(context),
               ],
@@ -249,7 +250,22 @@ class TourDetailPage extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => LeaderProfilePage(leader: leader)),
               ),
             ),
-          if (agency != null && agency.isNotEmpty)
+          if (t.agency != null)
+            _providerTile(
+              icon: '🏢',
+              name: t.agency!.name,
+              badge: 'آژانس',
+              sub: [
+                if (t.agency!.code.isNotEmpty) t.agency!.code,
+                if (t.agency!.city.isNotEmpty) t.agency!.city,
+                if (t.agency!.rating > 0) '⭐ ${t.agency!.rating.toStringAsFixed(1)}',
+              ].join(' · '),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AgencyProfilePage(agency: t.agency!)),
+              ),
+            )
+          else if (agency != null && agency.isNotEmpty)
             _providerTile(
               icon: '🏢',
               name: agency,
