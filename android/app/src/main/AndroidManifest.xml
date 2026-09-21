@@ -40,6 +40,31 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+                App Link: لینک‌های عمومی https://cyrustourist.ir/<نوع>/<شناسه>
+                مستقیم در برنامه باز می‌شوند (نیاز به فایل assetlinks.json روی سایت
+                برای باز شدن بدون پرسش در اندروید ۱۲ به بالا).
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/video/" />
+                <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/tour/" />
+                <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/guide/" />
+                <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/agency/" />
+                <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/accommodation/" />
+                <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/attraction/" />
+                <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/health/" />
+            </intent-filter>
+
+            <!-- مسیردهی لینک‌ها را پکیج app_links انجام می‌دهد، نه Navigator پیش‌فرض -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
+
         </activity>
 
         <!-- Flutter embedding -->
