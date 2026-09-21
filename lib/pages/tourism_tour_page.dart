@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/language/menu_translations.dart';
 import '../models/showcase_item.dart';
 import 'showcase/showcase_gallery_page.dart';
 import 'agencies/agency_registration_intro_page.dart';
@@ -38,25 +39,23 @@ class TourismTourPage extends StatelessWidget {
 
   final String languageCode;
 
-  bool get _isRtl => languageCode == 'fa' || languageCode == 'ar';
-
-  String _tr(String fa, [String? en]) {
-    if (!_isRtl && en != null) return en;
-    return fa;
+  bool get _isRtl {
+    final match = kMenuLanguages.where((l) => l.code == languageCode);
+    if (match.isEmpty) return true; // پیش‌فرض فارسی/راست‌به‌چپ
+    return match.first.isRtl;
   }
 
   // ---------------------------------------------------------------
   // گزینه‌های تور گردشگری — به ترتیب اضافه می‌شوند.
   // هر گزینه جدید فقط یک _TourOption دیگر به این لیست است.
+  // عنوان/توضیح هر گزینه از MenuTranslations خوانده می‌شود تا هر ۱۰
+  // زبان برنامه پوشش داده شود (قبلاً فقط فارسی/انگلیسی بود).
   // ---------------------------------------------------------------
   List<_TourOption> _options(BuildContext context) {
     return [
       _TourOption(
-        title: _tr('تورهای گردشگری', 'Tourism Tours'),
-        subtitle: _tr(
-          '۲۵ دسته‌ی تور در ۵ گروه — جست‌وجو، مشاهده‌ی فیلم، اشتراک‌گذاری و رزرو',
-          '25 tour categories in 5 groups — search, watch videos, share and book',
-        ),
+        title: MenuTranslations.tourOptionTitle(languageCode, 1),
+        subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 1),
         icon: Icons.luggage_rounded,
         onTap: () => Navigator.push(
           context,
@@ -64,11 +63,8 @@ class TourismTourPage extends StatelessWidget {
         ),
       ),
       _TourOption(
-        title: _tr('لیدرها', 'Tour Leaders'),
-        subtitle: _tr(
-          'راهنماهای گردشگری تأییدشده — جست‌وجو، مشاهده پروفایل یا ثبت‌نام',
-          'Verified tour leaders — search, view profiles or register',
-        ),
+        title: MenuTranslations.tourOptionTitle(languageCode, 2),
+        subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 2),
         icon: Icons.groups_2_rounded,
         onTap: () => Navigator.push(
           context,
@@ -78,11 +74,8 @@ class TourismTourPage extends StatelessWidget {
         ),
       ),
       _TourOption(
-        title: _tr('جعبه ابزار', 'Toolbox'),
-        subtitle: _tr(
-          'ابزارهای سفر — آب‌وهوا، تبدیل ارز، ساعت جهانی و موارد اضطراری',
-          'Travel tools — weather, currency, world clock and emergency info',
-        ),
+        title: MenuTranslations.tourOptionTitle(languageCode, 3),
+        subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 3),
         icon: Icons.build_rounded,
         onTap: () => Navigator.push(
           context,
@@ -92,11 +85,8 @@ class TourismTourPage extends StatelessWidget {
         ),
       ),
       _TourOption(
-        title: _tr('آژانس‌های مسافرتی و گردشگری', 'Travel Agencies'),
-        subtitle: _tr(
-          'آژانس‌های تأییدشده — جست‌وجو، مشاهده پروفایل یا ثبت‌نام',
-          'Verified travel agencies — search, view profiles or register',
-        ),
+        title: MenuTranslations.tourOptionTitle(languageCode, 4),
+        subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 4),
         icon: Icons.apartment_rounded,
         onTap: () => Navigator.push(
           context,
@@ -106,11 +96,8 @@ class TourismTourPage extends StatelessWidget {
         ),
       ),
       _TourOption(
-        title: _tr('ثبت‌نام لیدرها', 'Leader Registration'),
-        subtitle: _tr(
-          'ثبت‌نام به‌عنوان لیدر — همراه با تماس مستقیم با پشتیبانی',
-          'Register as a tour leader — with direct contact to support',
-        ),
+        title: MenuTranslations.tourOptionTitle(languageCode, 5),
+        subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 5),
         icon: Icons.how_to_reg_rounded,
         onTap: () => Navigator.push(
           context,
@@ -118,11 +105,8 @@ class TourismTourPage extends StatelessWidget {
         ),
       ),
       _TourOption(
-        title: _tr('ثبت‌نام آژانس مسافرتی', 'Travel Agency Registration'),
-        subtitle: _tr(
-          'ثبت‌نام آژانس مسافرتی — همراه با تماس مستقیم با پشتیبانی',
-          'Register your travel agency — with direct contact to support',
-        ),
+        title: MenuTranslations.tourOptionTitle(languageCode, 6),
+        subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 6),
         icon: Icons.business_center_rounded,
         onTap: () => Navigator.push(
           context,
@@ -147,7 +131,7 @@ class TourismTourPage extends StatelessWidget {
           centerTitle: true,
           iconTheme: const IconThemeData(color: Color(0xffffd76a)),
           title: Text(
-            _tr('تور گردشگری', 'Tourism Tour'),
+            MenuTranslations.title(languageCode, 8),
             style: const TextStyle(
               color: Color(0xffffd76a),
               fontSize: 20,
@@ -184,10 +168,7 @@ class TourismTourPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              _tr(
-                'گزینه‌های تور گردشگری به‌زودی اضافه می‌شوند.',
-                'Tourism tour options coming soon.',
-              ),
+              MenuTranslations.tourEmptyState(languageCode),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xfffff4be),
