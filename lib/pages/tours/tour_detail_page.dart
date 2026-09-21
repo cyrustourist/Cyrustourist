@@ -83,11 +83,11 @@ class TourDetailPage extends StatelessWidget {
               ],
               if (t.shareEnabled) ...[
                 const SizedBox(height: 14),
-                ShareCard(
+                ShareButton(
+                  wide: true,
                   entityType: PublicLinkService.tour,
                   entityId: '${t.id}',
                   title: t.title,
-                  heading: 'اشتراک‌گذاری این تور',
                 ),
               ],
             ],
