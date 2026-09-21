@@ -1083,9 +1083,16 @@ Widget _sheetActionButton({
 // ============================================================
 
 class MovieVideoPage extends StatefulWidget {
-  const MovieVideoPage({super.key, required this.data});
+  const MovieVideoPage({
+    super.key,
+    required this.data,
+    this.shareType = PublicLinkService.video,
+  });
 
   final MovieSlotData data;
+
+  /// نوع موجودیت برای لینک اشتراک (video / attraction / health ...)
+  final String shareType;
 
   @override
   State<MovieVideoPage> createState() => _MovieVideoPageState();
@@ -1109,7 +1116,7 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             ShareIconButton(
-              entityType: PublicLinkService.video,
+              entityType: widget.shareType,
               entityId: '${_d.code}',
               title: _d.displayName,
               color: Colors.white,
@@ -1136,13 +1143,6 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
                     _titleBlock(),
                     const SizedBox(height: 16),
 
-                    // اشتراک‌گذاری: اشتراک، کپی لینک، QR، باز کردن صفحه، اشتراک QR
-                    ShareCard(
-                      entityType: PublicLinkService.video,
-                      entityId: '${_d.code}',
-                      title: _d.displayName,
-                    ),
-                    const SizedBox(height: 16),
 
                     // آب‌وهوا — بر اساس موقعیت فعلی کاربر
                     const _MovieWeatherButton(),
@@ -1154,6 +1154,12 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
 
                     if (_d.displayDescription.trim().isNotEmpty) ...[
                       _descriptionBlock(),
+                      const SizedBox(height: 22),
+                    ] else ...[
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: _shareButton(),
+                      ),
                       const SizedBox(height: 22),
                     ],
 
@@ -1293,6 +1299,15 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
     );
   }
 
+  Widget _shareButton() {
+    return ShareButton(
+      entityType: widget.shareType,
+      entityId: '${_d.code}',
+      title: _d.displayName,
+      label: t('اشتراک‌گذاری', 'Share', 'مشاركة'),
+    );
+  }
+
   Widget _descriptionBlock() {
     final full = _d.displayDescription;
     final isLong = full.length > 140;
@@ -1300,12 +1315,18 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          t('چکیده', 'Summary', 'ملخص'),
-          style: const TextStyle(
-              color: _goldBright, fontWeight: FontWeight.bold, fontSize: 14),
+        Row(
+          children: [
+            Text(
+              t('چکیده', 'Summary', 'ملخص'),
+              style: const TextStyle(
+                  color: _goldBright, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const Spacer(),
+            _shareButton(),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Text(
           full,
           maxLines: 3,
