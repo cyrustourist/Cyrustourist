@@ -30,21 +30,42 @@ class ShareSheet {
     required String title,
     bool autoShareQr = false,
   }) {
+    return showLink(
+      context,
+      url: PublicLinkService.entityUrl(entityType, entityId),
+      title: title,
+      autoShareQr: autoShareQr,
+    );
+  }
+
+  /// برگه‌ی اشتراک برای یک لینک دلخواه (مثلاً «معرفی به دوستان»).
+  /// اگر [shareText] داده شود، دکمه‌ی «اشتراک‌گذاری» همان متن کامل را
+  /// (با لینک داخلش) به شبکه‌های اجتماعی می‌فرستد.
+  static Future<void> showLink(
+    BuildContext context, {
+    required String url,
+    required String title,
+    String? shareText,
+    String heading = 'اشتراک‌گذاری',
+    bool autoShareQr = false,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => _ShareSheetBody(
-        url: PublicLinkService.entityUrl(entityType, entityId),
+        url: url,
         title: title,
+        shareText: shareText,
+        heading: heading,
         autoShareQr: autoShareQr,
       ),
     );
   }
 
-  static Future<void> shareLink(String title, String url) async {
+  static Future<void> shareLink(String title, String url, {String? text}) async {
     try {
-      await Share.share('$title\n$url', subject: title);
+      await Share.share(text ?? '$title\n$url', subject: title);
     } catch (_) {}
   }
 
@@ -78,11 +99,15 @@ class _ShareSheetBody extends StatefulWidget {
     required this.url,
     required this.title,
     required this.autoShareQr,
+    this.shareText,
+    this.heading = 'اشتراک‌گذاری',
   });
 
   final String url;
   final String title;
   final bool autoShareQr;
+  final String? shareText;
+  final String heading;
 
   @override
   State<_ShareSheetBody> createState() => _ShareSheetBodyState();
@@ -117,10 +142,10 @@ class _ShareSheetBodyState extends State<_ShareSheetBody> {
             name: 'cyrustourist-qr.png',
           ),
         ],
-        text: '${widget.title}\n${widget.url}',
+        text: widget.shareText ?? '${widget.title}\n${widget.url}',
       );
     } catch (_) {
-      await ShareSheet.shareLink(widget.title, widget.url);
+      await ShareSheet.shareLink(widget.title, widget.url, text: widget.shareText);
     }
   }
 
@@ -148,9 +173,9 @@ class _ShareSheetBodyState extends State<_ShareSheetBody> {
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'اشتراک‌گذاری',
-                style: TextStyle(color: _goldBright, fontSize: 16, fontWeight: FontWeight.w900),
+              Text(
+                widget.heading,
+                style: const TextStyle(color: _goldBright, fontSize: 16, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 4),
               Text(
@@ -184,11 +209,40 @@ class _ShareSheetBodyState extends State<_ShareSheetBody> {
                 ),
               ),
               const SizedBox(height: 14),
-              ShareActionsWrap(
-                title: widget.title,
-                url: widget.url,
-                onShareQr: _shareQr,
-                showQrButton: false,
+              Row(
+                children: [
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.ios_share_rounded,
+                      label: 'اشتراک‌گذاری',
+                      onTap: () => ShareSheet.shareLink(widget.title, widget.url, text: widget.shareText),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.link_rounded,
+                      label: 'کپی لینک',
+                      onTap: () => ShareSheet.copyLink(context, widget.url),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.qr_code_scanner_rounded,
+                      label: 'اشتراک QR',
+                      onTap: _shareQr,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.open_in_new_rounded,
+                      label: 'باز کردن صفحه',
+                      onTap: () => ShareSheet.openPage(widget.url),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -198,131 +252,113 @@ class _ShareSheetBodyState extends State<_ShareSheetBody> {
   }
 }
 
-/// دکمه‌های اشتراک (برای صفحه‌ی جزئیات و برگه‌ی اشتراک).
-class ShareActionsWrap extends StatelessWidget {
-  const ShareActionsWrap({
-    super.key,
-    required this.title,
-    required this.url,
-    this.onQr,
-    this.onShareQr,
-    this.showQrButton = true,
-  });
+/// کاشی مرتب: آیکون بالا، نام پایین
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({required this.icon, required this.label, required this.onTap});
 
-  final String title;
-  final String url;
-  final VoidCallback? onQr;
-  final VoidCallback? onShareQr;
-  final bool showQrButton;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final items = <(IconData, String, VoidCallback)>[
-      (Icons.ios_share_rounded, 'اشتراک‌گذاری', () => ShareSheet.shareLink(title, url)),
-      (Icons.link_rounded, 'کپی لینک', () => ShareSheet.copyLink(context, url)),
-      if (showQrButton && onQr != null) (Icons.qr_code_2_rounded, 'QR Code', onQr!),
-      (Icons.open_in_new_rounded, 'باز کردن صفحه', () => ShareSheet.openPage(url)),
-      if (onShareQr != null) (Icons.qr_code_scanner_rounded, 'اشتراک QR', onShareQr!),
-    ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: items
-          .map(
-            (e) => InkWell(
-              borderRadius: BorderRadius.circular(15),
-              onTap: e.$3,
-              child: Container(
-                width: 104,
-                height: 52,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  color: const Color(0xff0d2537),
-                  border: Border.all(color: _gold.withValues(alpha: 0.6), width: 1.2),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(e.$1, color: _gold, size: 18),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        e.$2,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: _goldBright, fontSize: 11.5, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ],
-                ),
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: const Color(0xff0d2537),
+          border: Border.all(color: _gold.withValues(alpha: 0.45), width: 1.1),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _gold.withValues(alpha: 0.14),
               ),
+              child: Icon(icon, color: _gold, size: 20),
             ),
-          )
-          .toList(),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _goldBright, fontSize: 10.5, fontWeight: FontWeight.w800, height: 1.4),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-/// کارت «اشتراک‌گذاری» آماده برای هر صفحه‌ی جزئیات (تور، فیلم ویژه، ...)
-/// با ۵ گزینه‌ی دستورکار: اشتراک‌گذاری، کپی لینک، QR Code، باز کردن صفحه، اشتراک QR.
-class ShareCard extends StatelessWidget {
-  const ShareCard({
+/// یک کلید اشتراک‌گذاری زیبا؛ با لمس آن برگه‌ی گزینه‌ها (QR، کپی لینک،
+/// اشتراک، باز کردن صفحه، اشتراک QR) باز می‌شود.
+///  - compact: کلید کوچک (مثلاً بالای متن توضیحات، سمت چپ)
+///  - wide: کلید تمام‌عرض (مثلاً بعد از کلید وب‌سایت)
+class ShareButton extends StatelessWidget {
+  const ShareButton({
     super.key,
     required this.entityType,
     required this.entityId,
     required this.title,
-    this.heading = 'اشتراک‌گذاری',
+    this.wide = false,
+    this.label = 'اشتراک‌گذاری',
   });
 
   final String entityType;
   final String entityId;
   final String title;
-  final String heading;
+  final bool wide;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final url = PublicLinkService.entityUrl(entityType, entityId);
-    return Container(
-      padding: const EdgeInsets.all(14),
+    final child = Container(
+      height: wide ? 52 : 38,
+      padding: EdgeInsets.symmetric(horizontal: wide ? 18 : 14),
       decoration: BoxDecoration(
-        color: const Color(0xff0b2636),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _gold.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(wide ? 16 : 20),
+        gradient: const LinearGradient(colors: [_gold, _goldBright]),
+        boxShadow: [
+          BoxShadow(color: _gold.withValues(alpha: 0.28), blurRadius: 12, offset: const Offset(0, 3)),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: wide ? MainAxisSize.max : MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.ios_share_rounded, color: _gold, size: 17),
-              const SizedBox(width: 6),
-              Text(
-                heading,
-                style: const TextStyle(color: _goldBright, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ShareActionsWrap(
-            title: title,
-            url: url,
-            onQr: () => ShareSheet.show(
-              context,
-              entityType: entityType,
-              entityId: entityId,
-              title: title,
-            ),
-            onShareQr: () => ShareSheet.show(
-              context,
-              entityType: entityType,
-              entityId: entityId,
-              title: title,
-              autoShareQr: true,
+          Icon(Icons.ios_share_rounded, color: const Color(0xff3a2a00), size: wide ? 21 : 17),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: const Color(0xff3a2a00),
+              fontSize: wide ? 14 : 12.5,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
+      ),
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(wide ? 16 : 20),
+        onTap: () => ShareSheet.show(
+          context,
+          entityType: entityType,
+          entityId: entityId,
+          title: title,
+        ),
+        child: child,
       ),
     );
   }
