@@ -3,6 +3,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../models/leader.dart';
+import '../../services/public_link_service.dart';
+import '../../widgets/share_sheet.dart';
 import '../../services/video_favorites_service.dart';
 
 const Color _bg = Color(0xff06121d);
@@ -129,13 +131,45 @@ class _LeaderProfilePageState extends State<LeaderProfilePage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
               Center(
-                child: CircleAvatar(
-                  radius: 52,
-                  backgroundColor: _gold.withValues(alpha: 0.15),
-                  backgroundImage: leader.photoAsset != null ? AssetImage(leader.photoAsset!) : null,
-                  child: leader.photoAsset == null
-                      ? const Icon(Icons.person, color: _gold, size: 48)
-                      : null,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 52,
+                      backgroundColor: _gold.withValues(alpha: 0.15),
+                      backgroundImage: leader.photoAsset != null ? AssetImage(leader.photoAsset!) : null,
+                      child: leader.photoAsset == null
+                          ? const Icon(Icons.person, color: _gold, size: 48)
+                          : null,
+                    ),
+                    // آیکون اشتراک‌گذاری کنار عکس پروفایل → برگه‌ی گزینه‌ها
+                    if (_canFav)
+                      Positioned(
+                        bottom: -2,
+                        left: -6,
+                        child: GestureDetector(
+                          onTap: () => ShareSheet.show(
+                            context,
+                            entityType: PublicLinkService.guide,
+                            entityId: '$_code',
+                            title: leader.name,
+                          ),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(colors: [_gold, _goldBright]),
+                              border: Border.all(color: _bg, width: 2.5),
+                              boxShadow: [
+                                BoxShadow(color: _gold.withValues(alpha: 0.35), blurRadius: 10),
+                              ],
+                            ),
+                            child: const Icon(Icons.ios_share_rounded, color: Color(0xff3a2a00), size: 19),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
