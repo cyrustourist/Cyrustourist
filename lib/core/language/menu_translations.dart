@@ -349,4 +349,194 @@ class MenuTranslations {
       'it': 'Tour turistico',
     },
   };
+
+  // ==========================================================
+  // کلید ۸ — گزینه‌های داخل صفحه «تور گردشگری» (۱۰ زبان)
+  // ==========================================================
+  //
+  // عنوان و توضیح هر گزینه‌ی لیست TourismTourPage. قبلاً این متن‌ها
+  // فقط فارسی/انگلیسی بودند (تابع _tr داخل خود صفحه)؛ اکنون از همین
+  // جدول مرکزی و هر ۱۰ زبان برنامه خوانده می‌شوند.
+
+  static String tourOptionTitle(String languageCode, int index) {
+    final table = _tourOptionTitles[index];
+    if (table == null) return '';
+    final code = languageCode.toLowerCase().trim();
+    return table[code] ?? table['fa'] ?? '';
+  }
+
+  static String tourOptionSubtitle(String languageCode, int index) {
+    final table = _tourOptionSubtitles[index];
+    if (table == null) return '';
+    final code = languageCode.toLowerCase().trim();
+    return table[code] ?? table['fa'] ?? '';
+  }
+
+  static String tourEmptyState(String languageCode) {
+    final code = languageCode.toLowerCase().trim();
+    return _tourEmptyState[code] ?? _tourEmptyState['fa']!;
+  }
+
+  static const Map<int, Map<String, String>> _tourOptionTitles = {
+    1: {
+      'fa': 'تورهای گردشگری',
+      'en': 'Tourism Tours',
+      'ar': 'جولات سياحية',
+      'tr': 'Turizm Turları',
+      'ru': 'Туристические туры',
+      'fr': 'Circuits touristiques',
+      'de': 'Touristische Touren',
+      'es': 'Tours turísticos',
+      'zh': '旅游团',
+      'it': 'Tour turistici',
+    },
+    2: {
+      'fa': 'لیدرها',
+      'en': 'Tour Leaders',
+      'ar': 'المرشدون',
+      'tr': 'Tur Liderleri',
+      'ru': 'Лидеры туров',
+      'fr': 'Guides touristiques',
+      'de': 'Tourleiter',
+      'es': 'Guías turísticos',
+      'zh': '领队',
+      'it': 'Guide turistiche',
+    },
+    3: {
+      'fa': 'جعبه ابزار',
+      'en': 'Toolbox',
+      'ar': 'صندوق الأدوات',
+      'tr': 'Araç Kutusu',
+      'ru': 'Набор инструментов',
+      'fr': 'Boîte à outils',
+      'de': 'Werkzeugkasten',
+      'es': 'Caja de herramientas',
+      'zh': '工具箱',
+      'it': 'Cassetta degli attrezzi',
+    },
+    4: {
+      'fa': 'آژانس‌های مسافرتی و گردشگری',
+      'en': 'Travel Agencies',
+      'ar': 'وكالات السفر والسياحة',
+      'tr': 'Seyahat ve Turizm Acenteleri',
+      'ru': 'Туристические агентства',
+      'fr': 'Agences de voyage et de tourisme',
+      'de': 'Reise- und Touristikagenturen',
+      'es': 'Agencias de viajes y turismo',
+      'zh': '旅行社与旅游代理',
+      'it': 'Agenzie di viaggio e turismo',
+    },
+    5: {
+      'fa': 'ثبت‌نام لیدرها',
+      'en': 'Leader Registration',
+      'ar': 'تسجيل المرشدين',
+      'tr': 'Lider Kaydı',
+      'ru': 'Регистрация гидов',
+      'fr': 'Inscription des guides',
+      'de': 'Leiterregistrierung',
+      'es': 'Registro de guías',
+      'zh': '领队注册',
+      'it': 'Registrazione guide',
+    },
+    6: {
+      'fa': 'ثبت‌نام آژانس مسافرتی',
+      'en': 'Travel Agency Registration',
+      'ar': 'تسجيل وكالة سفر',
+      'tr': 'Seyahat Acentesi Kaydı',
+      'ru': 'Регистрация турагентства',
+      'fr': "Inscription d'agence de voyage",
+      'de': 'Reisebüro-Registrierung',
+      'es': 'Registro de agencia de viajes',
+      'zh': '旅行社注册',
+      'it': 'Registrazione agenzia di viaggi',
+    },
+  };
+
+  static const Map<int, Map<String, String>> _tourOptionSubtitles = {
+    1: {
+      'fa': '۲۵ دسته‌ی تور در ۵ گروه — جست‌وجو، مشاهده‌ی فیلم، اشتراک‌گذاری و رزرو',
+      'en': '25 tour categories in 5 groups — search, watch videos, share and book',
+      'ar': '25 فئة جولات في 5 مجموعات — بحث، مشاهدة الفيديو، مشاركة وحجز',
+      'tr': '5 grupta 25 tur kategorisi — arama, video izleme, paylaşma ve rezervasyon',
+      'ru': '25 категорий туров в 5 группах — поиск, просмотр видео, обмен и бронирование',
+      'fr': '25 catégories de circuits en 5 groupes — recherche, visionnage de vidéos, partage et réservation',
+      'de': '25 Tourkategorien in 5 Gruppen — suchen, Videos ansehen, teilen und buchen',
+      'es': '25 categorías de tours en 5 grupos: buscar, ver vídeos, compartir y reservar',
+      'zh': '5个分组共25个旅游分类——搜索、观看视频、分享和预订',
+      'it': '25 categorie di tour in 5 gruppi: cerca, guarda video, condividi e prenota',
+    },
+    2: {
+      'fa': 'راهنماهای گردشگری تأییدشده — جست‌وجو، مشاهده پروفایل یا ثبت‌نام',
+      'en': 'Verified tour leaders — search, view profiles or register',
+      'ar': 'مرشدون سياحيون معتمدون — بحث، عرض الملفات الشخصية أو التسجيل',
+      'tr': 'Onaylı tur liderleri — arama, profil görüntüleme veya kayıt',
+      'ru': 'Проверенные гиды — поиск, просмотр профилей или регистрация',
+      'fr': 'Guides touristiques vérifiés — recherche, consultation des profils ou inscription',
+      'de': 'Verifizierte Reiseleiter — suchen, Profile ansehen oder registrieren',
+      'es': 'Guías turísticos verificados: buscar, ver perfiles o registrarse',
+      'zh': '认证旅游领队——搜索、查看资料或注册',
+      'it': 'Guide turistiche verificate: cerca, visualizza i profili o registrati',
+    },
+    3: {
+      'fa': 'ابزارهای سفر — آب‌وهوا، تبدیل ارز، ساعت جهانی و موارد اضطراری',
+      'en': 'Travel tools — weather, currency, world clock and emergency info',
+      'ar': 'أدوات السفر — الطقس، تحويل العملات، الساعة العالمية ومعلومات الطوارئ',
+      'tr': 'Seyahat araçları — hava durumu, döviz çevirici, dünya saati ve acil durum bilgileri',
+      'ru': 'Инструменты для путешествий — погода, конвертер валют, мировое время и экстренная информация',
+      'fr': "Outils de voyage — météo, convertisseur de devises, horloge mondiale et infos d'urgence",
+      'de': 'Reisewerkzeuge — Wetter, Währungsrechner, Weltuhr und Notfallinformationen',
+      'es': 'Herramientas de viaje: clima, conversor de moneda, reloj mundial e información de emergencia',
+      'zh': '旅行工具——天气、货币换算、世界时钟和紧急信息',
+      'it': 'Strumenti di viaggio: meteo, convertitore di valuta, orologio mondiale e informazioni di emergenza',
+    },
+    4: {
+      'fa': 'آژانس‌های تأییدشده — جست‌وجو، مشاهده پروفایل یا ثبت‌نام',
+      'en': 'Verified travel agencies — search, view profiles or register',
+      'ar': 'وكالات معتمدة — بحث، عرض الملفات الشخصية أو التسجيل',
+      'tr': 'Onaylı acenteler — arama, profil görüntüleme veya kayıt',
+      'ru': 'Проверенные агентства — поиск, просмотр профилей или регистрация',
+      'fr': 'Agences vérifiées — recherche, consultation des profils ou inscription',
+      'de': 'Verifizierte Agenturen — suchen, Profile ansehen oder registrieren',
+      'es': 'Agencias verificadas: buscar, ver perfiles o registrarse',
+      'zh': '认证旅行社——搜索、查看资料或注册',
+      'it': 'Agenzie verificate: cerca, visualizza i profili o registrati',
+    },
+    5: {
+      'fa': 'ثبت‌نام به‌عنوان لیدر — همراه با تماس مستقیم با پشتیبانی',
+      'en': 'Register as a tour leader — with direct contact to support',
+      'ar': 'التسجيل كمرشد سياحي — مع تواصل مباشر مع الدعم',
+      'tr': 'Tur lideri olarak kayıt olun — destek ile doğrudan iletişim',
+      'ru': 'Регистрация в качестве гида — с прямой связью со службой поддержки',
+      'fr': 'Inscrivez-vous en tant que guide — avec contact direct avec le support',
+      'de': 'Als Reiseleiter registrieren — mit direktem Kontakt zum Support',
+      'es': 'Regístrate como guía turístico: con contacto directo con soporte',
+      'zh': '注册成为领队——可直接联系客服',
+      'it': "Registrati come guida turistica: con contatto diretto con l'assistenza",
+    },
+    6: {
+      'fa': 'ثبت‌نام آژانس مسافرتی — همراه با تماس مستقیم با پشتیبانی',
+      'en': 'Register your travel agency — with direct contact to support',
+      'ar': 'سجّل وكالة السفر الخاصة بك — مع تواصل مباشر مع الدعم',
+      'tr': 'Seyahat acentenizi kaydedin — destek ile doğrudan iletişim',
+      'ru': 'Зарегистрируйте туристическое агентство — с прямой связью со службой поддержки',
+      'fr': 'Inscrivez votre agence de voyage — avec contact direct avec le support',
+      'de': 'Registrieren Sie Ihr Reisebüro — mit direktem Kontakt zum Support',
+      'es': 'Registra tu agencia de viajes: con contacto directo con soporte',
+      'zh': '注册您的旅行社——可直接联系客服',
+      'it': "Registra la tua agenzia di viaggi: con contatto diretto con l'assistenza",
+    },
+  };
+
+  static const Map<String, String> _tourEmptyState = {
+    'fa': 'گزینه‌های تور گردشگری به‌زودی اضافه می‌شوند.',
+    'en': 'Tourism tour options coming soon.',
+    'ar': 'ستُضاف خيارات الجولة السياحية قريبًا.',
+    'tr': 'Turizm turu seçenekleri yakında eklenecek.',
+    'ru': 'Варианты туристических туров скоро появятся.',
+    'fr': 'Les options de circuits touristiques seront bientôt ajoutées.',
+    'de': 'Optionen für touristische Touren werden bald hinzugefügt.',
+    'es': 'Las opciones de tours turísticos se agregarán pronto.',
+    'zh': '旅游团选项即将推出。',
+    'it': 'Le opzioni per i tour turistici saranno aggiunte a breve.',
+  };
 }
