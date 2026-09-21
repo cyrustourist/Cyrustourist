@@ -45,6 +45,7 @@ import 'widgets/account/cyrus_account_screen.dart';
 import 'widgets/search/cyrus_smart_search.dart';
 import 'widgets/settings/cyrus_settings_screen.dart';
 import 'pages/favorites_page.dart';
+import 'services/deep_link_service.dart';
 
 // ============================================================
 // MAIN
@@ -70,6 +71,9 @@ void main() async {
   await NotificationService.instance.initialize();
 
   runApp(const CyrusTouristApp());
+
+  // لینک‌های عمومی (https://cyrustourist.ir/<نوع>/<شناسه>) مستقیم در برنامه باز می‌شوند
+  DeepLinkService.init();
 }
 
 // ============================================================
@@ -178,6 +182,8 @@ class _SplashPageState extends State<SplashPage> {
               builder: (_) => const HomePage(),
             ),
           );
+          // از این لحظه لینک‌های عمومی می‌توانند روی صفحه‌ی اصلی باز شوند
+          DeepLinkService.markReady();
         }
       },
     );
