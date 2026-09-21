@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/showcase_item.dart';
 import 'showcase/showcase_gallery_page.dart';
 import 'agencies/agency_registration_intro_page.dart';
+import 'tours/tour_categories_page.dart';
 import 'leaders/leader_registration_intro_page.dart';
 import '../widgets/toolbox/cyrus_smart_toolbox.dart';
 
@@ -50,6 +51,18 @@ class TourismTourPage extends StatelessWidget {
   // ---------------------------------------------------------------
   List<_TourOption> _options(BuildContext context) {
     return [
+      _TourOption(
+        title: _tr('تورهای گردشگری', 'Tourism Tours'),
+        subtitle: _tr(
+          '۲۵ دسته‌ی تور در ۵ گروه — جست‌وجو، مشاهده‌ی فیلم، اشتراک‌گذاری و رزرو',
+          '25 tour categories in 5 groups — search, watch videos, share and book',
+        ),
+        icon: Icons.luggage_rounded,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TourCategoriesPage()),
+        ),
+      ),
       _TourOption(
         title: _tr('لیدرها', 'Tour Leaders'),
         subtitle: _tr(
