@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/agency.dart';
+import '../../services/public_link_service.dart';
+import '../../widgets/share_sheet.dart';
 
 const Color _bg = Color(0xff06121d);
 const Color _card = Color(0xff0b2636);
@@ -46,14 +48,46 @@ class AgencyProfilePage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
               Center(
-                child: CircleAvatar(
-                  radius: 52,
-                  backgroundColor: _gold.withValues(alpha: 0.15),
-                  backgroundImage:
-                      agency.logoAsset != null ? AssetImage(agency.logoAsset!) : null,
-                  child: agency.logoAsset == null
-                      ? const Icon(Icons.apartment_rounded, color: _gold, size: 48)
-                      : null,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 52,
+                      backgroundColor: _gold.withValues(alpha: 0.15),
+                      backgroundImage:
+                          agency.logoAsset != null ? AssetImage(agency.logoAsset!) : null,
+                      child: agency.logoAsset == null
+                          ? const Icon(Icons.apartment_rounded, color: _gold, size: 48)
+                          : null,
+                    ),
+                    // آیکون اشتراک‌گذاری کنار لوگو → برگه‌ی گزینه‌ها
+                    if (agencyCodeOf(agency) > 0)
+                      Positioned(
+                        bottom: -2,
+                        left: -6,
+                        child: GestureDetector(
+                          onTap: () => ShareSheet.show(
+                            context,
+                            entityType: PublicLinkService.agency,
+                            entityId: '${agencyCodeOf(agency)}',
+                            title: agency.name,
+                          ),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(colors: [_gold, _goldBright]),
+                              border: Border.all(color: _bg, width: 2.5),
+                              boxShadow: [
+                                BoxShadow(color: _gold.withValues(alpha: 0.35), blurRadius: 10),
+                              ],
+                            ),
+                            child: const Icon(Icons.ios_share_rounded, color: Color(0xff3a2a00), size: 19),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
