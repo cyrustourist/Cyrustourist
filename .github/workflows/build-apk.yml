@@ -281,6 +281,19 @@ jobs:
 
           echo "Keystore verification successful."
 
+          # اثر انگشت SHA-256 گواهی امضا — برای فایل assetlinks.json (App Link)
+          FP="$(keytool -list -v \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" 2>/dev/null \
+            | grep -m1 'SHA256:' | sed 's/.*SHA256:[[:space:]]*//' || true)"
+          {
+            echo ""
+            echo "### 🔑 SHA-256 certificate fingerprint (for assetlinks.json)"
+            echo ""
+            echo "\`${FP:-not found}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Flutter pub get
         shell: bash
         run: |
