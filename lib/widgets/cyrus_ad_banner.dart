@@ -26,12 +26,18 @@ class _AdBannerItem {
 /// اولویت با تبلیغ‌های فعالِ همان جایگاه در دیتابیس است (به ترتیب
 /// `sort_order`)؛ اگر دیتابیس برای این جایگاه چیزی نداشت، به‌جای فضای
 /// خالی، بین [defaultAssets] (دو عکس پیش‌فرض داخل خود اپ) می‌چرخد.
+///
+/// برای این‌که در بازِ اول (پیش از پاسخ سرور) صفحه خالی/زشت دیده نشود،
+/// عکس‌های پیش‌فرض همان لحظه‌ی اول (به‌صورت sync) نمایش داده می‌شوند؛
+/// به‌محض رسیدن پاسخ سرور، در صورت وجود تبلیغ فعال، جای آن‌ها را
+/// می‌گیرند (به ترتیب `sort_order`).
 class CyrusAdBanner extends StatefulWidget {
   const CyrusAdBanner({
     super.key,
     required this.slot,
     this.borderRadius = 10,
     this.defaultAssets = const [],
+    this.onDefaultTap,
   });
 
   /// جایگاه تبلیغ (۱، ۲ یا ۳).
@@ -42,18 +48,27 @@ class CyrusAdBanner extends StatefulWidget {
   /// مسیر عکس‌های پیش‌فرض محلی این جایگاه (وقتی دیتابیس خالی است).
   final List<String> defaultAssets;
 
+  /// وقتی روی یکی از عکس‌های پیش‌فرض (بدون لینک از سرور) لمس می‌شود.
+  /// برای هر ۴ عکس پیش‌فرض (۲تای جایگاه ۱ و ۲تای جایگاه ۲) باید به
+  /// صفحه‌ی ثبت‌نام اقامتگاه هدایت شود، دقیقاً مثل بقیه‌ی نقاط ثبت‌نام.
+  final VoidCallback? onDefaultTap;
+
   @override
   State<CyrusAdBanner> createState() => _CyrusAdBannerState();
 }
 
 class _CyrusAdBannerState extends State<CyrusAdBanner> {
-  List<_AdBannerItem> _items = const [];
+  late List<_AdBannerItem> _items;
   int _index = 0;
   Timer? _rotationTimer;
 
   @override
   void initState() {
     super.initState();
+    // فوری، بدون معطلی برای پاسخ سرور: عکس‌های پیش‌فرض همین الان نمایش
+    // داده می‌شوند تا فضای تبلیغ هرگز خالی/زشت دیده نشود.
+    _items = _defaultItems();
+    _startRotationIfNeeded();
     _load();
   }
 
@@ -63,6 +78,8 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
     if (oldWidget.slot != widget.slot) {
       _rotationTimer?.cancel();
       _index = 0;
+      _items = _defaultItems();
+      _startRotationIfNeeded();
       _load();
     }
   }
@@ -73,30 +90,34 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
     super.dispose();
   }
 
+  List<_AdBannerItem> _defaultItems() => widget.defaultAssets
+      .map(
+        (path) => _AdBannerItem(
+          imageProvider: AssetImage(path),
+          linkUrl: null,
+          key: path,
+        ),
+      )
+      .toList();
+
   Future<void> _load() async {
     final ads = await AdvertisementService.instance.fetchAds(widget.slot);
 
     if (!mounted) return;
 
-    final items = ads.isNotEmpty
-        ? ads
-            .map(
-              (ad) => _AdBannerItem(
-                imageProvider: NetworkImage(ad.imageUrl),
-                linkUrl: ad.linkUrl,
-                key: 'db_${ad.id}',
-              ),
-            )
-            .toList()
-        : widget.defaultAssets
-            .map(
-              (path) => _AdBannerItem(
-                imageProvider: AssetImage(path),
-                linkUrl: null,
-                key: path,
-              ),
-            )
-            .toList();
+    // اگر سرور چیزی برای این جایگاه نداشت، همان عکس‌های پیش‌فرض که از
+    // ابتدا نمایش داده شده‌اند باقی می‌مانند (نیازی به تغییر نیست).
+    if (ads.isEmpty) return;
+
+    final items = ads
+        .map(
+          (ad) => _AdBannerItem(
+            imageProvider: NetworkImage(ad.imageUrl),
+            linkUrl: ad.linkUrl,
+            key: 'db_${ad.id}',
+          ),
+        )
+        .toList();
 
     setState(() {
       _items = items;
@@ -145,13 +166,20 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
     }
 
     final item = _items[_index];
+    final hasServerLink = item.linkUrl != null && item.linkUrl!.isNotEmpty;
+
+    // عکس‌های پیش‌فرض لینک سرور ندارند؛ با لمس آن‌ها به صفحه‌ی ثبت‌نام
+    // اقامتگاه هدایت می‌شویم (دقیقاً مثل بقیه‌ی نقاط ثبت‌نام در اپ).
+    final VoidCallback? onTap = hasServerLink
+        ? _openCurrentLink
+        : widget.onDefaultTap;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: item.linkUrl == null ? null : _openCurrentLink,
+          onTap: onTap,
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 400),
             child: Image(
