@@ -62,10 +62,14 @@ class AdvertisementService {
         return await _fallbackFromCache(slot);
       }
 
+      // نکته: `linkUrl` اجباری نیست — خیلی از تبلیغ‌ها فقط عکس‌اند و
+      // لینک مقصد ندارند؛ قبلاً همین تبلیغ‌ها با فیلتر اشتباه این‌جا
+      // (بررسی خالی‌نبودنِ linkUrl) به‌کل حذف می‌شدند و عکسی از سرور
+      // اضافه نمی‌شد. فقط داشتن عکس معتبر کافی است.
       final items = rawList
           .whereType<Map<String, dynamic>>()
           .map(CyrusAdvertisement.fromJson)
-          .where((ad) => ad.imageUrl.isNotEmpty && ad.linkUrl.isNotEmpty)
+          .where((ad) => ad.imageUrl.isNotEmpty)
           .toList()
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
@@ -97,7 +101,7 @@ class AdvertisementService {
     return rawList
         .whereType<Map<String, dynamic>>()
         .map(CyrusAdvertisement.fromJson)
-        .where((ad) => ad.imageUrl.isNotEmpty && ad.linkUrl.isNotEmpty)
+        .where((ad) => ad.imageUrl.isNotEmpty)
         .toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
