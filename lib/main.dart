@@ -47,6 +47,7 @@ import 'widgets/settings/cyrus_settings_screen.dart';
 import 'pages/favorites_page.dart';
 import 'services/deep_link_service.dart';
 import 'widgets/cyrus_ad_banner.dart';
+import 'pages/residence_register_page.dart';
 
 // ============================================================
 // MAIN
@@ -588,9 +589,9 @@ class _HomePageState extends State<HomePage> {
 
     return _at(
       190,
-      572,
+      588,
       730,
-      85,
+      78,
       imgW,
       imgH,
       Material(
@@ -675,21 +676,37 @@ class _HomePageState extends State<HomePage> {
   // جایگاه ۳ در صفحه‌ی نتایج/لیست دسته‌بندی‌ها قرار می‌گیرد، نه اینجا.
   // ------------------------------------------------------------
 
+  void _openResidenceRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ResidenceRegisterPage()),
+    );
+  }
+
   Widget _adSlot1(double imgW, double imgH) {
+    // مختصات جعبه‌ی طلایی خالیِ زیر نوار جستجو در خود تصویر پس‌زمینه:
+    // قبلاً ارتفاع این جایگاه فقط ۴۴ پیکسل کد شده بود (به‌جای ~۱۴۰)،
+    // در نتیجه عکس با BoxFit.cover تقریباً کامل از بالا/پایین بریده
+    // می‌شد و داخل قاب طلایی دیده نمی‌شد. با ارتفاع درست، عکس کامل و
+    // با گوشه‌های گرد هم‌راستا با قاب نمایش داده می‌شود.
     return _at(
       15,
-      677,
+      693,
       910,
-      44,
+      140,
       imgW,
       imgH,
-      const CyrusAdBanner(
+      CyrusAdBanner(
         slot: 1,
-        borderRadius: 10,
-        defaultAssets: [
+        // شعاع گوشه باید مثل بقیه‌ی عناصر با اندازه‌ی صفحه مقیاس شود،
+        // وگرنه در صفحه‌های بزرگ‌تر گوشه‌های عکس از قاب طلایی گرد بیرون
+        // می‌زند.
+        borderRadius: imgW * 26 / _refW,
+        defaultAssets: const [
           'assets/images/ads/slot1_default_1.jpg',
           'assets/images/ads/slot1_default_2.jpg',
         ],
+        onDefaultTap: _openResidenceRegister,
       ),
     );
   }
@@ -702,13 +719,14 @@ class _HomePageState extends State<HomePage> {
       170,
       imgW,
       imgH,
-      const CyrusAdBanner(
+      CyrusAdBanner(
         slot: 2,
-        borderRadius: 16,
-        defaultAssets: [
+        borderRadius: imgW * 26 / _refW,
+        defaultAssets: const [
           'assets/images/ads/slot2_default_1.jpg',
           'assets/images/ads/slot2_default_2.jpg',
         ],
+        onDefaultTap: _openResidenceRegister,
       ),
     );
   }
