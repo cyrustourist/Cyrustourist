@@ -46,6 +46,7 @@ import 'widgets/search/cyrus_smart_search.dart';
 import 'widgets/settings/cyrus_settings_screen.dart';
 import 'pages/favorites_page.dart';
 import 'services/deep_link_service.dart';
+import 'widgets/cyrus_ad_banner.dart';
 
 // ============================================================
 // MAIN
@@ -268,22 +269,22 @@ class _HomePageState extends State<HomePage> {
   int _headerBadgeTick = 0;
 
   // ------------------------------------------------------------
-  // مختصات همگی بر اساس تصویر مرجع home-hero.jpg (۷۲۰×۱۲۸۰ پیکسل)
+  // مختصات همگی بر اساس تصویر مرجع home-hero.jpg (۹۴۱×۱۶۷۰ پیکسل - نسخه جدید)
   // اندازه‌گیری شده‌اند و با نسبت imgW/imgH به اندازه واقعی تبدیل می‌شوند.
   // ------------------------------------------------------------
-  static const double _refW = 720;
-  static const double _refH = 1280;
+  static const double _refW = 941;
+  static const double _refH = 1670;
 
   // کادر کامل هر کلید (تصویر + نوار عنوان): [left, top, width, height]
   static const Map<int, List<double>> _cells = {
-    1: [19, 719, 165, 169],
-    2: [196, 719, 157, 169],
-    3: [364, 719, 160, 169],
-    4: [535, 719, 165, 169],
-    5: [19, 909, 165, 161],
-    6: [196, 909, 157, 161],
-    7: [364, 909, 160, 161],
-    8: [535, 909, 165, 161],
+    1: [15, 845, 220, 220],
+    2: [245, 845, 220, 220],
+    3: [470, 845, 220, 220],
+    4: [700, 845, 220, 220],
+    5: [15, 1075, 220, 190],
+    6: [245, 1075, 220, 190],
+    7: [470, 1075, 220, 190],
+    8: [700, 1075, 220, 190],
   };
 
   @override
@@ -536,8 +537,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget caption(int number, double imgW, double imgH) {
     final c = _cells[number]!;
-    final double top = number <= 4 ? 848 : 1035;
-    final double h = number <= 4 ? 33 : 30;
+    final double top = number <= 4 ? 1008 : 1218;
+    final double h = number <= 4 ? 52 : 42;
     final text = MenuTranslations.title(MenuLanguage.current, number);
     final label = _twoLine(text.isNotEmpty ? text : buttonTitle(number));
 
@@ -586,10 +587,10 @@ class _HomePageState extends State<HomePage> {
     final alignment = rtl ? Alignment.centerRight : Alignment.centerLeft;
 
     return _at(
-      22,
-      503,
-      664,
-      72,
+      190,
+      572,
+      730,
+      85,
       imgW,
       imgH,
       Material(
@@ -599,8 +600,8 @@ class _HomePageState extends State<HomePage> {
           onTap: _openSmartSearch,
           child: Padding(
             padding: EdgeInsets.only(
-              left: imgW * 78 / _refW,
-              right: imgW * 91 / _refW,
+              left: imgW * 20 / _refW,
+              right: imgW * 135 / _refW,
             ),
             child: Align(
               alignment: alignment,
@@ -626,95 +627,88 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ------------------------------------------------------------
-  // نوار پایین آیکون‌ها (خانه، نقشه، علاقه‌مندی‌ها، فیلم‌های ویژه، حساب)
-  // آیکون‌ها داخل تصویرند؛ عنوان‌ها ۱۰ زبانه و در کد رسم می‌شوند.
+  // دو آیکون کنار نوار جستجو (علاقه‌مندی‌ها و حساب کاربری)
+  // آیکون‌ها داخل تصویرند؛ اینجا فقط منطقه‌ی کلیک روی آن‌ها تعریف می‌شود.
+  // نوار قبلی ۵ آیکونی (خانه/نقشه/علاقه‌مندی/فیلم/حساب) از طرح جدید حذف
+  // شده - نقشه و فیلم‌های ویژه از طریق کلیدهای اصلی ۱ و ۶ در دسترس‌اند.
   // ------------------------------------------------------------
 
-  static const List<String> _tabKeys = ['home', 'map', 'favorites', 'films', 'account'];
-  static const List<List<double>> _tabBounds = [
-    [13, 152],
-    [152, 285],
-    [285, 422],
-    [422, 558],
-    [558, 708],
-  ];
-
-  void _onTab(String key) {
-    switch (key) {
-      case 'map':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartMapPage()));
-        break;
-      case 'favorites':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
-        break;
-      case 'films':
-        // همان مقصد کلید ۶ صفحه‌ی اصلی (فیلم‌های ویژه)
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const ShowcaseGalleryPage(kind: ShowcaseKind.video, showHubBanner: true),
-          ),
-        );
-        break;
-      case 'account':
-        _openAccount();
-        break;
-      case 'home':
-      default:
-        break; // همین صفحه است
-    }
-  }
-
-  Widget _tabItem(int index, double imgW, double imgH) {
-    final key = _tabKeys[index];
-    final l = _tabBounds[index][0];
-    final r = _tabBounds[index][1];
-    final label = MenuTranslations.tab(MenuLanguage.current, key);
-
+  Widget _favoritesIconButton(double imgW, double imgH) {
     return _at(
-      l,
-      601,
-      r - l,
-      91,
+      12,
+      572,
+      86,
+      86,
       imgW,
       imgH,
       Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(imgW * 0.04),
-          onTap: () => _onTab(key),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Positioned(
-                left: 2,
-                right: 2,
-                top: imgH * (653 - 601) / _refH,
-                height: imgH * 31 / _refH,
-                child: IgnorePointer(
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
-                        style: TextStyle(
-                          color: key == 'home' ? Colors.white : const Color(0xffdbe8ff),
-                          fontWeight: FontWeight.w800,
-                          fontSize: imgW * 0.028,
-                          shadows: const [
-                            Shadow(offset: Offset(0, 1), blurRadius: 2, color: Colors.black),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          customBorder: const CircleBorder(),
+          onTap: () =>
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage())),
         ),
+      ),
+    );
+  }
+
+  Widget _searchBarAccountButton(double imgW, double imgH) {
+    return _at(
+      100,
+      572,
+      86,
+      86,
+      imgW,
+      imgH,
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _openAccount,
+        ),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // دو جایگاه تبلیغاتی صفحه‌ی اصلی (روی جعبه‌های طلایی خالی تصویر)
+  // جایگاه ۳ در صفحه‌ی نتایج/لیست دسته‌بندی‌ها قرار می‌گیرد، نه اینجا.
+  // ------------------------------------------------------------
+
+  Widget _adSlot1(double imgW, double imgH) {
+    return _at(
+      15,
+      677,
+      910,
+      44,
+      imgW,
+      imgH,
+      const CyrusAdBanner(
+        slot: 1,
+        borderRadius: 10,
+        defaultAssets: [
+          'assets/images/ads/slot1_default_1.jpg',
+          'assets/images/ads/slot1_default_2.jpg',
+        ],
+      ),
+    );
+  }
+
+  Widget _adSlot2(double imgW, double imgH) {
+    return _at(
+      15,
+      1290,
+      910,
+      170,
+      imgW,
+      imgH,
+      const CyrusAdBanner(
+        slot: 2,
+        borderRadius: 16,
+        defaultAssets: [
+          'assets/images/ads/slot2_default_1.jpg',
+          'assets/images/ads/slot2_default_2.jpg',
+        ],
       ),
     );
   }
@@ -725,10 +719,10 @@ class _HomePageState extends State<HomePage> {
 
   Widget _menuButton(double imgW, double imgH) {
     return _at(
-      22,
-      15,
-      79,
-      79,
+      29,
+      20,
+      103,
+      103,
       imgW,
       imgH,
       HeaderGlassPress(
@@ -764,14 +758,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _languageButton(double imgW, double imgH) {
-    final w = imgW * 116 / _refW;
-    final h = imgH * 58 / _refH;
+    final w = imgW * 152 / _refW;
+    final h = imgH * 76 / _refH;
 
     return _at(
-      477,
-      26,
-      116,
-      58,
+      623,
+      34,
+      152,
+      76,
       imgW,
       imgH,
       HeaderGlassPress(
@@ -792,14 +786,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _accountButton(double imgW, double imgH) {
-    final w = imgW * 80 / _refW;
-    final h = imgH * 60 / _refH;
+    final w = imgW * 105 / _refW;
+    final h = imgH * 78 / _refH;
 
     return _at(
-      598,
-      24,
-      80,
-      60,
+      781,
+      31,
+      105,
+      78,
       imgW,
       imgH,
       HeaderGlassPress(
@@ -861,9 +855,14 @@ class _HomePageState extends State<HomePage> {
                                   Container(color: const Color(0xff071722)),
                             ),
 
-                            // نوار جستجو + نوار آیکون‌ها
+                            // نوار جستجو + دو آیکون علاقه‌مندی‌ها و حساب کاربری کنار آن
                             _searchBar(imgW, imgH),
-                            for (var i = 0; i < _tabKeys.length; i++) _tabItem(i, imgW, imgH),
+                            _favoritesIconButton(imgW, imgH),
+                            _searchBarAccountButton(imgW, imgH),
+
+                            // جایگاه‌های تبلیغاتی ۱ و ۲ (روی جعبه‌های طلایی خالی تصویر)
+                            _adSlot1(imgW, imgH),
+                            _adSlot2(imgW, imgH),
 
                             // ۸ کلید: ردیف اول ۱ تا ۴ ، ردیف دوم ۵ تا ۸
                             for (var n = 1; n <= 8; n++) area(n, imgW, imgH),
