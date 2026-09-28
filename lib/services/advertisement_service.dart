@@ -42,44 +42,65 @@ class AdvertisementService {
       final uri = Uri.parse('$_baseUrl?slot=$slot');
       final request = await client.getUrl(uri);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      request.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
 
-      final response = await request.close();
+      final response =
+          await request.close().timeout(const Duration(seconds: 12));
 
       if (response.statusCode != 200) {
+        debugPrint(
+            'Cyrus Ads slot $slot: HTTP ${response.statusCode} from $uri');
         return await _fallbackFromCache(slot);
       }
 
-      final body = await response.transform(const Utf8Decoder()).join();
+      final body = await response
+          .transform(const Utf8Decoder())
+          .join()
+          .timeout(const Duration(seconds: 12));
       final decoded = jsonDecode(body);
 
-      if (decoded is! Map<String, dynamic> || decoded['success'] != true) {
-        return await _fallbackFromCache(slot);
+      // پاسخ می‌تواند مستقیماً لیست باشد یا داخل data/ads/items/result.
+      dynamic rawList;
+      if (decoded is List) {
+        rawList = decoded;
+      } else if (decoded is Map) {
+        if (decoded['success'] == false) {
+          debugPrint('Cyrus Ads slot $slot: success=false → $body');
+          return await _fallbackFromCache(slot);
+        }
+        for (final key in const ['data', 'ads', 'advertisements', 'items', 'result']) {
+          if (decoded[key] is List) {
+            rawList = decoded[key];
+            break;
+          }
+        }
       }
-
-      final rawList = decoded['data'];
 
       if (rawList is! List) {
+        debugPrint('Cyrus Ads slot $slot: unexpected response shape → $body');
         return await _fallbackFromCache(slot);
       }
 
-      // نکته: `linkUrl` اجباری نیست — خیلی از تبلیغ‌ها فقط عکس‌اند و
-      // لینک مقصد ندارند؛ قبلاً همین تبلیغ‌ها با فیلتر اشتباه این‌جا
-      // (بررسی خالی‌نبودنِ linkUrl) به‌کل حذف می‌شدند و عکسی از سرور
-      // اضافه نمی‌شد. فقط داشتن عکس معتبر کافی است.
+      // فقط داشتن عکس معتبر کافی است (لینک اختیاری است).
       final items = rawList
-          .whereType<Map<String, dynamic>>()
-          .map(CyrusAdvertisement.fromJson)
-          .where((ad) => ad.imageUrl.isNotEmpty)
+          .whereType<Map>()
+          .map((m) => CyrusAdvertisement.fromJson(Map<String, dynamic>.from(m)))
+          .where((ad) => ad.imageUrl.isNotEmpty && ad.isActive)
           .toList()
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-      unawaited(
-        CacheService.instance.setEntry(
-          _cacheKey(slot),
-          rawList,
-          source: 'api',
-        ),
-      );
+      debugPrint('Cyrus Ads slot $slot: ${items.length} active ad(s) from API');
+
+      // عکس‌های base64 حجیم‌اند؛ کش کردنشان SharedPreferences را کند می‌کند.
+      if (body.length < 400 * 1024) {
+        unawaited(
+          CacheService.instance.setEntry(
+            _cacheKey(slot),
+            rawList,
+            source: 'api',
+          ),
+        );
+      }
 
       return items;
     } catch (error) {
@@ -99,9 +120,9 @@ class AdvertisementService {
     }
 
     return rawList
-        .whereType<Map<String, dynamic>>()
-        .map(CyrusAdvertisement.fromJson)
-        .where((ad) => ad.imageUrl.isNotEmpty)
+        .whereType<Map>()
+        .map((m) => CyrusAdvertisement.fromJson(Map<String, dynamic>.from(m)))
+        .where((ad) => ad.imageUrl.isNotEmpty && ad.isActive)
         .toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
