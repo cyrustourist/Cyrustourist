@@ -4,6 +4,17 @@ import 'tools/currency_converter_screen.dart';
 import 'tools/weather_screen.dart';
 import 'tools/world_clock_screen.dart';
 import 'tools/connection_status_screen.dart';
+import 'tools/compass_screen.dart';
+import 'tools/flashlight_screen.dart';
+import 'tools/emergency_screen.dart';
+import 'tools/unit_converter_screen.dart';
+import 'tools/trip_calculator_screen.dart';
+import 'tools/essential_services_screen.dart';
+import 'tools/packing_checklist_screen.dart';
+import 'tools/trip_notes_screen.dart';
+import 'tools/travel_phrases_screen.dart';
+import '../../pages/favorites_page.dart';
+import '../../pages/tours/tour_categories_page.dart';
 import '../../pages/leaders/leaders_list_page.dart';
 import '../../pages/leaders/leader_registration_intro_page.dart';
 
@@ -654,6 +665,72 @@ class CyrusSmartToolbox extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => const LeaderRegistrationIntroPage(),
           ),
+        );
+        return;
+
+      case 'compass':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CompassScreen()),
+        );
+        return;
+
+      case 'flashlight':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const FlashlightScreen()),
+        );
+        return;
+
+      case 'emergency':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const EmergencyScreen()),
+        );
+        return;
+
+      case 'unit_converter':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const UnitConverterScreen()),
+        );
+        return;
+
+      case 'trip_calculator':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const TripCalculatorScreen()),
+        );
+        return;
+
+      case 'essential_services':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const EssentialServicesScreen()),
+        );
+        return;
+
+      case 'packing_checklist':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PackingChecklistScreen()),
+        );
+        return;
+
+      case 'trip_notes':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const TripNotesScreen()),
+        );
+        return;
+
+      case 'travel_phrases':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const TravelPhrasesScreen()),
+        );
+        return;
+
+      case 'saved_trips':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const FavoritesPage()),
+        );
+        return;
+
+      case 'suggested_tours':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const TourCategoriesPage()),
         );
         return;
 
