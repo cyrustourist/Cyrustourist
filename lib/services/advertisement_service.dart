@@ -17,9 +17,11 @@ class AdvertisementService {
 
   static final AdvertisementService instance = AdvertisementService._();
 
-  /// آدرس پایه‌ی API عمومی سایروس توریست (همان Worker اعلان‌ها).
+  /// تبلیغات در دیتابیس Worker پنل مدیریت ثبت می‌شوند (cyrus-tourist-admin-panel)؛
+  /// Worker مربوط به cyrus-tourist-api مسیر /advertisements ندارد
+  /// (پاسخ Endpoint not found)، پس اپ باید از همین آدرس بخواند.
   static const String _baseUrl =
-      'https://cyrus-tourist-api.cyrustourist.workers.dev/advertisements';
+      'https://cyrus-tourist-admin-panel.cyrustourist.workers.dev/advertisements';
 
   String _cacheKey(int slot) => 'cyrus_advertisements_slot_$slot';
 
