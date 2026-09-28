@@ -198,7 +198,6 @@ jobs:
 
           REQUIRED_ASSETS=(
             "assets/images/splash.jpg"
-            "assets/images/home-hero.jpg"
             "assets/images/logo-new.jpg"
             "assets/images/showcase-hub.jpg"
           )
