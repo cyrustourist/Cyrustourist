@@ -110,7 +110,9 @@ class CyrusHeaderAccountButton extends StatelessWidget {
               } else {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const ResidenceRegisterPage(),
+                    builder: (_) => const ResidenceRegisterPage(
+                      type: ResidenceRegisterType.accommodation,
+                    ),
                   ),
                 );
               }
@@ -122,7 +124,9 @@ class CyrusHeaderAccountButton extends StatelessWidget {
               } else {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const ResidenceRegisterPage(),
+                    builder: (_) => const ResidenceRegisterPage(
+                      type: ResidenceRegisterType.hotel,
+                    ),
                   ),
                 );
               }
@@ -134,7 +138,9 @@ class CyrusHeaderAccountButton extends StatelessWidget {
               } else {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const ResidenceRegisterPage(),
+                    builder: (_) => const ResidenceRegisterPage(
+                      type: ResidenceRegisterType.cottage,
+                    ),
                   ),
                 );
               }
@@ -146,7 +152,9 @@ class CyrusHeaderAccountButton extends StatelessWidget {
               } else {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const ResidenceRegisterPage(),
+                    builder: (_) => const ResidenceRegisterPage(
+                      type: ResidenceRegisterType.health,
+                    ),
                   ),
                 );
               }
