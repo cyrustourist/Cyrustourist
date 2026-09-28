@@ -20,9 +20,9 @@ const String kCyrusVersionLabel = '5.9.15';
 
 /// لینک شبکه‌های اجتماعی — به آدرس واقعی پیج‌های خودتان تغییر دهید.
 const Map<String, String> kCyrusSocialUrls = {
-  'instagram': 'https://www.instagram.com/',
-  'aparat': 'https://www.aparat.com/',
-  'youtube': 'https://www.youtube.com/',
+  'instagram': 'https://www.instagram.com/cyrustourist?igsi=aDc3end6dTNqNW1o',
+  'aparat': 'https://www.aparat.com/Cyrustourist',
+  'youtube': 'https://youtube.com/@cyrustourist?si=fKcSD3vB6bzz2J6i',
   'telegram': 'https://t.me/',
   'eitaa': 'https://eitaa.com/cyrustourist',
   'links': 'https://cyrustourist.ir/',
