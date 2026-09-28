@@ -566,25 +566,14 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
     required PlaceCategory displayCategory,
     required String title,
   }) async {
-    _showLoadingDialog();
-
-    final location = await LocationManager.getCurrentLocation();
-    final center = location ?? _iranCenter;
-
-    final places = await _nearbyService.nearbyByRemoteType(
-      remoteType: remoteType,
-      displayCategory: displayCategory,
-      center: center,
+    await _openLiveMap(
+      title: title,
+      fetch: (center) async => _nearbyService.nearbyByRemoteType(
+        remoteType: remoteType,
+        displayCategory: displayCategory,
+        center: center,
+      ),
     );
-
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-
-    if (location == null) {
-      _showSnack(_locationDeniedMessage());
-    }
-
-    await _openResults(places: places, center: center, title: title);
   }
 
   // ============================================================
@@ -592,46 +581,48 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
   // ============================================================
 
   Future<void> _searchAroundMe(CyrusSearchItems items) async {
-    _showLoadingDialog();
-
-    final location = await LocationManager.getCurrentLocation();
-    final center = location ?? _iranCenter;
-
-    final results = await Future.wait([
-      _nearbyService.nearbyByRemoteType(
-        remoteType: remote.MapPlaceType.touristAttraction,
-        displayCategory: PlaceCategory.attraction,
-        center: center,
-      ),
-      _nearbyService.nearbyByRemoteType(
-        remoteType: remote.MapPlaceType.restaurant,
-        displayCategory: PlaceCategory.restaurant,
-        center: center,
-      ),
-      _nearbyService.nearbyByRemoteType(
-        remoteType: remote.MapPlaceType.accommodation,
-        displayCategory: PlaceCategory.accommodation,
-        center: center,
-      ),
-    ]);
-
-    final merged = results.expand((list) => list).toList()
-      ..sort(
-        (a, b) => (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0),
-      );
-
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-
-    if (location == null) {
-      _showSnack(_locationDeniedMessage());
-    }
-
-    await _openResults(
-      places: merged.take(40).toList(),
-      center: center,
+    await _openLiveMap(
       title: items.aroundMe.title,
+      maxResults: 40,
+      fetch: (center) async {
+        final results = await Future.wait([
+          _safeNearby(
+            remote.MapPlaceType.touristAttraction,
+            PlaceCategory.attraction,
+            center,
+          ),
+          _safeNearby(
+            remote.MapPlaceType.restaurant,
+            PlaceCategory.restaurant,
+            center,
+          ),
+          _safeNearby(
+            remote.MapPlaceType.accommodation,
+            PlaceCategory.accommodation,
+            center,
+          ),
+        ]);
+
+        return results.expand((list) => list).toList();
+      },
     );
+  }
+
+  /// اگر یکی از چند جستجوی هم‌زمان خطا داد، بقیه‌ی نتیجه‌ها از بین نروند.
+  Future<List<MapPlace>> _safeNearby(
+    remote.MapPlaceType type,
+    PlaceCategory category,
+    LatLng center,
+  ) async {
+    try {
+      return await _nearbyService.nearbyByRemoteType(
+        remoteType: type,
+        displayCategory: category,
+        center: center,
+      );
+    } catch (_) {
+      return <MapPlace>[];
+    }
   }
 
   // ============================================================
@@ -852,46 +843,69 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
     List<({remote.MapPlaceType type, PlaceCategory category})> selections,
     String title,
   ) async {
-    _showLoadingDialog();
+    await _openLiveMap(
+      title: title,
+      fetch: (center) async {
+        final results = await Future.wait(
+          selections.map(
+            (selection) =>
+                _safeNearby(selection.type, selection.category, center),
+          ),
+        );
 
-    final location = await LocationManager.getCurrentLocation();
-    final center = location ?? _iranCenter;
-
-    final results = await Future.wait(
-      selections.map(
-        (selection) => _nearbyService.nearbyByRemoteType(
-          remoteType: selection.type,
-          displayCategory: selection.category,
-          center: center,
-        ),
-      ),
+        return results.expand((list) => list).toList();
+      },
     );
-
-    final merged = results.expand((list) => list).toList()
-      ..sort(
-        (a, b) => (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0),
-      );
-
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-
-    if (location == null) {
-      _showSnack(_locationDeniedMessage());
-    }
-
-    await _openResults(places: merged, center: center, title: title);
   }
 
   // ============================================================
   // نمایش نتایج روی نقشه مشترک برنامه
   // ============================================================
 
-  void _showLoadingDialog() {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xffffd56d)),
+  /// نقشه را فوراً باز می‌کند (بدون دایره‌ی انتظار روی صفحه‌ی جستجو)؛
+  /// روی نقشه پیام «در حال جستجوی اطراف شما» با چرخنده دیده می‌شود و
+  /// موقعیت و نتیجه‌ها در پس‌زمینه می‌رسند.
+  Future<void> _openLiveMap({
+    required String title,
+    required Future<List<MapPlace>> Function(LatLng center) fetch,
+    int? maxResults,
+  }) async {
+    final favorites = _favoritesService.loadFavoriteIds();
+    final last = await LocationManager.getLastKnownLocation();
+    _favoriteIds = await favorites;
+
+    if (!mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoryFullMapPage(
+          initialCenter: last ?? _iranCenter,
+          title: title,
+          isRtl: _isRtl,
+          isFavorite: _isFavorite,
+          onFavorite: _toggleFavorite,
+          onRoute: _openRoute,
+          loader: () async {
+            final location = await LocationManager.getCurrentLocation();
+            final center = location ?? _iranCenter;
+
+            final places = await fetch(center);
+
+            places.sort(
+              (a, b) =>
+                  (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0),
+            );
+
+            return CategorySearchResult(
+              places: maxResults == null
+                  ? places
+                  : places.take(maxResults).toList(),
+              center: center,
+              locationDenied: location == null,
+            );
+          },
+        ),
       ),
     );
   }
