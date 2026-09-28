@@ -393,31 +393,26 @@ class MapPlacesService {
     final lat = center.latitude;
     final lon = center.longitude;
 
-    final nodeParts = <String>[];
-    final wayParts = <String>[];
+    final latS = lat.toStringAsFixed(5);
+    final lonS = lon.toStringAsFixed(5);
+    final r = radiusMeters.round();
+
+    // یک عبارت nwr به‌جای دو عبارت node و way ← حجم و زمان پردازش
+    // کوئری روی سرور نصف می‌شود.
+    final parts = <String>[];
 
     for (final tag in tags) {
-      final expression = _tagExpression(tag);
-
-      nodeParts.add(
-        'node(around:$radiusMeters,$lat,$lon)$expression;',
+      parts.add(
+        'nwr(around:$r,$latS,$lonS)${_tagExpression(tag)};',
       );
-
-      wayParts.add(
-        'way(around:$radiusMeters,$lat,$lon)$expression;',
-      );
-
     }
 
     return '''
-[out:json][timeout:20];
-
+[out:json][timeout:15];
 (
-${nodeParts.join('\n')}
-${wayParts.join('\n')}
+${parts.join('\n')}
 );
-
-out center tags qt 500;
+out center tags qt 200;
 ''';
   }
 
