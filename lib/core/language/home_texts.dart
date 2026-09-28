@@ -88,6 +88,17 @@ class HomeTexts {
       'ar': 'إيتا',
       'en': 'Eitaa',
     },
+    'tiktok': {
+      'fa': 'تیک‌تاک',
+      'ar': 'تيك توك',
+      'zh': '抖音国际版',
+      'en': 'TikTok',
+    },
+    'whatsapp': {
+      'fa': 'واتساپ',
+      'ar': 'واتساب',
+      'en': 'WhatsApp',
+    },
     'links': {
       'fa': 'لینک‌ها',
       'en': 'Links',
