@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -65,7 +67,10 @@ class _CategoryExplorerPageState
 
   bool _isSearchedMode = false;
 
-  double _radiusKm = 15;
+  double _radiusKm = 5;
+
+  // شماره‌ی آخرین درخواست؛ پاسخ‌های قدیمی و کندتر نادیده گرفته می‌شوند.
+  int _loadSeq = 0;
 
   List<MapPlace> _places = [];
   Set<String> _favoriteIds = {};
@@ -144,12 +149,16 @@ class _CategoryExplorerPageState
   Future<void> _bootstrap() async {
     _loadFavoriteIds();
 
+    // آخرین موقعیت ثبت‌شده فوری خوانده می‌شود و جستجو بلافاصله شروع
+    // می‌شود؛ منتظر GPS تازه نمی‌مانیم.
     final quick = await LocationManager.getLastKnownLocation();
     if (mounted && quick != null) {
       setState(() {
+        _userLocation = quick;
         _center = quick;
       });
-      _safeMove(quick, 12);
+      _safeMove(quick, 13);
+      unawaited(_loadNearby());
     }
 
     final location =
@@ -158,23 +167,34 @@ class _CategoryExplorerPageState
     if (!mounted) return;
 
     if (location == null) {
-      setState(() {
-        _locationWarning = _text(
-          'برای نمایش مکان‌های اطراف، لطفاً GPS را فعال کنید.',
-          'Please enable GPS to see nearby places.',
-          'يرجى تفعيل GPS لعرض الأماكن القريبة.',
-        );
-        _center = _fallbackCenter;
-      });
-    } else {
-      setState(() {
-        _userLocation = location;
-        _center = location;
-      });
-      _safeMove(location, 12);
+      if (quick == null) {
+        setState(() {
+          _locationWarning = _text(
+            'برای نمایش مکان‌های اطراف، لطفاً GPS را فعال کنید.',
+            'Please enable GPS to see nearby places.',
+            'يرجى تفعيل GPS لعرض الأماكن القريبة.',
+          );
+          _center = _fallbackCenter;
+        });
+        await _loadNearby();
+      }
+      return;
     }
 
-    await _loadNearby();
+    // فقط اگر موقعیت تازه با موقعیت اولیه بیش از ۵۰۰ متر فرق دارد
+    // دوباره جستجو می‌کنیم.
+    final moved = quick == null ||
+        const Distance().as(LengthUnit.Meter, quick, location) > 500;
+
+    setState(() {
+      _userLocation = location;
+      if (!_isSearchedMode) _center = location;
+    });
+
+    if (moved && !_isSearchedMode) {
+      _safeMove(location, 13);
+      await _loadNearby();
+    }
   }
 
   /// جابه‌جایی نقشه؛ اگر نقشه هنوز ساخته نشده بود بی‌سروصدا نادیده گرفته می‌شود.
@@ -203,6 +223,8 @@ class _CategoryExplorerPageState
   Future<void> _loadNearby() async {
     if (_center == null) return;
 
+    final seq = ++_loadSeq;
+
     setState(() {
       _loading = true;
     });
@@ -215,14 +237,14 @@ class _CategoryExplorerPageState
         language: _langCode,
       );
 
-      if (!mounted) return;
+      if (!mounted || seq != _loadSeq) return;
 
       setState(() {
         _places = results;
         _loading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || seq != _loadSeq) return;
 
       setState(() {
         _places = [];
@@ -533,7 +555,7 @@ class _CategoryExplorerPageState
                       options: MapOptions(
                         initialCenter:
                             _center ?? _fallbackCenter,
-                        initialZoom: 12,
+                        initialZoom: 13,
                         minZoom: 3,
                         maxZoom: 18,
                       ),
