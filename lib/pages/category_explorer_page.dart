@@ -142,7 +142,15 @@ class _CategoryExplorerPageState
   // ============================================================
 
   Future<void> _bootstrap() async {
-    await _loadFavoriteIds();
+    _loadFavoriteIds();
+
+    final quick = await LocationManager.getLastKnownLocation();
+    if (mounted && quick != null) {
+      setState(() {
+        _center = quick;
+      });
+      _safeMove(quick, 12);
+    }
 
     final location =
         await LocationManager.getCurrentLocation();
@@ -163,9 +171,19 @@ class _CategoryExplorerPageState
         _userLocation = location;
         _center = location;
       });
+      _safeMove(location, 12);
     }
 
     await _loadNearby();
+  }
+
+  /// جابه‌جایی نقشه؛ اگر نقشه هنوز ساخته نشده بود بی‌سروصدا نادیده گرفته می‌شود.
+  void _safeMove(LatLng point, double zoom) {
+    try {
+      _mapController.move(point, zoom);
+    } catch (_) {
+      // نقشه هنوز آماده نیست؛ مرکز در ساخت بعدی اعمال می‌شود.
+    }
   }
 
   Future<void> _loadFavoriteIds() async {
@@ -710,9 +728,45 @@ class _CategoryExplorerPageState
                     if (_loading || _searching)
                       Container(
                         color: Colors.black26,
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xffffd36a),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xee071722),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xffffd36a),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.4,
+                                    color: Color(0xffffd36a),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _text(
+                                    'در حال جستجوی اطراف شما…',
+                                    'Searching around you…',
+                                    'جارٍ البحث حولك…',
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
