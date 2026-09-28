@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/language/menu_translations.dart';
 import '../../pages/about_page.dart' as about_page;
 import '../../pages/support_page.dart';
-import '../../pages/social_media_page.dart';
+import '../account/cyrus_account_screen.dart';
 import '../../services/notification_service.dart';
 import 'cyrus_settings_social_about_support.dart';
 import 'cyrus_settings_theme.dart';
@@ -15,7 +15,7 @@ import 'cyrus_settings_notifications.dart';
 /// این صفحه چیز جدیدی نمی‌سازد؛ فقط سه ویجت مستقلی که قبلاً در
 /// پوشه lib/widgets/settings/ آماده و کاملاً ۱۰‌زبانه ساخته شده
 /// بودند را کنار هم قرار می‌دهد:
-///   - CyrusSettingsFeatureButtons  → شبکه‌های مجازی / درباره ما / پشتیبانی
+///   - CyrusSettingsFeatureButtons  → حساب کاربری / درباره ما / پشتیبانی
 ///     (به همان صفحات قدیمی و آماده وصل می‌شود: SocialMediaPage،
 ///     AboutPage، SupportPage — بدون ساخت صفحه تکراری)
 ///   - CyrusThemeSelector           → انتخاب ظاهر برنامه
@@ -182,11 +182,13 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
                   children: [
                     CyrusSettingsFeatureButtons(
                       languageCode: _languageCode,
-                      onSocialNetworks: () {
+                      onAccount: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const SocialMediaPage(),
+                            builder: (_) => CyrusAccountScreen(
+                              languageCode: _languageCode,
+                            ),
                           ),
                         );
                       },
