@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/language/menu_translations.dart';
 import '../../pages/about_page.dart' as about_page;
@@ -8,6 +7,7 @@ import '../account/cyrus_account_screen.dart';
 import '../../services/notification_service.dart';
 import 'cyrus_settings_social_about_support.dart';
 import 'cyrus_settings_theme.dart';
+import '../home/cyrus_home_style.dart';
 import 'cyrus_settings_notifications.dart';
 
 /// صفحه تنظیمات سایروس توریست — مقصد کلید ☰ در هدر صفحه اصلی.
@@ -31,19 +31,9 @@ class CyrusSettingsScreen extends StatefulWidget {
 }
 
 class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
-  static const _keyTheme = 'cyrus_settings_theme_mode';
-  static const _keyNotifGeneral = 'cyrus_settings_notif_general';
-  static const _keyNotifTourism = 'cyrus_settings_notif_tourism';
-  static const _keyNotifTravelSuggestions =
-      'cyrus_settings_notif_travel_suggestions';
-  static const _keyNotifSupport = 'cyrus_settings_notif_support';
-
-  CyrusThemeMode _themeMode = CyrusThemeMode.cyrusGold;
+  final CyrusHomeStyle _style = CyrusHomeStyle.instance;
 
   bool _notificationsEnabled = true;
-  bool _tourismNotificationsEnabled = true;
-  bool _travelSuggestionsEnabled = true;
-  bool _supportNotificationsEnabled = true;
   bool _soundEffectEnabled = true;
 
   bool _loaded = false;
@@ -52,70 +42,67 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
 
   bool get _isRtl => MenuLanguage.isRtl;
 
+  /// حالت نمایش فعلی صفحه‌ی اصلی → گزینه‌ی تم:
+  /// روشن = روز | تاریک = شب | طلایی سایروس = شب + رنگ طلایی.
+  CyrusThemeMode get _themeMode {
+    if (_style.display == CyrusDisplayMode.day) {
+      return CyrusThemeMode.light;
+    }
+    return _style.color == CyrusColorMode.gold
+        ? CyrusThemeMode.cyrusGold
+        : CyrusThemeMode.dark;
+  }
+
   @override
   void initState() {
     super.initState();
+    _style.addListener(_onStyleChanged);
     _loadPreferences();
   }
 
+  @override
+  void dispose() {
+    _style.removeListener(_onStyleChanged);
+    super.dispose();
+  }
+
+  void _onStyleChanged() {
+    if (mounted) setState(() {});
+  }
+
   Future<void> _loadPreferences() async {
-    final pref = await SharedPreferences.getInstance();
+    await _style.load();
 
-    final savedTheme = pref.getString(_keyTheme);
-
+    final pushEnabled = await NotificationService.instance.isPushEnabled();
     final soundEnabled =
         await NotificationService.instance.isAnnouncementSoundEnabled();
 
+    if (!mounted) return;
+
     setState(() {
-      _themeMode = _themeFromCode(savedTheme) ?? CyrusThemeMode.cyrusGold;
-      _notificationsEnabled = pref.getBool(_keyNotifGeneral) ?? true;
-      _tourismNotificationsEnabled =
-          pref.getBool(_keyNotifTourism) ?? true;
-      _travelSuggestionsEnabled =
-          pref.getBool(_keyNotifTravelSuggestions) ?? true;
-      _supportNotificationsEnabled =
-          pref.getBool(_keyNotifSupport) ?? true;
+      _notificationsEnabled = pushEnabled;
       _soundEffectEnabled = soundEnabled;
       _loaded = true;
     });
   }
 
-  CyrusThemeMode? _themeFromCode(String? code) {
-    switch (code) {
-      case 'light':
-        return CyrusThemeMode.light;
-      case 'dark':
-        return CyrusThemeMode.dark;
-      case 'cyrusGold':
-        return CyrusThemeMode.cyrusGold;
-      default:
-        return null;
-    }
-  }
-
-  String _themeToCode(CyrusThemeMode mode) {
+  /// انتخاب تم مستقیم روی ظاهر صفحه‌ی اصلی اعمال و ذخیره می‌شود.
+  void _saveTheme(CyrusThemeMode mode) {
     switch (mode) {
       case CyrusThemeMode.light:
-        return 'light';
+        _style.setDisplay(CyrusDisplayMode.day);
+        break;
       case CyrusThemeMode.dark:
-        return 'dark';
+        _style.setDisplay(CyrusDisplayMode.night);
+        if (_style.color == CyrusColorMode.gold) {
+          _style.setColor(CyrusColorMode.blue);
+        }
+        break;
       case CyrusThemeMode.cyrusGold:
-        return 'cyrusGold';
+        _style.setDisplay(CyrusDisplayMode.night);
+        _style.setColor(CyrusColorMode.gold);
+        break;
     }
-  }
-
-  Future<void> _saveTheme(CyrusThemeMode mode) async {
-    setState(() => _themeMode = mode);
-    final pref = await SharedPreferences.getInstance();
-    await pref.setString(_keyTheme, _themeToCode(mode));
-    // نکته: اعمال واقعی تم روی کل برنامه (ThemeData) مرحله بعدی
-    // است و باید همراه با بررسی رنگ‌های فعلی برنامه انجام شود؛
-    // فعلاً فقط انتخاب کاربر ذخیره و در همین صفحه نمایش داده می‌شود.
-  }
-
-  Future<void> _saveBool(String key, bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    await pref.setBool(key, value);
   }
 
   String _sectionTitle({
@@ -249,33 +236,10 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
                     CyrusNotificationsSelector(
                       languageCode: _languageCode,
                       notificationsEnabled: _notificationsEnabled,
-                      tourismNotificationsEnabled:
-                          _tourismNotificationsEnabled,
-                      travelSuggestionsEnabled: _travelSuggestionsEnabled,
-                      supportNotificationsEnabled:
-                          _supportNotificationsEnabled,
                       soundEffectEnabled: _soundEffectEnabled,
                       onNotificationsChanged: (value) {
                         setState(() => _notificationsEnabled = value);
-                        _saveBool(_keyNotifGeneral, value);
-                      },
-                      onTourismNotificationsChanged: (value) {
-                        setState(
-                          () => _tourismNotificationsEnabled = value,
-                        );
-                        _saveBool(_keyNotifTourism, value);
-                      },
-                      onTravelSuggestionsChanged: (value) {
-                        setState(
-                          () => _travelSuggestionsEnabled = value,
-                        );
-                        _saveBool(_keyNotifTravelSuggestions, value);
-                      },
-                      onSupportNotificationsChanged: (value) {
-                        setState(
-                          () => _supportNotificationsEnabled = value,
-                        );
-                        _saveBool(_keyNotifSupport, value);
+                        NotificationService.instance.setPushEnabled(value);
                       },
                       onSoundEffectChanged: (value) {
                         setState(() => _soundEffectEnabled = value);
