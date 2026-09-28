@@ -46,7 +46,8 @@ import 'widgets/search/cyrus_smart_search.dart';
 import 'widgets/settings/cyrus_settings_screen.dart';
 import 'pages/favorites_page.dart';
 import 'services/deep_link_service.dart';
-import 'widgets/cyrus_ad_banner.dart';
+import 'widgets/home/cyrus_home_view.dart';
+import 'widgets/home/cyrus_home_style.dart';
 import 'pages/residence_register_page.dart';
 
 // ============================================================
@@ -71,6 +72,7 @@ void main() async {
   }
 
   await NotificationService.instance.initialize();
+  await CyrusHomeStyle.instance.load();
 
   runApp(const CyrusTouristApp());
 
@@ -266,27 +268,7 @@ AppLanguage _appLanguageFromCode(String code) {
 }
 
 class _HomePageState extends State<HomePage> {
-  int selected = 0;
   int _headerBadgeTick = 0;
-
-  // ------------------------------------------------------------
-  // مختصات همگی بر اساس تصویر مرجع home-hero.jpg (۹۴۱×۱۶۷۰ پیکسل - نسخه جدید)
-  // اندازه‌گیری شده‌اند و با نسبت imgW/imgH به اندازه واقعی تبدیل می‌شوند.
-  // ------------------------------------------------------------
-  static const double _refW = 941;
-  static const double _refH = 1670;
-
-  // کادر کامل هر کلید (تصویر + نوار عنوان): [left, top, width, height]
-  static const Map<int, List<double>> _cells = {
-    1: [15, 845, 220, 220],
-    2: [245, 845, 220, 220],
-    3: [470, 845, 220, 220],
-    4: [700, 845, 220, 220],
-    5: [15, 1075, 220, 190],
-    6: [245, 1075, 220, 190],
-    7: [470, 1075, 220, 190],
-    8: [700, 1075, 220, 190],
-  };
 
   @override
   void initState() {
@@ -311,8 +293,6 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  String get homeImage => 'assets/images/home-hero.jpg';
-
   String buttonTitle(int number) {
     switch (number) {
       case 1:
@@ -336,19 +316,10 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> tap(int number) async {
-    setState(() {
-      selected = number;
-    });
-
-    await Future.delayed(const Duration(milliseconds: 150));
-
-    if (!mounted) return;
-
-    setState(() {
-      selected = 0;
-    });
-
+  /// شماره‌ی کلید در اپ: ۱ نقشه، ۲ سلامت، ۳ جاذبه‌ها، ۴ اقامتگاه‌ها،
+  /// ۵ راهنمای سفر، ۶ فیلم‌های ویژه، ۷ جستجوی هوشمند، ۸ تور گردشگری.
+  /// (ترتیب نمایش روی صفحه در kHomeButtonOrder تعیین می‌شود.)
+  void tap(int number) {
     if (number == 1) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartMapPage()));
       return;
@@ -431,6 +402,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openFavorites() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
+  }
+
+  void _openResidenceRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ResidenceRegisterPage()),
+    );
+  }
+
   Future<void> _openAccount() async {
     await Navigator.push(
       context,
@@ -446,89 +428,36 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ------------------------------------------------------------
-  // ابزارهای چیدمان
+  // هدر: همبرگری (چپ) ، زبان و حساب کاربری (راست)
   // ------------------------------------------------------------
 
-  /// قرار دادن ویجت در مختصات تصویر مرجع.
-  Widget _at(
-    double left,
-    double top,
-    double width,
-    double height,
-    double imgW,
-    double imgH,
-    Widget child,
-  ) {
-    return Positioned(
-      left: imgW * left / _refW,
-      top: imgH * top / _refH,
-      width: imgW * width / _refW,
-      height: imgH * height / _refH,
-      child: child,
-    );
-  }
-
-  /// اگر عنوان بلند و دارای فاصله بود، در دو خط شکسته می‌شود.
-  String _twoLine(String s) {
-    if (s.runes.length <= 13 || !s.contains(' ')) return s;
-    final mid = s.length / 2;
-    int best = -1;
-    double bestDistance = 1e9;
-    for (var i = 0; i < s.length; i++) {
-      if (s[i] == ' ') {
-        final d = (i - mid).abs();
-        if (d < bestDistance) {
-          bestDistance = d;
-          best = i;
-        }
-      }
-    }
-    if (best < 0) return s;
-    return '${s.substring(0, best)}\n${s.substring(best + 1)}';
-  }
-
-  // ------------------------------------------------------------
-  // ۸ کلید اصلی
-  // ------------------------------------------------------------
-
-  Widget area(int number, double imgW, double imgH) {
-    final c = _cells[number]!;
-    final radius = BorderRadius.circular(imgW * 0.04);
-    final active = selected == number;
-
-    return _at(
-      c[0],
-      c[1],
-      c[2],
-      c[3],
-      imgW,
-      imgH,
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: radius,
-          onTap: () => tap(number),
-          child: AnimatedScale(
-            scale: active ? 0.95 : 1.0,
-            duration: const Duration(milliseconds: 120),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                border: Border.all(
-                  color: const Color(0xffffd36a).withValues(alpha: active ? 0.9 : 0.0),
-                  width: 1.5,
-                ),
-                boxShadow: active
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xffffd36a).withValues(alpha: 0.7),
-                          blurRadius: 22,
-                          spreadRadius: 3,
-                        ),
-                      ]
-                    : const [],
+  Widget _menuButton() {
+    return HeaderGlassPress(
+      child: Tooltip(
+        message: MenuTranslations.tooltip(MenuLanguage.current, 'menu'),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CyrusSettingsScreen()),
+          ),
+          child: Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xff173246), Color(0xff081722)],
               ),
+              border: Border.all(color: const Color(0xffffd36a), width: 2),
+            ),
+            child: const Icon(
+              Icons.menu_rounded,
+              color: Color(0xffffd36a),
+              size: 24,
             ),
           ),
         ),
@@ -536,292 +465,48 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget caption(int number, double imgW, double imgH) {
-    final c = _cells[number]!;
-    final double top = number <= 4 ? 1008 : 1218;
-    final double h = number <= 4 ? 52 : 42;
-    final text = MenuTranslations.title(MenuLanguage.current, number);
-    final label = _twoLine(text.isNotEmpty ? text : buttonTitle(number));
-
-    return _at(
-      c[0] + 13,
-      top,
-      c[2] - 26,
-      h,
-      imgW,
-      imgH,
-      IgnorePointer(
-        child: Directionality(
-          textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                softWrap: false,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: imgW * ((number == 3 || number == 6) ? 0.037 : 0.031),
-                  height: 1.05,
-                  shadows: const [
-                    Shadow(offset: Offset(0, 1), blurRadius: 2.5, color: Colors.black),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+  Widget _languageButton() {
+    return HeaderGlassPress(
+      shape: BoxShape.rectangle,
+      borderRadius: BorderRadius.circular(16),
+      child: CyrusLanguageButton(
+        currentLanguage: MenuLanguage.current,
+        width: 92,
+        height: 44,
+        onLanguageChanged: (code) async {
+          await MenuLanguage.setLanguage(code);
+          await LanguageManager.setLanguage(_appLanguageFromCode(code));
+          if (mounted) setState(() {});
+        },
       ),
     );
   }
 
-  // ------------------------------------------------------------
-  // نوار جستجو
-  // ------------------------------------------------------------
-
-  Widget _searchBar(double imgW, double imgH) {
-    final rtl = MenuLanguage.isRtl;
-    final hint = MenuTranslations.searchHint(MenuLanguage.current);
-    final alignment = rtl ? Alignment.centerRight : Alignment.centerLeft;
-
-    return _at(
-      190,
-      588,
-      730,
-      78,
-      imgW,
-      imgH,
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(imgW * 0.05),
-          onTap: _openSmartSearch,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: imgW * 20 / _refW,
-              right: imgW * 135 / _refW,
-            ),
-            child: Align(
-              alignment: alignment,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: alignment,
-                child: Text(
-                  hint,
-                  textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: const Color(0xff153a70),
-                    fontWeight: FontWeight.w800,
-                    fontSize: imgW * 0.036,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+  Widget _accountButton() {
+    return HeaderGlassPress(
+      shape: BoxShape.rectangle,
+      borderRadius: BorderRadius.circular(16),
+      child: CyrusHeaderAccountButton(
+        currentLanguage: MenuLanguage.current,
+        refreshToken: _headerBadgeTick,
+        width: 62,
+        height: 44,
+        onAccountPressed: _openAccount,
       ),
     );
   }
 
-  // ------------------------------------------------------------
-  // دو آیکون کنار نوار جستجو (علاقه‌مندی‌ها و حساب کاربری)
-  // آیکون‌ها داخل تصویرند؛ اینجا فقط منطقه‌ی کلیک روی آن‌ها تعریف می‌شود.
-  // نوار قبلی ۵ آیکونی (خانه/نقشه/علاقه‌مندی/فیلم/حساب) از طرح جدید حذف
-  // شده - نقشه و فیلم‌های ویژه از طریق کلیدهای اصلی ۱ و ۶ در دسترس‌اند.
-  // ------------------------------------------------------------
-
-  Widget _favoritesIconButton(double imgW, double imgH) {
-    return _at(
-      12,
-      572,
-      86,
-      86,
-      imgW,
-      imgH,
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () =>
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage())),
-        ),
-      ),
-    );
-  }
-
-  Widget _searchBarAccountButton(double imgW, double imgH) {
-    return _at(
-      100,
-      572,
-      86,
-      86,
-      imgW,
-      imgH,
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: _openAccount,
-        ),
-      ),
-    );
-  }
-
-  // ------------------------------------------------------------
-  // دو جایگاه تبلیغاتی صفحه‌ی اصلی (روی جعبه‌های طلایی خالی تصویر)
-  // جایگاه ۳ در صفحه‌ی نتایج/لیست دسته‌بندی‌ها قرار می‌گیرد، نه اینجا.
-  // ------------------------------------------------------------
-
-  void _openResidenceRegister() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ResidenceRegisterPage()),
-    );
-  }
-
-  Widget _adSlot1(double imgW, double imgH) {
-    // جایگاه ۱ فعلاً در پایین کلیدهای صفحه اصلی نمایش داده می‌شود.
-    // تصاویر پیش‌فرض slot1_default_1 و slot1_default_2 ابتدا نمایش داده می‌شوند
-    // و در صورت وجود تبلیغ فعال از دیتابیس، همان تبلیغ جایگزین می‌شود.
-    return _at(
-      15,
-      1290,
-      910,
-      170,
-      imgW,
-      imgH,
-      CyrusAdBanner(
-        slot: 1,
-        // شعاع گوشه باید مثل بقیه‌ی عناصر با اندازه‌ی صفحه مقیاس شود،
-        // وگرنه در صفحه‌های بزرگ‌تر گوشه‌های عکس از قاب طلایی گرد بیرون
-        // می‌زند.
-        borderRadius: imgW * 26 / _refW,
-        defaultAssets: const [
-          'assets/images/ads/slot1_default_1.jpg',
-          'assets/images/ads/slot1_default_2.jpg',
+  Widget _buildHeader() {
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          _menuButton(),
+          const Spacer(),
+          _languageButton(),
+          const SizedBox(width: 8),
+          _accountButton(),
         ],
-        onDefaultTap: _openResidenceRegister,
-      ),
-    );
-  }
-
-  Widget _adSlot2(double imgW, double imgH) {
-    return _at(
-      15,
-      1290,
-      910,
-      170,
-      imgW,
-      imgH,
-      CyrusAdBanner(
-        slot: 2,
-        borderRadius: imgW * 26 / _refW,
-        defaultAssets: const [
-          'assets/images/ads/slot2_default_1.jpg',
-          'assets/images/ads/slot2_default_2.jpg',
-        ],
-        onDefaultTap: _openResidenceRegister,
-      ),
-    );
-  }
-
-  // ------------------------------------------------------------
-  // هدر: همبرگری (بالا چپ) ، زبان و حساب کاربری (بالا راست)
-  // ------------------------------------------------------------
-
-  Widget _menuButton(double imgW, double imgH) {
-    return _at(
-      29,
-      20,
-      103,
-      103,
-      imgW,
-      imgH,
-      HeaderGlassPress(
-        child: Tooltip(
-          message: MenuTranslations.tooltip(MenuLanguage.current, 'menu'),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CyrusSettingsScreen()),
-            ),
-            child: Container(
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xff173246), Color(0xff081722)],
-                ),
-                border: Border.all(color: const Color(0xffffd36a), width: 2),
-              ),
-              child: Icon(
-                Icons.menu_rounded,
-                color: const Color(0xffffd36a),
-                size: imgW * 0.062,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _languageButton(double imgW, double imgH) {
-    final w = imgW * 152 / _refW;
-    final h = imgH * 76 / _refH;
-
-    return _at(
-      623,
-      34,
-      152,
-      76,
-      imgW,
-      imgH,
-      HeaderGlassPress(
-        shape: BoxShape.rectangle,
-        borderRadius: BorderRadius.circular(imgW * 0.03),
-        child: CyrusLanguageButton(
-          currentLanguage: MenuLanguage.current,
-          width: w,
-          height: h,
-          onLanguageChanged: (code) async {
-            await MenuLanguage.setLanguage(code);
-            await LanguageManager.setLanguage(_appLanguageFromCode(code));
-            if (mounted) setState(() {});
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _accountButton(double imgW, double imgH) {
-    final w = imgW * 105 / _refW;
-    final h = imgH * 78 / _refH;
-
-    return _at(
-      781,
-      31,
-      105,
-      78,
-      imgW,
-      imgH,
-      HeaderGlassPress(
-        shape: BoxShape.rectangle,
-        borderRadius: BorderRadius.circular(imgW * 0.03),
-        child: CyrusHeaderAccountButton(
-          currentLanguage: MenuLanguage.current,
-          refreshToken: _headerBadgeTick,
-          width: w,
-          height: h,
-          onAccountPressed: _openAccount,
-        ),
       ),
     );
   }
@@ -831,73 +516,12 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Colors.black,
       drawer: _buildMenuDrawer(),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final double width = constraints.maxWidth;
-          final double height = constraints.maxHeight;
-          final EdgeInsets viewPadding = MediaQuery.of(context).padding;
-          final double contentHeight =
-              (height - viewPadding.top - viewPadding.bottom).clamp(0.0, double.infinity);
-
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              // تصویر و همه‌ی کلیدها/آیکون‌ها داخل یک قاب هم‌نسبت با تصویر (۹:۱۶)
-              // تا مختصات کسری دقیقاً روی پیکسل‌های واقعی تصویر بیفتد.
-              Positioned(
-                left: 0,
-                right: 0,
-                top: viewPadding.top,
-                bottom: viewPadding.bottom,
-                child: Builder(
-                  builder: (context) {
-                    double imgW = width;
-                    double imgH = imgW * _refH / _refW;
-                    if (imgH > contentHeight) {
-                      imgH = contentHeight;
-                      imgW = imgH * _refW / _refH;
-                    }
-                    return Center(
-                      child: SizedBox(
-                        width: imgW,
-                        height: imgH,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.asset(
-                              homeImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(color: const Color(0xff071722)),
-                            ),
-
-                            // نوار جستجو + دو آیکون علاقه‌مندی‌ها و حساب کاربری کنار آن
-                            _searchBar(imgW, imgH),
-                            _favoritesIconButton(imgW, imgH),
-                            _searchBarAccountButton(imgW, imgH),
-
-                            // تبلیغات ویژه — فعلاً فقط جایگاه ۱ در پایین کلیدهای صفحه اصلی
-                            // نمایش داده می‌شود. دو جایگاه دیگر بعداً متصل خواهند شد.
-                            _adSlot1(imgW, imgH),
-
-                            // ۸ کلید: ردیف اول ۱ تا ۴ ، ردیف دوم ۵ تا ۸
-                            for (var n = 1; n <= 8; n++) area(n, imgW, imgH),
-                            for (var n = 1; n <= 8; n++) caption(n, imgW, imgH),
-
-                            // هدر
-                            _menuButton(imgW, imgH),
-                            _languageButton(imgW, imgH),
-                            _accountButton(imgW, imgH),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
+      body: CyrusHomeView(
+        header: _buildHeader(),
+        onButtonTap: tap,
+        onOpenSearch: _openSmartSearch,
+        onOpenFavorites: _openFavorites,
+        onOpenRegister: _openResidenceRegister,
       ),
     );
   }
