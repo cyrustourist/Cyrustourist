@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -100,6 +101,21 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
       )
       .toList();
 
+  /// پنل تبلیغات عکس را گاهی به‌صورت data:image/webp;base64 در دیتابیس
+  /// ذخیره می‌کند؛ NetworkImage این نوع آدرس را نمی‌خواند و بنر خالی
+  /// می‌ماند، پس برای آن‌ها MemoryImage ساخته می‌شود.
+  ImageProvider _providerFor(String url) {
+    if (url.startsWith('data:')) {
+      try {
+        final comma = url.indexOf(',');
+        return MemoryImage(base64Decode(url.substring(comma + 1)));
+      } catch (_) {
+        // داده خراب؛ در ادامه errorBuilder بنر را خالی می‌کند.
+      }
+    }
+    return NetworkImage(url);
+  }
+
   Future<void> _load() async {
     final ads = await AdvertisementService.instance.fetchAds(widget.slot);
 
@@ -112,7 +128,7 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
     final items = ads
         .map(
           (ad) => _AdBannerItem(
-            imageProvider: NetworkImage(ad.imageUrl),
+            imageProvider: _providerFor(ad.imageUrl),
             linkUrl: ad.linkUrl,
             key: 'db_${ad.id}',
           ),
