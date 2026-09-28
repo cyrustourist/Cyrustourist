@@ -818,7 +818,7 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
         children: [
           const Icon(Icons.info_outline_rounded, color: Color(0xffffb020), size: 20),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
               'شرایط و خدمات ${_info.owner} در سایروس توریست بر پایه زیرساخت اینترنت کشور و صرفاً به‌صورت تبلیغات مجازی ارائه می‌شود. '
               'سایروس توریست در صورت بروز هرگونه اختلال، قطعی یا محدودیت در زیرساخت اینترنت، هیچ‌گونه مسئولیتی در قبال آن نخواهد داشت.\n\n'
@@ -1137,7 +1137,7 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
                   children: [
                     const Icon(Icons.check_circle_rounded, color: _teal, size: 22),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         '✅ قوانین و شرایط پذیرفته شد. اکنون می‌توانید برای تکمیل ${_info.owner} با پشتیبانی هماهنگ کنید.',
                         style: TextStyle(color: Colors.white, fontSize: 12.5, height: 1.8),
