@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -109,6 +110,18 @@ class MapPlacesService {
     double radiusMeters = 15000,
     String language = 'fa',
   }) async {
+    // کش کوتاه‌مدت: تکرار همان جستجو (همان دسته، همان محدوده) فوری جواب می‌دهد.
+    final cacheKey =
+        '${type.name}|${center.latitude.toStringAsFixed(2)}|'
+        '${center.longitude.toStringAsFixed(2)}|'
+        '${radiusMeters.round()}|$language';
+
+    final cached = _nearbyCache[cacheKey];
+    if (cached != null &&
+        DateTime.now().difference(cached.time) < _cacheTtl) {
+      return cached.places;
+    }
+
     final tags = _buildTags(type);
 
     final query = _buildOverpassQuery(
@@ -119,12 +132,25 @@ class MapPlacesService {
 
     final data = await _requestOverpass(query);
 
-    return _parseOverpassResults(
+    final places = _parseOverpassResults(
       data,
       type,
       language,
     );
+
+    if (places.isNotEmpty) {
+      if (_nearbyCache.length > 40) {
+        _nearbyCache.remove(_nearbyCache.keys.first);
+      }
+      _nearbyCache[cacheKey] = _NearbyCacheEntry(places, DateTime.now());
+    }
+
+    return places;
   }
+
+  static const Duration _cacheTtl = Duration(minutes: 15);
+
+  final Map<String, _NearbyCacheEntry> _nearbyCache = {};
 
   /// جستجوی یک شهر از طریق Nominatim.
   ///
@@ -369,7 +395,6 @@ class MapPlacesService {
 
     final nodeParts = <String>[];
     final wayParts = <String>[];
-    final relationParts = <String>[];
 
     for (final tag in tags) {
       final expression = _tagExpression(tag);
@@ -382,21 +407,17 @@ class MapPlacesService {
         'way(around:$radiusMeters,$lat,$lon)$expression;',
       );
 
-      relationParts.add(
-        'relation(around:$radiusMeters,$lat,$lon)$expression;',
-      );
     }
 
     return '''
-[out:json][timeout:25];
+[out:json][timeout:20];
 
 (
 ${nodeParts.join('\n')}
 ${wayParts.join('\n')}
-${relationParts.join('\n')}
 );
 
-out center tags;
+out center tags qt 500;
 ''';
   }
 
@@ -413,70 +434,88 @@ out center tags;
     return '["$tag"]';
   }
 
+  /// درخواست هم‌زمان به چند سرور Overpass؛ اولین پاسخ موفق برنده است
+  /// (قبلاً سرورها پشت‌سرهم امتحان می‌شدند و انتظار تا ۹۰ ثانیه می‌رسید).
   Future<dynamic> _requestOverpass(
     String query,
   ) async {
     const endpoints = <String>[
       'https://overpass-api.de/api/interpreter',
       'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass.private.coffee/api/interpreter',
     ];
 
+    final completer = Completer<dynamic>();
+    final clients = <HttpClient>[];
+    var failed = 0;
     Object? lastError;
 
     for (final endpoint in endpoints) {
-      final client = HttpClient();
-
-      try {
-        client.userAgent = _userAgent;
-
-        final request = await client.postUrl(
-          Uri.parse(endpoint),
-        );
-
-        request.headers.set(
-          HttpHeaders.contentTypeHeader,
-          'application/x-www-form-urlencoded',
-        );
-
-        request.headers.set(
-          HttpHeaders.acceptHeader,
-          'application/json',
-        );
-
-        request.write(
-          'data=${Uri.encodeQueryComponent(query)}',
-        );
-
-        final response = await request
-            .close()
-            .timeout(
-              const Duration(seconds: 30),
-            );
-
-        final body = await response
-            .transform(utf8.decoder)
-            .join()
-            .timeout(
-              const Duration(seconds: 15),
-            );
-
-        if (response.statusCode == HttpStatus.ok) {
-          return jsonDecode(body);
+      _fetchOverpass(endpoint, query, clients).then((data) {
+        if (!completer.isCompleted) {
+          completer.complete(data);
         }
-
-        lastError = Exception(
-          'Overpass HTTP ${response.statusCode}',
-        );
-      } catch (error) {
+      }).catchError((Object error) {
         lastError = error;
-      } finally {
+        failed++;
+        if (failed == endpoints.length && !completer.isCompleted) {
+          completer.completeError(
+            Exception('Map places service failed: $lastError'),
+          );
+        }
+      });
+    }
+
+    try {
+      return await completer.future;
+    } finally {
+      for (final client in clients) {
         client.close(force: true);
       }
     }
+  }
 
-    throw Exception(
-      'Map places service failed: $lastError',
+  Future<dynamic> _fetchOverpass(
+    String endpoint,
+    String query,
+    List<HttpClient> clients,
+  ) async {
+    final client = HttpClient();
+    clients.add(client);
+
+    client.userAgent = _userAgent;
+    client.connectionTimeout = const Duration(seconds: 8);
+
+    final request = await client.postUrl(Uri.parse(endpoint));
+
+    request.headers.set(
+      HttpHeaders.contentTypeHeader,
+      'application/x-www-form-urlencoded',
     );
+
+    request.headers.set(
+      HttpHeaders.acceptHeader,
+      'application/json',
+    );
+
+    request.write(
+      'data=${Uri.encodeQueryComponent(query)}',
+    );
+
+    final response = await request.close().timeout(
+          const Duration(seconds: 22),
+        );
+
+    final body = await response
+        .transform(utf8.decoder)
+        .join()
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode != HttpStatus.ok) {
+      throw Exception('Overpass HTTP ${response.statusCode}');
+    }
+
+    return jsonDecode(body);
   }
 
   // ============================================================
@@ -774,4 +813,11 @@ class MapPlaceCity {
     this.osmType,
     this.osmId,
   });
+}
+
+class _NearbyCacheEntry {
+  const _NearbyCacheEntry(this.places, this.time);
+
+  final List<MapPlace> places;
+  final DateTime time;
 }
