@@ -65,8 +65,37 @@ Future<void> _openUrl(BuildContext context, String url) async {
   }
 }
 
+/// نوع ثبت‌نامی که این صفحه نمایش می‌دهد (همه‌ی مسیرهای ثبت‌نام از همین صفحه می‌گذرند).
+enum ResidenceRegisterType { accommodation, hotel, cottage, health }
+
+class _TypeInfo {
+  const _TypeInfo(this.emoji, this.noun, this.owner);
+
+  final String emoji;
+
+  /// نام کسب‌وکار در جمله (اقامتگاه / هتل / کلبه / مرکز گردشگری سلامت).
+  final String noun;
+
+  /// عنوان «ثبت …» برای هدر.
+  final String owner;
+}
+
+const Map<ResidenceRegisterType, _TypeInfo> _kTypeInfo = {
+  ResidenceRegisterType.accommodation:
+      _TypeInfo('🏡', 'اقامتگاه', 'ثبت اقامتگاه'),
+  ResidenceRegisterType.hotel: _TypeInfo('🏨', 'هتل', 'ثبت هتل'),
+  ResidenceRegisterType.cottage: _TypeInfo('🛖', 'کلبه', 'ثبت کلبه'),
+  ResidenceRegisterType.health:
+      _TypeInfo('🩺', 'مرکز گردشگری سلامت', 'ثبت مرکز گردشگری سلامت'),
+};
+
 class ResidenceRegisterPage extends StatefulWidget {
-  const ResidenceRegisterPage({super.key});
+  const ResidenceRegisterPage({
+    super.key,
+    this.type = ResidenceRegisterType.accommodation,
+  });
+
+  final ResidenceRegisterType type;
 
   @override
   State<ResidenceRegisterPage> createState() =>
@@ -77,26 +106,39 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
   bool _rulesAccepted = false;
   bool _showSupportStep = false;
 
-  final List<Map<String, String>> _benefits = const [
-    {'icon': '🎬', 'text': 'نمایش فیلم اقامتگاه در سایت و نرم‌افزار'},
-    {'icon': '🎥', 'text': 'امکان تولید فیلم توسط سایروس توریست'},
-    {'icon': '🗺️', 'text': 'مسیریابی مستقیم برای گردشگران'},
-    {'icon': '📞', 'text': 'تماس مستقیم گردشگر با اقامتگاه'},
-    {'icon': '📸', 'text': 'معرفی صفحه اینستاگرام اقامتگاه'},
-    {'icon': '🌐', 'text': 'معرفی وب‌سایت اقامتگاه'},
-    {'icon': '⭐', 'text': 'دریافت امتیاز و بازخورد گردشگران'},
-  ];
+  _TypeInfo get _info => _kTypeInfo[widget.type]!;
+
+  String get _noun => _info.noun;
+
+  List<Map<String, String>> get _benefits => [
+        {'icon': '🎬', 'text': 'نمایش فیلم $_noun در سایت و نرم‌افزار'},
+        {'icon': '🎥', 'text': 'امکان تولید فیلم توسط سایروس توریست'},
+        {'icon': '🗺️', 'text': 'مسیریابی مستقیم برای گردشگران'},
+        {'icon': '📞', 'text': 'تماس مستقیم گردشگر با $_noun'},
+        {'icon': '📸', 'text': 'معرفی صفحه اینستاگرام $_noun'},
+        {'icon': '🌐', 'text': 'معرفی وب‌سایت $_noun'},
+        {'icon': '⭐', 'text': 'دریافت امتیاز و بازخورد گردشگران'},
+      ];
+
+  /// مراحل کار (نمایش به‌صورت خط زمانی).
+  List<List<String>> get _howItWorks => [
+        ['📋', 'قوانین را می‌پذیرید', 'شرایط خدمات را مطالعه و تأیید می‌کنید.'],
+        [
+          '💬',
+          'با پشتیبانی هماهنگ می‌کنید',
+          'از تلفن، تلگرام، واتساپ یا ایتا پیام می‌دهید.'
+        ],
+        [
+          '🚀',
+          '$_noun شما فعال می‌شود',
+          'اطلاعات و فیلم شما در سایت و نرم‌افزار نمایش داده می‌شود.'
+        ],
+      ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
       body: SafeArea(
         top: false,
         child: AnimatedSwitcher(
@@ -127,7 +169,12 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
   Widget _heroHeader({required bool onSupportStep}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 54, 20, 26),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        MediaQuery.of(context).padding.top + 10,
+        20,
+        26,
+      ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: _brandGradient,
@@ -165,24 +212,56 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  if (onSupportStep) {
+                    setState(() => _showSupportStep = false);
+                  } else {
+                    Navigator.of(context).maybePop();
+                  }
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black.withValues(alpha: 0.18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Container(
-                    width: 46,
-                    height: 46,
+                    width: 52,
+                    height: 52,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(15),
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.35),
+                      ),
                     ),
-                    child: const Text('🏡', style: TextStyle(fontSize: 22)),
+                    child: Text(_info.emoji,
+                        style: const TextStyle(fontSize: 26)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       onSupportStep
                           ? 'هماهنگی با پشتیبانی'
-                          : 'ثبت اقامتگاه در سایروس توریست',
+                          : '${_info.owner} در سایروس توریست',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -196,8 +275,8 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
               const SizedBox(height: 10),
               Text(
                 onSupportStep
-                    ? 'یک قدم تا معرفی اقامتگاه شما باقی مانده — با ما در ارتباط باشید.'
-                    : 'اقامتگاه خود را به گردشگران سایروس توریست معرفی کنید.',
+                    ? 'یک قدم تا معرفی $_noun شما باقی مانده — با ما در ارتباط باشید.'
+                    : '$_noun خود را به گردشگران سایروس توریست معرفی کنید.',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.92),
                   fontSize: 13,
@@ -322,12 +401,13 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _sectionTitle('🌟', 'مزایای ثبت اقامتگاه'),
+              _sectionTitle('🌟', 'مزایای ${_info.owner}'),
               const SizedBox(height: 12),
-              _FadeInUp(
-                delay: const Duration(milliseconds: 60),
-                child: _benefitsGrid(),
-              ),
+              _benefitsGrid(),
+              const SizedBox(height: 22),
+              _sectionTitle('🧭', 'مراحل کار'),
+              const SizedBox(height: 12),
+              _howItWorksTimeline(),
               const SizedBox(height: 22),
               _sectionTitle('🌤️', 'آب‌وهوای مقصد'),
               const SizedBox(height: 12),
@@ -341,7 +421,7 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
                 style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.8),
               ),
               const SizedBox(height: 22),
-              _sectionTitle('🎬', 'نمونه کارت اقامتگاه شما'),
+              _sectionTitle('🎬', 'نمونه کارت $_noun شما'),
               const SizedBox(height: 12),
               _FadeInUp(
                 delay: const Duration(milliseconds: 220),
@@ -420,67 +500,180 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
   // ---------- کارت‌های مزایا ----------
 
   Widget _benefitsGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _benefits.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisExtent: 128,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemBuilder: (context, index) {
-        final b = _benefits[index];
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_cardAlt, _card],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _goldA(0.22)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+    final items = _benefits;
+    final rows = <Widget>[];
+
+    for (var i = 0; i < items.length; i += 2) {
+      final hasPair = i + 1 < items.length;
+
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(bottom: i + 2 < items.length ? 12 : 0),
+          child: _FadeInUp(
+            delay: Duration(milliseconds: 40 * (i ~/ 2)),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: _benefitTile(i, items[i])),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: hasPair
+                        ? _benefitTile(i + 1, items[i + 1])
+                        : const SizedBox.shrink(),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+      );
+    }
+
+    return Column(children: rows);
+  }
+
+  Widget _benefitTile(int index, Map<String, String> b) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+      constraints: const BoxConstraints(minHeight: 118),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_cardAlt, _card],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _goldA(0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 38,
+                height: 38,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(colors: _brandGradient),
+                  gradient: LinearGradient(colors: _brandGradient),
                 ),
-                child: Text(b['icon']!, style: const TextStyle(fontSize: 16)),
+                child: Text(b['icon']!, style: const TextStyle(fontSize: 18)),
               ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Text(
-                  b['text']!,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    height: 1.6,
-                    fontWeight: FontWeight.w600,
-                  ),
+              const Spacer(),
+              Text(
+                '${index + 1}'.padLeft(2, '0'),
+                style: TextStyle(
+                  color: _goldA(0.35),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
                 ),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 10),
+          Text(
+            b['text']!,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12.5,
+              height: 1.7,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------- مراحل کار (خط زمانی) ----------
+
+  Widget _howItWorksTimeline() {
+    final steps = _howItWorks;
+
+    return _FadeInUp(
+      delay: const Duration(milliseconds: 120),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+        decoration: BoxDecoration(
+          color: _cardAlt,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: _goldA(0.18)),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < steps.length; i++)
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Column(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(colors: _brandGradient),
+                          ),
+                          child: Text(
+                            steps[i][0],
+                            style: const TextStyle(fontSize: 17),
+                          ),
+                        ),
+                        if (i != steps.length - 1)
+                          Expanded(
+                            child: Container(
+                              width: 2,
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              color: _goldA(0.25),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              steps[i][1],
+                              style: const TextStyle(
+                                color: _goldBright,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              steps[i][2],
+                              style: const TextStyle(
+                                color: Colors.white60,
+                                fontSize: 12,
+                                height: 1.7,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -627,9 +820,9 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
-              'شرایط و خدمات ثبت اقامتگاه در سایروس توریست بر پایه زیرساخت اینترنت کشور و صرفاً به‌صورت تبلیغات مجازی ارائه می‌شود. '
+              'شرایط و خدمات ${_info.owner} در سایروس توریست بر پایه زیرساخت اینترنت کشور و صرفاً به‌صورت تبلیغات مجازی ارائه می‌شود. '
               'سایروس توریست در صورت بروز هرگونه اختلال، قطعی یا محدودیت در زیرساخت اینترنت، هیچ‌گونه مسئولیتی در قبال آن نخواهد داشت.\n\n'
-              'هزینه خدمات ثبت اقامتگاه به‌صورت سالانه محاسبه و دریافت می‌شود.',
+              'هزینه خدمات ${_info.owner} به‌صورت سالانه محاسبه و دریافت می‌شود.',
               style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.9),
             ),
           ),
@@ -946,7 +1139,7 @@ class _ResidenceRegisterPageState extends State<ResidenceRegisterPage> {
                     const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
-                        '✅ قوانین و شرایط پذیرفته شد. اکنون می‌توانید برای تکمیل ثبت اقامتگاه با پشتیبانی هماهنگ کنید.',
+                        '✅ قوانین و شرایط پذیرفته شد. اکنون می‌توانید برای تکمیل ${_info.owner} با پشتیبانی هماهنگ کنید.',
                         style: TextStyle(color: Colors.white, fontSize: 12.5, height: 1.8),
                       ),
                     ),
