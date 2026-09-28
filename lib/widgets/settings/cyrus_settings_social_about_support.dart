@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// فایل مستقل گزینه‌های:
-/// 1. شبکه‌های مجازی
+/// 1. حساب کاربری
 /// 2. درباره ما
 /// 3. پشتیبانی
 ///
@@ -19,42 +19,42 @@ class CyrusSettingsSocialAboutSupport {
   /// ساخت سه گزینه اصلی تنظیمات.
   static List<CyrusSettingsFeatureItem> buildItems({
     required String languageCode,
-    VoidCallback? onSocialNetworks,
+    VoidCallback? onAccount,
     VoidCallback? onAboutUs,
     VoidCallback? onSupport,
   }) {
     return [
       CyrusSettingsFeatureItem(
-        icon: Icons.public_rounded,
+        icon: Icons.person_rounded,
         title: _text(
           languageCode,
-          'شبکه‌های مجازی',
-          'Social Networks',
-          'شبكات التواصل الاجتماعي',
-          'Sosyal Ağlar',
-          'Социальные сети',
-          'Réseaux sociaux',
-          'Soziale Netzwerke',
-          'Redes sociales',
-          '社交网络',
-          'Social network',
+          'حساب کاربری',
+          'Account',
+          'الحساب',
+          'Hesap',
+          'Аккаунт',
+          'Compte',
+          'Konto',
+          'Cuenta',
+          '账户',
+          'Account',
         ),
         subtitle: _text(
           languageCode,
-          'صفحات رسمی سایروس توریست',
-          'CyrusTourist official pages',
-          'الصفحات الرسمية لسایروس توریست',
-          'CyrusTourist resmi sayfaları',
-          'Официальные страницы CyrusTourist',
-          'Pages officielles de CyrusTourist',
-          'Offizielle Seiten von CyrusTourist',
-          'Páginas oficiales de CyrusTourist',
-          'CyrusTourist 官方页面',
-          'Pagine ufficiali di CyrusTourist',
+          'ورود و مدیریت حساب شما',
+          'Sign in and manage your account',
+          'تسجيل الدخول وإدارة حسابك',
+          'Giriş yapın ve hesabınızı yönetin',
+          'Вход и управление аккаунтом',
+          'Connexion et gestion de votre compte',
+          'Anmelden und Konto verwalten',
+          'Inicia sesión y gestiona tu cuenta',
+          '登录并管理您的账户',
+          'Accedi e gestisci il tuo account',
         ),
         iconBackground: const Color(0xff1769aa),
         iconForeground: Colors.white,
-        onTap: onSocialNetworks,
+        onTap: onAccount,
       ),
       CyrusSettingsFeatureItem(
         icon: Icons.info_outline_rounded,
@@ -403,14 +403,14 @@ class _CyrusSettingsFeatureButtonState
 /// به ساختار اصلی پروژه ندارد.
 class CyrusSettingsFeatureButtons extends StatelessWidget {
   final String languageCode;
-  final VoidCallback? onSocialNetworks;
+  final VoidCallback? onAccount;
   final VoidCallback? onAboutUs;
   final VoidCallback? onSupport;
 
   const CyrusSettingsFeatureButtons({
     super.key,
     required this.languageCode,
-    this.onSocialNetworks,
+    this.onAccount,
     this.onAboutUs,
     this.onSupport,
   });
@@ -419,7 +419,7 @@ class CyrusSettingsFeatureButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = CyrusSettingsSocialAboutSupport.buildItems(
       languageCode: languageCode,
-      onSocialNetworks: onSocialNetworks,
+      onAccount: onAccount,
       onAboutUs: onAboutUs,
       onSupport: onSupport,
     );
