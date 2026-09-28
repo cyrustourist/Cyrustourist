@@ -34,7 +34,7 @@ class CyrusAdvertisement {
   /// آدرس پایه‌ی Worker؛ برای تبدیل آدرس‌های نسبی (مثل /ads/image/3)
   /// به آدرس کامل. اگر سرور آدرس کامل بدهد، دست‌نخورده می‌ماند.
   static const String _origin =
-      'https://cyrus-tourist-api.cyrustourist.workers.dev';
+      'https://cyrus-tourist-admin-panel.cyrustourist.workers.dev';
 
   static String _absUrl(String raw) {
     final v = raw.trim();
