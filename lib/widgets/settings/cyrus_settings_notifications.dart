@@ -23,14 +23,8 @@ class CyrusSettingsNotifications {
   static List<CyrusNotificationItem> buildItems({
     required String languageCode,
     required bool notificationsEnabled,
-    required bool tourismNotificationsEnabled,
-    required bool travelSuggestionsEnabled,
-    required bool supportNotificationsEnabled,
     required bool soundEffectEnabled,
     required ValueChanged<bool> onNotificationsChanged,
-    required ValueChanged<bool> onTourismNotificationsChanged,
-    required ValueChanged<bool> onTravelSuggestionsChanged,
-    required ValueChanged<bool> onSupportNotificationsChanged,
     required ValueChanged<bool> onSoundEffectChanged,
   }) {
     return [
@@ -66,105 +60,6 @@ class CyrusSettingsNotifications {
         enabled: true,
         color: const Color(0xffc9a227),
         onChanged: onNotificationsChanged,
-      ),
-      CyrusNotificationItem(
-        icon: Icons.travel_explore_rounded,
-        title: _text(
-          languageCode,
-          'اعلان‌های گردشگری',
-          'Tourism Notifications',
-          'إشعارات السياحة',
-          'Turizm Bildirimleri',
-          'Туристические уведомления',
-          'Notifications touristiques',
-          'Tourismus-Benachrichtigungen',
-          'Notificaciones turísticas',
-          '旅游通知',
-          'Notifiche turistiche',
-        ),
-        subtitle: _text(
-          languageCode,
-          'اطلاع از جاذبه‌ها و رویدادهای گردشگری',
-          'Updates about attractions and tourism events',
-          'تحديثات حول المعالم والفعاليات السياحية',
-          'Turistik yerler ve etkinlikler hakkında güncellemeler',
-          'Новости о достопримечательностях и событиях',
-          'Actualités sur les sites et événements touristiques',
-          'Neuigkeiten zu Sehenswürdigkeiten und Veranstaltungen',
-          'Novedades sobre atracciones y eventos turísticos',
-          '景点和旅游活动更新',
-          'Aggiornamenti su attrazioni ed eventi turistici',
-        ),
-        value: tourismNotificationsEnabled,
-        enabled: notificationsEnabled,
-        color: const Color(0xff1769aa),
-        onChanged: onTourismNotificationsChanged,
-      ),
-      CyrusNotificationItem(
-        icon: Icons.auto_awesome_rounded,
-        title: _text(
-          languageCode,
-          'پیشنهادهای سفر',
-          'Travel Suggestions',
-          'اقتراحات السفر',
-          'Seyahat Önerileri',
-          'Предложения для путешествий',
-          'Suggestions de voyage',
-          'Reiseempfehlungen',
-          'Sugerencias de viaje',
-          '旅行推荐',
-          'Suggerimenti di viaggio',
-        ),
-        subtitle: _text(
-          languageCode,
-          'پیشنهادهای ویژه برای سفر و گردشگری',
-          'Special travel and tourism suggestions',
-          'اقتراحات خاصة للسفر والسياحة',
-          'Özel seyahat ve turizm önerileri',
-          'Специальные предложения для путешествий',
-          'Suggestions spéciales de voyage et tourisme',
-          'Besondere Reise- und Tourismusempfehlungen',
-          'Sugerencias especiales de viaje y turismo',
-          '特别旅行和旅游推荐',
-          'Suggerimenti speciali di viaggio e turismo',
-        ),
-        value: travelSuggestionsEnabled,
-        enabled: notificationsEnabled,
-        color: const Color(0xff8e244d),
-        onChanged: onTravelSuggestionsChanged,
-      ),
-      CyrusNotificationItem(
-        icon: Icons.support_agent_rounded,
-        title: _text(
-          languageCode,
-          'پیام‌های پشتیبانی',
-          'Support Messages',
-          'رسائل الدعم',
-          'Destek Mesajları',
-          'Сообщения поддержки',
-          'Messages du support',
-          'Support-Nachrichten',
-          'Mensajes de soporte',
-          '支持消息',
-          'Messaggi di supporto',
-        ),
-        subtitle: _text(
-          languageCode,
-          'دریافت پاسخ و پیام‌های پشتیبانی',
-          'Receive support replies and messages',
-          'تلقي ردود ورسائل الدعم',
-          'Destek yanıtlarını ve mesajlarını al',
-          'Получать ответы и сообщения поддержки',
-          'Recevoir les réponses et messages du support',
-          'Support-Antworten und Nachrichten erhalten',
-          'Recibir respuestas y mensajes de soporte',
-          '接收支持回复和消息',
-          'Ricevi risposte e messaggi di supporto',
-        ),
-        value: supportNotificationsEnabled,
-        enabled: notificationsEnabled,
-        color: const Color(0xff2f7d5b),
-        onChanged: onSupportNotificationsChanged,
       ),
       CyrusNotificationItem(
         icon: Icons.volume_up_rounded,
@@ -512,29 +407,17 @@ class _CyrusNotificationSwitchState
 class CyrusNotificationsSelector extends StatelessWidget {
   final String languageCode;
   final bool notificationsEnabled;
-  final bool tourismNotificationsEnabled;
-  final bool travelSuggestionsEnabled;
-  final bool supportNotificationsEnabled;
   final bool soundEffectEnabled;
 
   final ValueChanged<bool> onNotificationsChanged;
-  final ValueChanged<bool> onTourismNotificationsChanged;
-  final ValueChanged<bool> onTravelSuggestionsChanged;
-  final ValueChanged<bool> onSupportNotificationsChanged;
   final ValueChanged<bool> onSoundEffectChanged;
 
   const CyrusNotificationsSelector({
     super.key,
     required this.languageCode,
     required this.notificationsEnabled,
-    required this.tourismNotificationsEnabled,
-    required this.travelSuggestionsEnabled,
-    required this.supportNotificationsEnabled,
     required this.soundEffectEnabled,
     required this.onNotificationsChanged,
-    required this.onTourismNotificationsChanged,
-    required this.onTravelSuggestionsChanged,
-    required this.onSupportNotificationsChanged,
     required this.onSoundEffectChanged,
   });
 
@@ -543,20 +426,8 @@ class CyrusNotificationsSelector extends StatelessWidget {
     final items = CyrusSettingsNotifications.buildItems(
       languageCode: languageCode,
       notificationsEnabled: notificationsEnabled,
-      tourismNotificationsEnabled:
-          tourismNotificationsEnabled,
-      travelSuggestionsEnabled:
-          travelSuggestionsEnabled,
-      supportNotificationsEnabled:
-          supportNotificationsEnabled,
       soundEffectEnabled: soundEffectEnabled,
       onNotificationsChanged: onNotificationsChanged,
-      onTourismNotificationsChanged:
-          onTourismNotificationsChanged,
-      onTravelSuggestionsChanged:
-          onTravelSuggestionsChanged,
-      onSupportNotificationsChanged:
-          onSupportNotificationsChanged,
       onSoundEffectChanged: onSoundEffectChanged,
     );
 
