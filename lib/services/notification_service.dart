@@ -146,6 +146,33 @@ class NotificationService {
   // افکت صدای آگهی جدید
   // ==========================================================
 
+  // ==========================================================
+  // روشن/خاموش بودن دریافت اعلان‌های برنامه (Push)
+  // ==========================================================
+
+  static const String _pushEnabledKey = 'cyrus_push_enabled';
+
+  Future<bool> isPushEnabled() async {
+    final value = await CacheService.instance.getInt(_pushEnabledKey);
+    return value == null || value == 1;
+  }
+
+  /// خاموش کردن = لغو عضویت در Topic (اعلان حتی وقتی برنامه بسته است هم
+  /// نمی‌رسد) و نمایش ندادن پیام‌های لحظه‌ای داخل برنامه.
+  Future<void> setPushEnabled(bool enabled) async {
+    await CacheService.instance.setInt(_pushEnabledKey, enabled ? 1 : 0);
+
+    try {
+      if (enabled) {
+        await FirebaseMessaging.instance.subscribeToTopic(notificationTopic);
+      } else {
+        await FirebaseMessaging.instance.unsubscribeFromTopic(notificationTopic);
+      }
+    } catch (e) {
+      debugPrint('FCM topic update error: $e');
+    }
+  }
+
   Future<bool> isAnnouncementSoundEnabled() async {
     final value = await CacheService.instance.getInt(_soundEnabledKey);
     return value == null || value == 1;
@@ -258,8 +285,10 @@ class NotificationService {
     // Topic زیر، بدون نیاز به ذخیره‌ی توکن هر دستگاه، به همه‌ی
     // کاربران Push واقعی (حتی وقتی اپ بسته یا در پس‌زمینه است) می‌فرستد.
     try {
-      await FirebaseMessaging.instance.subscribeToTopic(notificationTopic);
-      debugPrint('Subscribed to FCM topic: $notificationTopic');
+      if (await isPushEnabled()) {
+        await FirebaseMessaging.instance.subscribeToTopic(notificationTopic);
+        debugPrint('Subscribed to FCM topic: $notificationTopic');
+      }
     } catch (e) {
       debugPrint('FCM topic subscribe error: $e');
     }
@@ -334,6 +363,10 @@ class NotificationService {
   }
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
+    if (!await isPushEnabled()) {
+      return;
+    }
+
     final notification = message.notification;
 
     final title = notification?.title ?? 'Cyrus Tourist';
