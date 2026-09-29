@@ -48,7 +48,7 @@ import 'pages/favorites_page.dart';
 import 'services/deep_link_service.dart';
 import 'widgets/home/cyrus_home_view.dart';
 import 'widgets/home/cyrus_home_style.dart';
-import 'pages/residence_register_page.dart';
+import 'pages/registration_hub_page.dart';
 
 // ============================================================
 // MAIN
@@ -409,7 +409,7 @@ class _HomePageState extends State<HomePage> {
   void _openResidenceRegister() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const ResidenceRegisterPage()),
+      MaterialPageRoute(builder: (_) => const RegistrationHubPage()),
     );
   }
 
