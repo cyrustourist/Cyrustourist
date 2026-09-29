@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/registration_send.dart';
 
 const Color _bg = Color(0xff06121d);
 const Color _card = Color(0xff0b2636);
 const Color _gold = Color(0xffffd36a);
 const Color _teal = Color(0xff29e0ad);
-
-class _SupportInfo {
-  static const String whatsapp = 'https://wa.me/989153448818';
-}
 
 const List<String> _contactMethods = ['تماس تلفنی', 'تلگرام', 'واتساپ'];
 
@@ -45,7 +41,7 @@ class _AgencyRegistrationFormPageState extends State<AgencyRegistrationFormPage>
   String _buildMessage() {
     return 'درخواست ثبت‌نام آژانس — CYRUS TOURIST\n\n'
         'نام آژانس: ${_nameCtrl.text.trim()}\n'
-        'شماره تماس: ${_phoneCtrl.text.trim()}\n'
+        'شماره تماس: ${normalizeDigits(_phoneCtrl.text.trim())}\n'
         'شهر محل فعالیت: ${_cityCtrl.text.trim()}\n'
         'خدمات ارائه‌شده: ${_servicesCtrl.text.trim()}\n'
         'توضیحات: ${_descCtrl.text.trim().isEmpty ? '—' : _descCtrl.text.trim()}\n'
@@ -57,18 +53,14 @@ class _AgencyRegistrationFormPageState extends State<AgencyRegistrationFormPage>
 
     setState(() => _submitting = true);
 
-    final message = Uri.encodeComponent(_buildMessage());
-    final uri = Uri.parse('${_SupportInfo.whatsapp}?text=$message');
-
+    bool sent = false;
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
+      sent = await showSendChooser(context, _buildMessage());
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
 
-    if (!mounted) return;
+    if (!mounted || !sent) return;
     _showConfirmation();
   }
 
@@ -170,10 +162,12 @@ class _AgencyRegistrationFormPageState extends State<AgencyRegistrationFormPage>
 
                 TextFormField(
                   controller: _phoneCtrl,
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: mobileInputFormatters,
+                  textDirection: TextDirection.ltr,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _decoration('شماره تماس'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'وارد کنید' : null,
+                  decoration: _decoration('شماره تماس', hint: '09xxxxxxxxx'),
+                  validator: validateIranMobile,
                 ),
                 const SizedBox(height: 14),
 
