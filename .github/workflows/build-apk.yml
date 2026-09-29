@@ -359,7 +359,7 @@ jobs:
           grep '^version:' pubspec.yaml
 
           echo ""
-          echo "Target platform: android-arm64"
+          echo "Target platform: android-arm (32-bit) + android-arm64"
           echo "Build mode: release"
           echo ""
 
@@ -367,7 +367,7 @@ jobs:
 
           flutter build apk \
             --release \
-            --target-platform android-arm64 \
+            --target-platform android-arm,android-arm64 \
             --android-skip-build-dependency-validation \
             --split-debug-info="$RUNNER_TEMP/debug-symbols" \
             --obfuscate \
@@ -449,6 +449,52 @@ jobs:
             build/app/outputs/flutter-apk/app-release.apk
 
           echo "APK signature verification successful."
+
+      - name: Verify APK ABIs and targetSdk
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          AAPT2="$(
+            find "$ANDROID_HOME/build-tools" \
+              -name aapt2 \
+              | sort -V \
+              | tail -n 1
+          )"
+
+          test -n "$AAPT2"
+
+          BADGING="$("$AAPT2" dump badging build/app/outputs/flutter-apk/app-release.apk)"
+
+          echo "$BADGING" | grep -E "^(sdkVersion|targetSdkVersion|native-code)" || true
+
+          MIN_SDK="$(echo "$BADGING" | sed -n "s/^sdkVersion:'\([0-9]*\)'.*/\1/p" | head -n 1)"
+          TARGET_SDK="$(echo "$BADGING" | sed -n "s/^targetSdkVersion:'\([0-9]*\)'.*/\1/p" | head -n 1)"
+          NATIVE="$(echo "$BADGING" | grep '^native-code' || true)"
+
+          if [[ "$NATIVE" != *armeabi-v7a* ]]; then
+            echo "ERROR: APK does not contain armeabi-v7a (32-bit) libraries."
+            exit 1
+          fi
+
+          if [[ "$NATIVE" != *arm64-v8a* ]]; then
+            echo "ERROR: APK does not contain arm64-v8a libraries."
+            exit 1
+          fi
+
+          # هشدار مایکت: تا ۱ آبان ۱۴۰۵ باید targetSdk حداقل ۳۴ باشد
+          if [ -z "$TARGET_SDK" ] || [ "$TARGET_SDK" -lt 34 ]; then
+            echo "ERROR: targetSdk ($TARGET_SDK) is lower than 34."
+            exit 1
+          fi
+
+          {
+            echo ""
+            echo "### 📐 APK compatibility"
+            echo "- minSdk: \`${MIN_SDK}\`"
+            echo "- targetSdk: \`${TARGET_SDK}\`"
+            echo "- ABIs: \`${NATIVE}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Prepare APK
         shell: bash
