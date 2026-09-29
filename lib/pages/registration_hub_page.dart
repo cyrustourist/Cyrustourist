@@ -2,23 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:webview_flutter/webview_flutter.dart';
+
 import '../core/language/menu_translations.dart';
 
-// ===================== رنگ‌ها (هماهنگ با سایت و صفحه‌های ثبت‌نام قبلی) =====================
+// ===================== رنگ‌ها (عیناً از CSS سایت: residences.html و residences-registration.js) =====================
 
-const Color _bg = Color(0xff070f18);
-const Color _card = Color(0xff0d2432);
-const Color _cardAlt = Color(0xff0a1c28);
-const Color _gold = Color(0xffffd36a);
-const Color _goldBright = Color(0xffffe39a);
-const Color _teal = Color(0xff22e0ad);
+const Color _pageBg = Color(0xfff3f6f7);
+const Color _topBar = Color(0xff0b6e69);
+const Color _boxA = Color(0xfffff8e8);
+const Color _boxB = Color(0xfffffdf7);
+const Color _boxBorder = Color(0xfff1dfb6);
+const Color _titleGold = Color(0xff765000);
+const Color _descBrown = Color(0xff6c624d);
+const Color _btnGold = Color(0xffc88a14);
+const Color _ink = Color(0xff202936);
+const Color _inkSoft = Color(0xff687482);
+const Color _teal = Color(0xff11998e);
 
 const List<Color> _brandGradient = [
   Color(0xff11998e),
   Color(0xff38ef7d),
   Color(0xff667eea),
 ];
-const List<Color> _goldGradient = [Color(0xffffd36a), Color(0xfff5a623)];
+const List<Color> _primaryGradient = [Color(0xff11998e), Color(0xff38ef7d)];
 const List<Color> _callGradient = [Color(0xff34d399), Color(0xff059669)];
 const List<Color> _telegramGradient = [Color(0xff4fb6e8), Color(0xff229ed9)];
 const List<Color> _whatsappGradient = [Color(0xff34d67a), Color(0xff25d366)];
@@ -30,6 +37,13 @@ class _Support {
   static const String telegram = 'https://t.me/Cyrustourist';
   static const String whatsapp = 'https://wa.me/989153448818';
   static const String eitaa = 'https://eitaa.com/cyrustourist';
+  static const String instagram = 'https://www.instagram.com/cyrustourist?igsi=aDc3end6dTNqNW1o';
+  static const String website = 'https://cyrustourist-maker.github.io/Cyrustourist/#residence';
+  static const String youtube = 'https://www.youtube.com/@cyrustourist';
+  static const String tiktok = 'https://www.tiktok.com/@cyrustourist';
+  static const String aparat = 'https://www.aparat.com/cyrustourist';
+  static const String sampleVideo =
+      'https://www.aparat.com/video/video/embed/videohash/w43c127/vt/frame';
 }
 
 const List<String> _kCategories = [
@@ -249,21 +263,79 @@ const Map<String, Map<String, String>> _kText = {
   },
 };
 
+
 const Map<String, Map<String, String>> _kExtra = {
   'fa': {
     'sendTg': '✈️ ارسال در تلگرام',
     'sendEitaa': '💬 ارسال در ایتا',
     'pasteHint': 'پیام کپی شد. در گفتگوی باز شده Paste کنید و ارسال بزنید.',
+    'samplePlaying': 'در حال بارگذاری نمونه…',
+    'close': '✕',
+    'sampleTitle': '🏡 نمونه کارت معرفی شما',
+    'sampleDesc': 'این یک نمونه از کارت معرفی شماست. برای فیلم معرفی دو روش دارید: ۱. ارسال لینک فیلم شبکه‌های اجتماعی‌تان به پشتیبانی سایروس توریست ۲. سفارش تولید محتوای حرفه‌ای توسط تیم سایروس توریست (حضوری یا دورکاری).',
+    'sampleRoute': '🗺️ مسیریابی (مکان من)',
+    'sampleCall': '📞 تماس مستقیم',
+    'sampleCallMobile': '📱 تلفن همراه',
+    'sampleCallLandline': '☎️ تلفن ثابت',
+    'sampleCallSupport': '🛟 تلفن پشتیبان',
+    'sampleCallNote': 'پس از ثبت‌نام آماده به کار است.',
+    'sampleInstagram': '📸 اینستاگرام',
+    'sampleWebsite': '🌐 وب‌سایت',
+    'sampleYoutube': '▶️ یوتیوب',
+    'sampleTiktok': '🎵 تیک‌تاک',
+    'sampleAparat': '▶️ آپارات',
+    'sampleTelegram': '✈️ تلگرام',
+    'sampleWhatsapp': '💬 واتساپ',
+    'sampleEitaa': '💬 ایتا',
+    'accepted': '✅ قوانین و شرایط پذیرفته شد.',
   },
   'en': {
     'sendTg': '✈️ Send via Telegram',
     'sendEitaa': '💬 Send via Eitaa',
     'pasteHint': 'Message copied. Paste it in the chat that opens and send.',
+    'samplePlaying': 'Loading sample…',
+    'close': '✕',
+    'sampleTitle': '🏡 Sample Listing Card',
+    'sampleDesc': 'This is a sample of your listing card. There are two ways to add your video: 1. Send your social media video link to Cyrus Tourist support 2. Order professional content production by the Cyrus Tourist team (in person or remote).',
+    'sampleRoute': '🗺️ Route (My Location)',
+    'sampleCall': '📞 Direct Call',
+    'sampleCallMobile': '📱 Mobile Number',
+    'sampleCallLandline': '☎️ Landline Number',
+    'sampleCallSupport': '🛟 Support Line',
+    'sampleCallNote': 'Ready to use after registration.',
+    'sampleInstagram': '📸 Instagram',
+    'sampleWebsite': '🌐 Website',
+    'sampleYoutube': '▶️ YouTube',
+    'sampleTiktok': '🎵 TikTok',
+    'sampleAparat': '▶️ Aparat',
+    'sampleTelegram': '✈️ Telegram',
+    'sampleWhatsapp': '💬 WhatsApp',
+    'sampleEitaa': '💬 Eitaa',
+    'accepted': '✅ Terms and conditions accepted.',
   },
   'ar': {
     'sendTg': '✈️ إرسال عبر تيليجرام',
     'sendEitaa': '💬 إرسال عبر إيتا',
     'pasteHint': 'تم نسخ الرسالة. الصقها في المحادثة التي ستفتح ثم أرسلها.',
+    'samplePlaying': 'جارٍ تحميل النموذج…',
+    'close': '✕',
+    'sampleTitle': '🏡 نموذج بطاقة التعريف الخاصة بك',
+    'sampleDesc': 'هذا نموذج لبطاقة إقامتك. لديك طريقتان لإضافة الفيديو: ١. إرسال رابط فيديو من وسائل التواصل الاجتماعي إلى دعم سايروس توريست ٢. طلب إنتاج محتوى احترافي من فريق سايروس توريست (حضورياً أو عن بُعد).',
+    'sampleRoute': '🗺️ الملاحة (موقعي)',
+    'sampleCall': '📞 اتصال مباشر',
+    'sampleCallMobile': '📱 رقم الجوال',
+    'sampleCallLandline': '☎️ رقم الهاتف الأرضي',
+    'sampleCallSupport': '🛟 خط الدعم',
+    'sampleCallNote': 'جاهز للاستخدام بعد التسجيل.',
+    'sampleInstagram': '📸 إنستغرام',
+    'sampleWebsite': '🌐 الموقع الإلكتروني',
+    'sampleYoutube': '▶️ يوتيوب',
+    'sampleTiktok': '🎵 تيك توك',
+    'sampleAparat': '▶️ آپارات',
+    'sampleTelegram': '✈️ تلغرام',
+    'sampleWhatsapp': '💬 واتساب',
+    'sampleEitaa': '💬 ایتا',
+    'accepted': '✅ تمت الموافقة على الشروط والأحكام.',
   },
 };
 
@@ -298,12 +370,12 @@ bool _isValidLink(String v) {
 
 enum _Step { hub, terms, form, support }
 
-/// صفحهٔ ثبت‌نام داخل برنامه — همان روال و ظاهر بخش «ثبت‌نام در سایروس توریست» سایت:
-/// انتخاب دسته ← مزایا و قوانین ← فرم ← ارسال به پشتیبانی.
+/// صفحهٔ ثبت‌نام داخل برنامه — همان ظاهر و روال «ثبت‌نام در سایروس توریست» سایت:
+/// کادر کرم‌رنگ با دکمه‌های دسته ← پنجرهٔ سفید (مزایا و قوانین) ← فرم ← ارسال به پشتیبان.
 class RegistrationHubPage extends StatefulWidget {
   const RegistrationHubPage({super.key, this.initialCategory});
 
-  /// اگر مقدار بدهید، مستقیم به مرحلهٔ قوانین همان دسته می‌رود.
+  /// اگر مقدار بدهید، مستقیم به مرحلهٔ مزایا و قوانین همان دسته می‌رود.
   final String? initialCategory;
 
   @override
@@ -315,6 +387,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
   String _category = 'residence';
   bool _accepted = false;
   bool _confirmed = false;
+  bool _callOpen = false;
   String? _error;
   String _message = '';
 
@@ -325,6 +398,8 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     for (final s in _kSocials) s[0]: TextEditingController(),
   };
   final _scroll = ScrollController();
+
+  bool get _rtl => MenuLanguage.isRtl;
 
   @override
   void initState() {
@@ -360,6 +435,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     setState(() {
       _category = cat;
       _accepted = false;
+      _callOpen = false;
     });
     _go(_Step.terms);
   }
@@ -370,7 +446,11 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
         Navigator.of(context).pop();
         break;
       case _Step.terms:
-        _go(_Step.hub);
+        if (widget.initialCategory != null) {
+          Navigator.of(context).pop();
+        } else {
+          _go(_Step.hub);
+        }
         break;
       case _Step.form:
         _go(_Step.terms);
@@ -378,6 +458,15 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
       case _Step.support:
         _go(_Step.form);
         break;
+    }
+  }
+
+  /// بستن «پنجره» — مثل دکمهٔ ✕ سایت
+  void _closeModal() {
+    if (widget.initialCategory != null) {
+      Navigator.of(context).pop();
+    } else {
+      _go(_Step.hub);
     }
   }
 
@@ -422,35 +511,173 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     _go(_Step.support);
   }
 
+  /// پیام را کپی می‌کند و گفتگوی پشتیبانی را باز می‌کند (تلگرام و ایتا متن آماده را
+  /// از لینک نمی‌پذیرند؛ کاربر فقط Paste می‌کند).
+  Future<void> _copyAndOpen(String url) async {
+    await Clipboard.setData(ClipboardData(text: _message));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('pasteHint'))));
+    await _openUrl(context, url);
+  }
+
   // ===================== ساختار صفحه =====================
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+      textDirection: _rtl ? TextDirection.rtl : TextDirection.ltr,
       child: PopScope(
         canPop: _step == _Step.hub,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _onBack();
         },
-        child: Scaffold(
-          backgroundColor: _bg,
-          body: SafeArea(
-            child: Column(
-              children: [
-                _header(),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 260),
+        child: _step == _Step.hub ? _hubScaffold() : _modalScaffold(),
+      ),
+    );
+  }
+
+  // ---------- کادر ثبت‌نام (صفحهٔ روشن مثل سایت) ----------
+
+  Widget _hubScaffold() {
+    return Scaffold(
+      backgroundColor: _pageBg,
+      appBar: AppBar(
+        backgroundColor: _topBar,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          _t('hubTitle'),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          controller: _scroll,
+          padding: const EdgeInsets.all(16),
+          children: [_hubBox()],
+        ),
+      ),
+    );
+  }
+
+  Widget _hubBox() {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [_boxA, _boxB],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _boxBorder),
+        boxShadow: [
+          BoxShadow(color: const Color(0xff825a00).withValues(alpha: 0.06), blurRadius: 25, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            _t('hubTitle'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: _titleGold, fontSize: 22, fontWeight: FontWeight.w900, height: 1.5),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            _t('hubDesc'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: _descBrown, fontSize: 14, height: 1.9),
+          ),
+          const SizedBox(height: 17),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final cat in _kCategories)
+                _goldPill(_t('regBtn').replaceAll('{cat}', _catName(cat)), () => _openCategory(cat)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _contactChip(_t('callBtn'), _callGradient, () => _openUrl(context, 'tel:${_Support.phone}')),
+              _contactChip(_t('tgBtn'), _telegramGradient, () => _openUrl(context, _Support.telegram)),
+              _contactChip(_t('waBtn'), _whatsappGradient, () => _openUrl(context, _Support.whatsapp)),
+              _contactChip(_t('eitaaBtn'), _eitaaGradient, () => _openUrl(context, _Support.eitaa)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _goldPill(String label, VoidCallback onTap) {
+    return Material(
+      color: _btnGold,
+      elevation: 3,
+      shadowColor: _btnGold.withValues(alpha: 0.4),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _contactChip(String label, List<Color> gradient, VoidCallback onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: gradient),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+
+  // ---------- «پنجرهٔ» سفید با هدر گرادیانی (مثل modal سایت) ----------
+
+  Widget _modalScaffold() {
+    return Scaffold(
+      backgroundColor: const Color(0xff2b3240),
+      body: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: Container(
+              color: Colors.white,
+              child: Column(
+                children: [
+                  _modalHeader(),
+                  Expanded(
                     child: SingleChildScrollView(
-                      key: ValueKey(_step),
                       controller: _scroll,
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-                      child: _stepBody(),
+                      child: _modalContent(),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -458,32 +685,54 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     );
   }
 
-  Widget _header() {
-    final title = _step == _Step.hub
-        ? _t('hubTitle')
-        : _t('titleTemplate').replaceAll('{cat}', _catName(_category));
+  Widget _modalHeader() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(6, 8, 14, 12),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(17, 22, 17, 19),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: _brandGradient),
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: _brandGradient,
+        ),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          IconButton(
-            onPressed: _onBack,
-            icon: Icon(
-              MenuLanguage.isRtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
-              color: Colors.white,
+          Padding(
+            padding: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 44),
+                  child: Text(
+                    _t('titleTemplate').replaceAll('{cat}', _catName(_category)),
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1.5),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _t('subtitle'),
+                  style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.9),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                height: 1.6,
+          PositionedDirectional(
+            top: -6,
+            start: 0,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: _closeModal,
+              child: Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.2),
+                ),
+                child: const Text('✕', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
               ),
             ),
           ),
@@ -492,164 +741,216 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     );
   }
 
-  Widget _stepBody() {
+  Widget _modalContent() {
     switch (_step) {
-      case _Step.hub:
-        return _hubStep();
       case _Step.terms:
         return _termsStep();
       case _Step.form:
         return _formStep();
       case _Step.support:
         return _supportStep();
+      case _Step.hub:
+        return const SizedBox.shrink();
     }
   }
 
-  // ===================== مرحلهٔ ۰: کادر ثبت‌نام (مثل سایت) =====================
-
-  Widget _hubStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _boxDecoration(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _t('hubTitle'),
-                style: const TextStyle(color: _goldBright, fontSize: 17, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _t('hubDesc'),
-                style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.9),
-              ),
-              const SizedBox(height: 14),
-              for (final cat in _kCategories) ...[
-                _gradientButton(
-                  label: _t('regBtn').replaceAll('{cat}', _catName(cat)),
-                  gradient: _goldGradient,
-                  textColor: const Color(0xff1a1200),
-                  onTap: () => _openCategory(cat),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _contactButtons(),
-      ],
-    );
-  }
-
-  Widget _contactButtons() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _contactChip(_t('callBtn'), _callGradient, () => _openUrl(context, 'tel:${_Support.phone}')),
-        _contactChip(_t('tgBtn'), _telegramGradient, () => _openUrl(context, _Support.telegram)),
-        _contactChip(_t('waBtn'), _whatsappGradient, () => _openUrl(context, _Support.whatsapp)),
-        _contactChip(_t('eitaaBtn'), _eitaaGradient, () => _openUrl(context, _Support.eitaa)),
-      ],
-    );
-  }
-
-  Widget _contactChip(String label, List<Color> gradient, VoidCallback onTap) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: gradient),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
-        ),
-      ),
-    );
-  }
-
-  // ===================== مرحلهٔ ۱: مزایا و قوانین =====================
+  // ===================== مرحلهٔ ۱: نمونه کارت، مزایا و قوانین =====================
 
   Widget _termsStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          _t('subtitle'),
-          style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.9),
-        ),
-        const SizedBox(height: 16),
+        _sampleCard(),
         _sectionTitle(_t('benefitsTitle')),
         for (var i = 1; i <= 8; i++)
           Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: _boxDecoration(alt: true),
+            margin: const EdgeInsets.only(bottom: 13),
+            padding: const EdgeInsets.all(17),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xfff8fbff), Color(0xffeef8f5)]),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xffe5edf0)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _t('benefit$i'),
-                  style: const TextStyle(color: _goldBright, fontWeight: FontWeight.w700, fontSize: 13.5, height: 1.7),
+                  style: const TextStyle(color: Color(0xff1d2935), fontSize: 15, fontWeight: FontWeight.w900, height: 1.7),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   _t('benefit${i}Desc'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.8),
+                  style: const TextStyle(color: _inkSoft, fontSize: 12, height: 1.9),
                 ),
               ],
             ),
           ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 11),
         _sectionTitle(_t('rulesTitle')),
         Container(
-          padding: const EdgeInsets.all(14),
-          decoration: _boxDecoration(),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xfffff9ed),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xfff3dfb3)),
+          ),
           child: Text(
             _t('rules'),
-            style: const TextStyle(color: Colors.white, fontSize: 12.5, height: 2),
+            style: const TextStyle(color: Color(0xff4d4331), fontSize: 13, height: 2),
           ),
         ),
-        const SizedBox(height: 10),
-        InkWell(
-          onTap: () => setState(() => _accepted = !_accepted),
-          child: Row(
-            children: [
-              Checkbox(
-                value: _accepted,
-                activeColor: _teal,
-                onChanged: (v) => setState(() => _accepted = v ?? false),
-              ),
-              Expanded(
-                child: Text(
-                  _t('accept'),
-                  style: const TextStyle(color: Colors.white, fontSize: 12.5, height: 1.8),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 18),
+        _checkCard(_accepted, _t('accept'), (v) => setState(() => _accepted = v)),
+        const SizedBox(height: 18),
         Opacity(
           opacity: _accepted ? 1 : 0.45,
-          child: _gradientButton(
-            label: _t('continueButton'),
-            gradient: _goldGradient,
-            textColor: const Color(0xff1a1200),
-            onTap: _accepted ? () => _go(_Step.form) : null,
+          child: _primaryButton(_t('continueButton'), _accepted ? () => _go(_Step.form) : null),
+        ),
+      ],
+    );
+  }
+
+  Widget _sampleCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xfff8fbff), Color(0xffeef8f5)]),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xffe5edf0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const AspectRatio(aspectRatio: 16 / 9, child: _SampleVideo()),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _t('sampleTitle'),
+                  style: const TextStyle(color: Color(0xff1d2935), fontSize: 16, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _t('sampleDesc'),
+                  style: const TextStyle(color: _inkSoft, fontSize: 12.5, height: 1.9),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _sampleBtn(
+                        _t('sampleRoute'),
+                        () => _openUrl(context, 'https://maps.google.com'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _sampleBtn(
+                        _t('sampleCall'),
+                        () => setState(() => _callOpen = !_callOpen),
+                        call: true,
+                      ),
+                    ),
+                  ],
+                ),
+                if (_callOpen) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      for (final k in const ['sampleCallMobile', 'sampleCallLandline', 'sampleCallSupport'])
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 3),
+                            child: OutlinedButton(
+                              onPressed: () {},
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xff344050),
+                                backgroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                                side: const BorderSide(color: Color(0xffdbe3ea)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: Text(
+                                _t(k),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xfffff7e6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      _t('sampleCallNote'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xff8a6d1d), fontSize: 12, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final e in <List<String>>[
+                      ['sampleInstagram', _Support.instagram],
+                      ['sampleWebsite', _Support.website],
+                      ['sampleYoutube', _Support.youtube],
+                      ['sampleTiktok', _Support.tiktok],
+                      ['sampleAparat', _Support.aparat],
+                      ['sampleTelegram', _Support.telegram],
+                      ['sampleWhatsapp', _Support.whatsapp],
+                      ['sampleEitaa', _Support.eitaa],
+                    ])
+                      SizedBox(
+                        width: (MediaQuery.of(context).size.width - 32 - 32 - 8) / 2,
+                        child: _sampleBtn(_t(e[0]), () => _openUrl(context, e[1])),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sampleBtn(String label, VoidCallback onTap, {bool call = false}) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
+        decoration: BoxDecoration(
+          gradient: call ? const LinearGradient(colors: _primaryGradient) : null,
+          color: call ? null : const Color(0xffedf1f5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: call ? Colors.white : const Color(0xff344050),
+              fontSize: 12.5,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        _outlineButton(_t('back'), () => _go(_Step.hub)),
-      ],
+      ),
     );
   }
 
@@ -660,24 +961,29 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _sectionTitle(_t('f_title')),
-        Text(
-          _t('f_desc'),
-          style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.8),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Text(
+            _t('f_desc'),
+            style: const TextStyle(color: Color(0xff5a6572), fontSize: 13, height: 1.9),
+          ),
         ),
-        const SizedBox(height: 14),
         _field(_t('f_name'), _name, maxLength: 120),
-        _label(_t('f_category')),
+        _fieldLabel(_t('f_category')),
         Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: _inputDecoration(),
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xffd9e0e7)),
+          ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _category,
               isExpanded: true,
-              dropdownColor: _card,
-              iconEnabledColor: _gold,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              dropdownColor: Colors.white,
+              style: const TextStyle(color: Color(0xff25303b), fontSize: 14),
               items: [
                 for (final c in _kCategories)
                   DropdownMenuItem<String>(value: c, child: Text(_catName(c))),
@@ -695,60 +1001,30 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
           padding: const EdgeInsets.only(top: 4, bottom: 8),
           child: Text(
             _t('f_socials'),
-            style: const TextStyle(color: _goldBright, fontWeight: FontWeight.w800, fontSize: 13.5),
+            style: const TextStyle(color: _teal, fontSize: 13, fontWeight: FontWeight.w900),
           ),
         ),
         for (final s in _kSocials)
           _field(s[1], _socials[s[0]]!, keyboard: TextInputType.url, ltr: true, hint: 'https://'),
-        InkWell(
-          onTap: () => setState(() => _confirmed = !_confirmed),
-          child: Row(
-            children: [
-              Checkbox(
-                value: _confirmed,
-                activeColor: _teal,
-                onChanged: (v) => setState(() => _confirmed = v ?? false),
-              ),
-              Expanded(
-                child: Text(
-                  _t('f_confirm'),
-                  style: const TextStyle(color: Colors.white, fontSize: 12.5, height: 1.8),
-                ),
-              ),
-            ],
-          ),
-        ),
+        const SizedBox(height: 4),
+        _checkCard(_confirmed, _t('f_confirm'), (v) => setState(() => _confirmed = v)),
+        const SizedBox(height: 10),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.only(bottom: 10),
             child: Text(
               _error!,
-              style: const TextStyle(color: Color(0xffff8a80), fontSize: 12.5, fontWeight: FontWeight.w700),
+              style: const TextStyle(color: Color(0xffc0392b), fontSize: 13, fontWeight: FontWeight.w800),
             ),
           ),
-        const SizedBox(height: 6),
-        _gradientButton(
-          label: _t('f_submit'),
-          gradient: _goldGradient,
-          textColor: const Color(0xff1a1200),
-          onTap: _submit,
-        ),
-        const SizedBox(height: 8),
-        _outlineButton(_t('back'), () => _go(_Step.terms)),
+        _primaryButton(_t('f_submit'), _submit),
+        const SizedBox(height: 10),
+        _secondaryButton(_t('back'), () => _go(_Step.terms)),
       ],
     );
   }
 
-  // ===================== مرحلهٔ ۳: ارسال به پشتیبانی =====================
-
-  /// پیام را کپی می‌کند و گفتگوی پشتیبانی را باز می‌کند (تلگرام و ایتا متن آماده را
-  /// از لینک نمی‌پذیرند؛ کاربر فقط Paste می‌کند).
-  Future<void> _copyAndOpen(String url) async {
-    await Clipboard.setData(ClipboardData(text: _message));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('pasteHint'))));
-    await _openUrl(context, url);
-  }
+  // ===================== مرحلهٔ ۳: ارسال به پشتیبان =====================
 
   Widget _supportStep() {
     final waUrl = '${_Support.whatsapp}?text=${Uri.encodeComponent(_message)}';
@@ -756,91 +1032,85 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
           decoration: BoxDecoration(
-            color: _teal.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _teal.withValues(alpha: 0.4)),
+            color: const Color(0xffeafaf1),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
-            '${_t('f_sendTitle')}\n${_t('f_sendDesc')}',
-            style: const TextStyle(color: Colors.white, fontSize: 12.5, height: 1.9),
+            '${_t('accepted')}\n${_t('f_sendDesc')}',
+            style: const TextStyle(color: Color(0xff176b43), fontSize: 13, fontWeight: FontWeight.w800, height: 1.8),
           ),
         ),
-        const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(12),
-          decoration: _boxDecoration(alt: true),
-          child: SelectableText(
-            _message,
-            style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.8),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xfff4f8ff), Color(0xfff4fff9)]),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xffe3eaf0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                _t('f_sendTitle'),
+                style: const TextStyle(color: _ink, fontSize: 21, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xffe3eaf0)),
+                ),
+                child: SelectableText(
+                  _message,
+                  style: const TextStyle(color: Color(0xff637080), fontSize: 12.5, height: 1.9),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _supportButton(_t('sendWa'), const [Color(0xff25d366), Color(0xff128c7e)], () => _openUrl(context, waUrl)),
+              const SizedBox(height: 10),
+              _supportButton(_t('sendTg'), const [Color(0xff229ed9), Color(0xff2aabee)], () => _copyAndOpen(_Support.telegram)),
+              const SizedBox(height: 10),
+              _supportButton(_t('sendEitaa'), _eitaaGradient, () => _copyAndOpen(_Support.eitaa)),
+              const SizedBox(height: 10),
+              _supportButton(_t('callBtn'), const [Color(0xff00b09b), Color(0xff96c93d)],
+                  () => _openUrl(context, 'tel:${_Support.phone}')),
+            ],
           ),
         ),
         const SizedBox(height: 14),
-        _gradientButton(
-          label: _t('sendWa'),
-          gradient: _whatsappGradient,
-          onTap: () => _openUrl(context, waUrl),
-        ),
-        const SizedBox(height: 8),
-        _gradientButton(
-          label: _t('sendTg'),
-          gradient: _telegramGradient,
-          onTap: () => _copyAndOpen(_Support.telegram),
-        ),
-        const SizedBox(height: 8),
-        _gradientButton(
-          label: _t('sendEitaa'),
-          gradient: _eitaaGradient,
-          onTap: () => _copyAndOpen(_Support.eitaa),
-        ),
-        const SizedBox(height: 8),
-        _gradientButton(
-          label: _t('callBtn'),
-          gradient: _callGradient,
-          onTap: () => _openUrl(context, 'tel:${_Support.phone}'),
-        ),
-        const SizedBox(height: 8),
-        _outlineButton(_t('copyAgain'), () async {
+        _secondaryButton(_t('copyAgain'), () async {
           await Clipboard.setData(ClipboardData(text: _message));
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('copied'))));
         }),
-        const SizedBox(height: 8),
-        _outlineButton(_t('back'), () => _go(_Step.form)),
-        const SizedBox(height: 8),
-        _outlineButton(_t('done'), () => Navigator.of(context).pop()),
+        const SizedBox(height: 10),
+        _secondaryButton(_t('back'), () => _go(_Step.form)),
+        const SizedBox(height: 10),
+        _secondaryButton(_t('done'), () => Navigator.of(context).pop()),
       ],
     );
   }
 
   // ===================== اجزای مشترک UI =====================
 
-  BoxDecoration _boxDecoration({bool alt = false}) => BoxDecoration(
-        color: alt ? _cardAlt : _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _gold.withValues(alpha: 0.3)),
-      );
-
-  BoxDecoration _inputDecoration() => BoxDecoration(
-        color: _cardAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _gold.withValues(alpha: 0.35)),
-      );
-
   Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.only(bottom: 15),
         child: Text(
           text,
-          style: const TextStyle(color: _goldBright, fontSize: 15, fontWeight: FontWeight.w800, height: 1.6),
+          style: const TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900, height: 1.5),
         ),
       );
 
-  Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
+  Widget _fieldLabel(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 5),
         child: Text(
           text,
-          style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+          style: const TextStyle(color: Color(0xff313b46), fontSize: 12, fontWeight: FontWeight.w800),
         ),
       );
 
@@ -857,28 +1127,29 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _label(label),
+          _fieldLabel(label),
           TextField(
             controller: controller,
             keyboardType: keyboard,
             maxLength: maxLength,
             textDirection: ltr ? TextDirection.ltr : null,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            cursorColor: _gold,
+            style: const TextStyle(color: Color(0xff25303b), fontSize: 14),
+            cursorColor: _teal,
             decoration: InputDecoration(
               counterText: '',
               hintText: hint,
-              hintStyle: const TextStyle(color: Colors.white38),
+              hintStyle: const TextStyle(color: Color(0xff9aa4ae)),
               filled: true,
-              fillColor: _cardAlt,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              fillColor: Colors.white,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: _gold.withValues(alpha: 0.35)),
+                borderSide: const BorderSide(color: Color(0xffd9e0e7)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _gold, width: 1.4),
+                borderSide: const BorderSide(color: _teal, width: 1.6),
               ),
             ),
           ),
@@ -887,17 +1158,87 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     );
   }
 
-  Widget _gradientButton({
-    required String label,
-    required List<Color> gradient,
-    required VoidCallback? onTap,
-    Color textColor = Colors.white,
-  }) {
+  Widget _checkCard(bool value, String label, ValueChanged<bool> onChanged) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(15),
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xfff4f7fa),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              value: value,
+              activeColor: _teal,
+              onChanged: (v) => onChanged(v ?? false),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  label,
+                  style: const TextStyle(color: Color(0xff313b46), fontSize: 13, fontWeight: FontWeight.w800, height: 1.9),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _primaryButton(String label, VoidCallback? onTap) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
       child: Ink(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: _primaryGradient),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _secondaryButton(String label, VoidCallback onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+        decoration: BoxDecoration(
+          color: const Color(0xffedf1f5),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xff344050), fontSize: 14, fontWeight: FontWeight.w900),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _supportButton(String label, List<Color> gradient, VoidCallback onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Ink(
+        height: 48,
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: gradient),
           borderRadius: BorderRadius.circular(14),
@@ -905,24 +1246,85 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
         child: Center(
           child: Text(
             label,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 14),
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _outlineButton(String label, VoidCallback onTap) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _goldBright,
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        side: BorderSide(color: _gold.withValues(alpha: 0.6)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      child: Text(label, textAlign: TextAlign.center),
+/// ویدیوی نمونهٔ کارت معرفی (همان iframe آپارات سایت)
+class _SampleVideo extends StatefulWidget {
+  const _SampleVideo();
+
+  @override
+  State<_SampleVideo> createState() => _SampleVideoState();
+}
+
+class _SampleVideoState extends State<_SampleVideo> {
+  late final WebViewController _controller;
+  bool _loading = true;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.black)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            if (mounted) setState(() => _loading = false);
+          },
+          onWebResourceError: (_) {
+            if (mounted) {
+              setState(() {
+                _loading = false;
+                _failed = true;
+              });
+            }
+          },
+          onNavigationRequest: (request) {
+            return request.url.contains('aparat.com')
+                ? NavigationDecision.navigate
+                : NavigationDecision.prevent;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(_Support.sampleVideo));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Container(color: Colors.black),
+        WebViewWidget(controller: _controller),
+        if (_loading)
+          Container(
+            color: Colors.black,
+            alignment: Alignment.center,
+            child: const CircularProgressIndicator(color: Colors.white),
+          ),
+        if (_failed)
+          Container(
+            color: Colors.black,
+            alignment: Alignment.center,
+            child: TextButton(
+              onPressed: () {
+                setState(() {
+                  _failed = false;
+                  _loading = true;
+                });
+                _controller.reload();
+              },
+              child: const Text('↻', style: TextStyle(color: Colors.white, fontSize: 28)),
+            ),
+          ),
+      ],
     );
   }
 }
