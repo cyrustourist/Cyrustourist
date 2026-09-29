@@ -25,13 +25,14 @@ android {
         applicationId = "cyrustourist.ir.app"
 
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // مایکت: targetSdk باید حداقل 34 باشد (مهلت: 1 آبان 1405)
+        targetSdk = maxOf(flutter.targetSdkVersion, 34)
 
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
         ndk {
-            abiFilters += "arm64-v8a"
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
     }
 
