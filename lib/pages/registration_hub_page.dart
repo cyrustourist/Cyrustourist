@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/menu_translations.dart';
+import '../widgets/brand_icons.dart';
 
 // ===================== رنگ‌ها (عیناً از CSS سایت: residences.html و residences-registration.js) =====================
 
@@ -79,6 +80,13 @@ const Map<String, Map<String, String>> _kText = {
     'rulesTitle': '📋 قوانین و شرایط خدمات',
     'rules': 'ثبت‌نام در سایروس توریست با پرداخت حق عضویت یک‌ساله انجام می‌شود و صرفاً برای حضور در فضای تبلیغاتی سایروس توریست و معرفی شما به کاربران است. این خدمت در چارچوب خدمات دیجیتال، تبلیغاتی و زیرساخت‌های مبتنی بر اینترنت ارائه می‌شود. در صورت اختلال، محدودیت یا قطعی اینترنت، مخابرات یا سرویس‌های شخص ثالث که خارج از کنترل سایروس توریست است، سایروس توریست مسئولیت مستقیمی نخواهد داشت.',
     'continueButton': '➡️ ادامه',
+    'enterReg': 'ورود به ثبت‌نام',
+    'chatTitle': 'چت مستقیم با پشتیبانی',
+    'chatDesc': 'برای راهنمایی یا پیگیری ثبت‌نام، مستقیم با پشتیبانی گفتگو کنید.',
+    'callDirect': 'تماس مستقیم',
+    'chatTg': 'چت در تلگرام',
+    'chatEitaa': 'چت در ایتا',
+    'chatWa': 'چت در واتساپ',
     'back': '↩ برگشت',
     'accept': 'قوانین و شرایط خدمات سایروس توریست را مطالعه کرده‌ام و می‌پذیرم.',
     'benefit1': '🎬 نمایش فیلم معرفی در سایت و نرم‌افزار سایروس توریست',
@@ -142,6 +150,13 @@ const Map<String, Map<String, String>> _kText = {
     'rulesTitle': '📋 Terms and Conditions',
     'rules': 'Registration with Cyrus Tourist is completed by paying a one-year membership fee and is solely for having a presence in the Cyrus Tourist advertising space and being introduced to users. This service is provided within the framework of digital, advertising and internet-based infrastructure services. In the event of disruption, limitation or interruption of internet, telecommunications or third-party services beyond the control of Cyrus Tourist, Cyrus Tourist shall not be directly responsible.',
     'continueButton': '➡️ Continue',
+    'enterReg': 'Enter Registration',
+    'chatTitle': 'Chat directly with support',
+    'chatDesc': 'Need help or want to follow up? Chat with our support team directly.',
+    'callDirect': 'Call directly',
+    'chatTg': 'Chat on Telegram',
+    'chatEitaa': 'Chat on Eitaa',
+    'chatWa': 'Chat on WhatsApp',
     'back': '↩ Back',
     'accept': 'I have read and accept the Cyrus Tourist terms and conditions.',
     'benefit1': '🎬 Residence video',
@@ -205,6 +220,13 @@ const Map<String, Map<String, String>> _kText = {
     'rulesTitle': '📋 الشروط والأحكام',
     'rules': 'يتم التسجيل في سايروس توريست عبر دفع رسوم عضوية لمدة سنة واحدة، وهو مخصص حصراً للتواجد في المساحة الإعلانية لسايروس توريست وتعريفكم للمستخدمين. تُقدَّم هذه الخدمة ضمن إطار الخدمات الرقمية والإعلانية والبنى التحتية القائمة على الإنترنت. وفي حال حدوث خلل أو تقييد أو انقطاع في خدمات الإنترنت أو الاتصالات أو خدمات الجهات الخارجية الخارجة عن سيطرة سايروس توريست، فلا تتحمل سايروس توريست مسؤولية مباشرة.',
     'continueButton': '➡️ متابعة',
+    'enterReg': 'الدخول إلى التسجيل',
+    'chatTitle': 'دردشة مباشرة مع الدعم',
+    'chatDesc': 'للمساعدة أو متابعة التسجيل، تحدث مع الدعم مباشرة.',
+    'callDirect': 'اتصال مباشر',
+    'chatTg': 'دردشة على تيليجرام',
+    'chatEitaa': 'دردشة على إيتا',
+    'chatWa': 'دردشة على واتساب',
     'back': '↩ رجوع',
     'accept': 'لقد قرأت شروط خدمات سايروس توريست وأوافق عليها.',
     'benefit1': '🎬 عرض فيديو مكان الإقامة',
@@ -266,8 +288,8 @@ const Map<String, Map<String, String>> _kText = {
 
 const Map<String, Map<String, String>> _kExtra = {
   'fa': {
-    'sendTg': '✈️ ارسال در تلگرام',
-    'sendEitaa': '💬 ارسال در ایتا',
+    'sendTg': 'ارسال در تلگرام',
+    'sendEitaa': 'ارسال در ایتا',
     'pasteHint': 'پیام کپی شد. در گفتگوی باز شده Paste کنید و ارسال بزنید.',
     'samplePlaying': 'در حال بارگذاری نمونه…',
     'close': '✕',
@@ -290,8 +312,8 @@ const Map<String, Map<String, String>> _kExtra = {
     'accepted': '✅ قوانین و شرایط پذیرفته شد.',
   },
   'en': {
-    'sendTg': '✈️ Send via Telegram',
-    'sendEitaa': '💬 Send via Eitaa',
+    'sendTg': 'Send via Telegram',
+    'sendEitaa': 'Send via Eitaa',
     'pasteHint': 'Message copied. Paste it in the chat that opens and send.',
     'samplePlaying': 'Loading sample…',
     'close': '✕',
@@ -314,8 +336,8 @@ const Map<String, Map<String, String>> _kExtra = {
     'accepted': '✅ Terms and conditions accepted.',
   },
   'ar': {
-    'sendTg': '✈️ إرسال عبر تيليجرام',
-    'sendEitaa': '💬 إرسال عبر إيتا',
+    'sendTg': 'إرسال عبر تيليجرام',
+    'sendEitaa': 'إرسال عبر إيتا',
     'pasteHint': 'تم نسخ الرسالة. الصقها في المحادثة التي ستفتح ثم أرسلها.',
     'samplePlaying': 'جارٍ تحميل النموذج…',
     'close': '✕',
@@ -664,7 +686,8 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
           padding: const EdgeInsets.only(top: 12),
           child: ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            child: Container(
+            // Material لازم است تا دکمه‌های گرادیانی (Ink) روی زمینهٔ سفید دیده شوند
+            child: Material(
               color: Colors.white,
               child: Column(
                 children: [
@@ -803,10 +826,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
         const SizedBox(height: 18),
         _checkCard(_accepted, _t('accept'), (v) => setState(() => _accepted = v)),
         const SizedBox(height: 18),
-        Opacity(
-          opacity: _accepted ? 1 : 0.45,
-          child: _primaryButton(_t('continueButton'), _accepted ? () => _go(_Step.form) : null),
-        ),
+        _enterButton(_t('enterReg'), _accepted ? () => _go(_Step.form) : null),
       ],
     );
   }
@@ -1071,18 +1091,20 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              _supportButton(_t('sendWa'), const [Color(0xff25d366), Color(0xff128c7e)], () => _openUrl(context, waUrl)),
-              const SizedBox(height: 10),
-              _supportButton(_t('sendTg'), const [Color(0xff229ed9), Color(0xff2aabee)], () => _copyAndOpen(_Support.telegram)),
-              const SizedBox(height: 10),
-              _supportButton(_t('sendEitaa'), _eitaaGradient, () => _copyAndOpen(_Support.eitaa)),
-              const SizedBox(height: 10),
-              _supportButton(_t('callBtn'), const [Color(0xff00b09b), Color(0xff96c93d)],
-                  () => _openUrl(context, 'tel:${_Support.phone}')),
+              _supportButton(_t('sendWa'), const [Color(0xff25d366), Color(0xff128c7e)],
+                  BrandIcons.whatsapp, () => _openUrl(context, waUrl)),
+              const SizedBox(height: 12),
+              _supportButton(_t('sendTg'), const [Color(0xff2aabee), Color(0xff1c86c9)],
+                  BrandIcons.telegram, () => _copyAndOpen(_Support.telegram)),
+              const SizedBox(height: 12),
+              _supportButton(_t('sendEitaa'), const [Color(0xfff7a21b), Color(0xffe2740f)],
+                  BrandIcons.eitaa, () => _copyAndOpen(_Support.eitaa)),
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
+        _chatSupportCard(),
+        const SizedBox(height: 18),
         _secondaryButton(_t('copyAgain'), () async {
           await Clipboard.setData(ClipboardData(text: _message));
           if (!mounted) return;
@@ -1233,22 +1255,150 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     );
   }
 
-  Widget _supportButton(String label, List<Color> gradient, VoidCallback onTap) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Ink(
-        height: 48,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: gradient),
-          borderRadius: BorderRadius.circular(14),
+  /// دکمهٔ بزرگ «ورود به ثبت‌نام» (جایگزین فلش کوچک)
+  Widget _enterButton(String label, VoidCallback? onTap) {
+    final enabled = onTap != null;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: enabled
+              ? const [Color(0xff11998e), Color(0xff38ef7d)]
+              : const [Color(0xffcfd8dc), Color(0xffb0bec5)],
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: enabled
+            ? [BoxShadow(color: const Color(0xff11998e).withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: SizedBox(
+            height: 62,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.how_to_reg_rounded, color: Colors.white, size: 28),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// دکمهٔ رنگی با آیکون SVG (همیشه قابل‌دیدن، مستقل از زمینه)
+  Widget _supportButton(String label, List<Color> gradient, String svg, VoidCallback onTap,
+      {String? sub}) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: gradient),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: gradient.last.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 5))],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: SizedBox(
+            height: 58,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.22),
+                    ),
+                    child: BrandIcon(svg, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900),
+                        ),
+                        if (sub != null)
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Text(
+                              sub,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.92),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                    color: Colors.white.withValues(alpha: 0.85),
+                    size: 26,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// بخش «چت مستقیم با پشتیبانی»: ۱) تماس  ۲) تلگرام  ۳) ایتا  ۴) واتساپ
+  Widget _chatSupportCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xfff4fbf8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xffcdeee2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _t('chatTitle'),
+            style: const TextStyle(color: _ink, fontSize: 19, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _t('chatDesc'),
+            style: const TextStyle(color: Color(0xff5a6572), fontSize: 13, height: 1.9),
+          ),
+          const SizedBox(height: 14),
+          _supportButton(_t('callDirect'), const [Color(0xff10b981), Color(0xff047857)], BrandIcons.phone,
+              () => _openUrl(context, 'tel:${_Support.phone}'),
+              sub: _Support.phone),
+          const SizedBox(height: 12),
+          _supportButton(_t('chatTg'), const [Color(0xff2aabee), Color(0xff1c86c9)], BrandIcons.telegram,
+              () => _openUrl(context, _Support.telegram)),
+          const SizedBox(height: 12),
+          _supportButton(_t('chatEitaa'), const [Color(0xfff7a21b), Color(0xffe2740f)], BrandIcons.eitaa,
+              () => _openUrl(context, _Support.eitaa)),
+          const SizedBox(height: 12),
+          _supportButton(_t('chatWa'), const [Color(0xff25d366), Color(0xff128c7e)], BrandIcons.whatsapp,
+              () => _openUrl(context, _Support.whatsapp)),
+        ],
       ),
     );
   }
