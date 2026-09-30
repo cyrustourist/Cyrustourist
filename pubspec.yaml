@@ -19,6 +19,9 @@ dependencies:
   url_launcher: ^6.3.2
   webview_flutter: ^4.13.0
 
+  # آیکون‌های SVG سبک برای دکمه‌های پیام‌رسان
+  flutter_svg: ^2.0.10+1
+
   # اشتراک‌گذاری و QR (کلید ۶ و ۸)
   share_plus: ^10.1.4
   qr_flutter: ^4.1.0
