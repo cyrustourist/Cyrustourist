@@ -31,8 +31,19 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
+        // معماری‌ها از --target-platform می‌آید (workflow دو بار می‌سازد:
+        // android-arm64 برای مایکت، android-arm برای سایت). هر APK فقط ABI خودش را
+        // داشته باشد تا گوشی ۶۴ بیتی، APK ۳۲ بیتی را اشتباهی ۶۴ بیتی اجرا نکند.
+        val targetPlatforms = (project.findProperty("target-platform") as String?)
+            ?: "android-arm,android-arm64"
         ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            abiFilters.clear()
+            targetPlatforms.split(",").map { it.trim() }.forEach { platform ->
+                when (platform) {
+                    "android-arm" -> abiFilters += "armeabi-v7a"
+                    "android-arm64" -> abiFilters += "arm64-v8a"
+                }
+            }
         }
     }
 
