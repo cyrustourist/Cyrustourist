@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../pages/agencies/agency_registration_intro_page.dart';
 import '../pages/leaders/leader_registration_intro_page.dart';
+import '../pages/profile/my_profile_page.dart';
 import '../pages/residence_register_page.dart';
 import '../services/notification_service.dart';
 import '../services/user_profile_service.dart';
@@ -99,7 +100,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
         onSelected: (value) {
           switch (value) {
             case 'account':
-              onAccountPressed?.call();
+              _openAccountOrProfile(context);
               break;
 
             // هر چهار مسیر ثبت‌نام فعلاً به یک فایل ثبت‌نام
@@ -203,16 +204,16 @@ class CyrusHeaderAccountButton extends StatelessWidget {
               fallbackTitle: username != null && username!.trim().isNotEmpty
                   ? username!.trim()
                   : _tr(
-                      'نام کاربری',
-                      'Username',
-                      'اسم المستخدم',
-                      'Kullanıcı adı',
-                      'Имя пользователя',
-                      'Nom d’utilisateur',
-                      'Benutzername',
-                      'Nombre de usuario',
-                      '用户名',
-                      'Nome utente',
+                      'افزودن عکس و نام',
+                      'Add photo and name',
+                      'إضافة صورة واسم',
+                      'Fotoğraf ve ad ekle',
+                      'Добавить фото и имя',
+                      'Ajouter photo et nom',
+                      'Foto und Namen hinzufügen',
+                      'Añadir foto y nombre',
+                      '添加头像和名称',
+                      'Aggiungi foto e nome',
                     ),
               fallbackSubtitle: _tr(
                 'حساب کاربری',
@@ -360,6 +361,21 @@ class CyrusHeaderAccountButton extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// اگر کاربر هنوز نام یا نام کاربری ندارد، مستقیم به صفحهٔ «پروفایل من» می‌رود؛
+  /// در غیر این صورت مثل قبل صفحهٔ حساب کاربری باز می‌شود.
+  Future<void> _openAccountOrProfile(BuildContext context) async {
+    final navigator = Navigator.of(context);
+    final p = await UserProfileService.load();
+    final noProfile = p.displayName.isEmpty && p.username.isEmpty;
+    if (noProfile) {
+      await navigator.push(
+        MaterialPageRoute(builder: (_) => const MyProfilePage()),
+      );
+    } else {
+      onAccountPressed?.call();
+    }
   }
 
   String _tr(
