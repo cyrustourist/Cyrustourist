@@ -89,7 +89,8 @@ class ShowcaseService {
   }
 
   static List<String?> _basesFor(ShowcaseKind kind) {
-    if (kind == ShowcaseKind.accommodation) {
+    // اقامتگاه و گردشگری سلامت هر دو از دیتابیس Worker پنل مدیریت خوانده می‌شوند.
+    if (kind == ShowcaseKind.accommodation || kind == ShowcaseKind.health) {
       return [ApiConfig.panelBaseUrl, null];
     }
     return [null];
@@ -157,8 +158,9 @@ class ShowcaseService {
     double? d(dynamic v) => v == null ? null : double.tryParse(v.toString());
     int code() => int.tryParse((j['id'] ?? j['code'] ?? 0).toString()) ?? 0;
 
-    final isStay = kind == ShowcaseKind.accommodation;
-    final stay = isStay ? StayDetails.fromRow(j) : null;
+    final isHealth = kind == ShowcaseKind.health;
+    final isStay = kind == ShowcaseKind.accommodation || isHealth;
+    final stay = isStay ? StayDetails.fromRow(j, health: isHealth) : null;
 
     final fa = p([j['name_fa'], j['title_fa'], j['title'], j['name']]);
     final en = p([j['name_en'], j['title_en']]);
