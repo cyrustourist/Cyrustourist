@@ -9,6 +9,7 @@ import '../leaders/leader_profile_page.dart';
 import '../movie_video_page.dart' show MovieSlotData, MovieVideoPage;
 import '../residence_video_page.dart' show ResidenceVideoData, ResidenceVideoPage;
 import 'showcase_detail_page.dart';
+import 'stay_detail_page.dart';
 
 const String _defaultPhone = '09153448818';
 const String _defaultInstagram =
@@ -43,6 +44,9 @@ class ShowcaseNavigator {
         data: _toMovie(item),
         shareType: PublicLinkService.typeForShowcaseKind(item.kind),
       );
+    } else if (item.kind == ShowcaseKind.accommodation && item.stay != null) {
+      // اقامتگاه‌های واقعی از دیتابیس → صفحه‌ی جدید با همه‌ی اطلاعات جدول
+      page = StayDetailPage(item: item);
     } else if (item.kind == ShowcaseKind.accommodation &&
         item.aparatHash != null) {
       page = ResidenceVideoPage(data: _toResidence(item));
