@@ -7,7 +7,11 @@ const _kCard2 = Color(0xff0b202c);
 const _kGold = Color(0xffffd76a);
 
 class WeatherScreen extends StatefulWidget {
-  const WeatherScreen({super.key});
+  /// [initialPlace]: اگر داده شود، صفحه بلافاصله آب‌وهوای همان مختصات را
+  /// (مثلاً مکان اقامتگاه/مرکز درمانی/جاذبه) نشان می‌دهد؛ جستجو بالای صفحه باقی می‌ماند.
+  const WeatherScreen({super.key, this.initialPlace});
+
+  final WeatherPlace? initialPlace;
 
   @override
   State<WeatherScreen> createState() => _WeatherScreenState();
@@ -20,6 +24,34 @@ class _WeatherScreenState extends State<WeatherScreen> {
   bool _loadingWeather = false;
   String? _error;
   WeatherResult? _weather;
+  WeatherPlace? _lastPlace;
+
+  static const List<String> _weekdayFa = [
+    'دوشنبه',
+    'سه‌شنبه',
+    'چهارشنبه',
+    'پنجشنبه',
+    'جمعه',
+    'شنبه',
+    'یکشنبه',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.initialPlace;
+    if (p != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _selectPlace(p);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _search(String q) async {
     if (q.trim().length < 2) {
@@ -36,6 +68,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
   }
 
   Future<void> _selectPlace(WeatherPlace place) async {
+    _lastPlace = place;
     setState(() {
       _suggestions = [];
       _searchCtrl.text = place.name;
@@ -44,7 +77,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
     });
     try {
       final result = await WeatherService.fetchWeather(
-        placeName: '${place.name}${place.country.isNotEmpty ? '، ${place.country}' : ''}',
+        placeName:
+            '${place.name}${place.country.isNotEmpty ? '، ${place.country}' : ''}',
         lat: place.lat,
         lon: place.lon,
       );
@@ -73,7 +107,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
           elevation: 0,
           iconTheme: const IconThemeData(color: _kGold),
           title: const Text(
-            'آب‌وهوای هوشمند مقصد',
+            'آب‌وهوا',
             style: TextStyle(color: _kGold, fontWeight: FontWeight.bold),
           ),
         ),
@@ -135,7 +169,22 @@ class _WeatherScreenState extends State<WeatherScreen> {
     }
     if (_error != null) {
       return Center(
-        child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.redAccent)),
+            const SizedBox(height: 12),
+            if (_lastPlace != null)
+              OutlinedButton.icon(
+                onPressed: () => _selectPlace(_lastPlace!),
+                icon: const Icon(Icons.refresh_rounded, color: _kGold),
+                label: const Text('تلاش دوباره',
+                    style: TextStyle(color: _kGold)),
+              ),
+          ],
+        ),
       );
     }
     final w = _weather;
@@ -160,6 +209,11 @@ class _WeatherScreenState extends State<WeatherScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
+              Text(
+                '${WeatherService.emoji(w.weatherCode)}  ${WeatherService.label(w.weatherCode, 'fa')}',
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 4),
               Text(
                 '${w.currentTemp.round()}°',
                 style: const TextStyle(
@@ -256,7 +310,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('پیش‌بینی چندروزه',
+              const Text('پیش‌بینی روزهای پیش رو',
                   style: TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
@@ -267,7 +321,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          '${d.date.year}/${d.date.month}/${d.date.day}',
+                          '${_weekdayFa[d.date.weekday - 1]}  ${d.date.month}/${d.date.day}',
                           style: const TextStyle(color: Colors.white70),
                         ),
                       ),
