@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/language/app_language.dart';
 import '../../models/showcase_item.dart';
+import '../../widgets/place_weather_card.dart';
 import 'showcase_cover.dart';
 import 'showcase_kinds.dart';
 
@@ -141,6 +142,16 @@ class ShowcaseDetailPage extends StatelessWidget {
                       : _tr('مشاهده پیشنهاد', 'View offer', 'عرض العرض'),
                   color: _gold,
                   onTap: () => _open(context, item.ctaUrl!),
+                ),
+              // آب‌وهوای همین مکان (طول/عرض جغرافیایی پنل) — بالای مسیریابی
+              if (item.latitude != null && item.longitude != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: PlaceWeatherCard(
+                    lat: item.latitude!,
+                    lon: item.longitude!,
+                    placeName: item.title(_lang),
+                  ),
                 ),
               if (item.latitude != null && item.longitude != null)
                 _bigButton(
