@@ -11,6 +11,7 @@ import '../../models/stay_details.dart';
 import '../../services/public_link_service.dart';
 import '../../services/video_favorites_service.dart';
 import '../../widgets/aparat_embed_player.dart';
+import '../../widgets/place_weather_card.dart';
 import '../../widgets/brand_icons.dart';
 import '../../widgets/share_sheet.dart';
 import 'showcase_cover.dart';
@@ -48,6 +49,9 @@ class _StayDetailPageState extends State<StayDetailPage> {
   bool _amenAll = false;
 
   ShowcaseItem get item => widget.item;
+
+  /// همین صفحه برای «گردشگری سلامت» هم استفاده می‌شود؛ فقط عنوان‌ها عوض می‌شود.
+  bool get _isHealth => item.kind == ShowcaseKind.health;
   StayDetails get stay => item.stay ?? const StayDetails();
 
   String get _lang {
@@ -73,6 +77,10 @@ class _StayDetailPageState extends State<StayDetailPage> {
         return en;
     }
   }
+
+  /// متن اقامتگاه / متن سلامت
+  String _ts(String fa, String en, String ar, String hFa, String hEn, String hAr) =>
+      _isHealth ? _tr(hFa, hEn, hAr) : _tr(fa, en, ar);
 
   String get _favId => item.videoUrl ?? item.id;
 
@@ -155,7 +163,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
                   decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4)),
                 ),
                 const SizedBox(height: 14),
-                Text(_tr('تماس با اقامتگاه', 'Call the property', 'الاتصال بالإقامة'),
+                Text(_ts('تماس با اقامتگاه', 'Call the property', 'الاتصال بالإقامة', 'تماس با مرکز', 'Call the center', 'الاتصال بالمركز'),
                     style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 for (final p in phones)
@@ -218,6 +226,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
             SliverToBoxAdapter(child: _hero(context)),
             SliverToBoxAdapter(child: _headerBlock()),
             SliverToBoxAdapter(child: _quickFacts()),
+            SliverToBoxAdapter(child: _workDaysTable()),
             SliverToBoxAdapter(child: _description()),
             SliverToBoxAdapter(child: _socialSection()),
             SliverToBoxAdapter(child: _amenitiesSection()),
@@ -291,7 +300,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
                 PositionedDirectional(
                   bottom: 12,
                   start: 14,
-                  child: _pill(Icons.movie_rounded, _tr('فیلم اقامتگاه', 'Property film', 'فيلم الإقامة')),
+                  child: _pill(Icons.movie_rounded, _ts('فیلم اقامتگاه', 'Property film', 'فيلم الإقامة', 'فیلم معرفی مرکز', 'Center film', 'فيلم المركز')),
                 ),
             ],
           ),
@@ -570,10 +579,10 @@ class _StayDetailPageState extends State<StayDetailPage> {
   Widget _quickFacts() {
     final facts = <Widget>[
       if ((stay.checkIn ?? '').isNotEmpty)
-        _fact(Icons.login_rounded, _tr('ساعت ورود', 'Check-in', 'وقت الدخول'), stay.checkIn!),
-      if ((stay.checkOut ?? '').isNotEmpty)
+        _fact(Icons.login_rounded, _ts('ساعت ورود', 'Check-in', 'وقت الدخول', 'ساعت کاری', 'Working hours', 'ساعات العمل'), stay.checkIn!),
+      if (!_isHealth && (stay.checkOut ?? '').isNotEmpty)
         _fact(Icons.logout_rounded, _tr('ساعت خروج', 'Check-out', 'وقت الخروج'), stay.checkOut!),
-      if (stay.bedrooms > 0)
+      if (!_isHealth && stay.bedrooms > 0)
         _fact(Icons.bed_rounded, _tr('اتاق‌خواب', 'Bedrooms', 'غرف النوم'), '${stay.bedrooms}'),
       if (stay.hasElevator)
         _fact(Icons.elevator_rounded, _tr('آسانسور', 'Elevator', 'مصعد'), _tr('دارد', 'Yes', 'نعم')),
@@ -650,6 +659,94 @@ class _StayDetailPageState extends State<StayDetailPage> {
     );
   }
 
+  // ---------------- ساعت کاری و روزهای هفته (گردشگری سلامت) ----------------
+
+  Widget _workDaysTable() {
+    if (!_isHealth || stay.workDays.isEmpty) return const SizedBox.shrink();
+    final hours = (stay.checkIn ?? '').trim();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _gold.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(
+              Icons.event_available_rounded,
+              _tr('روزها و ساعت کاری', 'Working days & hours', 'أيام وساعات العمل'),
+            ),
+            if (hours.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.access_time_rounded, color: _gold, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      hours,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final d in StayWeekdays.all) _dayChip(d, stay.workDays.contains(d.key)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dayChip(StayWeekday d, bool on) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: on ? _teal.withValues(alpha: 0.14) : Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: on ? _teal.withValues(alpha: 0.55) : Colors.white.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            on ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            size: 16,
+            color: on ? _teal : Colors.white24,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            d.label(_lang),
+            style: TextStyle(
+              color: on ? Colors.white : Colors.white38,
+              fontSize: 12.5,
+              fontWeight: on ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ---------------- توضیحات ----------------
 
   Widget _description() {
@@ -662,7 +759,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(Icons.notes_rounded, _tr('درباره‌ی اقامتگاه', 'About this stay', 'عن الإقامة')),
+          _sectionTitle(Icons.notes_rounded, _ts('درباره‌ی اقامتگاه', 'About this stay', 'عن الإقامة', 'درباره‌ی مرکز', 'About this center', 'عن المركز')),
           const SizedBox(height: 8),
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
@@ -725,6 +822,15 @@ class _StayDetailPageState extends State<StayDetailPage> {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
       child: Column(
         children: [
+          // آب‌وهوای همین مکان — بر اساس طول/عرض جغرافیایی پنل مدیریت (بالای مسیریابی)
+          if (item.latitude != null && item.longitude != null) ...[
+            PlaceWeatherCard(
+              lat: item.latitude!,
+              lon: item.longitude!,
+              placeName: item.title(_lang),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (_canRoute)
             _primaryButton(
               icon: Icons.near_me_rounded,
@@ -735,7 +841,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
             const SizedBox(height: 10),
             _goldButton(
               icon: Icons.event_available_rounded,
-              label: _tr('رزرو مستقیم', 'Book directly', 'احجز مباشرة'),
+              label: _ts('رزرو مستقیم', 'Book directly', 'احجز مباشرة', 'نوبت‌دهی / رزرو', 'Book appointment', 'حجز موعد'),
               onTap: () => _open(stay.bookingUrl!),
             ),
           ],
@@ -830,9 +936,9 @@ class _StayDetailPageState extends State<StayDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(Icons.checklist_rounded, _tr('امکانات اقامتگاه', 'Amenities', 'مرافق الإقامة')),
+          _sectionTitle(Icons.checklist_rounded, _ts('امکانات اقامتگاه', 'Amenities', 'مرافق الإقامة', 'امکانات و خدمات', 'Facilities & services', 'المرافق والخدمات')),
           const SizedBox(height: 12),
-          if (bedrooms > 0)
+          if (!_isHealth && bedrooms > 0)
             _amenityRow(
               Icons.bed_rounded,
               _tr('تعداد اتاق‌خواب', 'Bedrooms', 'غرف النوم'),
@@ -840,7 +946,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
             ),
           for (final k in visible)
             Builder(builder: (_) {
-              final a = StayAmenities.resolve(k);
+              final a = StayAmenities.resolve(k, panelLabels: stay.amenityLabels);
               return _amenityRow(a.icon, a.label(_lang));
             }),
           if (keys.length > limit)
@@ -1010,7 +1116,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(Icons.gavel_rounded, _tr('قوانین اقامتگاه', 'House rules', 'قوانين الإقامة')),
+          _sectionTitle(Icons.gavel_rounded, _ts('قوانین اقامتگاه', 'House rules', 'قوانين الإقامة', 'قوانین و شرایط پذیرش', 'Terms & conditions', 'الشروط والأحكام')),
           const SizedBox(height: 10),
           Container(
             width: double.infinity,
