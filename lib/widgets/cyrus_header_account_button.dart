@@ -4,6 +4,7 @@ import '../pages/agencies/agency_registration_intro_page.dart';
 import '../pages/leaders/leader_registration_intro_page.dart';
 import '../pages/residence_register_page.dart';
 import '../services/notification_service.dart';
+import '../services/user_profile_service.dart';
 
 /// دکمه حساب کاربری در هدر سایروس توریست.
 ///
@@ -198,10 +199,8 @@ class CyrusHeaderAccountButton extends StatelessWidget {
         itemBuilder: (context) => [
           PopupMenuItem<String>(
             value: 'account',
-            child: _HeaderAccountMenuItem(
-              icon: Icons.person_rounded,
-              iconColor: const Color(0xffe5bd55),
-              title: username != null && username!.trim().isNotEmpty
+            child: _AccountMenuHeader(
+              fallbackTitle: username != null && username!.trim().isNotEmpty
                   ? username!.trim()
                   : _tr(
                       'نام کاربری',
@@ -215,7 +214,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                       '用户名',
                       'Nome utente',
                     ),
-              subtitle: _tr(
+              fallbackSubtitle: _tr(
                 'حساب کاربری',
                 'Account',
                 'الحساب',
@@ -227,7 +226,6 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                 '账户',
                 'Account',
               ),
-              bold: true,
             ),
           ),
 
@@ -563,6 +561,94 @@ class _HeaderAccountMenuItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+
+/// سرِ منوی حساب کاربری: عکس پروفایل + نام + نام کاربری (از پروفایل ذخیره‌شده روی گوشی).
+class _AccountMenuHeader extends StatelessWidget {
+  const _AccountMenuHeader({
+    required this.fallbackTitle,
+    required this.fallbackSubtitle,
+  });
+
+  final String fallbackTitle;
+  final String fallbackSubtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<UserProfile>(
+      initialData: UserProfileService.cached,
+      future: UserProfileService.load(),
+      builder: (context, snap) {
+        final p = snap.data;
+        final photo = p?.photoBytes;
+        final hasName = p != null && p.displayName.isNotEmpty;
+        final hasUser = p != null && p.username.isNotEmpty;
+        final title = hasName
+            ? p.displayName
+            : (hasUser ? '@${p.username}' : fallbackTitle);
+        final subtitle = (hasName && hasUser) ? '@${p.username}' : fallbackSubtitle;
+
+        return Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xff132b3a),
+                border: Border.all(color: const Color(0xffe5bd55), width: 1.6),
+              ),
+              child: ClipOval(
+                child: photo != null
+                    ? Image.memory(
+                        photo,
+                        fit: BoxFit.cover,
+                        width: 46,
+                        height: 46,
+                        gaplessPlayback: true,
+                      )
+                    : const Icon(
+                        Icons.person_rounded,
+                        color: Color(0xffe5bd55),
+                        size: 25,
+                      ),
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xffaebbc2),
+                      fontSize: 10.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
