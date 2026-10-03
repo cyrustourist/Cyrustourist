@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/agency.dart';
 import '../../models/leader.dart';
 import '../../models/showcase_item.dart';
+import '../../models/stay_details.dart';
 import '../../services/public_link_service.dart';
 import '../agencies/agency_profile_page.dart';
 import '../leaders/leader_profile_page.dart';
@@ -66,6 +67,25 @@ class ShowcaseNavigator {
 
   static MovieSlotData _toMovie(ShowcaseItem i) {
     final phone = i.phone ?? _defaultPhone;
+
+    // امکانات تیک‌خورده در پنل مدیریت (ستون amenities / amenity_labels همان ردیف سرور)
+    final raw = i.native;
+    var amenityKeys = <String>[];
+    var amenityLabels = <String, String>{};
+    var bedrooms = 0;
+    if (raw is Map) {
+      final row = Map<String, dynamic>.from(raw);
+      final all = StayDetails.parseAmenities(row['amenities_list'] ?? row['amenities']);
+      for (final a in all) {
+        if (a.startsWith('bedrooms:')) {
+          bedrooms = int.tryParse(a.substring(9)) ?? bedrooms;
+        } else {
+          amenityKeys.add(a);
+        }
+      }
+      amenityLabels = StayDetails.parseAmenityLabels(row['amenity_labels']);
+    }
+
     return MovieSlotData(
       code: i.code,
       assigned: true,
@@ -89,6 +109,9 @@ class ShowcaseNavigator {
       supportPhone: phone,
       instagramUrl: i.instagramUrl ?? _defaultInstagram,
       websiteUrl: i.websiteUrl ?? _defaultWebsite,
+      bedroomCount: bedrooms > 0 ? bedrooms : null,
+      panelAmenityKeys: amenityKeys,
+      panelAmenityLabels: amenityLabels,
     );
   }
 
