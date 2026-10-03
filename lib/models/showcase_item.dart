@@ -45,6 +45,46 @@ ShowcaseTier showcaseTierFromString(String? value) {
   }
 }
 
+/// لینک https یا «کد کامل Embed» (div+script / iframe) → لینک https تمیز.
+/// پنل مدیریت هر دو حالت را ذخیره می‌کند؛ اپ هر دو را می‌فهمد.
+String? cleanVideoUrl(String? raw) {
+  var t = (raw ?? '').trim();
+  if (t.isEmpty) return null;
+  final m = RegExp(r"""src\s*=\s*["']([^"']+)["']""", caseSensitive: false)
+      .firstMatch(t);
+  if (m != null) {
+    t = m.group(1)!.trim();
+  } else if (t.contains('<')) {
+    return null;
+  }
+  if (t.startsWith('//')) t = 'https:$t';
+  if (t.toLowerCase().startsWith('http://')) {
+    t = 'https://${t.substring(7)}';
+  } else if (!t.toLowerCase().startsWith('https://') &&
+      t.contains('.') &&
+      !t.contains(' ')) {
+    t = 'https://$t';
+  }
+  return t;
+}
+
+/// هش ویدیوی آپارات از هر شکل لینک (v/ ، embed/ ، videohash/ یا کد Embed کامل).
+String? aparatHashFromAny(String? raw) {
+  final url = cleanVideoUrl(raw);
+  if (url == null || url.isEmpty) return null;
+  final uri = Uri.tryParse(url);
+  if (uri == null || !uri.host.contains('aparat')) return null;
+  final segs = uri.pathSegments.where((e) => e.isNotEmpty).toList();
+  if (segs.isEmpty) return null;
+  // لینک Embed: /video/video/embed/videohash/<hash>/vt/frame
+  final vh = segs.indexOf('videohash');
+  if (vh >= 0 && vh + 1 < segs.length) return segs[vh + 1];
+  if ((segs.first == 'v' || segs.first == 'embed') && segs.length >= 2) {
+    return segs[1];
+  }
+  return segs.last;
+}
+
 /// یکسان‌سازی متن برای جست‌وجو: ی/ک عربی، ارقام فارسی/عربی، نیم‌فاصله.
 String showcaseNormalize(String input) {
   var s = input.toLowerCase();
@@ -175,19 +215,7 @@ class ShowcaseItem {
   bool get hasVideo => videoUrl != null && videoUrl!.trim().isNotEmpty;
 
   /// هش ویدیوی آپارات (اگر videoUrl از آپارات باشد)
-  String? get aparatHash {
-    final url = videoUrl;
-    if (url == null || url.isEmpty) return null;
-    final uri = Uri.tryParse(url);
-    if (uri == null || !uri.host.contains('aparat')) return null;
-    final segs = uri.pathSegments.where((e) => e.isNotEmpty).toList();
-    if (segs.isEmpty) return null;
-    // لینک Embed: /video/video/embed/videohash/<hash>/vt/frame
-    final vh = segs.indexOf('videohash');
-    if (vh >= 0 && vh + 1 < segs.length) return segs[vh + 1];
-    if (segs.first == 'v' && segs.length >= 2) return segs[1];
-    return segs.last;
-  }
+  String? get aparatHash => aparatHashFromAny(videoUrl);
 
   /// متن جست‌وجو: کد + همه‌ی زبان‌های عنوان/مکان/توضیح/دسته
   String get searchText => showcaseNormalize([
