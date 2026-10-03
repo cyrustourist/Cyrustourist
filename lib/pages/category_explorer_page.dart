@@ -14,7 +14,7 @@ import '../services/map_place_favorites_service.dart';
 import '../widgets/map_markers_layer.dart';
 import '../widgets/map_place_details_sheet.dart';
 import '../widgets/map_search_bar.dart';
-import '../widgets/showcase_dome_button.dart';
+import '../widgets/showcase_film_banner.dart';
 import '../models/showcase_item.dart';
 import 'showcase/showcase_gallery_page.dart';
 import 'map/tourist_map_category_config.dart';
@@ -144,6 +144,7 @@ class _CategoryExplorerPageState
 
   @override
   void dispose() {
+    _radiusDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -374,6 +375,8 @@ class _CategoryExplorerPageState
     await _loadNearby();
   }
 
+  Timer? _radiusDebounce;
+
   void _onRadiusChanged(double value) {
     _autoRetried = false;
 
@@ -381,7 +384,11 @@ class _CategoryExplorerPageState
       _radiusKm = value;
     });
 
-    _loadNearby();
+    // چند لمس پشت‌سرهم فقط یک جستجو می‌سازد (به‌جای یک جستجوی کامل برای هر لمس)
+    _radiusDebounce?.cancel();
+    _radiusDebounce = Timer(const Duration(milliseconds: 450), () {
+      if (mounted) _loadNearby();
+    });
   }
 
   // ============================================================
@@ -535,25 +542,6 @@ class _CategoryExplorerPageState
   // سلامت + جاذبه‌ها → نمایش جاذبه‌ها (سلامت با فیلتر مخصوص خودش)
   // اقامتگاه → نمایش اقامتگاه‌ها
   // ============================================================
-
-  Widget _buildShowcaseButton() {
-    final isStay = widget.initialCategory == PlaceCategory.accommodation;
-    final isHealth = widget.initialCategory == PlaceCategory.health;
-
-    return ShowcaseDomeButton(
-      icon: isStay
-          ? Icons.hotel_rounded
-          : (isHealth
-              ? Icons.health_and_safety_rounded
-              : Icons.auto_awesome_rounded),
-      label: isStay
-          ? _text('نمایش اقامتگاه', 'Stays Showcase', 'عرض الإقامات')
-          : (isHealth
-              ? _text('نمایش سلامت', 'Health Showcase', 'عرض الصحة')
-              : _text('نمایش ویژه', 'VIP Showcase', 'العرض المميز')),
-      onTap: _openShowcase,
-    );
-  }
 
   void _openShowcase() {
     final category = widget.initialCategory;
@@ -765,7 +753,6 @@ class _CategoryExplorerPageState
                         selectedRadius: _radiusKm,
                         onChanged: _onRadiusChanged,
                         language: _langCode,
-                        topAction: _buildShowcaseButton(),
                       ),
                     ),
 
@@ -891,15 +878,27 @@ class _CategoryExplorerPageState
                 child: Container(
                   color: const Color(0xffedf4f7),
                   child: SingleChildScrollView(
-                    child: TouristPlacesList(
-                      places: _places,
-                      language: _langCode,
-                      category: widget.initialCategory,
-                      onPlaceTap: _onListItemTap,
-                      onRouteTap: _openRoute,
-                      isFavorite: _isFavorite,
-                      onFavoriteTap: _toggleFavorite,
-                      onRetry: _retry,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // بنر فیلم VIP: در حال بارگذاری یا لیست خالی، بزرگ‌تر
+                        ShowcaseFilmBanner(
+                          category: widget.initialCategory,
+                          language: _langCode,
+                          onTap: _openShowcase,
+                          large: _loading || _searching || _places.isEmpty,
+                        ),
+                        TouristPlacesList(
+                          places: _places,
+                          language: _langCode,
+                          category: widget.initialCategory,
+                          onPlaceTap: _onListItemTap,
+                          onRouteTap: _openRoute,
+                          isFavorite: _isFavorite,
+                          onFavoriteTap: _toggleFavorite,
+                          onRetry: _retry,
+                        ),
+                      ],
                     ),
                   ),
                 ),
