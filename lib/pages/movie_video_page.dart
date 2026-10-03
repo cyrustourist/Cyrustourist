@@ -10,6 +10,7 @@ import '../core/language/app_language.dart';
 import '../services/location_service.dart';
 import 'movie_amenities_page.dart';
 import '../services/public_link_service.dart';
+import '../widgets/place_weather_card.dart';
 import '../widgets/share_sheet.dart';
 
 // ===================== رنگ‌ها — هماهنگ با residence_video_page.dart =====================
@@ -139,6 +140,8 @@ class MovieSlotData {
     this.hasElevator = false,
     this.hasYardOrBalcony = false,
     this.isPetFriendly = false,
+    this.panelAmenityKeys = const [],
+    this.panelAmenityLabels = const {},
   });
 
   final int code;
@@ -188,6 +191,28 @@ class MovieSlotData {
   final bool hasElevator;
   final bool hasYardOrBalcony;
   final bool isPetFriendly;
+
+  /// امکاناتی که از پنل مدیریت تیک خورده‌اند (کلیدها مثل پنل) و برچسب‌های فارسی پنل.
+  /// اگر پر باشد، صفحه‌ی «امکانات» دقیقاً همین‌ها را نشان می‌دهد.
+  final List<String> panelAmenityKeys;
+  final Map<String, String> panelAmenityLabels;
+
+  /// آیا برای این جایگاه اصلاً داده‌ی امکانات وجود دارد؟ (برای نمایش/مخفی‌کردن دکمه)
+  bool get hasAmenityData =>
+      panelAmenityKeys.isNotEmpty ||
+      hasParking ||
+      hasWesternToilet ||
+      hasIranianToilet ||
+      (bedroomCount != null && bedroomCount! > 0) ||
+      hasInternet ||
+      hasKitchen ||
+      hasAc ||
+      hasHeating ||
+      hasHotWater ||
+      hasBreakfast ||
+      hasElevator ||
+      hasYardOrBalcony ||
+      isPetFriendly;
 
   String get displayName {
     final localized =
@@ -1101,6 +1126,8 @@ class MovieVideoPage extends StatefulWidget {
 class _MovieVideoPageState extends State<MovieVideoPage> {
   MovieSlotData get _d => widget.data;
 
+  bool get _hasPlaceCoords => _d.latitude != null && _d.longitude != null;
+
   bool _descriptionExpanded = false;
 
   @override
@@ -1144,9 +1171,12 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
                     const SizedBox(height: 16),
 
 
-                    // آب‌وهوا — بر اساس موقعیت فعلی کاربر
-                    const _MovieWeatherButton(),
-                    const SizedBox(height: 18),
+                    // آب‌وهوا — اگر مختصات این مکان در پنل ثبت شده باشد، پایین‌تر
+                    // (بالای مسیریابی) نشان داده می‌شود؛ وگرنه موقعیت فعلی کاربر.
+                    if (!_hasPlaceCoords) ...[
+                      const _MovieWeatherButton(),
+                      const SizedBox(height: 18),
+                    ],
 
                     // فیلم‌های بیشتر — مثل قسمت فیلم‌های آپارات
                     _MoreVideosStrip(currentCode: _d.code),
@@ -1163,6 +1193,16 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
                       const SizedBox(height: 22),
                     ],
 
+                    // آب‌وهوای همین مکان (طول/عرض جغرافیایی پنل) — بالای مسیریابی
+                    if (_hasPlaceCoords) ...[
+                      PlaceWeatherCard(
+                        lat: _d.latitude!,
+                        lon: _d.longitude!,
+                        placeName: _d.displayName,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
                     // مسیریابی — بر اساس موقعیت فعلی کاربر (مثل آب‌وهوا)
                     SizedBox(
                       width: double.infinity,
@@ -1177,7 +1217,8 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
                     ),
                     const SizedBox(height: 12),
 
-                    // امکانات اقامتگاه/هتل/کلبه
+                    // امکانات اقامتگاه/هتل/کلبه — از تیک‌های پنل مدیریت
+                    if (_d.hasAmenityData) ...[
                     SizedBox(
                       width: double.infinity,
                       child: _outlinedIconButton(
@@ -1193,6 +1234,7 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    ],
 
                     // رزرو — مثل فایل نمونه، سه شماره تماس
                     SizedBox(
