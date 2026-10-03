@@ -55,8 +55,10 @@ class AgencyProfilePage extends StatelessWidget {
                       radius: 52,
                       backgroundColor: _gold.withValues(alpha: 0.15),
                       backgroundImage:
-                          agency.logoAsset != null ? AssetImage(agency.logoAsset!) : null,
-                      child: agency.logoAsset == null
+                          agency.logoUrl != null
+                              ? NetworkImage(agency.logoUrl!) as ImageProvider
+                              : (agency.logoAsset != null ? AssetImage(agency.logoAsset!) : null),
+                      child: (agency.logoAsset == null && agency.logoUrl == null)
                           ? const Icon(Icons.apartment_rounded, color: _gold, size: 48)
                           : null,
                     ),
