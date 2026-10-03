@@ -2,6 +2,8 @@
 // لیدر، آژانس). داده‌ی محلی و داده‌ی سرور هر دو به همین مدل تبدیل
 // می‌شوند تا یک قالب برای همه کار کند.
 
+import 'stay_details.dart';
+
 enum ShowcaseKind { video, attraction, accommodation, health, leader, agency }
 
 extension ShowcaseKindX on ShowcaseKind {
@@ -89,6 +91,7 @@ class ShowcaseItem {
     this.ctaLabels = const {},
     this.expiresAt,
     this.native,
+    this.stay,
   });
 
   final ShowcaseKind kind;
@@ -133,6 +136,10 @@ class ShowcaseItem {
   /// برای باز کردن همان صفحه‌ی جزئیات موجود.
   final Object? native;
 
+  /// جزئیات اقامتگاه (فقط برای kind=accommodation و داده‌ی سرور): ستاره، امکانات،
+  /// ساعت ورود/خروج، قوانین، شبکه‌های اجتماعی و ... مطابق جدول accommodations
+  final StayDetails? stay;
+
   static String pick(Map<String, String> map, String lang) {
     final v = map[lang];
     if (v != null && v.isNotEmpty) return v;
@@ -175,6 +182,9 @@ class ShowcaseItem {
     if (uri == null || !uri.host.contains('aparat')) return null;
     final segs = uri.pathSegments.where((e) => e.isNotEmpty).toList();
     if (segs.isEmpty) return null;
+    // لینک Embed: /video/video/embed/videohash/<hash>/vt/frame
+    final vh = segs.indexOf('videohash');
+    if (vh >= 0 && vh + 1 < segs.length) return segs[vh + 1];
     if (segs.first == 'v' && segs.length >= 2) return segs[1];
     return segs.last;
   }
