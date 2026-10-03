@@ -36,7 +36,11 @@ class StayAmenities {
   StayAmenities._();
 
   static const List<StayAmenity> all = [
-    StayAmenity('wifi', Icons.wifi_rounded, 'اینترنت Wi‑Fi', 'Wi‑Fi', 'واي فاي'),
+    StayAmenity('western_toilet', Icons.wc_rounded, 'سرویس فرنگی', 'Western-style toilet', 'مرحاض إفرنجي'),
+    StayAmenity('iranian_toilet', Icons.wc_rounded, 'سرویس ایرانی', 'Iranian-style toilet', 'مرحاض إيراني'),
+    StayAmenity('kitchen', Icons.kitchen_rounded, 'آشپزخانه', 'Kitchen', 'مطبخ'),
+    StayAmenity('hot_water', Icons.water_drop_rounded, 'آب‌گرم', 'Hot water', 'ماء ساخن'),
+    StayAmenity('wifi', Icons.wifi_rounded, 'اینترنت / وای‌فای', 'Internet / Wi‑Fi', 'إنترنت / واي فاي'),
     StayAmenity('parking', Icons.local_parking_rounded, 'پارکینگ', 'Parking', 'موقف سيارات'),
     StayAmenity('elevator', Icons.elevator_rounded, 'آسانسور', 'Elevator', 'مصعد'),
     StayAmenity('restaurant', Icons.restaurant_rounded, 'رستوران', 'Restaurant', 'مطعم'),
@@ -52,8 +56,8 @@ class StayAmenities {
     StayAmenity('laundry', Icons.local_laundry_service_rounded, 'خدمات لاندری', 'Laundry', 'مغسلة'),
     StayAmenity('safe_box', Icons.lock_rounded, 'صندوق امانات', 'Safe box', 'خزنة'),
     StayAmenity('24h_reception', Icons.schedule_rounded, 'پذیرش ۲۴ ساعته', '24h reception', 'استقبال ٢٤ ساعة'),
-    StayAmenity('air_conditioning', Icons.ac_unit_rounded, 'تهویه مطبوع', 'Air conditioning', 'تكييف'),
-    StayAmenity('heating', Icons.local_fire_department_rounded, 'سیستم گرمایش', 'Heating', 'تدفئة'),
+    StayAmenity('air_conditioning', Icons.ac_unit_rounded, 'کولر / تهویه', 'AC / Cooling', 'مكيف / تهوية'),
+    StayAmenity('heating', Icons.local_fire_department_rounded, 'سیستم گرمایشی', 'Heating', 'نظام تدفئة'),
     StayAmenity('tv', Icons.tv_rounded, 'تلویزیون', 'TV', 'تلفزيون'),
     StayAmenity('minibar', Icons.local_bar_rounded, 'مینی‌بار', 'Minibar', 'ميني بار'),
     StayAmenity('hairdryer', Icons.air_rounded, 'سشوار', 'Hairdryer', 'مجفف شعر'),
@@ -172,6 +176,7 @@ class StayDetails {
     this.aparat,
     this.tiktok,
     this.ownerPhoto,
+    this.bedrooms = 0,
     this.mapUrl,
     this.managementCode,
   });
@@ -199,6 +204,9 @@ class StayDetails {
   final String? aparat;
   final String? tiktok;
   final String? ownerPhoto;
+
+  /// تعداد اتاق‌خواب (در پنل داخل ستون امکانات به‌صورت bedrooms:N ذخیره می‌شود)
+  final int bedrooms;
   final String? mapUrl;
   final String? managementCode;
 
@@ -259,6 +267,13 @@ class StayDetails {
     final type = StayTypes.resolve(_s(j['accommodation_type']));
 
     var amenities = parseAmenities(j['amenities_list'] ?? j['amenities']);
+    var bedrooms = int.tryParse((j['bedrooms'] ?? 0).toString()) ?? 0;
+    for (final a in amenities) {
+      if (a.startsWith('bedrooms:')) {
+        bedrooms = int.tryParse(a.substring(9)) ?? bedrooms;
+      }
+    }
+    amenities = amenities.where((a) => !a.startsWith('bedrooms:')).toList();
     final elevator = _b(j['has_elevator']) || amenities.contains('elevator');
     if (elevator && !amenities.contains('elevator')) {
       amenities = [...amenities, 'elevator'];
@@ -289,6 +304,7 @@ class StayDetails {
       aparat: _s(j['aparat_url'] ?? j['social_aparat']),
       tiktok: _s(j['tiktok_url']),
       ownerPhoto: _s(j['owner_profile_photo']),
+      bedrooms: bedrooms < 0 ? 0 : bedrooms,
       mapUrl: _s(j['map_url'] ?? j['map_link']),
       managementCode: _s(j['management_code']),
     );
