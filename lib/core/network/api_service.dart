@@ -41,8 +41,9 @@ class ApiService {
     String path, {
     Map<String, dynamic>? query,
     int? retry,
+    String? baseUrl,
   }) {
-    return _send('GET', path, query: query, retry: retry);
+    return _send('GET', path, query: query, retry: retry, baseUrl: baseUrl);
   }
 
   /// POST با بدنه‌ی JSON.
@@ -72,6 +73,7 @@ class ApiService {
     Map<String, dynamic>? query,
     Map<String, dynamic>? body,
     int? retry,
+    String? baseUrl,
   }) async {
     final maxRetry = retry ?? ApiConfig.maxRetry;
     Object? lastError;
@@ -79,7 +81,7 @@ class ApiService {
     for (var attempt = 0; attempt <= maxRetry; attempt++) {
       final client = HttpClient()..connectionTimeout = ApiConfig.timeout;
       try {
-        final uri = ApiConfig.uri(path, query);
+        final uri = ApiConfig.uri(path, query, baseUrl);
         final request = await client.openUrl(method, uri).timeout(ApiConfig.timeout);
         request.headers.set(HttpHeaders.acceptHeader, 'application/json');
         if (ApiConfig.apiKey.isNotEmpty) {
