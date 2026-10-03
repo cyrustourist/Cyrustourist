@@ -170,7 +170,9 @@ class ShowcaseService {
 
   static List<String?> _basesFor(ShowcaseKind kind) {
     // اقامتگاه و گردشگری سلامت هر دو از دیتابیس Worker پنل مدیریت خوانده می‌شوند.
-    if (kind == ShowcaseKind.accommodation || kind == ShowcaseKind.health) {
+    if (kind == ShowcaseKind.accommodation ||
+        kind == ShowcaseKind.health ||
+        kind == ShowcaseKind.agency) {
       return [ApiConfig.panelBaseUrl, null];
     }
     // لیدرها فقط در دیتابیس پنل هستند (/guides)؛ جاذبه‌ها هم اول از پنل.
@@ -196,8 +198,7 @@ class ShowcaseService {
       case ShowcaseKind.leader:
         return '/guides'; // فقط لیدرهای Active از دیتابیس پنل
       case ShowcaseKind.agency:
-        // این ماژول هنوز Endpoint عمومی نهایی در Worker فعلی ندارد.
-        return null;
+        return '/travel-agencies'; // آژانس‌های ثبت‌شده در پنل مدیریت (جدول travel_agencies)
     }
   }
 
@@ -258,6 +259,35 @@ class ShowcaseService {
       final digits =
           RegExp(r'(\d+)\s*$').firstMatch((j['guide_id'] ?? '').toString());
       return int.tryParse(digits?.group(1) ?? '') ?? 0;
+    }
+
+    // آژانس مسافرتی: ردیف پنل → مدل Agency (برای صفحهٔ پروفایل آژانس)
+    if (kind == ShowcaseKind.agency) {
+      final a = Agency.fromRow(j);
+      final item = _fromAgency(code(), a);
+      return ShowcaseItem(
+        kind: ShowcaseKind.agency,
+        code: item.code,
+        titles: item.titles,
+        locations: _m(a.city, s(j['city_en']), s(j['city_ar'])),
+        descriptions: _m(a.bio.isNotEmpty ? a.bio : a.services,
+            s(j['description_en']), s(j['description_ar'])),
+        categoryLabels: item.categoryLabels,
+        categories: item.categories,
+        coverUrl: a.logoUrl,
+        videoUrl: cleanVideoUrl(a.introVideoUrl),
+        phone: a.phone,
+        instagramUrl: p([j['instagram_url']]),
+        websiteUrl: a.website,
+        latitude: d(j['latitude']),
+        longitude: d(j['longitude']),
+        rating: a.rating,
+        ratingCount: a.reviewCount,
+        tier: showcaseTierFromString(s(j['tier'])),
+        priority: int.tryParse((j['priority'] ?? 0).toString()) ?? 0,
+        expiresAt: DateTime.tryParse(j['expires_at']?.toString() ?? ''),
+        native: a,
+      );
     }
 
     final isLeader = kind == ShowcaseKind.leader;
