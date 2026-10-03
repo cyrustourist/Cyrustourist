@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:webview_flutter/webview_flutter.dart';
@@ -59,17 +58,6 @@ const List<String> _kCategories = [
   'partner',
 ];
 
-const List<List<String>> _kSocials = [
-  ['instagram', 'اینستاگرام / Instagram'],
-  ['website', 'وب‌سایت / Website'],
-  ['youtube', 'یوتیوب / YouTube'],
-  ['tiktok', 'تیک‌تاک / TikTok'],
-  ['aparat', 'آپارات / Aparat'],
-  ['telegram', 'تلگرام / Telegram'],
-  ['whatsapp', 'واتساپ / WhatsApp'],
-  ['eitaa', 'ایتا / Eitaa'],
-];
-
 // ===================== متن‌ها (fa / en / ar — مطابق سایت؛ سایر زبان‌ها انگلیسی) =====================
 
 const Map<String, Map<String, String>> _kText = {
@@ -89,6 +77,14 @@ const Map<String, Map<String, String>> _kText = {
     'chatWa': 'چت در واتساپ',
     'back': '↩ برگشت',
     'accept': 'قوانین و شرایط خدمات سایروس توریست را مطالعه کرده‌ام و می‌پذیرم.',
+    'sendOptsTitle': 'نمونه گزینه‌ها برای ارسال و هماهنگی مستقیم با پشتیبانی',
+    'sendOptsDesc': 'نیازی به پر کردن فرم نیست. برای ثبت‌نام، اطلاعات زیر را از طریق یکی از راه‌های ارتباطی پایین صفحه مستقیم برای پشتیبانی سایروس توریست بفرستید و ثبت‌نام را با پشتیبانی هماهنگ کنید:',
+    'sendOpt1': '• نام کسب‌وکار / اقامتگاه',
+    'sendOpt2': '• دسته‌بندی (اقامتگاه، کافه، رستوران، لیدر تور، گردشگری سلامت، آژانس مسافرتی و…)',
+    'sendOpt3': '• شماره تلفن (همراه، ثابت یا کمکی)',
+    'sendOpt4': '• لینک فیلم معرفی (در صورت وجود) یا درخواست تولید فیلم توسط سایروس توریست',
+    'sendOpt5': '• لینک شبکه‌های اجتماعی و وب‌سایت (اینستاگرام، یوتیوب، تیک‌تاک، آپارات، تلگرام، واتساپ، ایتا)',
+    'socialsTitle': 'شبکه‌های اجتماعی سایروس توریست',
     'benefit1': '🎬 نمایش فیلم معرفی در سایت و نرم‌افزار سایروس توریست',
     'benefit1Desc': 'لینک فیلم معرفی خود را ارسال کنید یا در صورت درخواست، تولید فیلم توسط سایروس توریست انجام می‌شود.',
     'benefit2': '🗺️ مسیریابی',
@@ -105,22 +101,6 @@ const Map<String, Map<String, String>> _kText = {
     'benefit7Desc': 'معرفی مستمر شما در وب‌سایت، نرم‌افزار و شبکه‌های اجتماعی سایروس توریست در طول دوره عضویت.',
     'benefit8': '🤝 دیده‌شدن توسط گردشگران بیشتر',
     'benefit8Desc': 'دسترسی گردشگران داخلی و خارجی به اطلاعات و راه‌های ارتباطی شما از طریق یک سامانه واحد.',
-    'f_title': '📝 فرم ثبت‌نام',
-    'f_desc': 'اطلاعات زیر را تکمیل کنید. فیلدهای ستاره‌دار الزامی هستند.',
-    'f_name': 'نام کسب‌وکار / اقامتگاه *',
-    'f_category': 'دسته‌بندی *',
-    'f_phone': 'شماره تلفن *',
-    'f_video': 'لینک فیلم معرفی',
-    'f_socials': 'شبکه‌های اجتماعی (اختیاری)',
-    'f_confirm': 'اطلاعات واردشده را بررسی کرده‌ام و صحت آن را تأیید می‌کنم. *',
-    'f_submit': '✅ تأیید و ارسال',
-    'f_errName': 'نام را وارد کنید.',
-    'f_errPhone': 'شماره تلفن معتبر وارد کنید.',
-    'f_errLink': 'لینک واردشده معتبر نیست.',
-    'f_errConfirm': 'تأیید نهایی الزامی است.',
-    'f_sendTitle': 'ارسال اطلاعات',
-    'f_sendDesc': 'اطلاعات شما کپی شد. یکی از پیام‌رسان‌ها را باز کنید و پیام را برای پشتیبانی ارسال (paste) کنید.',
-    'f_msgHead': 'درخواست ثبت‌نام در سایروس توریست',
     'hubTitle': '➕ ثبت‌نام در سایروس توریست',
     'hubDesc': 'اقامتگاه، کافه، رستوران، لیدر تور، گردشگری سلامت، آژانس مسافرتی، خدمات گردشگری، صنایع‌دستی یا همکاری گردشگری خود را معرفی کنید و از خدمات معرفی، نمایش فیلم، مسیریابی، تماس مستقیم و امتیاز گردشگران بهره‌مند شوید.',
     'regBtn': '➕ ثبت {cat}',
@@ -128,9 +108,6 @@ const Map<String, Map<String, String>> _kText = {
     'tgBtn': '✈️ تلگرام',
     'waBtn': '💬 واتساپ',
     'eitaaBtn': '💬 ایتا',
-    'copyAgain': '📋 کپی دوباره پیام',
-    'copied': 'پیام کپی شد.',
-    'sendWa': 'ارسال در واتساپ',
     'done': '✔ پایان',
     'linkErr': 'امکان باز کردن لینک وجود ندارد.',
     'cat_residence': 'اقامتگاه',
@@ -159,6 +136,14 @@ const Map<String, Map<String, String>> _kText = {
     'chatWa': 'Chat on WhatsApp',
     'back': '↩ Back',
     'accept': 'I have read and accept the Cyrus Tourist terms and conditions.',
+    'sendOptsTitle': 'Sample options to send and coordinate directly with support',
+    'sendOptsDesc': 'No form to fill in. To register, send the details below straight to Cyrus Tourist support through any of the contact options at the bottom of the page, and coordinate your registration with them:',
+    'sendOpt1': '• Business / residence name',
+    'sendOpt2': '• Category (residence, cafe, restaurant, tour leader, health tourism, travel agency, etc.)',
+    'sendOpt3': '• Phone number (mobile, landline or auxiliary)',
+    'sendOpt4': '• Intro video link (if you have one), or request video production by Cyrus Tourist',
+    'sendOpt5': '• Social network and website links (Instagram, YouTube, TikTok, Aparat, Telegram, WhatsApp, Eitaa)',
+    'socialsTitle': 'Cyrus Tourist social networks',
     'benefit1': '🎬 Residence video',
     'benefit1Desc': 'Send your residence video link, or request video production by Cyrus Tourist.',
     'benefit2': '🗺️ Route navigation',
@@ -175,22 +160,6 @@ const Map<String, Map<String, String>> _kText = {
     'benefit7Desc': 'Ongoing visibility on the Cyrus Tourist website, app and social media during your membership period.',
     'benefit8': '🤝 Reach more tourists',
     'benefit8Desc': 'Domestic and international tourists can find your information and contact details in one place.',
-    'f_title': '📝 Registration Form',
-    'f_desc': 'Please complete the details below. Fields marked * are required.',
-    'f_name': 'Business / Residence name *',
-    'f_category': 'Category *',
-    'f_phone': 'Phone number *',
-    'f_video': 'Intro video link',
-    'f_socials': 'Social networks (optional)',
-    'f_confirm': 'I have reviewed the information and confirm it is correct. *',
-    'f_submit': '✅ Confirm and send',
-    'f_errName': 'Please enter the name.',
-    'f_errPhone': 'Please enter a valid phone number.',
-    'f_errLink': 'The link is not valid.',
-    'f_errConfirm': 'Final confirmation is required.',
-    'f_sendTitle': 'Send your information',
-    'f_sendDesc': 'Your details were copied. Open a messenger and paste the message to support.',
-    'f_msgHead': 'Cyrus Tourist registration request',
     'hubTitle': '➕ Register on Cyrus Tourist',
     'hubDesc': 'Introduce your residence, cafe, restaurant, tour leader service, health tourism, travel agency, tourism services, handicrafts or tourism partnership, and benefit from introduction, video showcase, navigation, direct contact and tourist ratings.',
     'regBtn': '➕ Register {cat}',
@@ -198,9 +167,6 @@ const Map<String, Map<String, String>> _kText = {
     'tgBtn': '✈️ Telegram',
     'waBtn': '💬 WhatsApp',
     'eitaaBtn': '💬 Eitaa',
-    'copyAgain': '📋 Copy message again',
-    'copied': 'Message copied.',
-    'sendWa': 'Send via WhatsApp',
     'done': '✔ Done',
     'linkErr': 'Unable to open the link.',
     'cat_residence': 'Residence',
@@ -229,6 +195,14 @@ const Map<String, Map<String, String>> _kText = {
     'chatWa': 'دردشة على واتساب',
     'back': '↩ رجوع',
     'accept': 'لقد قرأت شروط خدمات سايروس توريست وأوافق عليها.',
+    'sendOptsTitle': 'نموذج الخيارات للإرسال والتنسيق المباشر مع الدعم',
+    'sendOptsDesc': 'لا حاجة لملء نموذج. للتسجيل، أرسل المعلومات التالية مباشرة إلى دعم سايروس توريست عبر إحدى وسائل التواصل أسفل الصفحة ونسّق التسجيل معهم:',
+    'sendOpt1': '• اسم النشاط / الإقامة',
+    'sendOpt2': '• الفئة (إقامة، مقهى، مطعم، قائد جولة، سياحة علاجية، وكالة سفر وغيرها)',
+    'sendOpt3': '• رقم الهاتف (جوال أو أرضي أو إضافي)',
+    'sendOpt4': '• رابط فيديو التعريف (إن وجد) أو طلب إنتاج فيديو من سايروس توريست',
+    'sendOpt5': '• روابط شبكات التواصل والموقع الإلكتروني (إنستغرام، يوتيوب، تيك توك، آپارات، تيليجرام، واتساب، إيتا)',
+    'socialsTitle': 'شبكات التواصل لسايروس توريست',
     'benefit1': '🎬 عرض فيديو مكان الإقامة',
     'benefit1Desc': 'يمكنك إرسال رابط الفيديو أو طلب إنتاج فيديو من سايروس توريست.',
     'benefit2': '🗺️ الملاحة',
@@ -245,22 +219,6 @@ const Map<String, Map<String, String>> _kText = {
     'benefit7Desc': 'ظهور مستمر لك على موقع وتطبيق ووسائل التواصل الاجتماعي لسايروس توريست خلال فترة العضوية.',
     'benefit8': '🤝 الوصول إلى مزيد من السياح',
     'benefit8Desc': 'يمكن للسياح المحليين والأجانب الوصول إلى معلوماتك وطرق التواصل معك من خلال منصة واحدة.',
-    'f_title': '📝 نموذج التسجيل',
-    'f_desc': 'يرجى إكمال البيانات أدناه. الحقول المعلَّمة بـ * إلزامية.',
-    'f_name': 'اسم النشاط / الإقامة *',
-    'f_category': 'الفئة *',
-    'f_phone': 'رقم الهاتف *',
-    'f_video': 'رابط فيديو التعريف',
-    'f_socials': 'شبكات التواصل (اختياري)',
-    'f_confirm': 'لقد راجعت المعلومات وأؤكد صحتها. *',
-    'f_submit': '✅ تأكيد وإرسال',
-    'f_errName': 'يرجى إدخال الاسم.',
-    'f_errPhone': 'يرجى إدخال رقم هاتف صحيح.',
-    'f_errLink': 'الرابط غير صالح.',
-    'f_errConfirm': 'التأكيد النهائي مطلوب.',
-    'f_sendTitle': 'إرسال المعلومات',
-    'f_sendDesc': 'تم نسخ بياناتكم. افتحوا أحد التطبيقات والصقوا الرسالة للدعم.',
-    'f_msgHead': 'طلب تسجيل في سايروس توريست',
     'hubTitle': '➕ التسجيل في سايروس توريست',
     'hubDesc': 'عرّف بمكان إقامتك أو مقهاك أو مطعمك أو خدمة قيادة الجولات أو السياحة العلاجية أو وكالة السفر أو الخدمات السياحية أو الصناعات اليدوية أو شراكتك السياحية، واستفد من التعريف وعرض الفيديو والملاحة والاتصال المباشر وتقييمات السياح.',
     'regBtn': '➕ تسجيل {cat}',
@@ -268,9 +226,6 @@ const Map<String, Map<String, String>> _kText = {
     'tgBtn': '✈️ تيليجرام',
     'waBtn': '💬 واتساب',
     'eitaaBtn': '💬 إيتا',
-    'copyAgain': '📋 نسخ الرسالة مرة أخرى',
-    'copied': 'تم نسخ الرسالة.',
-    'sendWa': 'إرسال عبر واتساب',
     'done': '✔ إنهاء',
     'linkErr': 'تعذّر فتح الرابط.',
     'cat_residence': 'الإقامة',
@@ -288,9 +243,6 @@ const Map<String, Map<String, String>> _kText = {
 
 const Map<String, Map<String, String>> _kExtra = {
   'fa': {
-    'sendTg': 'ارسال در تلگرام',
-    'sendEitaa': 'ارسال در ایتا',
-    'pasteHint': 'پیام کپی شد. در گفتگوی باز شده Paste کنید و ارسال بزنید.',
     'samplePlaying': 'در حال بارگذاری نمونه…',
     'close': '✕',
     'sampleTitle': '🏡 نمونه کارت معرفی شما',
@@ -312,9 +264,6 @@ const Map<String, Map<String, String>> _kExtra = {
     'accepted': '✅ قوانین و شرایط پذیرفته شد.',
   },
   'en': {
-    'sendTg': 'Send via Telegram',
-    'sendEitaa': 'Send via Eitaa',
-    'pasteHint': 'Message copied. Paste it in the chat that opens and send.',
     'samplePlaying': 'Loading sample…',
     'close': '✕',
     'sampleTitle': '🏡 Sample Listing Card',
@@ -336,9 +285,6 @@ const Map<String, Map<String, String>> _kExtra = {
     'accepted': '✅ Terms and conditions accepted.',
   },
   'ar': {
-    'sendTg': 'إرسال عبر تيليجرام',
-    'sendEitaa': 'إرسال عبر إيتا',
-    'pasteHint': 'تم نسخ الرسالة. الصقها في المحادثة التي ستفتح ثم أرسلها.',
     'samplePlaying': 'جارٍ تحميل النموذج…',
     'close': '✕',
     'sampleTitle': '🏡 نموذج بطاقة التعريف الخاصة بك',
@@ -383,17 +329,10 @@ Future<void> _openUrl(BuildContext context, String url) async {
   }
 }
 
-bool _isValidLink(String v) {
-  if (v.isEmpty) return true;
-  final withScheme = RegExp(r'^https?://', caseSensitive: false).hasMatch(v) ? v : 'https://$v';
-  final uri = Uri.tryParse(withScheme);
-  return uri != null && uri.host.contains('.') && !uri.host.startsWith('.') && !uri.host.endsWith('.');
-}
-
-enum _Step { hub, terms, form, support }
+enum _Step { hub, terms, support }
 
 /// صفحهٔ ثبت‌نام داخل برنامه — همان ظاهر و روال «ثبت‌نام در سایروس توریست» سایت:
-/// کادر کرم‌رنگ با دکمه‌های دسته ← پنجرهٔ سفید (مزایا و قوانین) ← فرم ← ارسال به پشتیبان.
+/// کادر کرم‌رنگ با دکمه‌های دسته ← پنجرهٔ سفید (مزایا و قوانین) ← گزینه‌های ارسال و هماهنگی مستقیم با پشتیبانی.
 class RegistrationHubPage extends StatefulWidget {
   const RegistrationHubPage({super.key, this.initialCategory});
 
@@ -408,17 +347,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
   _Step _step = _Step.hub;
   String _category = 'residence';
   bool _accepted = false;
-  bool _confirmed = false;
   bool _callOpen = false;
-  String? _error;
-  String _message = '';
-
-  final _name = TextEditingController();
-  final _phone = TextEditingController();
-  final _video = TextEditingController();
-  final Map<String, TextEditingController> _socials = {
-    for (final s in _kSocials) s[0]: TextEditingController(),
-  };
   final _scroll = ScrollController();
 
   bool get _rtl => MenuLanguage.isRtl;
@@ -435,21 +364,12 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
 
   @override
   void dispose() {
-    _name.dispose();
-    _phone.dispose();
-    _video.dispose();
-    for (final c in _socials.values) {
-      c.dispose();
-    }
     _scroll.dispose();
     super.dispose();
   }
 
   void _go(_Step s) {
-    setState(() {
-      _step = s;
-      _error = null;
-    });
+    setState(() => _step = s);
     if (_scroll.hasClients) _scroll.jumpTo(0);
   }
 
@@ -474,11 +394,8 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
           _go(_Step.hub);
         }
         break;
-      case _Step.form:
-        _go(_Step.terms);
-        break;
       case _Step.support:
-        _go(_Step.form);
+        _go(_Step.terms);
         break;
     }
   }
@@ -490,56 +407,6 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     } else {
       _go(_Step.hub);
     }
-  }
-
-  String _buildMessage() {
-    String clean(String k) => _t(k).replaceAll(' *', '');
-    final lines = <String>[
-      _t('f_msgHead'),
-      '',
-      '${clean('f_name')}: ${_name.text.trim()}',
-      '${clean('f_category')}: ${_catName(_category)}',
-      '${clean('f_phone')}: ${_phone.text.trim()}',
-    ];
-    if (_video.text.trim().isNotEmpty) {
-      lines.add('${_t('f_video')}: ${_video.text.trim()}');
-    }
-    for (final s in _kSocials) {
-      final v = _socials[s[0]]!.text.trim();
-      if (v.isNotEmpty) {
-        lines.add('${s[1].split(' / ').last}: $v');
-      }
-    }
-    return lines.join('\n');
-  }
-
-  void _submit() {
-    final digits = _phone.text.replaceAll(RegExp(r'\D'), '');
-    if (_name.text.trim().isEmpty) {
-      return setState(() => _error = _t('f_errName'));
-    }
-    if (digits.length < 8) {
-      return setState(() => _error = _t('f_errPhone'));
-    }
-    final links = <String>[_video.text.trim(), ..._socials.values.map((c) => c.text.trim())];
-    if (!links.every(_isValidLink)) {
-      return setState(() => _error = _t('f_errLink'));
-    }
-    if (!_confirmed) {
-      return setState(() => _error = _t('f_errConfirm'));
-    }
-    _message = _buildMessage();
-    Clipboard.setData(ClipboardData(text: _message));
-    _go(_Step.support);
-  }
-
-  /// پیام را کپی می‌کند و گفتگوی پشتیبانی را باز می‌کند (تلگرام و ایتا متن آماده را
-  /// از لینک نمی‌پذیرند؛ کاربر فقط Paste می‌کند).
-  Future<void> _copyAndOpen(String url) async {
-    await Clipboard.setData(ClipboardData(text: _message));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('pasteHint'))));
-    await _openUrl(context, url);
   }
 
   // ===================== ساختار صفحه =====================
@@ -768,8 +635,6 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     switch (_step) {
       case _Step.terms:
         return _termsStep();
-      case _Step.form:
-        return _formStep();
       case _Step.support:
         return _supportStep();
       case _Step.hub:
@@ -826,7 +691,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
         const SizedBox(height: 18),
         _checkCard(_accepted, _t('accept'), (v) => setState(() => _accepted = v)),
         const SizedBox(height: 18),
-        _enterButton(_t('enterReg'), _accepted ? () => _go(_Step.form) : null),
+        _enterButton(_t('enterReg'), _accepted ? () => _go(_Step.support) : null),
       ],
     );
   }
@@ -974,80 +839,20 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     );
   }
 
-  // ===================== مرحلهٔ ۲: فرم =====================
-
-  Widget _formStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionTitle(_t('f_title')),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: Text(
-            _t('f_desc'),
-            style: const TextStyle(color: Color(0xff5a6572), fontSize: 13, height: 1.9),
-          ),
-        ),
-        _field(_t('f_name'), _name, maxLength: 120),
-        _fieldLabel(_t('f_category')),
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 13),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xffd9e0e7)),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _category,
-              isExpanded: true,
-              dropdownColor: Colors.white,
-              style: const TextStyle(color: Color(0xff25303b), fontSize: 14),
-              items: [
-                for (final c in _kCategories)
-                  DropdownMenuItem<String>(value: c, child: Text(_catName(c))),
-              ],
-              onChanged: (v) {
-                if (v != null) setState(() => _category = v);
-              },
-            ),
-          ),
-        ),
-        _field(_t('f_phone'), _phone,
-            keyboard: TextInputType.phone, ltr: true, maxLength: 20, hint: '09xxxxxxxxx'),
-        _field(_t('f_video'), _video, keyboard: TextInputType.url, ltr: true, hint: 'https://'),
-        Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 8),
-          child: Text(
-            _t('f_socials'),
-            style: const TextStyle(color: _teal, fontSize: 13, fontWeight: FontWeight.w900),
-          ),
-        ),
-        for (final s in _kSocials)
-          _field(s[1], _socials[s[0]]!, keyboard: TextInputType.url, ltr: true, hint: 'https://'),
-        const SizedBox(height: 4),
-        _checkCard(_confirmed, _t('f_confirm'), (v) => setState(() => _confirmed = v)),
-        const SizedBox(height: 10),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text(
-              _error!,
-              style: const TextStyle(color: Color(0xffc0392b), fontSize: 13, fontWeight: FontWeight.w800),
-            ),
-          ),
-        _primaryButton(_t('f_submit'), _submit),
-        const SizedBox(height: 10),
-        _secondaryButton(_t('back'), () => _go(_Step.terms)),
-      ],
-    );
-  }
-
-  // ===================== مرحلهٔ ۳: ارسال به پشتیبان =====================
+  // ===================== مرحلهٔ ۲: گزینه‌های ارسال و هماهنگی مستقیم با پشتیبانی =====================
 
   Widget _supportStep() {
-    final waUrl = '${_Support.whatsapp}?text=${Uri.encodeComponent(_message)}';
+    final socials = <List<String>>[
+      ['sampleInstagram', _Support.instagram],
+      ['sampleWebsite', _Support.website],
+      ['sampleYoutube', _Support.youtube],
+      ['sampleTiktok', _Support.tiktok],
+      ['sampleAparat', _Support.aparat],
+      ['sampleTelegram', _Support.telegram],
+      ['sampleWhatsapp', _Support.whatsapp],
+      ['sampleEitaa', _Support.eitaa],
+    ];
+    final btnWidth = (MediaQuery.of(context).size.width - 32 - 32 - 8) / 2;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1059,7 +864,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
-            '${_t('accepted')}\n${_t('f_sendDesc')}',
+            _t('accepted'),
             style: const TextStyle(color: Color(0xff176b43), fontSize: 13, fontWeight: FontWeight.w800, height: 1.8),
           ),
         ),
@@ -1074,8 +879,13 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                _t('f_sendTitle'),
-                style: const TextStyle(color: _ink, fontSize: 21, fontWeight: FontWeight.w900),
+                _t('sendOptsTitle'),
+                style: const TextStyle(color: _ink, fontSize: 19, fontWeight: FontWeight.w900, height: 1.6),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _t('sendOptsDesc'),
+                style: const TextStyle(color: Color(0xff5a6572), fontSize: 13, height: 1.9),
               ),
               const SizedBox(height: 10),
               Container(
@@ -1085,33 +895,40 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xffe3eaf0)),
                 ),
-                child: SelectableText(
-                  _message,
-                  style: const TextStyle(color: Color(0xff637080), fontSize: 12.5, height: 1.9),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 1; i <= 5; i++)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: i == 5 ? 0 : 6),
+                        child: Text(
+                          _t('sendOpt$i'),
+                          style: const TextStyle(color: Color(0xff3f4b58), fontSize: 12.5, height: 1.9),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              _supportButton(_t('sendWa'), const [Color(0xff25d366), Color(0xff128c7e)],
-                  BrandIcons.whatsapp, () => _openUrl(context, waUrl)),
-              const SizedBox(height: 12),
-              _supportButton(_t('sendTg'), const [Color(0xff2aabee), Color(0xff1c86c9)],
-                  BrandIcons.telegram, () => _copyAndOpen(_Support.telegram)),
-              const SizedBox(height: 12),
-              _supportButton(_t('sendEitaa'), const [Color(0xfff7a21b), Color(0xffe2740f)],
-                  BrandIcons.eitaa, () => _copyAndOpen(_Support.eitaa)),
             ],
           ),
         ),
         const SizedBox(height: 18),
+        _sectionTitle(_t('socialsTitle')),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final e in socials)
+              SizedBox(
+                width: btnWidth,
+                child: _sampleBtn(_t(e[0]), () => _openUrl(context, e[1])),
+              ),
+          ],
+        ),
+        const SizedBox(height: 18),
         _chatSupportCard(),
         const SizedBox(height: 18),
-        _secondaryButton(_t('copyAgain'), () async {
-          await Clipboard.setData(ClipboardData(text: _message));
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('copied'))));
-        }),
-        const SizedBox(height: 10),
-        _secondaryButton(_t('back'), () => _go(_Step.form)),
+        _secondaryButton(_t('back'), () => _go(_Step.terms)),
         const SizedBox(height: 10),
         _secondaryButton(_t('done'), () => Navigator.of(context).pop()),
       ],
@@ -1127,58 +944,6 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
           style: const TextStyle(color: _ink, fontSize: 20, fontWeight: FontWeight.w900, height: 1.5),
         ),
       );
-
-  Widget _fieldLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 5),
-        child: Text(
-          text,
-          style: const TextStyle(color: Color(0xff313b46), fontSize: 12, fontWeight: FontWeight.w800),
-        ),
-      );
-
-  Widget _field(
-    String label,
-    TextEditingController controller, {
-    TextInputType keyboard = TextInputType.text,
-    bool ltr = false,
-    int? maxLength,
-    String? hint,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _fieldLabel(label),
-          TextField(
-            controller: controller,
-            keyboardType: keyboard,
-            maxLength: maxLength,
-            textDirection: ltr ? TextDirection.ltr : null,
-            style: const TextStyle(color: Color(0xff25303b), fontSize: 14),
-            cursorColor: _teal,
-            decoration: InputDecoration(
-              counterText: '',
-              hintText: hint,
-              hintStyle: const TextStyle(color: Color(0xff9aa4ae)),
-              filled: true,
-              fillColor: Colors.white,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xffd9e0e7)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _teal, width: 1.6),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _checkCard(bool value, String label, ValueChanged<bool> onChanged) {
     return InkWell(
@@ -1208,27 +973,6 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _primaryButton(String label, VoidCallback? onTap) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: _primaryGradient),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900),
-          ),
         ),
       ),
     );
