@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 /// وضعیت آژانس — همان الگوی وضعیت لیدرها.
@@ -47,6 +49,7 @@ class Agency {
     required this.city,
     required this.services,
     this.logoAsset,
+    this.logoUrl,
     this.rating = 0,
     this.reviewCount = 0,
     this.experienceText = '',
@@ -70,6 +73,9 @@ class Agency {
   final String city;
   final String services; // مثلاً: تور خارجی، بلیط، اقامتگاه
   final String? logoAsset;
+
+  /// آدرس عکس پروفایل/لوگو از پنل مدیریت (دیتابیس)
+  final String? logoUrl;
   final double rating;
   final int reviewCount;
   final String experienceText;
@@ -82,6 +88,70 @@ class Agency {
   final String? introVideoUrl;
   final List<AgencyTour> tours;
   final AgencyStatus status;
+
+  /// ساخت آژانس از یک ردیف جدول travel_agencies (پاسخ /travel-agencies).
+  factory Agency.fromRow(Map<String, dynamic> j) {
+    String? p(List<dynamic> vs) {
+      for (final v in vs) {
+        final t = v?.toString().trim() ?? '';
+        if (t.isNotEmpty && t != 'null') return t;
+      }
+      return null;
+    }
+
+    List<String> splitList(dynamic v) {
+      final raw = v?.toString() ?? '';
+      if (raw.trim().isEmpty) return const [];
+      try {
+        final d = jsonDecode(raw);
+        if (d is List) return d.map((e) => '$e'.trim()).where((e) => e.isNotEmpty).toList();
+      } catch (_) {}
+      return raw
+          .split(RegExp(r'[\n,،|]'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    bool truthy(dynamic v) => v == 1 || v == true || '$v' == '1' || '$v'.toLowerCase() == 'true';
+
+    final id = '${j['id'] ?? ''}';
+    final code = p([j['management_code']]) ?? 'AGENCY-${id.padLeft(5, '0')}';
+    final amenities = splitList(j['amenities_list'] ?? j['amenities']);
+    final status = () {
+      switch ('${j['status'] ?? 'active'}'.toLowerCase()) {
+        case 'warning':
+          return AgencyStatus.warning;
+        case 'inactive':
+          return AgencyStatus.inactive;
+        case 'pending':
+          return AgencyStatus.pending;
+        default:
+          return AgencyStatus.active;
+      }
+    }();
+
+    return Agency(
+      id: 'db-$id',
+      code: code,
+      name: p([j['name_fa'], j['name'], j['name_en'], j['name_ar']]) ?? 'آژانس',
+      city: p([j['city_name'], j['city'], j['province']]) ?? '',
+      services: p([j['services']]) ?? '',
+      logoUrl: p([j['cover_url'], j['logo_url'], j['owner_profile_photo'], j['image_url']]),
+      rating: double.tryParse('${j['rating'] ?? 0}') ?? 0,
+      reviewCount: int.tryParse('${j['rating_count'] ?? 0}') ?? 0,
+      experienceText: p([j['experience_text']]) ?? '',
+      isVerifiedPartner: j['is_verified'] == null ? true : truthy(j['is_verified']),
+      isLicensed: truthy(j['is_licensed']) || amenities.contains('licensed'),
+      bio: p([j['description_fa'], j['description_en'], j['description_ar']]) ?? '',
+      regions: splitList(j['regions']),
+      phone: p([j['mobile'], j['phone'], j['phone2']]),
+      website: p([j['website'], j['website2']]),
+      introVideoUrl: p([j['video_url'], j['videoEmbedUrl'], j['aparat_url']]),
+      tours: splitList(j['tours']).map((t) => AgencyTour(title: t)).toList(),
+      status: status,
+    );
+  }
 }
 
 /// -------------------------------------------------------------
