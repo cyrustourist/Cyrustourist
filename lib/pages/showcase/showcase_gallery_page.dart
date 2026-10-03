@@ -73,6 +73,9 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
   String? _province;
   bool _onlyVip = false;
 
+  /// کلید آسانسوریِ «نوع سلامت» (فقط صفحه‌ی گردشگری سلامت): باز/بسته بودن فهرست انواع
+  bool _typeOpen = false;
+
   ShowcaseKindInfo get _info => ShowcaseKinds.of(widget.kind);
 
   String get _lang {
@@ -199,7 +202,10 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
     if (item.categories.contains(f.key)) return true;
     // اقامتگاهِ دیتابیس نوع مشخص دارد؛ فقط با کلید دقیق نوع تطبیق می‌خورد
     // (تا «هتل آپارتمان» داخل فیلتر «آپارتمان» یا «هتل» دیده نشود).
-    if (item.kind == ShowcaseKind.accommodation && item.categories.isNotEmpty) return false;
+    if ((item.kind == ShowcaseKind.accommodation || item.kind == ShowcaseKind.health) &&
+        item.categories.isNotEmpty) {
+      return false;
+    }
     final text = item.filterText;
     for (final k in f.keywords) {
       if (text.contains(showcaseNormalize(k))) return true;
@@ -596,7 +602,116 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
     );
   }
 
+  // ------------------------------------------------------------
+  // کلید آسانسوریِ «نوع سلامت» — با لمس، فهرست انواع مثل در آسانسور باز می‌شود.
+  // فهرست انواع همان فهرست پنل مدیریت است (HealthTypes).
+  // ------------------------------------------------------------
+  Widget _healthElevator() {
+    final filters = [_allFilter, ..._filters];
+    final current = filters.firstWhere(
+      (f) => f.key == _filterKey,
+      orElse: () => _allFilter,
+    );
+
+    int countOf(ShowcaseFilter f) =>
+        f.key == 'all' ? _items.length : _items.where((it) => _matches(it, f)).length;
+
+    Widget chip(ShowcaseFilter f) {
+      final selected = _filterKey == f.key;
+      return GestureDetector(
+        onTap: () => setState(() {
+          _filterKey = f.key;
+          _typeOpen = false;
+        }),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: selected
+                ? const LinearGradient(colors: [Color(0xff29e0ad), Color(0xff3ff0a8)])
+                : null,
+            color: selected ? null : Colors.transparent,
+            border: selected ? null : Border.all(color: Colors.white.withValues(alpha: 0.18)),
+          ),
+          child: Text(
+            '${f.label(_lang)} (${countOf(f)})',
+            style: TextStyle(
+              color: selected ? _bg : Colors.white70,
+              fontWeight: FontWeight.bold,
+              fontSize: 12.5,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _gold.withValues(alpha: _typeOpen ? 0.8 : 0.35)),
+        ),
+        child: Column(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () => setState(() => _typeOpen = !_typeOpen),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                child: Row(
+                  children: [
+                    const Icon(Icons.elevator_rounded, color: _gold, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '${_tr('نوع سلامت', 'Health type', 'نوع الخدمة الصحية')}: ${current.label(_lang)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _goldBright,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: _typeOpen ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 260),
+                      child: const Icon(Icons.keyboard_arrow_down_rounded, color: _gold, size: 26),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 340),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: _typeOpen
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [for (final f in filters) chip(f)],
+                        ),
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity, height: 0),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _chips() {
+    if (widget.kind == ShowcaseKind.health) return _healthElevator();
     final filters = [_allFilter, ..._filters];
     return SizedBox(
       height: 54,
