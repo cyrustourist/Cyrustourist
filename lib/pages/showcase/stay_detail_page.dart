@@ -11,6 +11,7 @@ import '../../models/stay_details.dart';
 import '../../services/public_link_service.dart';
 import '../../services/video_favorites_service.dart';
 import '../../widgets/aparat_embed_player.dart';
+import '../../widgets/brand_icons.dart';
 import '../../widgets/share_sheet.dart';
 import 'showcase_cover.dart';
 
@@ -44,6 +45,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
   bool _isFav = false;
   bool _playing = false;
   bool _descExpanded = false;
+  bool _amenAll = false;
 
   ShowcaseItem get item => widget.item;
   StayDetails get stay => item.stay ?? const StayDetails();
@@ -217,8 +219,9 @@ class _StayDetailPageState extends State<StayDetailPage> {
             SliverToBoxAdapter(child: _headerBlock()),
             SliverToBoxAdapter(child: _quickFacts()),
             SliverToBoxAdapter(child: _description()),
-            SliverToBoxAdapter(child: _actions()),
+            SliverToBoxAdapter(child: _socialSection()),
             SliverToBoxAdapter(child: _amenitiesSection()),
+            SliverToBoxAdapter(child: _actions()),
             SliverToBoxAdapter(child: _rulesSection()),
             SliverToBoxAdapter(child: _mapSection()),
             SliverToBoxAdapter(child: _contactSection()),
@@ -379,6 +382,10 @@ class _StayDetailPageState extends State<StayDetailPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if ((stay.ownerPhoto ?? '').isNotEmpty) ...[
+            _ownerAvatar(),
+            const SizedBox(width: 14),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,6 +460,99 @@ class _StayDetailPageState extends State<StayDetailPage> {
     );
   }
 
+  // ---------------- عکس پروفایل مالک ----------------
+
+  Widget _ownerAvatar() {
+    final url = stay.ownerPhoto;
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: _showOwnerPhoto,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 78,
+                height: 78,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [_goldBright, _gold, _teal],
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: _gold.withValues(alpha: 0.35), blurRadius: 16, spreadRadius: 1),
+                  ],
+                ),
+                child: Container(
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: _bg),
+                  padding: const EdgeInsets.all(2),
+                  child: ClipOval(
+                    child: Image.network(
+                      url,
+                      width: 68,
+                      height: 68,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.person_rounded, color: Colors.white38, size: 36),
+                    ),
+                  ),
+                ),
+              ),
+              PositionedDirectional(
+                bottom: -2,
+                end: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: _teal,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: _bg, width: 2),
+                  ),
+                  child: const Icon(Icons.verified_rounded, color: _bg, size: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _tr('میزبان', 'Host', 'المضيف'),
+          style: const TextStyle(color: _goldBright, fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+
+  void _showOwnerPhoto() {
+    final url = stay.ownerPhoto;
+    if (url == null || url.isEmpty) return;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(18),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: InteractiveViewer(
+            child: Image.network(
+              url,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox(
+                height: 200,
+                child: Center(child: Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _tag(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -473,6 +573,8 @@ class _StayDetailPageState extends State<StayDetailPage> {
         _fact(Icons.login_rounded, _tr('ساعت ورود', 'Check-in', 'وقت الدخول'), stay.checkIn!),
       if ((stay.checkOut ?? '').isNotEmpty)
         _fact(Icons.logout_rounded, _tr('ساعت خروج', 'Check-out', 'وقت الخروج'), stay.checkOut!),
+      if (stay.bedrooms > 0)
+        _fact(Icons.bed_rounded, _tr('اتاق‌خواب', 'Bedrooms', 'غرف النوم'), '${stay.bedrooms}'),
       if (stay.hasElevator)
         _fact(Icons.elevator_rounded, _tr('آسانسور', 'Elevator', 'مصعد'), _tr('دارد', 'Yes', 'نعم')),
       if (stay.amenityKeys.isNotEmpty)
@@ -717,7 +819,11 @@ class _StayDetailPageState extends State<StayDetailPage> {
 
   Widget _amenitiesSection() {
     final keys = stay.amenityKeys;
-    if (keys.isEmpty) return const SizedBox.shrink();
+    final bedrooms = stay.bedrooms;
+    if (keys.isEmpty && bedrooms <= 0) return const SizedBox.shrink();
+
+    const limit = 8;
+    final visible = (_amenAll || keys.length <= limit) ? keys : keys.take(limit).toList();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
@@ -726,34 +832,169 @@ class _StayDetailPageState extends State<StayDetailPage> {
         children: [
           _sectionTitle(Icons.checklist_rounded, _tr('امکانات اقامتگاه', 'Amenities', 'مرافق الإقامة')),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final k in keys)
-                Builder(builder: (_) {
-                  final a = StayAmenities.resolve(k);
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _card,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: _teal.withValues(alpha: 0.28)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(a.icon, color: _teal, size: 17),
-                        const SizedBox(width: 6),
-                        Text(a.label(_lang),
-                            style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  );
-                }),
-            ],
+          if (bedrooms > 0)
+            _amenityRow(
+              Icons.bed_rounded,
+              _tr('تعداد اتاق‌خواب', 'Bedrooms', 'غرف النوم'),
+              valueText: _tr('$bedrooms اتاق', '$bedrooms rooms', '$bedrooms غرف'),
+            ),
+          for (final k in visible)
+            Builder(builder: (_) {
+              final a = StayAmenities.resolve(k);
+              return _amenityRow(a.icon, a.label(_lang));
+            }),
+          if (keys.length > limit)
+            Center(
+              child: TextButton.icon(
+                onPressed: () => setState(() => _amenAll = !_amenAll),
+                icon: Icon(_amenAll ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: _gold),
+                label: Text(
+                  _amenAll
+                      ? _tr('نمایش کمتر', 'Show less', 'عرض أقل')
+                      : _tr('نمایش همه (${keys.length})', 'Show all (${keys.length})', 'عرض الكل (${keys.length})'),
+                  style: const TextStyle(color: _gold, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _amenityRow(IconData icon, String label, {String? valueText}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [_cardSoft, _card]),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _gold.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _teal.withValues(alpha: 0.14),
+            ),
+            child: Icon(icon, color: _teal, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
+          if (valueText != null)
+            Text(valueText, style: const TextStyle(color: _goldBright, fontSize: 14, fontWeight: FontWeight.w800))
+          else
+            const Icon(Icons.check_circle_rounded, color: _teal, size: 24),
+        ],
+      ),
+    );
+  }
+
+  // ---------------- شبکه‌های اجتماعی و وب‌سایت ----------------
+
+  Widget _socialSection() {
+    final bubbles = <Widget>[];
+
+    void add(String label, String? url, Widget icon, List<Color> colors) {
+      if (url == null || url.trim().isEmpty) return;
+      bubbles.add(_socialBubble(label, url, icon, colors));
+    }
+
+    const w = Colors.white;
+    add('Instagram', item.instagramUrl, const Icon(Icons.camera_alt_rounded, color: w, size: 26),
+        const [Color(0xfff58529), Color(0xffdd2a7b), Color(0xff8134af)]);
+    add('Telegram', stay.telegram, const BrandIcon(BrandIcons.telegram, size: 27),
+        const [Color(0xff2aabee), Color(0xff1d84c4)]);
+    add('WhatsApp', stay.whatsapp, const BrandIcon(BrandIcons.whatsapp, size: 27),
+        const [Color(0xff25d366), Color(0xff128c7e)]);
+    add(_tr('ایتا', 'Eitaa', 'إيتا'), stay.eitaa, const BrandIcon(BrandIcons.eitaa, size: 27),
+        const [Color(0xffffa000), Color(0xffe65100)]);
+    add('YouTube', stay.youtube, const Icon(Icons.smart_display_rounded, color: w, size: 28),
+        const [Color(0xffff3d3d), Color(0xffb30000)]);
+    add(_tr('آپارات', 'Aparat', 'أباره'), stay.aparat, const Icon(Icons.ondemand_video_rounded, color: w, size: 26),
+        const [Color(0xffed145b), Color(0xff8e0c36)]);
+    add('TikTok', stay.tiktok, const Icon(Icons.music_note_rounded, color: w, size: 26),
+        const [Color(0xff2b2b2b), Color(0xff000000)]);
+    add(_tr('وب‌سایت', 'Website', 'الموقع'), item.websiteUrl, const Icon(Icons.language_rounded, color: _bg, size: 26),
+        const [_teal, Color(0xff12a37f)]);
+    add(_tr('وب‌سایت دوم', 'Website 2', 'الموقع 2'), stay.website2, const Icon(Icons.public_rounded, color: _bg, size: 26),
+        const [_goldBright, _gold]);
+
+    if (bubbles.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(Icons.share_rounded, _tr('شبکه‌های اجتماعی', 'Social media', 'التواصل الاجتماعي')),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [_cardSoft, _card],
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: _gold.withValues(alpha: 0.22)),
+            ),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
+              children: bubbles,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _socialBubble(String label, String url, Widget icon, List<Color> colors) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => _open(url),
+      child: SizedBox(
+        width: 70,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: colors,
+                ),
+                boxShadow: [
+                  BoxShadow(color: colors.first.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: icon,
+            ),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 11.5, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -861,15 +1102,6 @@ class _StayDetailPageState extends State<StayDetailPage> {
       tiles.add(_linkTile(icon, label, onTap));
     }
 
-    add(Icons.camera_alt_rounded, 'Instagram', item.instagramUrl, () => _open(item.instagramUrl!));
-    add(Icons.language_rounded, _tr('وب‌سایت', 'Website', 'الموقع'), item.websiteUrl, () => _open(item.websiteUrl!));
-    add(Icons.public_rounded, _tr('وب‌سایت دوم', 'Website 2', 'الموقع 2'), stay.website2, () => _open(stay.website2!));
-    add(Icons.chat_rounded, 'WhatsApp', stay.whatsapp, () => _open(stay.whatsapp!));
-    add(Icons.send_rounded, 'Telegram', stay.telegram, () => _open(stay.telegram!));
-    add(Icons.forum_rounded, 'Eitaa', stay.eitaa, () => _open(stay.eitaa!));
-    add(Icons.smart_display_rounded, 'YouTube', stay.youtube, () => _open(stay.youtube!));
-    add(Icons.ondemand_video_rounded, 'Aparat', stay.aparat, () => _open(stay.aparat!));
-    add(Icons.music_note_rounded, 'TikTok', stay.tiktok, () => _open(stay.tiktok!));
     add(Icons.mail_rounded, _tr('ایمیل', 'Email', 'البريد'), stay.email, () => _open('mailto:${stay.email}'));
 
     final phones = stay.phones;
