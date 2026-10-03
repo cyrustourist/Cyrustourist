@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/agency.dart';
 import '../models/leader.dart';
 import '../models/showcase_item.dart';
+import '../models/stay_details.dart';
 import '../pages/movie_video_page.dart' show MovieSlotData, kMovieSlots;
 import '../pages/residence_video_page.dart'
     show ResidenceVideoData, kResidenceSlots;
@@ -134,18 +135,61 @@ class ShowcaseService {
     String? s(dynamic v) => v?.toString().trim().isEmpty == true
         ? null
         : v?.toString();
+    // اولین مقدار غیرخالی (ستون خالی دیتابیس '' است، نه null)
+    String? p(List<dynamic> vs) {
+      for (final v in vs) {
+        final t = v?.toString().trim() ?? '';
+        if (t.isNotEmpty) return t;
+      }
+      return null;
+    }
+
     double? d(dynamic v) => v == null ? null : double.tryParse(v.toString());
     int code() => int.tryParse((j['id'] ?? j['code'] ?? 0).toString()) ?? 0;
 
-    final fa = s(j['name_fa'] ?? j['title_fa'] ?? j['title'] ?? j['name']);
-    final en = s(j['name_en'] ?? j['title_en']);
-    final ar = s(j['name_ar'] ?? j['title_ar']);
-    final cityFa = s(j['city_name'] ?? j['city_fa'] ?? j['city']);
-    final cityEn = s(j['city_en']);
-    final cityAr = s(j['city_ar']);
-    final descFa = s(j['description_fa'] ?? j['message']);
+    final isStay = kind == ShowcaseKind.accommodation;
+    final stay = isStay ? StayDetails.fromRow(j) : null;
+
+    final fa = p([j['name_fa'], j['title_fa'], j['title'], j['name']]);
+    final en = p([j['name_en'], j['title_en']]);
+    final ar = p([j['name_ar'], j['title_ar']]);
+
+    // مکان: «شهر، استان» (اگر ستون province پر باشد) — مثل نمونه‌ی داخل اپ
+    String? joinPlace(String? city, String? province) {
+      final parts = [city, province]
+          .whereType<String>()
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      return parts.isEmpty ? null : parts.join('، ');
+    }
+
+    final cityFa = joinPlace(
+        p([j['city_name'], j['city_fa'], j['city']]), p([j['province'], j['province_fa']]));
+    final cityEn = joinPlace(s(j['city_en']), s(j['province_en']));
+    final cityAr = joinPlace(s(j['city_ar']), s(j['province_ar']));
+
+    final descFa = p([j['description_fa'], j['message']]);
     final descEn = s(j['description_en']);
     final descAr = s(j['description_ar']);
+
+    // دسته: برای اقامتگاه از «نوع اقامتگاه» می‌آید (هتل، بوم‌گردی، ...)
+    final typeLabels = stay?.typeLabels ?? const <String, String>{};
+    final hasType = typeLabels.isNotEmpty;
+    final catFa = hasType ? typeLabels['fa'] : p([j['category_fa'], j['category']]);
+    final catEn = hasType ? typeLabels['en'] : s(j['category_en']);
+    final catAr = hasType ? typeLabels['ar'] : s(j['category_ar']);
+
+    final tier = s(j['tier']);
+    final rating = d(j['rating']);
+    final ratingCount = int.tryParse((j['rating_count'] ?? 0).toString());
+
+    // شماره‌ی اصلی: همراه ← ثابت ← کمکی
+    final stayPhones = stay?.phones ?? const <String>[];
+    final mainPhone = isStay
+        ? (stayPhones.isNotEmpty ? stayPhones.first : null)
+        : p([j['phone_mobile'], j['phone'], j['mobile_phone']]);
+    final typeKey = stay?.typeKey ?? '';
 
     return ShowcaseItem(
       kind: kind,
@@ -153,18 +197,22 @@ class ShowcaseService {
       titles: _m(fa, en, ar),
       locations: _m(cityFa, cityEn, cityAr),
       descriptions: _m(descFa, descEn, descAr),
-      categoryLabels: _m(s(j['category_fa'] ?? j['category']),
-          s(j['category_en']), s(j['category_ar'])),
-      videoUrl: s(j['video_url'] ?? j['video']),
-      coverUrl: s(j['image_url'] ?? j['image'] ?? j['cover_url']),
-      phone: s(j['phone_mobile'] ?? j['phone'] ?? j['mobile_phone']),
-      instagramUrl: s(j['instagram_url'] ?? j['instagram']),
-      websiteUrl: s(j['website_url'] ?? j['website']),
+      categoryLabels: _m(catFa, catEn, catAr),
+      categories: typeKey.isNotEmpty ? [typeKey] : const [],
+      videoUrl: p([j['video_url'], j['video'], j['videoEmbedUrl']]),
+      coverUrl: p([j['image_url'], j['image'], j['cover_url']]),
+      phone: mainPhone,
+      instagramUrl: p([j['instagram_url'], j['instagram']]),
+      websiteUrl: p([j['website_url'], j['website']]),
       latitude: d(j['latitude'] ?? j['lat']),
       longitude: d(j['longitude'] ?? j['lng']),
-      rating: d(j['rating']),
-      ratingCount: int.tryParse((j['rating_count'] ?? 0).toString()),
+      rating: rating,
+      ratingCount: ratingCount,
+      tier: showcaseTierFromString(tier),
+      priority: int.tryParse((j['priority'] ?? 0).toString()) ?? 0,
+      expiresAt: DateTime.tryParse(j['expires_at']?.toString() ?? ''),
       native: j,
+      stay: stay,
     );
   }
 
