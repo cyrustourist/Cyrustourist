@@ -9,6 +9,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../core/language/app_language.dart';
 import '../main.dart' show SmartMapPage;
 import '../services/public_link_service.dart';
+import '../widgets/place_weather_card.dart';
 import '../widgets/share_sheet.dart';
 import 'residence_amenities_page.dart';
 import 'residence_register_page.dart';
@@ -626,6 +627,15 @@ class _ResidenceVideoPageState extends State<ResidenceVideoPage> {
                       _descriptionBlock(),
                       const SizedBox(height: 22),
                     ],
+                    // آب‌وهوای همین مکان (طول/عرض جغرافیایی پنل) — بالای مسیریابی
+                    if (_d.latitude != null && _d.longitude != null) ...[
+                      PlaceWeatherCard(
+                        lat: _d.latitude!,
+                        lon: _d.longitude!,
+                        placeName: _d.displayName,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     SizedBox(
                       width: double.infinity,
                       child: _gradientButton(
@@ -651,11 +661,14 @@ class _ResidenceVideoPageState extends State<ResidenceVideoPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _ResidenceWeatherButton(
-                      city: _d.displayCity,
-                      province: _d.displayProvince,
-                    ),
-                    const SizedBox(height: 12),
+                    // اگر مختصات پنل نبود، همان آب‌وهوای شهر قبلی نمایش داده می‌شود
+                    if (_d.latitude == null || _d.longitude == null) ...[
+                      _ResidenceWeatherButton(
+                        city: _d.displayCity,
+                        province: _d.displayProvince,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     if (_d.hasAnyPhone) ...[
                       SizedBox(
                         width: double.infinity,
