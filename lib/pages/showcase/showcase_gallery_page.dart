@@ -197,6 +197,9 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
       return item.categoryLabel(_lang) == f.key.substring(4);
     }
     if (item.categories.contains(f.key)) return true;
+    // اقامتگاهِ دیتابیس نوع مشخص دارد؛ فقط با کلید دقیق نوع تطبیق می‌خورد
+    // (تا «هتل آپارتمان» داخل فیلتر «آپارتمان» یا «هتل» دیده نشود).
+    if (item.kind == ShowcaseKind.accommodation && item.categories.isNotEmpty) return false;
     final text = item.filterText;
     for (final k in f.keywords) {
       if (text.contains(showcaseNormalize(k))) return true;
@@ -973,6 +976,25 @@ class _ShowcaseCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (item.kind == ShowcaseKind.accommodation &&
+                        item.tier == ShowcaseTier.normal &&
+                        item.categoryLabel(lang).isNotEmpty)
+                      PositionedDirectional(
+                        bottom: 6,
+                        end: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _teal.withValues(alpha: 0.7)),
+                          ),
+                          child: Text(
+                            item.categoryLabel(lang),
+                            style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ),
                     if (item.tier != ShowcaseTier.normal)
                       PositionedDirectional(
                         bottom: 6,
@@ -1006,6 +1028,19 @@ class _ShowcaseCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold, height: 1.4),
                       ),
+                      if ((item.stay?.stars ?? 0) > 0) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            for (var i = 0; i < 5; i++)
+                              Icon(
+                                i < item.stay!.stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                                size: 13,
+                                color: i < item.stay!.stars ? _gold : Colors.white24,
+                              ),
+                          ],
+                        ),
+                      ],
                       if (desc.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
