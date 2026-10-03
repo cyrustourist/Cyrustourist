@@ -213,6 +213,41 @@ class ShowcaseKinds {
               labels: {'fa': 'مهمان‌پذیر', 'en': 'Guesthouse', 'ar': 'بيت ضيافة'},
               keywords: ['مهمان پذیر', 'مهمانپذیر', 'guesthouse', 'guest house'],
             ),
+            ShowcaseFilter(
+              key: 'hotel_apartment',
+              labels: {'fa': 'هتل آپارتمان', 'en': 'Hotel apt.', 'ar': 'شقق فندقية'},
+              keywords: ['هتل آپارتمان', 'hotel apartment'],
+            ),
+            ShowcaseFilter(
+              key: 'motel',
+              labels: {'fa': 'متل', 'en': 'Motel', 'ar': 'موتيل'},
+              keywords: ['متل', 'motel'],
+            ),
+            ShowcaseFilter(
+              key: 'pension',
+              labels: {'fa': 'پانسیون', 'en': 'Pension', 'ar': 'بنسيون'},
+              keywords: ['پانسیون', 'pension'],
+            ),
+            ShowcaseFilter(
+              key: 'traditional',
+              labels: {'fa': 'اقامتگاه سنتی', 'en': 'Traditional', 'ar': 'تقليدي'},
+              keywords: ['سنتی', 'traditional'],
+            ),
+            ShowcaseFilter(
+              key: 'resort',
+              labels: {'fa': 'مجتمع گردشگری', 'en': 'Resort', 'ar': 'منتجع'},
+              keywords: ['مجتمع', 'resort'],
+            ),
+            ShowcaseFilter(
+              key: 'hostel',
+              labels: {'fa': 'هاستل', 'en': 'Hostel', 'ar': 'نزل'},
+              keywords: ['هاستل', 'hostel'],
+            ),
+            ShowcaseFilter(
+              key: 'camp',
+              labels: {'fa': 'کمپ', 'en': 'Camp', 'ar': 'مخيم'},
+              keywords: ['کمپ', 'camp'],
+            ),
           ],
         );
 
