@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../pages/announcements_page.dart';
+import '../../pages/profile/my_profile_page.dart';
+import '../../services/user_profile_service.dart';
 import '../../pages/residence_register_page.dart';
 import '../../services/notification_service.dart';
 import '../../services/public_link_service.dart';
@@ -72,7 +74,7 @@ class CyrusAccountScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _buildProfileHeader(texts),
+                _LiveProfileHeader(texts: texts, builder: _buildProfileHeader),
                 const SizedBox(height: 22),
 
                 _buildSection(
@@ -94,26 +96,13 @@ class CyrusAccountScreen extends StatelessWidget {
                       iconColor: const Color(0xff29e0ad),
                       actionId: 'invite',
                     ),
+                    // «پروفایل من + ویرایش اطلاعات + تصویر پروفایل» در یک کلید
                     _AccountItem(
-                      icon: Icons.person_rounded,
+                      icon: Icons.account_circle_rounded,
                       title: texts.profile,
                       subtitle: texts.profileSubtitle,
                       iconColor: const Color(0xffffd36a),
-                      futureFeature: true,
-                    ),
-                    _AccountItem(
-                      icon: Icons.edit_rounded,
-                      title: texts.editProfile,
-                      subtitle: texts.editProfileSubtitle,
-                      iconColor: const Color(0xff66d9ff),
-                      futureFeature: true,
-                    ),
-                    _AccountItem(
-                      icon: Icons.photo_camera_rounded,
-                      title: texts.profileImage,
-                      subtitle: texts.profileImageSubtitle,
-                      iconColor: const Color(0xffc89cff),
-                      futureFeature: true,
+                      actionId: 'profile',
                     ),
                   ],
                 ),
@@ -271,7 +260,11 @@ class CyrusAccountScreen extends StatelessWidget {
 
   Widget _buildProfileHeader(
     _AccountTranslations texts,
+    UserProfile profile,
   ) {
+    final photo = profile.photoBytes;
+    final shownName = profile.displayName.isNotEmpty ? profile.displayName : texts.account;
+    final shownUser = profile.username.isNotEmpty ? '@${profile.username}' : texts.usernamePlaceholder;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -317,10 +310,14 @@ class CyrusAccountScreen extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.person_rounded,
-              size: 42,
-              color: Color(0xffffd36a),
+            child: ClipOval(
+              child: photo != null
+                  ? Image.memory(photo, fit: BoxFit.cover, width: 76, height: 76)
+                  : const Icon(
+                      Icons.person_rounded,
+                      size: 42,
+                      color: Color(0xffffd36a),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -329,7 +326,7 @@ class CyrusAccountScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  texts.account,
+                  shownName,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -338,7 +335,9 @@ class CyrusAccountScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  texts.accountSubtitle,
+                  profile.bio.isNotEmpty ? profile.bio : texts.accountSubtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.68),
                     fontSize: 13,
@@ -355,7 +354,7 @@ class CyrusAccountScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    texts.usernamePlaceholder,
+                    shownUser,
                     style: const TextStyle(
                       color: Color(0xffffd36a),
                       fontSize: 12,
@@ -456,6 +455,13 @@ class CyrusAccountScreen extends StatelessWidget {
       return;
     }
 
+    if (item.actionId == 'profile') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const MyProfilePage()),
+      );
+      return;
+    }
+
     if (item.actionId == 'registration') {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -525,6 +531,7 @@ class CyrusAccountScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(dialogContext).pop();
 
+                UserProfileService.clear();
                 // در مرحله اتصال نهایی:
                 // 1. عکس پروفایل محلی حذف می‌شود.
                 // 2. اطلاعات محلی حساب پاک می‌شود.
@@ -1665,4 +1672,41 @@ class _InviteTexts {
         );
     }
   }
+}
+
+
+/// هدر حساب کاربری که با ذخیره/حذف پروفایل خودکار به‌روز می‌شود.
+class _LiveProfileHeader extends StatefulWidget {
+  const _LiveProfileHeader({required this.texts, required this.builder});
+
+  final _AccountTranslations texts;
+  final Widget Function(_AccountTranslations, UserProfile) builder;
+
+  @override
+  State<_LiveProfileHeader> createState() => _LiveProfileHeaderState();
+}
+
+class _LiveProfileHeaderState extends State<_LiveProfileHeader> {
+  UserProfile _profile = const UserProfile();
+
+  @override
+  void initState() {
+    super.initState();
+    UserProfileService.changes.addListener(_reload);
+    _reload();
+  }
+
+  @override
+  void dispose() {
+    UserProfileService.changes.removeListener(_reload);
+    super.dispose();
+  }
+
+  Future<void> _reload() async {
+    final p = await UserProfileService.load();
+    if (mounted) setState(() => _profile = p);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(widget.texts, _profile);
 }
