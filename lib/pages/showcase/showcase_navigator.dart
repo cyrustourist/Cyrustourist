@@ -44,8 +44,10 @@ class ShowcaseNavigator {
         data: _toMovie(item),
         shareType: PublicLinkService.typeForShowcaseKind(item.kind),
       );
-    } else if (item.kind == ShowcaseKind.accommodation && item.stay != null) {
-      // اقامتگاه‌های واقعی از دیتابیس → صفحه‌ی جدید با همه‌ی اطلاعات جدول
+    } else if ((item.kind == ShowcaseKind.accommodation ||
+            item.kind == ShowcaseKind.health) &&
+        item.stay != null) {
+      // اقامتگاه / مرکز سلامتِ واقعی از دیتابیس → صفحه‌ی جدید با همه‌ی اطلاعات جدول
       page = StayDetailPage(item: item);
     } else if (item.kind == ShowcaseKind.accommodation &&
         item.aparatHash != null) {
