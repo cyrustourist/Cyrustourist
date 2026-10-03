@@ -65,14 +65,17 @@ class ShowcaseService {
       prefs = await SharedPreferences.getInstance();
     } catch (_) {}
 
-    try {
-      final json = await ApiService.getJson(endpoint);
-      final parsed = _parse(kind, json, ShowcaseSource.server);
-      if (parsed.items.isNotEmpty) {
-        await prefs?.setString(cacheKey, jsonEncode(json));
-        return parsed;
-      }
-    } catch (_) {}
+    // اقامتگاه‌های ثبت‌شده در پنل مدیریت اول از Worker پنل خوانده می‌شوند.
+    for (final base in _basesFor(kind)) {
+      try {
+        final json = await ApiService.getJson(endpoint, baseUrl: base);
+        final parsed = _parse(kind, json, ShowcaseSource.server);
+        if (parsed.items.isNotEmpty) {
+          await prefs?.setString(cacheKey, jsonEncode(json));
+          return parsed;
+        }
+      } catch (_) {}
+    }
 
     final cached = prefs?.getString(cacheKey);
     if (cached != null && cached.isNotEmpty) {
@@ -83,6 +86,13 @@ class ShowcaseService {
     }
 
     return local;
+  }
+
+  static List<String?> _basesFor(ShowcaseKind kind) {
+    if (kind == ShowcaseKind.accommodation) {
+      return [ApiConfig.panelBaseUrl, null];
+    }
+    return [null];
   }
 
   /// Endpointهای واقعی Worker فعلی.
@@ -199,8 +209,15 @@ class ShowcaseService {
       descriptions: _m(descFa, descEn, descAr),
       categoryLabels: _m(catFa, catEn, catAr),
       categories: typeKey.isNotEmpty ? [typeKey] : const [],
-      videoUrl: p([j['video_url'], j['video'], j['videoEmbedUrl']]),
-      coverUrl: p([j['image_url'], j['image'], j['cover_url']]),
+      videoUrl: cleanVideoUrl(p([j['videoEmbedUrl'], j['video_url'], j['video']])),
+      coverUrl: p([j['image_url'], j['image'], j['cover_url']]) ??
+          // فقط «عکس پروفایل» ثبت می‌شود؛ اگر فیلم نبود همان کاور کارت است
+          (isStay &&
+                  aparatHashFromAny(
+                          p([j['videoEmbedUrl'], j['video_url'], j['video']])) ==
+                      null
+              ? stay?.ownerPhoto
+              : null),
       phone: mainPhone,
       instagramUrl: p([j['instagram_url'], j['instagram']]),
       websiteUrl: p([j['website_url'], j['website']]),
