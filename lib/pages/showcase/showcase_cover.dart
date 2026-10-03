@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../models/showcase_item.dart';
@@ -99,13 +101,28 @@ class _ShowcaseCoverState extends State<ShowcaseCover> {
 
     Widget image;
     if (url != null && url.isNotEmpty) {
-      image = Image.network(
-        url,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, progress) =>
-            progress == null ? child : _placeholder(),
-        errorBuilder: (_, __, ___) => _placeholder(),
-      );
+      // عکسی که از پنل آپلود می‌شود به‌صورت data:image/webp;base64 ذخیره است
+      // (Image.network آن را نمی‌خواند).
+      if (url.startsWith('data:')) {
+        try {
+          image = Image.memory(
+            base64Decode(url.substring(url.indexOf(',') + 1)),
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => _placeholder(),
+          );
+        } catch (_) {
+          image = _placeholder();
+        }
+      } else {
+        image = Image.network(
+          url,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) =>
+              progress == null ? child : _placeholder(),
+          errorBuilder: (_, __, ___) => _placeholder(),
+        );
+      }
     } else if (item.coverAsset != null && item.coverAsset!.isNotEmpty) {
       image = Image.asset(
         item.coverAsset!,
