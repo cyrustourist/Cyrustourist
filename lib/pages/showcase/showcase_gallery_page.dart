@@ -140,30 +140,77 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
     );
   }
 
-  Future<void> _load() async {
-    var result = await ShowcaseService.load(widget.kind, lang: _lang);
+  /// ۱) فوراً فایل‌های داخل اپ (بدون معطلی) — ۲) آخرین داده‌ی ذخیره‌شده‌ی پنل
+  /// — ۳) داده‌ی تازه‌ی پنل. داده‌ی پنل همیشه ردیف‌های بالاست و فایل‌های
+  /// داخل اپ پایین‌تر می‌آیند. اگر پنل جواب ندهد، فایل‌های داخلی می‌مانند.
+  List<ShowcaseItem> _baseLocal = const [];
 
-    // تا وقتی داده‌ی واقعیِ لیدر/گردشگری سلامت از سرور نرسیده، برای اینکه
-    // صفحه‌ی هاب خالی به‌نظر نرسد، همان فیلم‌های نمایشیِ موجود را به‌عنوان
-    // نمونه‌ی موقت نشان می‌دهیم (به محض رسیدن داده‌ی واقعی، همین‌جا حذف شود).
-    if (result.items.isEmpty &&
-        (widget.kind == ShowcaseKind.leader || widget.kind == ShowcaseKind.health)) {
-      final fallback = await ShowcaseService.load(ShowcaseKind.video, lang: _lang);
-      result = ShowcaseLoad(items: fallback.items, filters: result.filters);
+  Future<List<ShowcaseItem>> _localBase() async {
+    var local = ShowcaseService.localOnly(widget.kind).items;
+    // تا وقتی داده‌ی واقعیِ لیدر/گردشگری سلامت نیست، برای اینکه صفحه خالی
+    // نماند، همان فیلم‌های نمایشیِ موجود زیر داده‌ی پنل نشان داده می‌شوند.
+    if (local.isEmpty &&
+        (widget.kind == ShowcaseKind.leader ||
+            widget.kind == ShowcaseKind.health)) {
+      local = ShowcaseService.localOnly(ShowcaseKind.video).items;
     }
+    return local;
+  }
 
+  Future<void> _load() async {
     // قلب علاقه‌مندی در همه‌ی بخش‌ها (اقامتگاه، سلامت، لیدر، آژانس، ...)
     Set<String> favs = {};
     try {
       favs = await _favService.loadFavoriteIds();
     } catch (_) {}
+
+    // ۱) فوری: فایل‌های داخل اپ
+    _baseLocal = await _localBase();
     if (!mounted) return;
-    setState(() {
-      _items = result.items;
-      _serverFilters = result.filters;
-      _favIds = favs;
-      _loading = false;
-    });
+    if (_items.isEmpty) {
+      setState(() {
+        _items = _baseLocal;
+        _favIds = favs;
+        _loading = false;
+      });
+    }
+
+    // ۲) داده‌ی ذخیره‌شده‌ی قبلیِ پنل (سریع، بدون شبکه)
+    ShowcaseLoad? cached;
+    try {
+      cached = await ShowcaseService.loadCached(widget.kind);
+    } catch (_) {}
+    if (!mounted) return;
+    if (cached != null) {
+      final merged = ShowcaseService.merge(widget.kind, cached, _baseLocal);
+      setState(() {
+        _items = merged.items;
+        _serverFilters = merged.filters;
+        _favIds = favs;
+        _loading = false;
+      });
+    }
+
+    // ۳) داده‌ی تازه‌ی پنل مدیریت (اگر نرسید، همان نمایش فعلی می‌ماند)
+    ShowcaseLoad? remote;
+    try {
+      remote = await ShowcaseService.loadRemote(widget.kind);
+    } catch (_) {}
+    if (!mounted) return;
+    if (remote != null) {
+      final merged = ShowcaseService.merge(widget.kind, remote, _baseLocal);
+      setState(() {
+        _items = merged.items;
+        _serverFilters = merged.filters;
+        _favIds = favs;
+        _loading = false;
+      });
+    } else if (_loading) {
+      setState(() {
+        _favIds = favs;
+        _loading = false;
+      });
+    }
   }
 
   // ------------------------------------------------------------
@@ -236,7 +283,16 @@ class _ShowcaseGalleryPageState extends State<ShowcaseGalleryPage> {
       return true;
     }).toList();
 
+    // داده‌ی پنل مدیریت (native = Map) همیشه بالاتر از فایل‌های داخل اپ.
+    int panelFirst(ShowcaseItem a, ShowcaseItem b) {
+      final pa = a.native is Map ? 1 : 0;
+      final pb = b.native is Map ? 1 : 0;
+      return pb.compareTo(pa);
+    }
+
     int byRecommended(ShowcaseItem a, ShowcaseItem b) {
+      final pf = panelFirst(a, b);
+      if (pf != 0) return pf;
       final w = b.tierWeight.compareTo(a.tierWeight);
       if (w != 0) return w;
       final p = b.priority.compareTo(a.priority);
