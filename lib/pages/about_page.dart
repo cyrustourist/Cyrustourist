@@ -6,8 +6,8 @@ import '../core/language/app_language.dart';
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
-  static const String websiteUrl =
-      'https://cyrustourist-maker.github.io/Cyrustourist/';
+  static const String websiteUrl = 'https://cyrustourist.ir/';
+  static const String emailAddress = 'cyrustourist@gmail.com';
 
   String _t(String fa, String en, String ar) {
     switch (LanguageManager.current) {
@@ -50,6 +50,26 @@ class AboutPage extends StatelessWidget {
             content: Text(_t('خطا در باز کردن وب‌سایت',
                 'Error opening the website', 'خطأ في فتح الموقع الإلكتروني')),
           ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openEmail(BuildContext context) async {
+    try {
+      final bool opened = await launchUrl(
+        Uri(scheme: 'mailto', path: emailAddress),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(emailAddress)),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(emailAddress)),
         );
       }
     }
@@ -287,7 +307,7 @@ class AboutPage extends StatelessWidget {
 
                         Flexible(
                           child: Text(
-                            'cyrustourist-maker.github.io/Cyrustourist/',
+                            'cyrustourist.ir',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Color(0xffffd36a),
@@ -323,6 +343,59 @@ class AboutPage extends StatelessWidget {
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                Text(
+                  _t('صندوق پستی', 'Email', 'البريد الإلكتروني'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xffffd36a),
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                InkWell(
+                  onTap: () => _openEmail(context),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 15,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: const Color(0xffffd36a),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.mail_outline_rounded,
+                          color: Color(0xffffd36a),
+                        ),
+                        SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            emailAddress,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xffffd36a),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
