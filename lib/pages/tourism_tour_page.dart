@@ -25,12 +25,16 @@ class _TourOption {
     required this.title,
     required this.subtitle,
     required this.icon,
+    this.color = const Color(0xffffd76a),
     this.onTap,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
+
+  /// رنگ ویژهٔ هر کلید (رنگ‌بندی ترکیبی)
+  final Color color;
   final VoidCallback? onTap;
 }
 
@@ -57,6 +61,7 @@ class TourismTourPage extends StatelessWidget {
         title: MenuTranslations.tourOptionTitle(languageCode, 1),
         subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 1),
         icon: Icons.luggage_rounded,
+        color: const Color(0xffffd76a),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const TourCategoriesPage()),
@@ -66,6 +71,7 @@ class TourismTourPage extends StatelessWidget {
         title: MenuTranslations.tourOptionTitle(languageCode, 2),
         subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 2),
         icon: Icons.groups_2_rounded,
+        color: const Color(0xff29e0ad),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
@@ -74,20 +80,10 @@ class TourismTourPage extends StatelessWidget {
         ),
       ),
       _TourOption(
-        title: MenuTranslations.tourOptionTitle(languageCode, 3),
-        subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 3),
-        icon: Icons.build_rounded,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CyrusSmartToolbox(languageCode: languageCode),
-          ),
-        ),
-      ),
-      _TourOption(
         title: MenuTranslations.tourOptionTitle(languageCode, 4),
         subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 4),
         icon: Icons.apartment_rounded,
+        color: const Color(0xff66d9ff),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
@@ -99,6 +95,7 @@ class TourismTourPage extends StatelessWidget {
         title: MenuTranslations.tourOptionTitle(languageCode, 5),
         subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 5),
         icon: Icons.how_to_reg_rounded,
+        color: const Color(0xffc89cff),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const LeaderRegistrationIntroPage()),
@@ -108,12 +105,25 @@ class TourismTourPage extends StatelessWidget {
         title: MenuTranslations.tourOptionTitle(languageCode, 6),
         subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 6),
         icon: Icons.business_center_rounded,
+        color: const Color(0xffff9f6b),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const AgencyRegistrationIntroPage()),
         ),
       ),
-      // گزینه‌های بعدی به ترتیب اینجا اضافه می‌شوند.
+      // «جعبه ابزار» طبق دستور آخرِ فهرست است (زیر همهٔ کلیدها).
+      _TourOption(
+        title: MenuTranslations.tourOptionTitle(languageCode, 3),
+        subtitle: MenuTranslations.tourOptionSubtitle(languageCode, 3),
+        icon: Icons.build_rounded,
+        color: const Color(0xff8fd8a8),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CyrusSmartToolbox(languageCode: languageCode),
+          ),
+        ),
+      ),
     ];
   }
 
@@ -193,8 +203,17 @@ class TourismTourPage extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+              colors: [
+                option.color.withValues(alpha: 0.16),
+                Colors.transparent,
+              ],
+            ),
             border: Border.all(
-              color: const Color(0xffffd76a).withValues(alpha: 0.25),
+              color: option.color.withValues(alpha: 0.55),
+              width: 1.1,
             ),
           ),
           child: Row(
@@ -204,10 +223,10 @@ class TourismTourPage extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xffffd76a).withValues(alpha: 0.12),
+                  color: option.color.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(option.icon, color: const Color(0xffffd76a)),
+                child: Icon(option.icon, color: option.color),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -216,8 +235,8 @@ class TourismTourPage extends StatelessWidget {
                   children: [
                     Text(
                       option.title,
-                      style: const TextStyle(
-                        color: Color(0xfffff4be),
+                      style: TextStyle(
+                        color: option.color,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -236,7 +255,7 @@ class TourismTourPage extends StatelessWidget {
               Icon(
                 _isRtl ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios,
                 size: 14,
-                color: const Color(0xffffd76a).withValues(alpha: 0.6),
+                color: option.color.withValues(alpha: 0.8),
               ),
             ],
           ),
