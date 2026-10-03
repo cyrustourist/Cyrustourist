@@ -20,11 +20,11 @@ jobs:
     runs-on: ubuntu-24.04
 
     env:
-      # معماری خروجی (نام فایل خروجی همیشه Cyrustourist.ir.apk می‌ماند):
-      #   android-arm    => ۳۲ بیتی (گوشی‌های قدیمی، مثل A03 Core)
-      #   android-arm64  => ۶۴ بیتی (مایکت / گوشی‌های جدید)  ← فعلاً این
-      # برای گرفتن خروجی ۳۲ بیتی فقط همین یک خط را به android-arm تغییر بدهید.
-      TARGET_PLATFORM: android-arm64
+      # هر بار دو خروجی ساخته می‌شود:
+      #   Cyrustourist.ir.apk    => ۶۴ بیتی (android-arm64) — مایکت / گوشی‌های جدید
+      #   Cyrustourist32.ir.apk  => ۳۲ بیتی (android-arm)   — گوشی‌های قدیمی / نصب از سایت
+      APK64_NAME: Cyrustourist.ir.apk
+      APK32_NAME: Cyrustourist32.ir.apk
 
     steps:
       - name: Checkout
@@ -345,7 +345,7 @@ jobs:
           echo ""
           echo "======================================"
 
-      - name: Build signed APK
+      - name: Build signed APKs (64-bit + 32-bit)
         shell: bash
         env:
           CYRUS_KEYSTORE_PATH: ${{ runner.temp }}/cyrus-signing/cyrus-tourist.jks
@@ -355,76 +355,56 @@ jobs:
         run: |
           set -uo pipefail
 
+          OUT_DIR="$RUNNER_TEMP/apk-out"
+          mkdir -p "$OUT_DIR"
           LOG_FILE="$RUNNER_TEMP/flutter-build.log"
-
-          echo "======================================"
-          echo "STARTING SIGNED APK BUILD"
-          echo "======================================"
-          echo ""
 
           echo "Version:"
           grep '^version:' pubspec.yaml
 
-          echo ""
-          echo "Target platform: $TARGET_PLATFORM"
-          echo "Build mode: release"
-          echo ""
+          # فرمت: پلتفرم|نام فایل خروجی|پوشه‌ی نمادهای دیباگ
+          for ITEM in "android-arm64|$APK64_NAME|arm64" "android-arm|$APK32_NAME|arm"; do
+            PLATFORM="${ITEM%%|*}"
+            REST="${ITEM#*|}"
+            NAME="${REST%%|*}"
+            SYM="${REST##*|}"
 
-          set +e
-
-          flutter build apk \
-            --release \
-            --target-platform "$TARGET_PLATFORM" \
-            --android-skip-build-dependency-validation \
-            --split-debug-info="$RUNNER_TEMP/debug-symbols" \
-            --obfuscate \
-            2>&1 | tee "$LOG_FILE"
-
-          BUILD_EXIT=${PIPESTATUS[0]}
-
-          set -e
-
-          echo ""
-          echo "======================================"
-
-          if [ "$BUILD_EXIT" -ne 0 ]; then
-            echo "❌ FLUTTER APK BUILD FAILED"
-            echo "Exit code: $BUILD_EXIT"
             echo "======================================"
-            echo ""
-            echo "========== LAST 200 LINES OF BUILD LOG =========="
-            tail -n 200 "$LOG_FILE" || true
-            echo "=================================================="
-            echo ""
+            echo "BUILDING $PLATFORM -> $NAME"
+            echo "======================================"
 
-            echo "========== SEARCHING FOR COMMON ERRORS =========="
-            grep -Ei \
-              "error:|exception|failed|FAILURE|missing|not found|asset|gradle" \
-              "$LOG_FILE" \
-              | tail -n 100 \
-              || true
-            echo "================================================="
+            rm -rf build/app/outputs/flutter-apk
 
-            {
-              echo "## ❌ Flutter APK Build Failed"
-              echo ""
-              echo "**Exit code:** $BUILD_EXIT"
-              echo ""
-              echo "### Last 200 lines of build log"
-              echo '```text'
+            set +e
+            flutter build apk \
+              --release \
+              --target-platform "$PLATFORM" \
+              --android-skip-build-dependency-validation \
+              --split-debug-info="$RUNNER_TEMP/debug-symbols/$SYM" \
+              --obfuscate \
+              2>&1 | tee "$LOG_FILE"
+            BUILD_EXIT=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$BUILD_EXIT" -ne 0 ]; then
+              echo "❌ FLUTTER APK BUILD FAILED ($PLATFORM) — exit code: $BUILD_EXIT"
+              echo "========== LAST 200 LINES OF BUILD LOG =========="
               tail -n 200 "$LOG_FILE" || true
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
+              {
+                echo "## ❌ Flutter APK Build Failed ($PLATFORM)"
+                echo ""
+                echo "**Exit code:** $BUILD_EXIT"
+                echo '```text'
+                tail -n 200 "$LOG_FILE" || true
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit "$BUILD_EXIT"
+            fi
 
-            exit "$BUILD_EXIT"
-          fi
-
-          echo "✅ FLUTTER APK BUILD SUCCESSFUL."
-          echo "======================================"
-
-          test -s build/app/outputs/flutter-apk/app-release.apk
-
-          echo "APK file exists and is not empty."
+            test -s build/app/outputs/flutter-apk/app-release.apk
+            cp build/app/outputs/flutter-apk/app-release.apk "$OUT_DIR/$NAME"
+            echo "✅ $NAME built: $(stat -c%s "$OUT_DIR/$NAME") bytes"
+          done
 
       - name: Upload debug symbols (for future crash symbolication)
         if: success()
@@ -448,12 +428,10 @@ jobs:
 
           test -n "$APKSIGNER"
 
-          echo "Using apksigner:"
-          echo "$APKSIGNER"
-
-          "$APKSIGNER" verify \
-            --verbose \
-            build/app/outputs/flutter-apk/app-release.apk
+          for NAME in "$APK64_NAME" "$APK32_NAME"; do
+            echo "Verifying $NAME"
+            "$APKSIGNER" verify --verbose "$RUNNER_TEMP/apk-out/$NAME"
+          done
 
           echo "APK signature verification successful."
 
@@ -461,14 +439,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          if [ "$TARGET_PLATFORM" = "android-arm" ]; then
-            WANT="armeabi-v7a"
-            DENY="arm64-v8a"
-          else
-            WANT="arm64-v8a"
-            DENY="armeabi-v7a"
-          fi
 
           AAPT2="$(
             find "$ANDROID_HOME/build-tools" \
@@ -479,54 +449,56 @@ jobs:
 
           test -n "$AAPT2"
 
-          BADGING="$("$AAPT2" dump badging build/app/outputs/flutter-apk/app-release.apk)"
+          for ITEM in "$APK64_NAME|arm64-v8a|armeabi-v7a" "$APK32_NAME|armeabi-v7a|arm64-v8a"; do
+            NAME="${ITEM%%|*}"
+            REST="${ITEM#*|}"
+            WANT="${REST%%|*}"
+            DENY="${REST##*|}"
 
-          echo "$BADGING" | grep -E "^(sdkVersion|targetSdkVersion|native-code)" || true
+            BADGING="$("$AAPT2" dump badging "$RUNNER_TEMP/apk-out/$NAME")"
 
-          MIN_SDK="$(echo "$BADGING" | sed -n "s/^sdkVersion:'\([0-9]*\)'.*/\1/p" | head -n 1)"
-          TARGET_SDK="$(echo "$BADGING" | sed -n "s/^targetSdkVersion:'\([0-9]*\)'.*/\1/p" | head -n 1)"
-          NATIVE="$(echo "$BADGING" | grep '^native-code' || true)"
+            echo "== $NAME =="
+            echo "$BADGING" | grep -E "^(sdkVersion|targetSdkVersion|native-code)" || true
 
-          if [[ "$NATIVE" != *"'$WANT'"* ]]; then
-            echo "ERROR: APK does not contain $WANT libraries."
-            exit 1
-          fi
+            MIN_SDK="$(echo "$BADGING" | sed -n "s/^sdkVersion:'\([0-9]*\)'.*/\1/p" | head -n 1)"
+            TARGET_SDK="$(echo "$BADGING" | sed -n "s/^targetSdkVersion:'\([0-9]*\)'.*/\1/p" | head -n 1)"
+            NATIVE="$(echo "$BADGING" | grep '^native-code' || true)"
 
-          # ABI اضافه باعث می‌شود گوشی ۶۴ بیتی APK ۳۲ بیتی را اشتباهی ۶۴ بیتی اجرا کند
-          if [[ "$NATIVE" == *"'$DENY'"* ]]; then
-            echo "ERROR: APK must NOT contain $DENY libraries."
-            exit 1
-          fi
+            if [[ "$NATIVE" != *"'$WANT'"* ]]; then
+              echo "ERROR: $NAME does not contain $WANT libraries."
+              exit 1
+            fi
 
-          # هشدار مایکت: تا ۱ آبان ۱۴۰۵ باید targetSdk حداقل ۳۴ باشد
-          if [ -z "$TARGET_SDK" ] || [ "$TARGET_SDK" -lt 34 ]; then
-            echo "ERROR: targetSdk ($TARGET_SDK) is lower than 34."
-            exit 1
-          fi
+            # ABI اضافه باعث می‌شود گوشی ۶۴ بیتی APK ۳۲ بیتی را اشتباهی ۶۴ بیتی اجرا کند
+            if [[ "$NATIVE" == *"'$DENY'"* ]]; then
+              echo "ERROR: $NAME must NOT contain $DENY libraries."
+              exit 1
+            fi
 
-          {
-            echo ""
-            echo "### 📐 APK compatibility ($TARGET_PLATFORM)"
-            echo "- minSdk: \`${MIN_SDK}\`"
-            echo "- targetSdk: \`${TARGET_SDK}\`"
-            echo "- ABIs: \`${NATIVE}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+            # هشدار مایکت: تا ۱ آبان ۱۴۰۵ باید targetSdk حداقل ۳۴ باشد
+            if [ -z "$TARGET_SDK" ] || [ "$TARGET_SDK" -lt 34 ]; then
+              echo "ERROR: targetSdk ($TARGET_SDK) is lower than 34."
+              exit 1
+            fi
 
-      - name: Prepare APK
+            {
+              echo ""
+              echo "### 📐 $NAME compatibility"
+              echo "- minSdk: \`${MIN_SDK}\`"
+              echo "- targetSdk: \`${TARGET_SDK}\`"
+              echo "- ABIs: \`${NATIVE}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Prepare APKs
         shell: bash
         run: |
           set -euo pipefail
 
-          cp \
-            build/app/outputs/flutter-apk/app-release.apk \
-            build/app/outputs/flutter-apk/Cyrustourist.ir.apk
-
-          test -s build/app/outputs/flutter-apk/Cyrustourist.ir.apk
-
-          APK_SIZE="$(stat -c%s build/app/outputs/flutter-apk/Cyrustourist.ir.apk)"
-
-          echo "APK prepared successfully."
-          echo "APK size: $APK_SIZE bytes"
+          for NAME in "$APK64_NAME" "$APK32_NAME"; do
+            test -s "$RUNNER_TEMP/apk-out/$NAME"
+            echo "$NAME size: $(stat -c%s "$RUNNER_TEMP/apk-out/$NAME") bytes"
+          done
 
       - name: Create GitHub Release with APK
         id: release
@@ -537,7 +509,8 @@ jobs:
           set -euo pipefail
 
           TAG="v${{ steps.bump.outputs.new_version }}"
-          APK="build/app/outputs/flutter-apk/Cyrustourist.ir.apk"
+          APK="$RUNNER_TEMP/apk-out/$APK64_NAME"
+          APK32="$RUNNER_TEMP/apk-out/$APK32_NAME"
 
           echo "Creating GitHub Release..."
           echo "Repository: ${{ github.repository }}"
@@ -555,6 +528,7 @@ jobs:
 
           gh release create "$TAG" \
             "$APK" \
+            "$APK32" \
             --repo "${{ github.repository }}" \
             --title "Cyrus Tourist $TAG" \
             --notes "Automated build from commit ${{ github.sha }}"
@@ -581,6 +555,28 @@ jobs:
                 | .browser_download_url
               '
           )"
+
+          APK32_URL="$(
+            echo "$RELEASE_JSON" \
+              | jq -r --arg n "$APK32_NAME" '
+                .assets[]
+                | select(.name == $n)
+                | .browser_download_url
+              '
+          )"
+
+          APK32_SIZE="$(
+            echo "$RELEASE_JSON" \
+              | jq -r --arg n "$APK32_NAME" '
+                .assets[]
+                | select(.name == $n)
+                | .size
+              '
+          )"
+
+          test -n "$APK32_URL"
+          test "$APK32_URL" != "null"
+          test "$APK32_SIZE" -gt 0
 
           APK_STATE="$(
             echo "$RELEASE_JSON" \
@@ -635,6 +631,8 @@ jobs:
           echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
           echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
           echo "apk_size=$APK_SIZE" >> "$GITHUB_OUTPUT"
+          echo "apk32_url=$APK32_URL" >> "$GITHUB_OUTPUT"
+          echo "apk32_size=$APK32_SIZE" >> "$GITHUB_OUTPUT"
 
       - name: Test APK download URL
         id: test_download
@@ -766,6 +764,8 @@ jobs:
           RELEASE_URL: ${{ steps.release.outputs.release_url }}
           APK_URL: ${{ steps.release.outputs.apk_url }}
           APK_SIZE: ${{ steps.release.outputs.apk_size }}
+          APK32_URL: ${{ steps.release.outputs.apk32_url }}
+          APK32_SIZE: ${{ steps.release.outputs.apk32_size }}
         run: |
           set -euo pipefail
 
@@ -787,7 +787,9 @@ jobs:
 
           ### ⭐ دانلود مستقیم
 
-          👉 **[⬇️ دانلود مستقیم Cyrustourist.ir.apk](${APK_URL})**
+          👉 **[⬇️ دانلود ۶۴ بیتی — Cyrustourist.ir.apk](${APK_URL})** (${APK_SIZE} bytes)
+
+          👉 **[⬇️ دانلود ۳۲ بیتی (برای سایت) — Cyrustourist32.ir.apk](${APK32_URL})** (${APK32_SIZE} bytes)
 
           ### 📦 صفحه Release
 
