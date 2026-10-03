@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:latlong2/latlong.dart';
 
 /// نوع اطلاعاتی که از نقشه درخواست می‌شود.
@@ -184,14 +185,20 @@ class MapPlacesService {
     try {
       client.userAgent = _userAgent;
 
-      final request = await client.getUrl(uri);
+      client.connectionTimeout = const Duration(seconds: 8);
+
+      final request = await client
+          .getUrl(uri)
+          .timeout(const Duration(seconds: 10));
 
       request.headers.set(
         HttpHeaders.acceptHeader,
         'application/json',
       );
 
-      final response = await request.close();
+      final response = await request
+          .close()
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != HttpStatus.ok) {
         throw Exception(
@@ -201,7 +208,8 @@ class MapPlacesService {
 
       final body = await response
           .transform(utf8.decoder)
-          .join();
+          .join()
+          .timeout(const Duration(seconds: 10));
 
       final decoded = jsonDecode(body);
 
@@ -397,36 +405,43 @@ class MapPlacesService {
     final lonS = lon.toStringAsFixed(5);
     final r = radiusMeters.round();
 
-    // یک عبارت nwr به‌جای دو عبارت node و way ← حجم و زمان پردازش
-    // کوئری روی سرور نصف می‌شود.
-    final parts = <String>[];
+    // یک عبارت nwr به‌جای دو عبارت node و way، و تگ‌های هم‌کلید در یک
+    // عبارت ترکیبی (regex) ادغام می‌شوند؛ مثلاً ۹ جستجوی tourism=... فقط یک
+    // جستجو می‌شود ← زمان پردازش روی سرور خیلی کمتر.
+    final bareKeys = <String>{};
+    final valuesByKey = <String, List<String>>{};
 
     for (final tag in tags) {
-      parts.add(
-        'nwr(around:$r,$latS,$lonS)${_tagExpression(tag)};',
-      );
+      if (tag.contains('=')) {
+        final idx = tag.indexOf('=');
+        valuesByKey
+            .putIfAbsent(tag.substring(0, idx), () => <String>[])
+            .add(tag.substring(idx + 1));
+      } else {
+        bareKeys.add(tag);
+      }
     }
 
+    final parts = <String>[];
+
+    for (final key in bareKeys) {
+      parts.add('nwr(around:$r,$latS,$lonS)["$key"];');
+    }
+
+    valuesByKey.forEach((key, values) {
+      // اگر خود کلید بدون مقدار هم خواسته شده، همه‌ی مقدارها را پوشش می‌دهد.
+      if (bareKeys.contains(key)) return;
+      final regex = values.map(RegExp.escape).join('|');
+      parts.add('nwr(around:$r,$latS,$lonS)["$key"~"^($regex)\$"];');
+    });
+
     return '''
-[out:json][timeout:15];
+[out:json][timeout:12];
 (
 ${parts.join('\n')}
 );
 out center tags qt 200;
 ''';
-  }
-
-  String _tagExpression(String tag) {
-    if (tag.contains('=')) {
-      final parts = tag.split('=');
-
-      final key = parts.first;
-      final value = parts.sublist(1).join('=');
-
-      return '["$key"="$value"]';
-    }
-
-    return '["$tag"]';
   }
 
   /// درخواست هم‌زمان به چند سرور Overpass؛ اولین پاسخ موفق برنده است
@@ -498,19 +513,34 @@ out center tags qt 200;
     );
 
     final response = await request.close().timeout(
-          const Duration(seconds: 22),
+          const Duration(seconds: 14),
         );
 
     final body = await response
         .transform(utf8.decoder)
         .join()
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != HttpStatus.ok) {
       throw Exception('Overpass HTTP ${response.statusCode}');
     }
 
-    return jsonDecode(body);
+    // تبدیل JSON در یک isolate جدا انجام می‌شود تا صفحه (UI) قفل نکند.
+    final decoded = await compute(_decodeJson, body);
+
+    // بعضی سرورها با کد 200 ولی با پیام خطا/timeout و فهرست خالی جواب می‌دهند؛
+    // اگر آن را «موفق» حساب کنیم، جواب خالی در رقابت سرورها برنده می‌شود.
+    if (decoded is Map) {
+      final remark = decoded['remark']?.toString().toLowerCase() ?? '';
+      final elements = decoded['elements'];
+      if (remark.isNotEmpty &&
+          (remark.contains('error') || remark.contains('timed out')) &&
+          (elements is! List || elements.isEmpty)) {
+        throw Exception('Overpass remark: $remark');
+      }
+    }
+
+    return decoded;
   }
 
   // ============================================================
@@ -677,6 +707,9 @@ out center tags qt 200;
     return 'en';
   }
 }
+
+/// تبدیل JSON در isolate (تابع سطح‌بالا برای compute).
+dynamic _decodeJson(String body) => jsonDecode(body);
 
 // ================================================================
 // MAP PLACE
