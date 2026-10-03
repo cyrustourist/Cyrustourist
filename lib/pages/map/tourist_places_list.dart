@@ -12,7 +12,11 @@ class TouristPlacesList extends StatelessWidget {
     required this.onRouteTap,
     required this.isFavorite,
     required this.onFavoriteTap,
+    this.onRetry,
   });
+
+  /// تلاش دوباره (وقتی لیست خالی است نمایش داده می‌شود)
+  final VoidCallback? onRetry;
 
   final List<MapPlace> places;
   final String language;
@@ -153,23 +157,66 @@ class TouristPlacesList extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            const Icon(
-              Icons.travel_explore_rounded,
-              color: Color(0xffffd36a),
-              size: 30,
+            Row(
+              children: [
+                const Icon(
+                  Icons.travel_explore_rounded,
+                  color: Color(0xffffd36a),
+                  size: 30,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _emptyText(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _emptyText(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+            if (onRetry != null) ...[
+              const SizedBox(height: 14),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: onRetry,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xffffd36a)),
+                      color: const Color(0xffffd36a).withValues(alpha: 0.12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.refresh_rounded,
+                          color: Color(0xffffd36a),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _text('تلاش دوباره', 'Try again', 'حاول مرة أخرى'),
+                          style: const TextStyle(
+                            color: Color(0xffffe39a),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       );
