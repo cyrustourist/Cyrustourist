@@ -14,6 +14,10 @@ class ApiConfig {
   /// آدرس اصلی Cloudflare Worker API.
   static const String baseUrl = 'https://cyrus-tourist-api.cyrustourist.workers.dev';
 
+  /// Worker پنل مدیریت (cyrus-tourist-admin-panel) — اقامتگاه‌هایی که از پنل ثبت می‌شوند
+  /// در دیتابیس همین Worker هستند و مسیر عمومی /accommodations از همین‌جا خوانده می‌شود.
+  static const String panelBaseUrl = 'https://cyrus-tourist-admin-panel.cyrustourist.workers.dev';
+
   /// مسیر بررسی سلامت سرور (اگر بک‌اند مسیر دیگری داشت، فقط همین را عوض کنید).
   static const String healthPath = '/';
 
@@ -26,9 +30,9 @@ class ApiConfig {
   /// حداکثر تعداد تلاش مجدد برای یک درخواست ناموفق (Retry محدود، نه بی‌نهایت).
   static const int maxRetry = 2;
 
-  static Uri uri(String path, [Map<String, dynamic>? query]) {
+  static Uri uri(String path, [Map<String, dynamic>? query, String? base]) {
     final clean = path.startsWith('/') ? path : '/$path';
-    return Uri.parse('$baseUrl$clean').replace(
+    return Uri.parse('${base ?? baseUrl}$clean').replace(
       queryParameters: query?.map((k, v) => MapEntry(k, '$v')),
     );
   }
