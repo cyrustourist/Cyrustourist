@@ -85,6 +85,37 @@ class StayAmenities {
     StayAmenity('luggage_storage', Icons.work_rounded, 'نگهداری چمدان', 'Luggage storage', 'حفظ الأمتعة'),
     StayAmenity('concierge', Icons.support_agent_rounded, 'خدمات کانسیرج', 'Concierge', 'خدمة الكونسيرج'),
     StayAmenity('wake_up', Icons.alarm_rounded, 'سرویس بیدارباش', 'Wake-up call', 'خدمة الإيقاظ'),
+    // ---- امکانات مخصوص گردشگری سلامت (کلیدها = کلیدهای پنل مدیریت) ----
+    StayAmenity('hospital', Icons.local_hospital_rounded, 'بیمارستان / مرکز درمانی', 'Hospital / medical center', 'مستشفى / مركز طبي'),
+    StayAmenity('specialist', Icons.medical_services_rounded, 'پزشک متخصص', 'Specialist doctor', 'طبيب مختص'),
+    StayAmenity('surgery', Icons.healing_rounded, 'خدمات جراحی', 'Surgery services', 'خدمات جراحية'),
+    StayAmenity('diagnosis', Icons.biotech_rounded, 'تشخیص و آزمایش', 'Diagnosis & tests', 'تشخيص وفحوصات'),
+    StayAmenity('dental', Icons.health_and_safety_rounded, 'دندان‌پزشکی', 'Dentistry', 'طب الأسنان'),
+    StayAmenity('beauty', Icons.face_retouching_natural_rounded, 'خدمات زیبایی', 'Beauty services', 'خدمات التجميل'),
+    StayAmenity('rehabilitation', Icons.accessibility_new_rounded, 'توانبخشی', 'Rehabilitation', 'التأهيل'),
+    StayAmenity('hotel', Icons.hotel_rounded, 'اقامت بیمار', 'Patient accommodation', 'إقامة المريض'),
+    StayAmenity('interpreter', Icons.translate_rounded, 'مترجم', 'Interpreter', 'مترجم'),
+    StayAmenity('visa_support', Icons.flight_takeoff_rounded, 'پشتیبانی ویزا', 'Visa support', 'دعم التأشيرة'),
+    StayAmenity('24h_support', Icons.support_agent_rounded, 'پشتیبانی ۲۴ ساعته', '24h support', 'دعم على مدار الساعة'),
+    StayAmenity('emergency', Icons.emergency_rounded, 'خدمات اورژانسی', 'Emergency services', 'خدمات الطوارئ'),
+    StayAmenity('ambulance', Icons.airport_shuttle_rounded, 'آمبولانس', 'Ambulance', 'إسعاف'),
+    StayAmenity('icu', Icons.monitor_heart_rounded, 'بخش مراقبت ویژه (ICU)', 'Intensive care (ICU)', 'العناية المركزة'),
+    StayAmenity('laboratory', Icons.science_rounded, 'آزمایشگاه', 'Laboratory', 'مختبر'),
+    StayAmenity('radiology', Icons.settings_overscan_rounded, 'رادیولوژی و تصویربرداری', 'Radiology & imaging', 'الأشعة والتصوير'),
+    StayAmenity('pharmacy', Icons.medication_rounded, 'داروخانه', 'Pharmacy', 'صيدلية'),
+    StayAmenity('telemedicine', Icons.video_call_rounded, 'ویزیت آنلاین', 'Online consultation', 'استشارة عن بعد'),
+    StayAmenity('online_booking', Icons.event_available_rounded, 'نوبت‌دهی آنلاین', 'Online booking', 'حجز إلكتروني'),
+    StayAmenity('insurance_accepted', Icons.verified_user_rounded, 'پذیرش بیمه', 'Insurance accepted', 'قبول التأمين'),
+    StayAmenity('international_patients', Icons.public_rounded, 'پذیرش بیمار خارجی', 'International patients', 'استقبال المرضى الأجانب'),
+    StayAmenity('female_doctor', Icons.female_rounded, 'پزشک خانم', 'Female doctor', 'طبيبة'),
+    StayAmenity('children_ward', Icons.child_care_rounded, 'بخش کودکان', 'Children ward', 'قسم الأطفال'),
+    StayAmenity('maternity', Icons.pregnant_woman_rounded, 'زایشگاه و زنان', 'Maternity & gynecology', 'الولادة والنساء'),
+    StayAmenity('waiting_lounge', Icons.weekend_rounded, 'سالن انتظار', 'Waiting lounge', 'صالة انتظار'),
+    StayAmenity('cafe', Icons.local_cafe_rounded, 'کافی‌شاپ و رستوران', 'Cafe & restaurant', 'مقهى ومطعم'),
+    StayAmenity('atm', Icons.atm_rounded, 'خودپرداز', 'ATM', 'صراف آلي'),
+    StayAmenity('hot_spring', Icons.hot_tub_rounded, 'آب معدنی / آبگرم', 'Mineral / hot spring', 'مياه معدنية / ينابيع حارة'),
+    StayAmenity('massage_service', Icons.spa_rounded, 'ماساژ درمانی', 'Therapeutic massage', 'مساج علاجي'),
+    StayAmenity('spa_service', Icons.hot_tub_rounded, 'اسپا و سونا', 'Spa & sauna', 'سبا وساونا'),
   ];
 
   static final Map<String, StayAmenity> _byKey = {
@@ -94,10 +125,18 @@ class StayAmenities {
   static StayAmenity? byKey(String key) => _byKey[key.trim().toLowerCase()];
 
   /// کلید ناشناخته (که در آینده در پنل اضافه شده) هم نمایش داده می‌شود.
-  static StayAmenity resolve(String key) {
+  ///
+  /// [panelLabels]: برچسب‌هایی که خود پنل همراه رکورد می‌فرستد (ستون amenity_labels).
+  /// اگر امکانی فقط در پنل اضافه شده باشد، با همان نام پنل در اپ دیده می‌شود
+  /// و نیازی به به‌روزرسانی اپ نیست. برچسب پنل (فارسی) روی برچسب فارسی اپ می‌نشیند.
+  static StayAmenity resolve(String key, {Map<String, String> panelLabels = const {}}) {
     final known = byKey(key);
-    if (known != null) return known;
-    final pretty = key.replaceAll('_', ' ').trim();
+    final panel = (panelLabels[key] ?? panelLabels[key.trim().toLowerCase()] ?? '').trim();
+    if (known != null) {
+      if (panel.isEmpty || panel == known.fa) return known;
+      return StayAmenity(known.key, known.icon, panel, known.en, known.ar);
+    }
+    final pretty = panel.isNotEmpty ? panel : key.replaceAll('_', ' ').trim();
     return StayAmenity(key, Icons.check_circle_outline_rounded, pretty, pretty, pretty);
   }
 }
@@ -150,6 +189,129 @@ class _StayType {
   final Map<String, String> labels;
 }
 
+/// روزهای هفته (برای جدول «روزهای کاری» گردشگری سلامت).
+/// کلیدها دقیقاً همان کلیدهایی‌اند که پنل مدیریت در ستون work_days ذخیره می‌کند.
+class StayWeekday {
+  const StayWeekday(this.key, this.fa, this.en, this.ar);
+
+  final String key;
+  final String fa;
+  final String en;
+  final String ar;
+
+  String label(String lang) {
+    switch (lang) {
+      case 'fa':
+        return fa;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+}
+
+class StayWeekdays {
+  StayWeekdays._();
+
+  /// ترتیب هفته‌ی ایرانی: شنبه تا جمعه
+  static const List<StayWeekday> all = [
+    StayWeekday('sat', 'شنبه', 'Saturday', 'السبت'),
+    StayWeekday('sun', 'یکشنبه', 'Sunday', 'الأحد'),
+    StayWeekday('mon', 'دوشنبه', 'Monday', 'الاثنين'),
+    StayWeekday('tue', 'سه‌شنبه', 'Tuesday', 'الثلاثاء'),
+    StayWeekday('wed', 'چهارشنبه', 'Wednesday', 'الأربعاء'),
+    StayWeekday('thu', 'پنجشنبه', 'Thursday', 'الخميس'),
+    StayWeekday('fri', 'جمعه', 'Friday', 'الجمعة'),
+  ];
+
+  /// ورودی: آرایه‌ی JSON، لیست یا متن جداشده با ویرگول. خروجی: فقط کلیدهای معتبر، به ترتیب هفته.
+  static List<String> parse(dynamic v) {
+    if (v == null) return const [];
+    var raw = <String>[];
+    if (v is List) {
+      raw = v.map((e) => e.toString().trim().toLowerCase()).toList();
+    } else {
+      final text = v.toString().trim();
+      if (text.isEmpty) return const [];
+      if (text.startsWith('[')) {
+        try {
+          final d = jsonDecode(text);
+          if (d is List) {
+            raw = d.map((e) => e.toString().trim().toLowerCase()).toList();
+          }
+        } catch (_) {}
+      } else {
+        raw = text
+            .split(RegExp(r'[,،;|]'))
+            .map((e) => e.trim().toLowerCase())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+    }
+    return [
+      for (final d in all)
+        if (raw.contains(d.key)) d.key,
+    ];
+  }
+}
+
+/// نوع مرکز در گردشگری سلامت.
+/// کلیدها و ترتیب کلمات دقیقاً همان HEALTH_TYPES / HEALTH_TYPE_WORDS در پنل مدیریت (worker.js)
+/// است؛ بنابراین کلید «نوع سلامت» در پنل و در نوار ابزار اپ یکی است.
+class HealthType {
+  const HealthType(this.key, this.keywords, this.labels);
+
+  final String key;
+  final List<String> keywords;
+  final Map<String, String> labels;
+}
+
+class HealthTypes {
+  HealthTypes._();
+
+  /// ترتیب نمایش در نوار ابزار (کلید آسانسوری)
+  static const List<HealthType> all = [
+    HealthType('hospital', ['بیمارستان', 'hospital'], {'fa': 'بیمارستان', 'en': 'Hospital', 'ar': 'مستشفى'}),
+    HealthType('clinic', ['کلینیک', 'درمانگاه', 'clinic'], {'fa': 'کلینیک و درمانگاه', 'en': 'Clinic', 'ar': 'عيادة'}),
+    HealthType('dental', ['دندان', 'dental'], {'fa': 'دندان‌پزشکی', 'en': 'Dental', 'ar': 'أسنان'}),
+    HealthType('beauty', ['زیبایی', 'پوست', 'beauty', 'cosmetic'], {'fa': 'زیبایی، پوست و مو', 'en': 'Beauty & skin', 'ar': 'تجميل وجلد'}),
+    HealthType('spa', ['آبگرم', 'اسپا', 'spa', 'hot spring'], {'fa': 'آبگرم و اسپا', 'en': 'Hot spring & spa', 'ar': 'ينابيع حارة وسبا'}),
+    HealthType('massage', ['ماساژ', 'massage'], {'fa': 'ماساژ و ریلکسیشن', 'en': 'Massage', 'ar': 'مساج واسترخاء'}),
+    HealthType('specialist', ['متخصص', 'پزشک', 'specialist', 'doctor'], {'fa': 'پزشک متخصص', 'en': 'Specialist doctor', 'ar': 'طبيب مختص'}),
+    HealthType('physio', ['فیزیو', 'توانبخشی', 'physio', 'rehab'], {'fa': 'فیزیوتراپی و توانبخشی', 'en': 'Physio & rehab', 'ar': 'علاج طبيعي وتأهيل'}),
+    HealthType('lab', ['آزمایشگاه', 'رادیولوژی', 'سونوگرافی', 'lab', 'radiology'], {'fa': 'آزمایشگاه و تصویربرداری', 'en': 'Lab & imaging', 'ar': 'مختبر وتصوير'}),
+    HealthType('eye', ['چشم', 'لیزیک', 'eye', 'lasik'], {'fa': 'چشم‌پزشکی و لیزیک', 'en': 'Eye care & LASIK', 'ar': 'طب العيون'}),
+    HealthType('hair', ['کاشت مو', 'hair'], {'fa': 'کاشت مو', 'en': 'Hair transplant', 'ar': 'زراعة الشعر'}),
+    HealthType('fertility', ['ناباروری', 'زنان', 'fertility', 'ivf'], {'fa': 'زنان و ناباروری', 'en': 'Women & fertility', 'ar': 'نساء وخصوبة'}),
+    HealthType('traditional', ['طب سنتی', 'گیاهی', 'traditional'], {'fa': 'طب سنتی و گیاهی', 'en': 'Traditional medicine', 'ar': 'طب تقليدي'}),
+    HealthType('nutrition', ['تغذیه', 'رژیم', 'nutrition', 'diet'], {'fa': 'تغذیه و رژیم‌درمانی', 'en': 'Nutrition & diet', 'ar': 'تغذية وحمية'}),
+    HealthType('pharmacy', ['داروخانه', 'pharmacy'], {'fa': 'داروخانه', 'en': 'Pharmacy', 'ar': 'صيدلية'}),
+    HealthType('wellness', ['تندرستی', 'wellness', 'yoga', 'یوگا'], {'fa': 'سلامت و تندرستی', 'en': 'Wellness', 'ar': 'عافية'}),
+    HealthType('other', [], {'fa': 'سایر', 'en': 'Other', 'ar': 'أخرى'}),
+  ];
+
+  /// ورودی: مقدار ستون health_type (کلید دقیق یا متن آزاد) — در نبودش service_type / specialty.
+  static ({String key, Map<String, String> labels}) resolve(List<String?> raws) {
+    for (final raw in raws) {
+      final text = (raw ?? '').trim();
+      if (text.isEmpty) continue;
+      final lower = text.toLowerCase();
+      for (final t in all) {
+        if (t.key == lower) return (key: t.key, labels: t.labels);
+      }
+      for (final t in all) {
+        for (final k in t.keywords) {
+          if (lower.contains(k.toLowerCase())) return (key: t.key, labels: t.labels);
+        }
+      }
+      final other = all.last;
+      return (key: other.key, labels: other.labels);
+    }
+    return (key: '', labels: const {});
+  }
+}
+
 /// همه‌ی فیلدهای «اقامتگاه» که از جدول accommodations می‌آید و در
 /// صفحه‌ی جزئیات نمایش داده می‌شود.
 class StayDetails {
@@ -179,6 +341,9 @@ class StayDetails {
     this.bedrooms = 0,
     this.mapUrl,
     this.managementCode,
+    this.amenityLabels = const {},
+    this.isHealth = false,
+    this.workDays = const [],
   });
 
   final String typeKey;
@@ -209,6 +374,15 @@ class StayDetails {
   final int bedrooms;
   final String? mapUrl;
   final String? managementCode;
+
+  /// برچسب امکانات از پنل (کلید → نام فارسی) برای امکاناتی که اپ هنوز نمی‌شناسد
+  final Map<String, String> amenityLabels;
+
+  /// true = رکورد «گردشگری سلامت» (از همین مدل برای نمایش استفاده می‌شود)
+  final bool isHealth;
+
+  /// روزهای کاری هفته (کلیدهای StayWeekdays) — فقط برای گردشگری سلامت
+  final List<String> workDays;
 
   /// همه‌ی شماره‌های تماس بدون تکرار (به ترتیب: همراه، ثابت، کمکی)
   List<String> get phones {
@@ -263,8 +437,31 @@ class StayDetails {
         .toList();
   }
 
-  factory StayDetails.fromRow(Map<String, dynamic> j) {
-    final type = StayTypes.resolve(_s(j['accommodation_type']));
+  static Map<String, String> parseAmenityLabels(dynamic v) {
+    if (v == null) return const {};
+    dynamic d = v;
+    if (v is String) {
+      final raw = v.trim();
+      if (raw.isEmpty || !raw.startsWith('{')) return const {};
+      try {
+        d = jsonDecode(raw);
+      } catch (_) {
+        return const {};
+      }
+    }
+    if (d is! Map) return const {};
+    final out = <String, String>{};
+    d.forEach((k, val) {
+      final s = val?.toString().trim() ?? '';
+      if (s.isNotEmpty) out[k.toString()] = s;
+    });
+    return out;
+  }
+
+  factory StayDetails.fromRow(Map<String, dynamic> j, {bool health = false}) {
+    final type = health
+        ? HealthTypes.resolve([_s(j['health_type']), _s(j['service_type']), _s(j['specialty'])])
+        : StayTypes.resolve(_s(j['accommodation_type']));
 
     var amenities = parseAmenities(j['amenities_list'] ?? j['amenities']);
     var bedrooms = int.tryParse((j['bedrooms'] ?? 0).toString()) ?? 0;
@@ -288,7 +485,7 @@ class StayDetails {
       address: _s(j['address']),
       amenityKeys: amenities,
       hasElevator: elevator,
-      checkIn: _s(j['check_in']),
+      checkIn: _s(j['check_in']) ?? (health ? _s(j['opening_hours']) : null),
       checkOut: _s(j['check_out']),
       rules: _s(j['rules']),
       mobile: _s(j['mobile'] ?? j['phone_mobile']),
@@ -307,6 +504,9 @@ class StayDetails {
       bedrooms: bedrooms < 0 ? 0 : bedrooms,
       mapUrl: _s(j['map_url'] ?? j['map_link']),
       managementCode: _s(j['management_code']),
+      amenityLabels: parseAmenityLabels(j['amenity_labels']),
+      isHealth: health,
+      workDays: StayWeekdays.parse(j['work_days']),
     );
   }
 }
