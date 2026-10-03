@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/language/app_language.dart';
+import '../models/stay_details.dart';
 import 'movie_video_page.dart' show MovieSlotData;
 
 // رنگ‌ها — مطابق movie_video_page.dart (فایلی جدا، نمی‌تواند
@@ -67,7 +68,28 @@ class MovieAmenitiesPage extends StatelessWidget {
 
   final MovieSlotData data;
 
-  List<_AmenityRow> get _rows => [
+  /// اگر پنل مدیریت امکاناتی تیک زده باشد، دقیقاً همان‌ها (با نام پنل) نمایش داده می‌شود.
+  List<_AmenityRow> get _panelRows {
+    final rows = <_AmenityRow>[];
+    final beds = data.bedroomCount;
+    if (beds != null && beds > 0) {
+      rows.add(_AmenityRow(
+        icon: Icons.bed_rounded,
+        label: _t('تعداد اتاق‌خواب', 'Bedrooms', 'غرف النوم'),
+        available: true,
+        valueText: _t('$beds اتاق', '$beds rooms', '$beds غرف'),
+      ));
+    }
+    for (final k in data.panelAmenityKeys) {
+      final am = StayAmenities.resolve(k, panelLabels: data.panelAmenityLabels);
+      rows.add(_AmenityRow(icon: am.icon, label: am.label(_lang), available: true));
+    }
+    return rows;
+  }
+
+  List<_AmenityRow> get _rows => data.panelAmenityKeys.isNotEmpty ? _panelRows : _legacyRows;
+
+  List<_AmenityRow> get _legacyRows => [
         _AmenityRow(
           icon: Icons.local_parking_rounded,
           label: _t('پارکینگ', 'Parking', 'موقف سيارات'),
@@ -172,9 +194,9 @@ class MovieAmenitiesPage extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 _t(
-                  'این فهرست، امکانات ثابتی است که هنگام تکمیل مشخصات این جایگاه تیک زده می‌شوند.',
-                  'This is the fixed list of amenities ticked once this slot’s details are completed.',
-                  'هذه قائمة المرافق الثابتة التي يتم تحديدها عند استكمال بيانات هذا المكان.',
+                  'این فهرست از پنل مدیریت سایروس توریست می‌آید.',
+                  'This list comes from the Cyrus Tourist admin panel.',
+                  'هذه القائمة قادمة من لوحة إدارة سايروس توريست.',
                 ),
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.55),
