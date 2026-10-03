@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/showcase_item.dart';
+import '../../models/stay_details.dart';
 
 /// یک کلید نوار ابزار (چیپ). اگر [opensKind] داشته باشد، به‌جای فیلتر،
 /// صفحه‌ی دیگری (مثلاً لیدرها) را باز می‌کند.
@@ -252,46 +253,24 @@ class ShowcaseKinds {
         );
 
       case ShowcaseKind.health:
-        return const ShowcaseKindInfo(
+        return ShowcaseKindInfo(
           kind: ShowcaseKind.health,
-          titles: {
+          titles: const {
             'fa': 'نمایش گردشگری سلامت',
             'en': 'Health Tourism Showcase',
             'ar': 'عرض السياحة العلاجية',
           },
-          hints: {
+          hints: const {
             'fa': 'جست‌وجوی مرکز درمانی با کد، نام یا شهر...',
             'en': 'Search health centers by code, name or city...',
             'ar': 'ابحث عن المراكز الصحية بالرمز أو الاسم أو المدينة...',
           },
           emptyTexts: _soonText,
           icon: Icons.health_and_safety_rounded,
+          // همان فهرست «نوع سلامت» پنل مدیریت (HealthTypes) — یک منبع برای هر دو
           filters: [
-            ShowcaseFilter(
-              key: 'hospital',
-              labels: {'fa': 'بیمارستان', 'en': 'Hospital', 'ar': 'مستشفى'},
-              keywords: ['بیمارستان', 'hospital'],
-            ),
-            ShowcaseFilter(
-              key: 'clinic',
-              labels: {'fa': 'کلینیک', 'en': 'Clinic', 'ar': 'عيادة'},
-              keywords: ['کلینیک', 'درمانگاه', 'clinic'],
-            ),
-            ShowcaseFilter(
-              key: 'spa',
-              labels: {'fa': 'آبگرم و اسپا', 'en': 'Spa', 'ar': 'منتجع'},
-              keywords: ['آبگرم', 'اسپا', 'spa'],
-            ),
-            ShowcaseFilter(
-              key: 'dental',
-              labels: {'fa': 'دندان‌پزشکی', 'en': 'Dental', 'ar': 'أسنان'},
-              keywords: ['دندان', 'dental'],
-            ),
-            ShowcaseFilter(
-              key: 'cosmetic',
-              labels: {'fa': 'زیبایی', 'en': 'Cosmetic', 'ar': 'تجميل'},
-              keywords: ['زیبایی', 'cosmetic'],
-            ),
+            for (final t in HealthTypes.all)
+              ShowcaseFilter(key: t.key, labels: t.labels, keywords: t.keywords),
           ],
         );
 
