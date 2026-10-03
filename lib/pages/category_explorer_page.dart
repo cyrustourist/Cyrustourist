@@ -72,6 +72,12 @@ class _CategoryExplorerPageState
   // شماره‌ی آخرین درخواست؛ پاسخ‌های قدیمی و کندتر نادیده گرفته می‌شوند.
   int _loadSeq = 0;
 
+  // یک بار تلاش خودکار بعد از نتیجه‌ی خالی/خطا؛ با تغییر شعاع/جستجو دوباره فعال می‌شود.
+  bool _autoRetried = false;
+
+  // چرخش دکمه‌ی «تلاش دوباره» (هر لمس یک دور کامل)
+  double _retryTurns = 0;
+
   List<MapPlace> _places = [];
   Set<String> _favoriteIds = {};
 
@@ -156,6 +162,7 @@ class _CategoryExplorerPageState
       setState(() {
         _userLocation = quick;
         _center = quick;
+        _locationWarning = null;
       });
       _safeMove(quick, 13);
       unawaited(_loadNearby());
@@ -188,6 +195,7 @@ class _CategoryExplorerPageState
 
     setState(() {
       _userLocation = location;
+      _locationWarning = null;
       if (!_isSearchedMode) _center = location;
     });
 
@@ -243,6 +251,8 @@ class _CategoryExplorerPageState
         _places = results;
         _loading = false;
       });
+
+      if (results.isEmpty) _scheduleAutoRetry(seq);
     } catch (_) {
       if (!mounted || seq != _loadSeq) return;
 
@@ -250,6 +260,8 @@ class _CategoryExplorerPageState
         _places = [];
         _loading = false;
       });
+
+      _scheduleAutoRetry(seq);
 
       _showSnack(
         _text(
@@ -259,6 +271,36 @@ class _CategoryExplorerPageState
         ),
       );
     }
+  }
+
+  /// اگر نتیجه خالی بود یا خطا آمد، یک بار بعد از ۳ ثانیه خودکار دوباره تلاش می‌کند
+  /// (سرورهای نقشه گاهی اولین بار جواب نمی‌دهند). بعد از آن فقط با دکمه‌ی «تلاش دوباره».
+  void _scheduleAutoRetry(int seq) {
+    if (_autoRetried) return;
+    _autoRetried = true;
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted || seq != _loadSeq || _loading) return;
+      _loadNearby();
+    });
+  }
+
+  /// دکمه‌ی چرخشی «تلاش دوباره»: اگر GPS هنوز نیامده بود دوباره موقعیت را می‌گیرد،
+  /// وگرنه همان جستجوی فعلی را از نو اجرا می‌کند.
+  Future<void> _retry() async {
+    if (_loading || _searching) return;
+
+    setState(() {
+      _retryTurns += 1;
+      _autoRetried = false;
+    });
+
+    if (_userLocation == null && !_isSearchedMode) {
+      await _bootstrap();
+      return;
+    }
+
+    _center ??= _userLocation ?? _fallbackCenter;
+    await _loadNearby();
   }
 
   // ============================================================
@@ -313,6 +355,7 @@ class _CategoryExplorerPageState
 
     _mapController.move(match.point, 13);
 
+    _autoRetried = false;
     await _loadNearby();
   }
 
@@ -327,10 +370,13 @@ class _CategoryExplorerPageState
 
     _mapController.move(fallback, 12);
 
+    _autoRetried = false;
     await _loadNearby();
   }
 
   void _onRadiusChanged(double value) {
+    _autoRetried = false;
+
     setState(() {
       _radiusKm = value;
     });
@@ -492,12 +538,19 @@ class _CategoryExplorerPageState
 
   Widget _buildShowcaseButton() {
     final isStay = widget.initialCategory == PlaceCategory.accommodation;
+    final isHealth = widget.initialCategory == PlaceCategory.health;
 
     return ShowcaseDomeButton(
-      icon: isStay ? Icons.hotel_rounded : Icons.auto_awesome_rounded,
+      icon: isStay
+          ? Icons.hotel_rounded
+          : (isHealth
+              ? Icons.health_and_safety_rounded
+              : Icons.auto_awesome_rounded),
       label: isStay
           ? _text('نمایش اقامتگاه', 'Stays Showcase', 'عرض الإقامات')
-          : _text('نمایش ویژه', 'VIP Showcase', 'العرض المميز'),
+          : (isHealth
+              ? _text('نمایش سلامت', 'Health Showcase', 'عرض الصحة')
+              : _text('نمایش ویژه', 'VIP Showcase', 'العرض المميز')),
       onTap: _openShowcase,
     );
   }
@@ -505,13 +558,14 @@ class _CategoryExplorerPageState
   void _openShowcase() {
     final category = widget.initialCategory;
 
-    // دکمه‌ی «نمایش ویژه» برای اقامتگاه به گالری همان بخش می‌رود؛
-    // برای بقیه (جاذبه/سلامت) طبق درخواست به همان «فیلم‌های ویژه»ی
-    // کلید ۶ صفحه‌ی اصلی وصل می‌شود (با بنر هاب چهار کلید بالای صفحه)
-    // نه به گالری جاذبه‌ها.
+    // اقامتگاه → گالری اقامتگاه‌ها؛ سلامت → گالری گردشگری سلامت (مثل اقامتگاه،
+    // با کلید آسانسوریِ «نوع سلامت»)؛ جاذبه‌ها → «فیلم‌های ویژه»ی کلید ۶
+    // صفحه‌ی اصلی (با بنر هاب چهار کلید بالای صفحه).
     final Widget page = category == PlaceCategory.accommodation
         ? const ShowcaseGalleryPage(kind: ShowcaseKind.accommodation)
-        : const ShowcaseGalleryPage(kind: ShowcaseKind.video, showHubBanner: true);
+        : (category == PlaceCategory.health
+            ? const ShowcaseGalleryPage(kind: ShowcaseKind.health)
+            : const ShowcaseGalleryPage(kind: ShowcaseKind.video, showHubBanner: true));
 
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
@@ -715,6 +769,43 @@ class _CategoryExplorerPageState
                       ),
                     ),
 
+                    // دکمه‌ی چرخشی «تلاش دوباره» (روی لبه‌ی مخالف دکمه‌ی تمام‌صفحه)
+                    PositionedDirectional(
+                      start: 10,
+                      bottom: 64,
+                      child: Tooltip(
+                        message: _text(
+                          'تلاش دوباره',
+                          'Try again',
+                          'حاول مرة أخرى',
+                        ),
+                        child: Material(
+                          color: const Color(0xff071722)
+                              .withValues(alpha: 0.85),
+                          shape: const CircleBorder(
+                            side: BorderSide(color: Color(0xffffd36a)),
+                          ),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: _retry,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: AnimatedRotation(
+                                turns: _retryTurns,
+                                duration: const Duration(milliseconds: 700),
+                                curve: Curves.easeInOut,
+                                child: const Icon(
+                                  Icons.refresh_rounded,
+                                  color: Color(0xffffd36a),
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
                     if (_locationWarning != null &&
                         !_isSearchedMode)
                       Positioned(
@@ -808,6 +899,7 @@ class _CategoryExplorerPageState
                       onRouteTap: _openRoute,
                       isFavorite: _isFavorite,
                       onFavoriteTap: _toggleFavorite,
+                      onRetry: _retry,
                     ),
                   ),
                 ),
