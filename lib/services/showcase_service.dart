@@ -50,14 +50,39 @@ class ShowcaseLoad {
 class ShowcaseService {
   ShowcaseService._();
 
+  /// نسخه‌ی کامل: داده‌ی پنل (در صورت وجود) بالا + فایل‌های داخل اپ پایین.
+  /// (مثلاً برای لینک‌های عمیق). صفحه‌ی گالری از [localOnly] / [loadCached] /
+  /// [loadRemote] استفاده می‌کند تا هرگز منتظر سرور نماند.
   static Future<ShowcaseLoad> load(ShowcaseKind kind,
       {String lang = 'fa'}) async {
-    final local = ShowcaseLoad(items: localItems(kind));
-    final endpoint = _endpointFor(kind);
+    final remote = await loadRemote(kind);
+    return merge(kind, remote, localItems(kind));
+  }
 
-    // فقط Endpointهایی که در Worker فعلی وجود دارند از سرور خوانده می‌شوند.
-    // برای بخش‌های هنوز آماده‌نشده، مستقیم از Cache/Fallback محلی استفاده می‌شود.
-    if (endpoint == null) return local;
+  /// فوری و بدون شبکه: فقط فایل‌های داخل نرم‌افزار.
+  static ShowcaseLoad localOnly(ShowcaseKind kind) =>
+      ShowcaseLoad(items: localItems(kind));
+
+  /// تقریباً فوری: آخرین داده‌ی موفقِ پنل که روی گوشی ذخیره شده (بدون شبکه).
+  static Future<ShowcaseLoad?> loadCached(ShowcaseKind kind) async {
+    if (_endpointFor(kind) == null) return null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString('showcase_cache_${kind.apiName}');
+      if (cached == null || cached.isEmpty) return null;
+      final parsed = _parse(kind, jsonDecode(cached), ShowcaseSource.cache);
+      return parsed.items.isEmpty ? null : parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// دریافت از پنل مدیریت. اگر سرور جواب نداد (شبکه/خطا) `null` برمی‌گردد
+  /// تا صفحه همان فایل‌های داخل اپ را نگه دارد. اگر سرور جواب سالم داد ولی
+  /// فهرست خالی بود، فهرست خالیِ معتبر برمی‌گردد (مثلاً همه‌ی لیدرها غیرفعال شده‌اند).
+  static Future<ShowcaseLoad?> loadRemote(ShowcaseKind kind) async {
+    final endpoint = _endpointFor(kind);
+    if (endpoint == null) return null;
 
     final cacheKey = 'showcase_cache_${kind.apiName}';
     SharedPreferences? prefs;
@@ -65,32 +90,92 @@ class ShowcaseService {
       prefs = await SharedPreferences.getInstance();
     } catch (_) {}
 
-    // اقامتگاه‌های ثبت‌شده در پنل مدیریت اول از Worker پنل خوانده می‌شوند.
+    ShowcaseLoad? emptyOk;
     for (final base in _basesFor(kind)) {
       try {
         final json = await ApiService.getJson(endpoint, baseUrl: base);
+        if (json is Map && json['success'] == false) continue;
         final parsed = _parse(kind, json, ShowcaseSource.server);
         if (parsed.items.isNotEmpty) {
-          await prefs?.setString(cacheKey, jsonEncode(json));
+          // عکس‌های base64 حجیم‌اند؛ کش خیلی بزرگ گوشی را کند می‌کند.
+          final text = jsonEncode(json);
+          if (text.length < 1500 * 1024) {
+            await prefs?.setString(cacheKey, text);
+          }
           return parsed;
         }
+        if (_isValidList(json)) emptyOk ??= parsed; // سالم ولی خالی
       } catch (_) {}
     }
-
-    final cached = prefs?.getString(cacheKey);
-    if (cached != null && cached.isNotEmpty) {
-      try {
-        final parsed = _parse(kind, jsonDecode(cached), ShowcaseSource.cache);
-        if (parsed.items.isNotEmpty) return parsed;
-      } catch (_) {}
+    if (emptyOk != null) {
+      await prefs?.remove(cacheKey); // پنل سالم است ولی چیزی ندارد
+      return emptyOk;
     }
+    return null;
+  }
 
-    return local;
+  static bool _isValidList(dynamic d) {
+    if (d is List) return true;
+    if (d is Map) {
+      return d['items'] is List ||
+          d['data'] is List ||
+          d['results'] is List ||
+          d['guides'] is List;
+    }
+    return false;
+  }
+
+  /// ادغام: ردیف‌های بالا = پنل مدیریت (به ترتیب اولویتِ پنل)،
+  /// ردیف‌های پایین = فایل‌های داخل نرم‌افزار (بدون تکرار).
+  static ShowcaseLoad merge(
+      ShowcaseKind kind, ShowcaseLoad? remote, List<ShowcaseItem> local) {
+    if (remote == null || remote.items.isEmpty) {
+      return ShowcaseLoad(
+        items: local,
+        filters: remote?.filters,
+        source: remote?.source ?? ShowcaseSource.local,
+      );
+    }
+    final serverItems = remote.items;
+    final serverIds = serverItems.map((e) => e.id).toSet();
+    final serverVideos = <String>{
+      for (final e in serverItems)
+        if ((e.videoUrl ?? '').isNotEmpty) e.videoUrl!.trim(),
+    };
+    final serverTitles = <String>{
+      for (final e in serverItems)
+        if (e.title('fa').trim().isNotEmpty) e.title('fa').trim(),
+    };
+
+    var base = local;
+    // اگر کدِ یکی از موارد داخلی با کد پنل یکی بود، کدها جابه‌جا می‌شوند
+    // تا قلب علاقه‌مندی/باز کردن جزئیات قاطی نشود.
+    if (base.any((e) => e.kind == kind && serverIds.contains(e.id))) {
+      base = localItems(kind, codeShift: 100000);
+    }
+    final extras = base.where((e) {
+      final v = (e.videoUrl ?? '').trim();
+      if (v.isNotEmpty && serverVideos.contains(v)) return false;
+      final t = e.title('fa').trim();
+      if (t.isNotEmpty && serverTitles.contains(t)) return false;
+      return true;
+    }).toList();
+
+    return ShowcaseLoad(
+      items: [...serverItems, ...extras],
+      filters: remote.filters,
+      source: remote.source,
+    );
   }
 
   static List<String?> _basesFor(ShowcaseKind kind) {
     // اقامتگاه و گردشگری سلامت هر دو از دیتابیس Worker پنل مدیریت خوانده می‌شوند.
     if (kind == ShowcaseKind.accommodation || kind == ShowcaseKind.health) {
+      return [ApiConfig.panelBaseUrl, null];
+    }
+    // لیدرها فقط در دیتابیس پنل هستند (/guides)؛ جاذبه‌ها هم اول از پنل.
+    if (kind == ShowcaseKind.leader) return [ApiConfig.panelBaseUrl];
+    if (kind == ShowcaseKind.attraction) {
       return [ApiConfig.panelBaseUrl, null];
     }
     return [null];
@@ -109,8 +194,9 @@ class ShowcaseService {
       case ShowcaseKind.health:
         return '/health-tourism';
       case ShowcaseKind.leader:
+        return '/guides'; // فقط لیدرهای Active از دیتابیس پنل
       case ShowcaseKind.agency:
-        // این دو ماژول هنوز Endpoint عمومی نهایی در Worker فعلی ندارند.
+        // این ماژول هنوز Endpoint عمومی نهایی در Worker فعلی ندارد.
         return null;
     }
   }
@@ -123,13 +209,22 @@ class ShowcaseService {
     if (decoded is List) {
       rawItems = decoded;
     } else if (decoded is Map) {
-      final raw = decoded['items'] ?? decoded['data'] ?? decoded['results'];
+      final raw = decoded['items'] ??
+          decoded['data'] ??
+          decoded['results'] ??
+          decoded['guides'];
       if (raw is List) rawItems = raw;
     }
 
+    var index = -1;
     for (final raw in rawItems) {
+      index++;
       if (raw is! Map) continue;
       final row = Map<String, dynamic>.from(raw);
+      // ترتیب پنل برای لیدرها حفظ شود (بالاتر در پاسخ = بالاتر در لیست)
+      if (kind == ShowcaseKind.leader && row['priority'] == null) {
+        row['priority'] = rawItems.length - index;
+      }
       try {
         final item = _fromServerRow(kind, row);
         if (!item.isExpired) items.add(item);
@@ -156,13 +251,32 @@ class ShowcaseService {
     }
 
     double? d(dynamic v) => v == null ? null : double.tryParse(v.toString());
-    int code() => int.tryParse((j['id'] ?? j['code'] ?? 0).toString()) ?? 0;
+    int code() {
+      final direct = int.tryParse((j['id'] ?? j['code'] ?? '').toString());
+      if (direct != null) return direct;
+      // لیدرها: guide_id مثل GUIDE-00012
+      final digits =
+          RegExp(r'(\d+)\s*$').firstMatch((j['guide_id'] ?? '').toString());
+      return int.tryParse(digits?.group(1) ?? '') ?? 0;
+    }
+
+    final isLeader = kind == ShowcaseKind.leader;
+    final amenityKeys = <String>{};
+    if (isLeader) {
+      try {
+        final raw = j['amenities'];
+        final list = raw is List ? raw : jsonDecode(raw?.toString() ?? '[]');
+        if (list is List) amenityKeys.addAll(list.map((e) => e.toString()));
+      } catch (_) {}
+    }
 
     final isHealth = kind == ShowcaseKind.health;
     final isStay = kind == ShowcaseKind.accommodation || isHealth;
     final stay = isStay ? StayDetails.fromRow(j, health: isHealth) : null;
 
-    final fa = p([j['name_fa'], j['title_fa'], j['title'], j['name']]);
+    final fullName =
+        '${j['first_name'] ?? ''} ${j['last_name'] ?? ''}'.trim();
+    final fa = p([j['name_fa'], j['title_fa'], j['title'], j['name'], fullName]);
     final en = p([j['name_en'], j['title_en']]);
     final ar = p([j['name_ar'], j['title_ar']]);
 
@@ -181,19 +295,21 @@ class ShowcaseService {
     final cityEn = joinPlace(s(j['city_en']), s(j['province_en']));
     final cityAr = joinPlace(s(j['city_ar']), s(j['province_ar']));
 
-    final descFa = p([j['description_fa'], j['message']]);
+    final descFa = p([j['description_fa'], j['message'], j['bio']]);
     final descEn = s(j['description_en']);
     final descAr = s(j['description_ar']);
 
     // دسته: برای اقامتگاه از «نوع اقامتگاه» می‌آید (هتل، بوم‌گردی، ...)
     final typeLabels = stay?.typeLabels ?? const <String, String>{};
     final hasType = typeLabels.isNotEmpty;
-    final catFa = hasType ? typeLabels['fa'] : p([j['category_fa'], j['category']]);
+    final catFa = hasType
+        ? typeLabels['fa']
+        : p([j['category_fa'], j['category'], j['specialty']]);
     final catEn = hasType ? typeLabels['en'] : s(j['category_en']);
     final catAr = hasType ? typeLabels['ar'] : s(j['category_ar']);
 
     final tier = s(j['tier']);
-    final rating = d(j['rating']);
+    final rating = d(j['rating'] ?? j['average_rating']);
     final ratingCount = int.tryParse((j['rating_count'] ?? 0).toString());
 
     // شماره‌ی اصلی: همراه ← ثابت ← کمکی
@@ -210,9 +326,29 @@ class ShowcaseService {
       locations: _m(cityFa, cityEn, cityAr),
       descriptions: _m(descFa, descEn, descAr),
       categoryLabels: _m(catFa, catEn, catAr),
-      categories: typeKey.isNotEmpty ? [typeKey] : const [],
+      categories: typeKey.isNotEmpty
+          ? [typeKey]
+          : (isLeader
+              ? [
+                  if (_asInt0(j['is_local_guide']) == 1 ||
+                      amenityKeys.contains('local'))
+                    'local',
+                  if ('${j['license_status']}' == 'Licensed' ||
+                      amenityKeys.contains('licensed'))
+                    'licensed',
+                  if (amenityKeys.contains('nature_tours')) 'nature',
+                  if (amenityKeys.contains('historical_tours')) 'historic',
+                ]
+              : const []),
       videoUrl: cleanVideoUrl(p([j['videoEmbedUrl'], j['video_url'], j['video']])),
-      coverUrl: p([j['image_url'], j['image'], j['cover_url']]) ??
+      coverUrl: (isLeader
+              ? p([
+                  j['profile_photo_url'],
+                  j['owner_profile_photo'],
+                  j['image_url'],
+                ])
+              : null) ??
+          p([j['image_url'], j['image'], j['cover_url']]) ??
           // فقط «عکس پروفایل» ثبت می‌شود؛ اگر فیلم نبود همان کاور کارت است
           (isStay &&
                   aparatHashFromAny(
@@ -239,34 +375,36 @@ class ShowcaseService {
   // داده‌های محلی (تا زمان اتصال دیتابیس)
   // ------------------------------------------------------------
 
-  static List<ShowcaseItem> localItems(ShowcaseKind kind) {
+  static List<ShowcaseItem> localItems(ShowcaseKind kind, {int codeShift = 0}) {
     switch (kind) {
       case ShowcaseKind.video:
       case ShowcaseKind.attraction:
         // فعلاً هر دو از همین لینک فیلم‌های موجود ساخته می‌شوند.
         return kMovieSlots
             .where((s) => s.assigned)
-            .map((s) => _fromMovie(kind, s))
+            .map((s) => _fromMovie(kind, s, codeShift))
             .toList();
 
       case ShowcaseKind.accommodation:
         return kResidenceSlots
             .where((s) => s.assigned)
-            .map(_fromResidence)
+            .map((s) => _fromResidence(s, codeShift))
             .toList();
 
       case ShowcaseKind.health:
         return const [];
 
       case ShowcaseKind.leader:
-        var code = 0;
+        var code = codeShift;
         return approvedLeaders.map((l) => _fromLeader(++code, l)).toList();
 
       case ShowcaseKind.agency:
-        var code = 0;
+        var code = codeShift;
         return approvedAgencies.map((a) => _fromAgency(++code, a)).toList();
     }
   }
+
+  static int _asInt0(dynamic v) => int.tryParse('${v ?? 0}') ?? 0;
 
   static Map<String, String> _m(String? fa, [String? en, String? ar]) {
     final out = <String, String>{};
@@ -276,7 +414,8 @@ class ShowcaseService {
     return out;
   }
 
-  static ShowcaseItem _fromMovie(ShowcaseKind kind, MovieSlotData s) {
+  static ShowcaseItem _fromMovie(ShowcaseKind kind, MovieSlotData s,
+      [int codeShift = 0]) {
     final hasDesc = (s.description ?? '').isNotEmpty;
     final cat = s.category ?? '';
     final city = s.city ?? '';
@@ -301,7 +440,7 @@ class ShowcaseService {
 
     return ShowcaseItem(
       kind: kind,
-      code: s.code,
+      code: s.code + codeShift,
       titles: _m(s.name, s.nameEn, s.nameAr),
       locations: _m(s.city, s.cityEn, s.cityAr),
       descriptions: descriptions,
@@ -316,7 +455,8 @@ class ShowcaseService {
     );
   }
 
-  static ShowcaseItem _fromResidence(ResidenceVideoData s) {
+  static ShowcaseItem _fromResidence(ResidenceVideoData s,
+      [int codeShift = 0]) {
     String join(String? a, String? b) => [a, b]
         .whereType<String>()
         .where((e) => e.isNotEmpty)
@@ -325,7 +465,7 @@ class ShowcaseService {
     final hash = s.aparatHash;
     return ShowcaseItem(
       kind: ShowcaseKind.accommodation,
-      code: s.code,
+      code: s.code + codeShift,
       titles: _m(s.name, s.nameEn, s.nameAr),
       locations: _m(join(s.city, s.province), join(s.cityEn, s.provinceEn),
           join(s.cityAr, s.provinceAr)),
