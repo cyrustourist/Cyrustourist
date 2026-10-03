@@ -24,9 +24,9 @@ class _AdBannerItem {
 /// بنر تبلیغاتی یک جایگاه (۱ یا ۲) — روی جعبه‌ی طلایی خالیِ از قبل در
 /// تصویر صفحه‌ی اصلی قرار می‌گیرد.
 ///
-/// اولویت با تبلیغ‌های فعالِ همان جایگاه در دیتابیس است (به ترتیب
-/// `sort_order`)؛ اگر دیتابیس برای این جایگاه چیزی نداشت، به‌جای فضای
-/// خالی، بین [defaultAssets] (دو عکس پیش‌فرض داخل خود اپ) می‌چرخد.
+/// تبلیغ‌های فعالِ پنل (به ترتیب `sort_order`) اول نمایش داده می‌شوند و
+/// بعد از آن‌ها [defaultAssets] (عکس‌های پیش‌فرض داخل اپ) در همان چرخش
+/// می‌آیند؛ اگر پنل چیزی نداشت یا جواب نداد، فوراً فقط عکس‌های داخلی.
 ///
 /// برای این‌که در بازِ اول (پیش از پاسخ سرور) صفحه خالی/زشت دیده نشود،
 /// عکس‌های پیش‌فرض همان لحظه‌ی اول (به‌صورت sync) نمایش داده می‌شوند؛
@@ -125,7 +125,7 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
     // ابتدا نمایش داده شده‌اند باقی می‌مانند (نیازی به تغییر نیست).
     if (ads.isEmpty) return;
 
-    final items = ads
+    final dbItems = ads
         .map(
           (ad) => _AdBannerItem(
             imageProvider: _providerFor(ad.imageUrl),
@@ -135,8 +135,10 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
         )
         .toList();
 
+    // ترکیبی: ابتدا تبلیغ‌های پنل (به ترتیب sort_order)، سپس عکس‌های
+    // پیش‌فرض داخل اپ؛ هر دو گروه در یک چرخش پشت‌سرهم نمایش داده می‌شوند.
     setState(() {
-      _items = items;
+      _items = [...dbItems, ..._defaultItems()];
       _index = 0;
     });
 
@@ -156,6 +158,21 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
       setState(() {
         _index = (_index + 1) % _items.length;
       });
+    });
+  }
+
+  /// اگر عکس یک تبلیغ (لینک خراب/نبود اینترنت) بار نشد، از چرخش حذف می‌شود
+  /// تا بنر خالی نماند و نوبت به مورد بعدی برسد.
+  void _skipBrokenItem(Object key) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _items.length < 2) return;
+      final broken = _items.indexWhere((e) => e.key == key);
+      if (broken == -1) return;
+      setState(() {
+        _items = List<_AdBannerItem>.of(_items)..removeAt(broken);
+        _index = _index % _items.length;
+      });
+      _startRotationIfNeeded();
     });
   }
 
@@ -204,8 +221,10 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              errorBuilder: (context, error, stackTrace) =>
-                  const SizedBox.shrink(),
+              errorBuilder: (context, error, stackTrace) {
+                _skipBrokenItem(item.key);
+                return const SizedBox.shrink();
+              },
             ),
           ),
         ),
