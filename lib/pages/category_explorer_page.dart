@@ -112,6 +112,32 @@ class _CategoryExplorerPageState
     }
   }
 
+  /// کد زبان برای بنر فیلم (هر ۱۰ زبان)
+  String get _bannerLang {
+    switch (LanguageManager.current) {
+      case AppLanguage.persian:
+        return 'fa';
+      case AppLanguage.english:
+        return 'en';
+      case AppLanguage.arabic:
+        return 'ar';
+      case AppLanguage.german:
+        return 'de';
+      case AppLanguage.spanish:
+        return 'es';
+      case AppLanguage.french:
+        return 'fr';
+      case AppLanguage.italian:
+        return 'it';
+      case AppLanguage.russian:
+        return 'ru';
+      case AppLanguage.turkish:
+        return 'tr';
+      case AppLanguage.chinese:
+        return 'zh';
+    }
+  }
+
   bool get _isRtl => _langCode != 'en';
 
   /// نقطه مرجع فعلی برای مسیریابی.
@@ -884,7 +910,7 @@ class _CategoryExplorerPageState
                         // بنر فیلم VIP: در حال بارگذاری یا لیست خالی، بزرگ‌تر
                         ShowcaseFilmBanner(
                           category: widget.initialCategory,
-                          language: _langCode,
+                          language: _bannerLang,
                           onTap: _openShowcase,
                           large: _loading || _searching || _places.isEmpty,
                         ),
