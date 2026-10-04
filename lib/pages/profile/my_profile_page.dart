@@ -3,7 +3,9 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../../services/badge_service.dart';
 import '../../services/user_profile_service.dart';
+import 'badge_page.dart';
 
 const Color _bg = Color(0xff071722);
 const Color _card = Color(0xff0e2433);
@@ -49,11 +51,18 @@ class _MyProfilePageState extends State<MyProfilePage> {
   bool _loading = true;
   bool _editing = false;
   bool _busy = false;
+  BadgeStatus? _badge;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadBadge();
+  }
+
+  Future<void> _loadBadge() async {
+    final st = await BadgeService.fetchStatus();
+    if (mounted && st != null) setState(() => _badge = st);
   }
 
   @override
@@ -326,7 +335,22 @@ class _MyProfilePageState extends State<MyProfilePage> {
       children: [
         Center(child: _avatar()),
         const SizedBox(height: 14),
-        Center(child: Text(name, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800))),
+        Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(child: Text(name, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800))),
+              if (_badge != null && (_badge!.hasGold || _badge!.hasBlue)) ...[
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.verified_rounded,
+                  color: _badge!.hasGold ? const Color(0xffffc233) : const Color(0xff2a8cff),
+                  size: 24,
+                ),
+              ],
+            ],
+          ),
+        ),
         if (p.username.isNotEmpty)
           Center(
             child: Padding(
@@ -335,6 +359,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
             ),
           ),
         const SizedBox(height: 18),
+        if (p.displayName.isNotEmpty && p.photoBase64.isNotEmpty) _badgeCard(),
         if (p.bio.isNotEmpty) _infoCard(Icons.info_outline_rounded, 'دربارهٔ من', p.bio, _gold),
         if (p.city.isNotEmpty) _infoCard(Icons.location_city_rounded, 'شهر', p.city, _sky),
         if (p.phone.isNotEmpty) _infoCard(Icons.phone_rounded, 'شماره تماس', p.phone, _teal),
@@ -409,6 +434,50 @@ class _MyProfilePageState extends State<MyProfilePage> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _gold.withValues(alpha: 0.22)),
       );
+
+  Widget _badgeCard() {
+    final has = _badge != null && (_badge!.hasGold || _badge!.hasBlue);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(colors: [Color(0xff1b4f9c), Color(0xff2a8cff), Color(0xffffc233)]),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () async {
+            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BadgePage()));
+            _loadBadge();
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                const Icon(Icons.verified_rounded, color: Colors.white, size: 30),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        has ? 'تیک شما فعال است' : 'دریافت تیک آبی / طلایی',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14.5),
+                      ),
+                      const SizedBox(height: 3),
+                      const Text('اعتبار سالانه · اختیاری', style: TextStyle(color: Color(0xffeaf3ff), fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_left_rounded, color: Colors.white),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _infoCard(IconData icon, String title, String value, Color color) {
     return Container(
