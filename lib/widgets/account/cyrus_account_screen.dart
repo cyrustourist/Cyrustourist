@@ -4,6 +4,7 @@ import '../../pages/announcements_page.dart';
 import '../../pages/profile/my_profile_page.dart';
 import '../../services/user_profile_service.dart';
 import '../../pages/residence_register_page.dart';
+import '../../pages/support_chat_page.dart';
 import '../../services/notification_service.dart';
 import '../../services/public_link_service.dart';
 import '../share_sheet.dart';
@@ -204,15 +205,24 @@ class CyrusAccountScreen extends StatelessWidget {
 
                 _buildSection(
                   context,
-                  title: texts.futureSection,
+                  title: _SupportChatTexts.of(languageCode).section,
                   items: [
                     _AccountItem(
-                      icon: Icons.chat_bubble_rounded,
-                      title: texts.onlineChat,
-                      subtitle: texts.futureSubtitle,
+                      icon: Icons.support_agent_rounded,
+                      title: _SupportChatTexts.of(languageCode).title,
+                      subtitle: _SupportChatTexts.of(languageCode).subtitle,
                       iconColor: const Color(0xff65d9ff),
-                      futureFeature: true,
+                      actionId: 'support_chat',
                     ),
+                  ],
+                ),
+
+                const SizedBox(height: 18),
+
+                _buildSection(
+                  context,
+                  title: texts.futureSection,
+                  items: [
                     _AccountItem(
                       icon: Icons.groups_rounded,
                       title: texts.createTravelGroup,
@@ -452,6 +462,15 @@ class CyrusAccountScreen extends StatelessWidget {
     // در مرحله نهایی اتصال کلید ۸ انجام خواهد شد.
     if (item.actionId == 'invite') {
       _openInvite(context);
+      return;
+    }
+
+    if (item.actionId == 'support_chat') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SupportChatPage(languageCode: languageCode),
+        ),
+      );
       return;
     }
 
@@ -1709,4 +1728,41 @@ class _LiveProfileHeaderState extends State<_LiveProfileHeader> {
 
   @override
   Widget build(BuildContext context) => widget.builder(widget.texts, _profile);
+}
+
+
+/// متن‌های کاشی «چت با پشتیبانی» (زبان‌های دیگر فعلاً انگلیسی نمایش داده می‌شوند).
+class _SupportChatTexts {
+  const _SupportChatTexts({
+    required this.section,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String section;
+  final String title;
+  final String subtitle;
+
+  static _SupportChatTexts of(String lang) {
+    switch (lang) {
+      case 'fa':
+        return const _SupportChatTexts(
+          section: 'ارتباط با ما',
+          title: 'چت با پشتیبانی',
+          subtitle: 'واتساپ، تلگرام و ایتا · با پیام آماده',
+        );
+      case 'ar':
+        return const _SupportChatTexts(
+          section: 'تواصل معنا',
+          title: 'الدردشة مع الدعم',
+          subtitle: 'واتساب وتيليجرام وإيتا · برسالة جاهزة',
+        );
+      default:
+        return const _SupportChatTexts(
+          section: 'Contact us',
+          title: 'Chat with support',
+          subtitle: 'WhatsApp, Telegram, Eitaa · with a ready message',
+        );
+    }
+  }
 }
