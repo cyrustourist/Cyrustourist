@@ -19,7 +19,7 @@ class ShowcaseFilmBanner extends StatefulWidget {
   });
 
   final PlaceCategory category;
-  final String language; // fa / en / ar
+  final String language; // fa en ar de es fr it ru tr zh
   final VoidCallback onTap;
   final bool large;
 
@@ -35,9 +35,6 @@ class _BannerTheme {
     required this.pillText,
     required this.glow,
     required this.icon,
-    required this.fa,
-    required this.en,
-    required this.ar,
   });
 
   final List<Color> colors;
@@ -46,12 +43,22 @@ class _BannerTheme {
   final Color pillText;
   final Color glow;
   final IconData icon;
-  final List<String> fa; // [title, subtitle]
-  final List<String> en;
-  final List<String> ar;
 }
 
 const Color _navy = Color(0xff071722);
+
+const List<String> _kBannerLangs = ['fa', 'en', 'ar', 'de', 'es', 'fr', 'it', 'ru', 'tr', 'zh'];
+
+const Map<String, List<String>> _kBanner = {
+  'stayT': ['فیلم اقامتگاه‌های ویژه را ببینید', 'Watch featured stay videos', 'شاهد فيديوهات الإقامات المميزة', 'Videos ausgewählter Unterkünfte ansehen', 'Vea vídeos de alojamientos destacados', 'Regardez les vidéos des hébergements en vedette', 'Guarda i video delle strutture in evidenza', 'Смотрите видео избранных мест размещения', 'Öne çıkan konaklama videolarını izleyin', '观看精选住宿视频'],
+  'stayS': ['قبل از رزرو، محل را با فیلم ببینید', 'See the place on video before you book', 'شاهد المكان بالفيديو قبل الحجز', 'Sehen Sie sich den Ort vor der Buchung im Video an', 'Vea el lugar en vídeo antes de reservar', 'Découvrez le lieu en vidéo avant de réserver', 'Guarda il posto in video prima di prenotare', 'Посмотрите место на видео перед бронированием', 'Rezervasyondan önce yeri videoda görün', '预订前先看视频了解住宿'],
+  'healthT': ['فیلم مراکز سلامت ویژه را ببینید', 'Watch featured health center videos', 'شاهد فيديوهات المراكز الصحية المميزة', 'Videos ausgewählter Gesundheitszentren ansehen', 'Vea vídeos de centros de salud destacados', 'Regardez les vidéos des centres de santé en vedette', 'Guarda i video dei centri sanitari in evidenza', 'Смотрите видео избранных медицинских центров', 'Öne çıkan sağlık merkezi videolarını izleyin', '观看精选健康中心视频'],
+  'healthS': ['با اطمینان بیشتر مرکز درمانی را انتخاب کنید', 'Choose your care with more confidence', 'اختر مركزك العلاجي بثقة أكبر', 'Wählen Sie Ihre Behandlung mit mehr Sicherheit', 'Elija su atención con más confianza', 'Choisissez vos soins en toute confiance', 'Scegli le tue cure con più fiducia', 'Выбирайте лечение с большей уверенностью', 'Tedavinizi daha güvenle seçin', '更放心地选择医疗机构'],
+  'attrT': ['فیلم جاذبه‌های ویژه را ببینید', 'Watch featured attraction videos', 'شاهد فيديوهات المعالم المميزة', 'Videos ausgewählter Sehenswürdigkeiten ansehen', 'Vea vídeos de atracciones destacadas', 'Regardez les vidéos des attractions en vedette', 'Guarda i video delle attrazioni in evidenza', 'Смотрите видео избранных достопримечательностей', 'Öne çıkan gezilecek yer videolarını izleyin', '观看精选景点视频'],
+  'attrS': ['پیش از سفر، جاذبه‌ها را با فیلم کشف کنید', 'Discover attractions on video before you go', 'اكتشف المعالم بالفيديو قبل السفر', 'Entdecken Sie Sehenswürdigkeiten vor der Reise im Video', 'Descubra las atracciones en vídeo antes de viajar', 'Découvrez les attractions en vidéo avant de partir', 'Scopri le attrazioni in video prima di partire', 'Откройте для себя достопримечательности на видео до поездки', 'Gitmeden önce gezilecek yerleri videoda keşfedin', '出发前先用视频探索景点'],
+  'cta': ['مشاهده فیلم‌ها', 'Watch videos', 'شاهد الفيديوهات', 'Videos ansehen', 'Ver vídeos', 'Voir les vidéos', 'Guarda i video', 'Смотреть видео', 'Videoları izle', '观看视频'],
+  'count': ['{n} فیلم', '{n} videos', '{n} فيديو', '{n} Videos', '{n} vídeos', '{n} vidéos', '{n} video', '{n} видео', '{n} video', '{n} 个视频'],
+};
 
 // اقامتگاه: طلایی گرم / سلامت: سبز-فیروزه‌ای / جاذبه: بنفش-سرخابی
 const _BannerTheme _stayTheme = _BannerTheme(
@@ -61,9 +68,6 @@ const _BannerTheme _stayTheme = _BannerTheme(
   pillText: Color(0xffffd36a),
   glow: Color(0xffffa84a),
   icon: Icons.hotel_rounded,
-  fa: ['فیلم اقامتگاه‌های ویژه را ببینید', 'قبل از رزرو، محل را با فیلم ببینید'],
-  en: ['Watch featured stay videos', 'See the place on video before you book'],
-  ar: ['شاهد فيديوهات الإقامات المميزة', 'شاهد المكان بالفيديو قبل الحجز'],
 );
 
 const _BannerTheme _healthTheme = _BannerTheme(
@@ -73,9 +77,6 @@ const _BannerTheme _healthTheme = _BannerTheme(
   pillText: Color(0xff7af0d0),
   glow: Color(0xff1fd1b0),
   icon: Icons.health_and_safety_rounded,
-  fa: ['فیلم مراکز سلامت ویژه را ببینید', 'با اطمینان بیشتر مرکز درمانی را انتخاب کنید'],
-  en: ['Watch featured health center videos', 'Choose your care with more confidence'],
-  ar: ['شاهد فيديوهات المراكز الصحية المميزة', 'اختر مركزك العلاجي بثقة أكبر'],
 );
 
 const _BannerTheme _attractionTheme = _BannerTheme(
@@ -85,9 +86,6 @@ const _BannerTheme _attractionTheme = _BannerTheme(
   pillText: Color(0xff6a3df0),
   glow: Color(0xffb35cff),
   icon: Icons.auto_awesome_rounded,
-  fa: ['فیلم جاذبه‌های ویژه را ببینید', 'پیش از سفر، جاذبه‌ها را با فیلم کشف کنید'],
-  en: ['Watch featured attraction videos', 'Discover attractions on video before you go'],
-  ar: ['شاهد فيديوهات المعالم المميزة', 'اكتشف المعالم بالفيديو قبل السفر'],
 );
 
 class _ShowcaseFilmBannerState extends State<ShowcaseFilmBanner>
@@ -146,38 +144,29 @@ class _ShowcaseFilmBannerState extends State<ShowcaseFilmBanner>
     }
   }
 
+  String _b(String key) {
+    final list = _kBanner[key];
+    if (list == null) return key;
+    var idx = _kBannerLangs.indexOf(widget.language);
+    if (idx < 0) idx = 1;
+    return list[idx];
+  }
+
   List<String> _texts(_BannerTheme t) {
-    switch (widget.language) {
-      case 'en':
-        return t.en;
-      case 'ar':
-        return t.ar;
+    switch (widget.category) {
+      case PlaceCategory.accommodation:
+        return [_b('stayT'), _b('stayS')];
+      case PlaceCategory.health:
+        return [_b('healthT'), _b('healthS')];
+      case PlaceCategory.attraction:
       default:
-        return t.fa;
+        return [_b('attrT'), _b('attrS')];
     }
   }
 
-  String get _cta {
-    switch (widget.language) {
-      case 'en':
-        return 'Watch videos';
-      case 'ar':
-        return 'شاهد الفيديوهات';
-      default:
-        return 'مشاهده فیلم‌ها';
-    }
-  }
+  String get _cta => _b('cta');
 
-  String get _countText {
-    switch (widget.language) {
-      case 'en':
-        return '$_count videos';
-      case 'ar':
-        return '$_count فيديو';
-      default:
-        return '$_count فیلم';
-    }
-  }
+  String get _countText => _b('count').replaceAll('{n}', '$_count');
 
   @override
   Widget build(BuildContext context) {
