@@ -107,7 +107,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     }
     _rooms = rooms;
     if (_city.isEmpty || !_cities.contains(_city)) {
-      _city = _cities.contains('مشهد') ? 'مشهد' : _cities.first;
+      _city = _cities.contains('خراسان رضوی')
+          ? 'خراسان رضوی'
+          : (_cities.contains('مشهد') ? 'مشهد' : _cities.first);
     }
     setState(() => _loadingRooms = false);
     await _enterRoom();
