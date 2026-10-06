@@ -16,6 +16,8 @@ class UserProfile {
     this.phone = '',
     this.interests = const [],
     this.photoBase64 = '',
+    this.visibility = 'all',
+    this.videoLink = '',
   });
 
   final String displayName;
@@ -25,6 +27,12 @@ class UserProfile {
   final String phone;
   final List<String> interests;
   final String photoBase64;
+
+  /// چه کسانی پروفایل را می‌بینند: all (همگانی) | friends (دوستان) | none (هیچ‌کس)
+  final String visibility;
+
+  /// لینک «فیلم من در سایروس توریست» (فقط لینک cyrustourist.ir)
+  final String videoLink;
 
   bool get isEmpty =>
       displayName.isEmpty &&
@@ -52,6 +60,8 @@ class UserProfile {
     String? phone,
     List<String>? interests,
     String? photoBase64,
+    String? visibility,
+    String? videoLink,
   }) {
     return UserProfile(
       displayName: displayName ?? this.displayName,
@@ -61,6 +71,8 @@ class UserProfile {
       phone: phone ?? this.phone,
       interests: interests ?? this.interests,
       photoBase64: photoBase64 ?? this.photoBase64,
+      visibility: visibility ?? this.visibility,
+      videoLink: videoLink ?? this.videoLink,
     );
   }
 
@@ -71,6 +83,8 @@ class UserProfile {
         'city': city,
         'phone': phone,
         'interests': interests,
+        'visibility': visibility,
+        'videoLink': videoLink,
       };
 
   static UserProfile fromJson(Map<String, dynamic> j, String photo) {
@@ -84,6 +98,8 @@ class UserProfile {
           ? (j['interests'] as List).map((e) => '$e').toList()
           : const [],
       photoBase64: photo,
+      visibility: ['all', 'friends', 'none'].contains('${j['visibility']}') ? '${j['visibility']}' : 'all',
+      videoLink: '${j['videoLink'] ?? ''}',
     );
   }
 }
