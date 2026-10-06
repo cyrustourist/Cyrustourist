@@ -113,6 +113,29 @@ class CyrusAccountScreen extends StatelessWidget {
 
                 _buildSection(
                   context,
+                  title: _SupportChatTexts.of(languageCode).section,
+                  items: [
+                    _AccountItem(
+                      icon: Icons.support_agent_rounded,
+                      title: _SupportChatTexts.of(languageCode).title,
+                      subtitle: _SupportChatTexts.of(languageCode).subtitle,
+                      iconColor: const Color(0xff65d9ff),
+                      actionId: 'support_chat',
+                    ),
+                    _AccountItem(
+                      icon: Icons.forum_rounded,
+                      title: _SupportChatTexts.of(languageCode).roomTitle,
+                      subtitle: _SupportChatTexts.of(languageCode).roomSubtitle,
+                      iconColor: const Color(0xffff5fb0),
+                      actionId: 'chat_room',
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 18),
+
+                _buildSection(
+                  context,
                   title: texts.registrationSection,
                   items: [
                     _AccountItem(
@@ -146,43 +169,6 @@ class CyrusAccountScreen extends StatelessWidget {
 
                 _buildSection(
                   context,
-                  title: texts.activitySection,
-                  items: [
-                    _AccountItem(
-                      icon: Icons.star_rounded,
-                      title: texts.myReviews,
-                      subtitle: texts.myReviewsSubtitle,
-                      iconColor: const Color(0xffffd36a),
-                      futureFeature: true,
-                    ),
-                    _AccountItem(
-                      icon: Icons.analytics_rounded,
-                      title: texts.travelStats,
-                      subtitle: texts.travelStatsSubtitle,
-                      iconColor: const Color(0xff66d9ff),
-                      futureFeature: true,
-                    ),
-                    _AccountItem(
-                      icon: Icons.emoji_events_rounded,
-                      title: texts.achievements,
-                      subtitle: texts.achievementsSubtitle,
-                      iconColor: const Color(0xffffc857),
-                      futureFeature: true,
-                    ),
-                    _AccountItem(
-                      icon: Icons.card_giftcard_rounded,
-                      title: texts.rewards,
-                      subtitle: texts.rewardsSubtitle,
-                      iconColor: const Color(0xffff8fc7),
-                      futureFeature: true,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                _buildSection(
-                  context,
                   title: texts.securitySection,
                   items: [
                     _AccountItem(
@@ -198,29 +184,6 @@ class CyrusAccountScreen extends StatelessWidget {
                       subtitle: texts.devicesSubtitle,
                       iconColor: const Color(0xffa9e6c4),
                       futureFeature: true,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                _buildSection(
-                  context,
-                  title: _SupportChatTexts.of(languageCode).section,
-                  items: [
-                    _AccountItem(
-                      icon: Icons.support_agent_rounded,
-                      title: _SupportChatTexts.of(languageCode).title,
-                      subtitle: _SupportChatTexts.of(languageCode).subtitle,
-                      iconColor: const Color(0xff65d9ff),
-                      actionId: 'support_chat',
-                    ),
-                    _AccountItem(
-                      icon: Icons.forum_rounded,
-                      title: _SupportChatTexts.of(languageCode).roomTitle,
-                      subtitle: _SupportChatTexts.of(languageCode).roomSubtitle,
-                      iconColor: const Color(0xffff5fb0),
-                      actionId: 'chat_room',
                     ),
                   ],
                 ),
