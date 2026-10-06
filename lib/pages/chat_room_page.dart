@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import '../services/badge_service.dart';
 import '../services/chat_service.dart';
 import '../services/user_profile_service.dart';
+import '../core/language/new_texts.dart';
+import '../widgets/linkified_text.dart';
 import 'profile/my_profile_page.dart';
+import 'profile/public_profile_page.dart';
 
 const Color _bg = Color(0xff06121d);
 const Color _panel = Color(0xff0b2636);
@@ -219,6 +222,11 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     );
   }
 
+  void _openProfile(String uid, String name) {
+    if (uid.isEmpty) return;
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicProfilePage(uid: uid, name: name)));
+  }
+
   void _toast(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -392,7 +400,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   Widget _postsSection() {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-      constraints: const BoxConstraints(maxHeight: 190),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.45),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -429,9 +437,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(p.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
                               if (p.details.isNotEmpty)
-                                Text(p.details, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xffd6cdf3), fontSize: 12, height: 1.7)),
+                                LinkifiedText(text: p.details, linkColor: const Color(0xff66d9ff), style: const TextStyle(color: Color(0xffd6cdf3), fontSize: 12, height: 1.7)),
                               Row(children: [
-                                Text('${p.name}${p.travelDate.isEmpty ? '' : ' · ${p.travelDate}'} · ${p.seats} نفر', style: const TextStyle(color: Color(0xffb9a5ff), fontSize: 11.5)),
+                                Flexible(
+                                  child: InkWell(
+                                    onTap: () => _openProfile(p.uid, p.name),
+                                    child: Text('${p.name}${p.travelDate.isEmpty ? '' : ' · ${p.travelDate}'} · ${p.seats} نفر', style: const TextStyle(color: Color(0xffb9a5ff), fontSize: 11.5, decoration: TextDecoration.underline)),
+                                  ),
+                                ),
                                 _tick(p.badge),
                               ]),
                             ]),
@@ -481,10 +494,13 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
             children: [
               if (!mine)
                 Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(m.name, style: const TextStyle(color: _gold, fontSize: 11.5, fontWeight: FontWeight.w800)),
+                  InkWell(
+                    onTap: () => _openProfile(m.uid, m.name),
+                    child: Text(m.name, style: const TextStyle(color: _gold, fontSize: 11.5, fontWeight: FontWeight.w800, decoration: TextDecoration.underline)),
+                  ),
                   _tick(m.badge),
                 ]),
-              Text(m.text, style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.8)),
+              LinkifiedText(text: m.text, style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.8)),
               Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(_time(m.at), style: const TextStyle(color: Color(0xff8fa5b2), fontSize: 10.5)),
                 if (!mine) ...[
@@ -586,9 +602,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                           ]),
                         ),
                         _statusBar(),
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(bottom: 2),
-                          child: Text('پیام‌ها موقتی‌اند و بعد از مدتی پاک می‌شوند. لینک و شماره تلفن مجاز نیست.',
+                          child: Text(NT.t('chat_rules'),
                               textAlign: TextAlign.center, style: TextStyle(color: Color(0xff8fa5b2), fontSize: 11)),
                         ),
                         if (_companion) _postsSection(),
