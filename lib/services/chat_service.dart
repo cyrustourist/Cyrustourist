@@ -84,6 +84,7 @@ class ChatSendResult {
 class CompanionPost {
   const CompanionPost({
     required this.id,
+    this.uid = '',
     required this.title,
     required this.details,
     required this.travelDate,
@@ -94,6 +95,7 @@ class CompanionPost {
   });
 
   final int id;
+  final String uid;
   final String title;
   final String details;
   final String travelDate;
@@ -104,6 +106,7 @@ class CompanionPost {
 
   factory CompanionPost.fromJson(Map<String, dynamic> j) => CompanionPost(
         id: int.tryParse('${j['id']}') ?? 0,
+        uid: '${j['uid'] ?? ''}',
         title: '${j['title'] ?? ''}',
         details: '${j['details'] ?? ''}'.replaceAll('null', ''),
         travelDate: '${j['travel_date'] ?? ''}'.replaceAll('null', ''),
