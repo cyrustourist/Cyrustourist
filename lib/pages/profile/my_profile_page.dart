@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import '../../services/badge_service.dart';
 import '../../services/user_profile_service.dart';
+import '../../core/language/new_texts.dart';
+import '../../widgets/linkified_text.dart';
 import 'badge_page.dart';
+import 'google_link_card.dart';
 
 const Color _bg = Color(0xff071722);
 const Color _card = Color(0xff0e2433);
@@ -43,6 +47,8 @@ class _MyProfilePageState extends State<MyProfilePage> {
   final _bioCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _videoCtrl = TextEditingController();
+  String _visibility = 'all';
   final _picker = ImagePicker();
 
   UserProfile _saved = const UserProfile();
@@ -72,6 +78,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
     _bioCtrl.dispose();
     _cityCtrl.dispose();
     _phoneCtrl.dispose();
+    _videoCtrl.dispose();
     super.dispose();
   }
 
@@ -92,6 +99,8 @@ class _MyProfilePageState extends State<MyProfilePage> {
     _bioCtrl.text = p.bio;
     _cityCtrl.text = p.city;
     _phoneCtrl.text = p.phone;
+    _videoCtrl.text = p.videoLink;
+    _visibility = p.visibility;
     _photo = p.photoBase64;
     _interests = p.interests.toSet();
   }
@@ -178,9 +187,12 @@ class _MyProfilePageState extends State<MyProfilePage> {
       phone: _phoneCtrl.text.trim(),
       interests: _interests.toList(),
       photoBase64: _photo,
+      visibility: _visibility,
+      videoLink: _videoCtrl.text.trim(),
     );
     try {
       await UserProfileService.save(p);
+      BadgeService.registerUser(); // همگام‌سازی نام، بیو و عکس با چت‌روم
       if (!mounted) return;
       setState(() {
         _saved = p;
@@ -359,10 +371,13 @@ class _MyProfilePageState extends State<MyProfilePage> {
             ),
           ),
         const SizedBox(height: 18),
+        const GoogleLinkCard(),
         if (p.displayName.isNotEmpty && p.photoBase64.isNotEmpty) _badgeCard(),
         if (p.bio.isNotEmpty) _infoCard(Icons.info_outline_rounded, 'دربارهٔ من', p.bio, _gold),
         if (p.city.isNotEmpty) _infoCard(Icons.location_city_rounded, 'شهر', p.city, _sky),
         if (p.phone.isNotEmpty) _infoCard(Icons.phone_rounded, 'شماره تماس', p.phone, _teal),
+        if (p.videoLink.isNotEmpty) _videoCard(p.videoLink),
+        _infoCard(Icons.visibility_rounded, NT.t('vis_card'), _visLabel(p.visibility), _sky),
         if (p.interests.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(bottom: 10),
@@ -421,7 +436,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
         ),
         const SizedBox(height: 18),
         Text(
-          'اطلاعات فقط روی همین گوشی ذخیره می‌شود و برای کسی ارسال نمی‌شود.',
+          NT.t('sync_note'),
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 11.5),
         ),
@@ -475,6 +490,47 @@ class _MyProfilePageState extends State<MyProfilePage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  static const List<String> _visKeys = ['all', 'friends', 'none'];
+  String _visLabel(String v) => NT.t('vis_${_visKeys.contains(v) ? v : 'all'}');
+
+  Widget _videoCard(String link) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: _cardDeco(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(color: _teal.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(11)),
+            child: const Icon(Icons.play_circle_fill_rounded, color: _teal, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(NT.t('video_title'), style: const TextStyle(color: _teal, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 4),
+                LinkifiedText(text: link, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: NT.t('copy_link'),
+            icon: const Icon(Icons.copy_rounded, color: _teal, size: 20),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: link));
+              _snack(NT.t('copied'));
+            },
+          ),
+        ],
       ),
     );
   }
@@ -568,6 +624,60 @@ class _MyProfilePageState extends State<MyProfilePage> {
             textDirection: TextDirection.ltr,
             style: const TextStyle(color: Colors.white),
             decoration: _dec('شماره تماس (اختیاری)', hint: '09xxxxxxxxx', icon: Icons.phone_rounded),
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _videoCtrl,
+            keyboardType: TextInputType.url,
+            textDirection: TextDirection.ltr,
+            style: const TextStyle(color: Colors.white),
+            decoration: _dec(
+              NT.t('video_label'),
+              hint: 'https://cyrustourist.ir/accommodation/6',
+              icon: Icons.play_circle_outline_rounded,
+              helper: NT.t('video_helper'),
+            ).copyWith(
+              suffixIcon: IconButton(
+                tooltip: NT.t('paste'),
+                icon: const Icon(Icons.content_paste_rounded, color: _teal, size: 20),
+                onPressed: () async {
+                  final d = await Clipboard.getData(Clipboard.kTextPlain);
+                  final t = (d?.text ?? '').trim();
+                  if (t.isNotEmpty) setState(() => _videoCtrl.text = t);
+                },
+              ),
+            ),
+            validator: (v) {
+              final t = (v ?? '').trim();
+              if (t.isEmpty) return null;
+              if (!RegExp(r'^https://(www\.)?cyrustourist\.ir/\S*$', caseSensitive: false).hasMatch(t)) {
+                return NT.t('video_invalid');
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 18),
+          Text(NT.t('vis_title'), style: const TextStyle(color: _gold, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(
+            NT.t('vis_hint'),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11.5),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: _visKeys.map((k) {
+              final sel = _visibility == k;
+              return ChoiceChip(
+                label: Text(NT.t('vis_$k')),
+                selected: sel,
+                onSelected: (_) => setState(() => _visibility = k),
+                selectedColor: _gold,
+                backgroundColor: _card,
+                labelStyle: TextStyle(color: sel ? const Color(0xff06121d) : Colors.white70, fontWeight: FontWeight.w700, fontSize: 12.5),
+                side: BorderSide(color: _gold.withValues(alpha: 0.3)),
+              );
+            }).toList(),
           ),
           const SizedBox(height: 18),
           const Text('علاقه‌مندی‌های سفر', style: TextStyle(color: _gold, fontWeight: FontWeight.bold)),
