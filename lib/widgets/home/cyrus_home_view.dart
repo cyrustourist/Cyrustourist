@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/language/home_texts.dart';
 import '../../core/language/menu_translations.dart';
 import '../cyrus_ad_banner.dart';
+import '../stories/stories_bar.dart';
 import 'cyrus_home_style.dart';
 
 /// ==========================================================
@@ -193,6 +194,7 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
                             ),
                           ),
                           _brand(s),
+                          const StoriesBar(),
                           _searchRow(s, lang, rtl),
                           _grid(s, lang),
                           _adSection(s, lang),
