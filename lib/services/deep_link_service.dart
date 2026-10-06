@@ -60,6 +60,9 @@ class DeepLinkService {
     }
   }
 
+  /// باز کردن یک لینک cyrustourist.ir از داخل برنامه (چت‌روم، پروفایل و ...).
+  static Future<void> openLink(Uri uri) => _open(uri);
+
   static void dispose() {
     _sub?.cancel();
     _sub = null;
