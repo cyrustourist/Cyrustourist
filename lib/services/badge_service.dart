@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_config.dart';
+import '../core/language/menu_translations.dart';
 import 'user_profile_service.dart';
 
 /// طرح تیک (آبی / طلایی) — قیمت و مدت از پنل مدیریت تعیین می‌شود.
@@ -82,6 +83,8 @@ class BadgeService {
   static const String _uidKey = 'cyrus_user_uid';
   static const String _base = ApiConfig.panelBaseUrl;
 
+  static String get baseUrl => _base;
+
   static Future<String> userUid() async {
     final prefs = await SharedPreferences.getInstance();
     var uid = prefs.getString(_uidKey);
@@ -93,6 +96,27 @@ class BadgeService {
     }
     return uid;
   }
+
+  /// وقتی ورود با گوگل حساب قبلی را پیدا کند، شناسهٔ همان حساب جایگزین می‌شود.
+  static Future<void> setUserUid(String uid) async {
+    if (!RegExp(r'^[A-Za-z0-9_-]{8,64}$').hasMatch(uid)) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_uidKey, uid);
+  }
+
+  /// فراخوانی عمومی برای سرویس‌های دیگر (گوگل، پروفایل عمومی).
+  static Future<Map<String, dynamic>?> call(
+    String method,
+    String path, {
+    Map<String, String>? query,
+    Map<String, dynamic>? body,
+  }) =>
+      _call(
+        method,
+        path,
+        query: {...?query, 'lang': MenuLanguage.current},
+        body: body == null ? null : {...body, 'lang': MenuLanguage.current},
+      );
 
   static Future<Map<String, dynamic>?> _call(
     String method,
@@ -130,6 +154,10 @@ class BadgeService {
         'display_name': p.displayName,
         'username': p.username,
         'city': p.city,
+        'bio': p.bio,
+        'profile_visibility': p.visibility,
+        'video_link': p.videoLink,
+        'photo_data': p.photoBase64,
       });
     } catch (_) {}
   }
