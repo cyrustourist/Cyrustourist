@@ -121,6 +121,7 @@ class _GoogleLinkCardState extends State<GoogleLinkCard> {
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white54,
+                  disabledForegroundColor: Colors.white60,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
