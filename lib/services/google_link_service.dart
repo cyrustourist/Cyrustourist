@@ -6,24 +6,36 @@ import 'account_service.dart';
 import 'badge_service.dart';
 
 class GoogleLinkResult {
-  const GoogleLinkResult({required this.ok, this.message = '', this.emailMasked = '', this.cancelled = false});
+  const GoogleLinkResult({required this.ok, this.message = '', this.emailMasked = '', this.cancelled = false, this.badge = 'none'});
   final bool ok;
   final String message;
   final String emailMasked;
   final bool cancelled;
+
+  /// تیک مؤثر پس از تأیید: none | blue | gold
+  final String badge;
 }
 
-/// اتصال جی‌میل کاربر به حسابش با «ورود با گوگل».
+/// اتصال جی‌میل کاربر به شناسه‌اش با «ورود با گوگل».
 /// فقط جی‌میل (تأییدشده توسط گوگل) سمت سرور ذخیره می‌شود؛ رمز یا توکن ذخیره نمی‌شود.
-/// ورود اختیاری است؛ بدون آن، همان روش شناسهٔ دستگاه کار می‌کند.
 class GoogleLinkService {
   GoogleLinkService._();
 
-  /// «Web client ID» ساخته‌شده در Google Cloud Console (نه Android client).
-  /// همین مقدار باید در Worker پنل هم با نام GOOGLE_CLIENT_IDS تنظیم شود.
+  /// اختیاری: اگر «Web client ID» را اینجا بگذارید همان استفاده می‌شود.
+  /// در غیر این صورت برنامه آن را از Worker می‌گیرد (GOOGLE_WEB_CLIENT_ID یا اولین مقدار GOOGLE_CLIENT_IDS).
   static const String webClientId = 'PUT_WEB_CLIENT_ID.apps.googleusercontent.com';
 
-  static final GoogleSignIn _gs = GoogleSignIn(scopes: const ['email'], serverClientId: webClientId);
+  static String _cachedId = '';
+  static GoogleSignIn? _gs;
+
+  static Future<String> _clientId() async {
+    if (!webClientId.startsWith('PUT_')) return webClientId;
+    if (_cachedId.isNotEmpty) return _cachedId;
+    final j = await BadgeService.call('GET', '/api/auth/config');
+    final id = (j == null || j['success'] != true) ? '' : '${j['google_client_id'] ?? ''}'.trim();
+    if (id.isNotEmpty) _cachedId = id;
+    return id;
+  }
 
   /// null = وصل نیست؛ در غیر این صورت جی‌میل پوشانده‌شده (مثل ab***@gmail.com)
   static Future<String?> status() async {
@@ -34,13 +46,16 @@ class GoogleLinkService {
   }
 
   static Future<GoogleLinkResult> link() async {
-    if (webClientId.startsWith('PUT_')) {
+    final id = await _clientId();
+    if (id.isEmpty) {
       return GoogleLinkResult(ok: false, message: NT.t('g_not_set'));
     }
     try {
+      _gs ??= GoogleSignIn(scopes: const ['email'], serverClientId: id);
+      final gs = _gs!;
       await BadgeService.registerUser();
-      await _gs.signOut();
-      final acc = await _gs.signIn();
+      await gs.signOut();
+      final acc = await gs.signIn();
       if (acc == null) return const GoogleLinkResult(ok: false, cancelled: true);
       final auth = await acc.authentication;
       final token = auth.idToken;
@@ -49,7 +64,7 @@ class GoogleLinkService {
       }
       final uid = await BadgeService.userUid();
       final j = await BadgeService.call('POST', '/api/auth/google', body: {'user_uid': uid, 'id_token': token});
-      await _gs.signOut();
+      await gs.signOut();
       if (j == null) return GoogleLinkResult(ok: false, message: NT.t('g_net'));
       if (j['success'] != true) {
         return GoogleLinkResult(ok: false, message: '${j['message'] ?? NT.t('g_fail')}');
@@ -60,8 +75,16 @@ class GoogleLinkService {
         await AccountService.pullProfile();
       }
       await BadgeService.registerUser();
-      return GoogleLinkResult(ok: true, emailMasked: '${j['email_masked'] ?? ''}');
-    } on PlatformException {
+      final accJ = j['account'];
+      final badge = accJ is Map ? '${accJ['badge_type'] ?? 'none'}' : 'none';
+      return GoogleLinkResult(ok: true, emailMasked: '${j['email_masked'] ?? ''}', badge: badge);
+    } on PlatformException catch (e) {
+      final m = '${e.code} ${e.message ?? ''}'.toLowerCase();
+      if (m.contains('network')) return GoogleLinkResult(ok: false, message: NT.t('g_net'));
+      // ApiException 10 / 12500 = SHA-1 یا شناسهٔ کلاینت در Google Cloud درست ثبت نشده
+      if (m.contains(': 10') || m.contains('12500') || m.contains('developer')) {
+        return GoogleLinkResult(ok: false, message: NT.t('g_dev'));
+      }
       return GoogleLinkResult(ok: false, message: NT.t('g_no_services'));
     } catch (_) {
       return GoogleLinkResult(ok: false, message: NT.t('g_fail'));
