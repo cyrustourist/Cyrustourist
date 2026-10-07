@@ -293,11 +293,21 @@ jobs:
             -storepass "$STORE_PASSWORD" \
             -alias "$KEY_ALIAS" 2>/dev/null \
             | grep -m1 'SHA256:' | sed 's/.*SHA256:[[:space:]]*//' || true)"
+          # اثر انگشت SHA-1 — برای «OAuth client از نوع Android» در Google Cloud (ورود با گوگل / تأیید جی‌میل)
+          FP1="$(keytool -list -v \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" 2>/dev/null \
+            | grep -m1 'SHA1:' | sed 's/.*SHA1:[[:space:]]*//' || true)"
           {
             echo ""
             echo "### 🔑 SHA-256 certificate fingerprint (for assetlinks.json)"
             echo ""
             echo "\`${FP:-not found}\`"
+            echo ""
+            echo "### 🔑 SHA-1 certificate fingerprint (for Google Sign-In / Google Cloud Android OAuth client)"
+            echo ""
+            echo "\`${FP1:-not found}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Flutter pub get
