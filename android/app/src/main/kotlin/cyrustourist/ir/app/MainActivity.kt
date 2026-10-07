@@ -1,6 +1,11 @@
 package cyrustourist.ir.app
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import android.os.Build
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -11,11 +16,14 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 /**
  * کانال‌های بومی جعبه ابزار سایروس توریست:
  *  - cyrus/torch   : چراغ قوه (روشن/خاموش) — بدون نیاز به مجوز دوربین
  *  - cyrus/compass : قطب‌نما (زاویه‌ی جهت گوشی نسبت به شمال مغناطیسی)
+ *  - cyrus/image   : فشرده‌ساز عکس استوری (JPEG، کاهش اندازه و کیفیت تا رسیدن به حجم هدف)
  */
 class MainActivity : FlutterActivity() {
 
@@ -25,6 +33,30 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
 
         val messenger = flutterEngine.dartExecutor.binaryMessenger
+
+        MethodChannel(messenger, "cyrus/image").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "compress" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val maxSide = call.argument<Int>("maxSide") ?: 1080
+                    val target = call.argument<Int>("targetBytes") ?: 180000
+                    if (bytes == null || bytes.isEmpty()) {
+                        result.error("NO_DATA", "No image bytes", null)
+                    } else {
+                        Thread {
+                            try {
+                                val out = compressJpeg(bytes, maxSide, target)
+                                runOnUiThread { result.success(out) }
+                            } catch (e: Throwable) {
+                                runOnUiThread { result.error("COMPRESS_ERROR", e.message, null) }
+                            }
+                        }.start()
+                    }
+                }
+
+                else -> result.notImplemented()
+            }
+        }
 
         MethodChannel(messenger, "cyrus/torch").setMethodCallHandler { call, result ->
             when (call.method) {
@@ -116,6 +148,79 @@ class MainActivity : FlutterActivity() {
         val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         sensorManager.unregisterListener(listener)
         sensorListener = null
+    }
+
+    /**
+     * عکس را می‌خواند، جهت EXIF را اعمال می‌کند، ضلع بلند را به maxSide می‌رساند و
+     * کیفیت JPEG را آن‌قدر پایین می‌آورد تا حجم از targetBytes کمتر شود
+     * (اگر لازم بود ابعاد هم کوچک‌تر می‌شود، تا حداقل ۴۸۰ پیکسل).
+     */
+    private fun compressJpeg(src: ByteArray, maxSide: Int, targetBytes: Int): ByteArray {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(src, 0, src.size, bounds)
+        val longest = maxOf(bounds.outWidth, bounds.outHeight)
+        var sample = 1
+        while (longest / (sample * 2) >= maxSide) sample *= 2
+
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+        val decoded = BitmapFactory.decodeByteArray(src, 0, src.size, opts)
+            ?: throw IllegalStateException("decode failed")
+
+        var degrees = 0f
+        if (Build.VERSION.SDK_INT >= 24) {
+            try {
+                val exif = ExifInterface(ByteArrayInputStream(src))
+                degrees = when (exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL
+                )) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
+            } catch (e: Exception) {
+                degrees = 0f
+            }
+        }
+
+        var base = decoded
+        if (degrees != 0f) {
+            val m = Matrix()
+            m.postRotate(degrees)
+            base = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, m, true)
+            if (base !== decoded) decoded.recycle()
+        }
+
+        var side = maxSide
+        var quality = 82
+        var best: ByteArray? = null
+        while (true) {
+            val cur = scaleToSide(base, side)
+            val bos = ByteArrayOutputStream()
+            cur.compress(Bitmap.CompressFormat.JPEG, quality, bos)
+            if (cur !== base) cur.recycle()
+            val data = bos.toByteArray()
+            best = data
+            if (data.size <= targetBytes) break
+            quality -= 8
+            if (quality < 45) {
+                if (side <= 480) break
+                side = (side * 0.85f).toInt().coerceAtLeast(480)
+                quality = 75
+            }
+        }
+        base.recycle()
+        return best ?: src
+    }
+
+    private fun scaleToSide(bmp: Bitmap, maxSide: Int): Bitmap {
+        val longest = maxOf(bmp.width, bmp.height)
+        if (longest <= maxSide) return bmp
+        val ratio = maxSide.toFloat() / longest.toFloat()
+        val w = (bmp.width * ratio).toInt().coerceAtLeast(1)
+        val h = (bmp.height * ratio).toInt().coerceAtLeast(1)
+        return Bitmap.createScaledBitmap(bmp, w, h, true)
     }
 
     private fun findTorchCameraId(): String? {
