@@ -70,8 +70,16 @@ class _StoriesBarState extends State<StoriesBar> {
 
   Future<void> _compose() async {
     final me = _me;
-    if (me == null || !me.canPost) {
+    if (me == null || me.badge == null) {
       _needBadge();
+      return;
+    }
+    if (!me.storyEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(NT.t('st_disabled'))));
+      return;
+    }
+    if (me.remaining <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(NT.t('st_quota_full').replaceAll('{n}', '${me.dailyLimit}'))));
       return;
     }
     final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const StoryComposerPage()));
