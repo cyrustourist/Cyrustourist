@@ -28,6 +28,15 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
   int _bgIdx = 0;
   Uint8List? _bytes;
   bool _busy = false;
+  StoryMe? _me;
+
+  @override
+  void initState() {
+    super.initState();
+    StoryService.me().then((m) {
+      if (mounted) setState(() => _me = m);
+    });
+  }
 
   @override
   void dispose() {
@@ -214,6 +223,15 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
             if (_isText) _textBody() else _photoBody(),
             const SizedBox(height: 10),
             Text(NT.t('st_expires'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            if (_me != null && _me!.dailyLimit > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  NT.t('st_quota').replaceAll('{u}', '${_me!.storiesToday}').replaceAll('{n}', '${_me!.dailyLimit}'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _gold, fontSize: 12.5, fontWeight: FontWeight.w700),
+                ),
+              ),
             const SizedBox(height: 14),
             SizedBox(
               height: 50,
