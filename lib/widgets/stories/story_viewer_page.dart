@@ -49,8 +49,118 @@ class _StoryViewerPageState extends State<StoryViewerPage> with SingleTickerProv
 
   void _start() {
     if (!mounted) return;
-    StoryService.markSeen(_group.stories[_s].id);
+    final st = _group.stories[_s];
+    StoryService.markSeen(st.id);
+    if (!_group.mine) StoryService.view(st.id); // هر کاربر فقط یک بازدید
     _anim.forward(from: 0);
+  }
+
+  Future<void> _toggleLike(Story st) async {
+    final want = !st.liked;
+    setState(() {
+      st.liked = want;
+      st.likes += want ? 1 : -1;
+      if (st.likes < 0) st.likes = 0;
+    });
+    final n = await StoryService.like(st.id, want);
+    if (!mounted) return;
+    if (n == null) {
+      setState(() {
+        st.liked = !want;
+        st.likes += want ? -1 : 1;
+        if (st.likes < 0) st.likes = 0;
+      });
+    } else {
+      setState(() => st.likes = n);
+    }
+  }
+
+  Future<void> _report(Story st) async {
+    _anim.stop();
+    final reasons = <String, String>{
+      'inappropriate': NT.t('r_inappropriate'),
+      'spam': NT.t('r_spam'),
+      'ads': NT.t('r_ads'),
+      'rules': NT.t('r_rules'),
+    };
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xff0e2433),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (c) => Directionality(
+        textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: Text(NT.t('st_report'), style: const TextStyle(color: Color(0xffffd36a), fontWeight: FontWeight.w900, fontSize: 16)),
+            ),
+            for (final e in reasons.entries)
+              ListTile(
+                leading: const Icon(Icons.flag_outlined, color: Colors.white70),
+                title: Text(e.value, style: const TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(c, e.key),
+              ),
+            const SizedBox(height: 8),
+          ]),
+        ),
+      ),
+    );
+    if (picked != null) {
+      final msg = await StoryService.report(st.id, picked);
+      if (mounted && msg.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
+    if (mounted) _anim.forward();
+  }
+
+  Future<void> _showAudience(Story st) async {
+    _anim.stop();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xff0e2433),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (c) => _AudienceSheet(storyId: st.id),
+    );
+    if (mounted) _anim.forward();
+  }
+
+  Widget _actions(StoryGroup g, Story st) {
+    final style = const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14, shadows: [Shadow(blurRadius: 6, color: Colors.black54)]);
+    if (g.mine) {
+      return InkWell(
+        onTap: () => _showAudience(st),
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.visibility_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 6),
+            Text('${st.views ?? 0}', style: style),
+            const SizedBox(width: 18),
+            const Icon(Icons.favorite_rounded, color: Color(0xffff5c7a), size: 20),
+            const SizedBox(width: 6),
+            Text('${st.likes}', style: style),
+            const SizedBox(width: 8),
+            const Icon(Icons.keyboard_arrow_up_rounded, color: Colors.white70),
+          ]),
+        ),
+      );
+    }
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      IconButton(
+        tooltip: NT.t('st_like'),
+        onPressed: () => _toggleLike(st),
+        icon: Icon(st.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: st.liked ? const Color(0xffff5c7a) : Colors.white, size: 30),
+      ),
+      if (st.likes > 0) Text('${st.likes}', style: style),
+      const SizedBox(width: 14),
+      IconButton(
+        tooltip: NT.t('st_report'),
+        onPressed: () => _report(st),
+        icon: const Icon(Icons.flag_outlined, color: Colors.white70, size: 24),
+      ),
+    ]);
   }
 
   void _close() => Navigator.of(context).pop(_changed);
@@ -219,11 +329,15 @@ class _StoryViewerPageState extends State<StoryViewerPage> with SingleTickerProv
             alignment: Alignment.bottomCenter,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 30, 20, 34),
+              padding: const EdgeInsets.fromLTRB(20, 30, 20, 96),
               decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xcc000000)])),
               child: LinkifiedText(text: st.text, linkColor: const Color(0xff66d9ff), style: const TextStyle(color: Colors.white, fontSize: 15.5, height: 1.7)),
             ),
           ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: SafeArea(child: Padding(padding: const EdgeInsets.only(bottom: 10), child: _actions(g, st))),
+        ),
       ],
     );
   }
@@ -250,6 +364,116 @@ class _StoryViewerPageState extends State<StoryViewerPage> with SingleTickerProv
               _start();
             },
             itemBuilder: (c, i) => _page(i),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// فهرست بازدیدکنندگان و لایک‌کنندگان (فقط برای صاحب استوری)
+class _AudienceSheet extends StatefulWidget {
+  const _AudienceSheet({required this.storyId});
+  final int storyId;
+
+  @override
+  State<_AudienceSheet> createState() => _AudienceSheetState();
+}
+
+class _AudienceSheetState extends State<_AudienceSheet> {
+  bool _likers = false;
+  bool _loading = true;
+  StoryAudience? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final d = await StoryService.audience(widget.storyId, likers: _likers);
+    if (!mounted) return;
+    setState(() {
+      _data = d;
+      _loading = false;
+    });
+  }
+
+  String _time(DateTime? t) {
+    if (t == null) return '';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(t.hour)}:${two(t.minute)}';
+  }
+
+  Widget _chip(String label, bool sel, VoidCallback onTap) => Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: sel ? const Color(0xffffd36a) : const Color(0xff102733),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Text(label, style: TextStyle(color: sel ? const Color(0xff06121d) : Colors.white70, fontWeight: FontWeight.w800)),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final d = _data;
+    return Directionality(
+      textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+      child: SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.62,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(children: [
+              Row(children: [
+                _chip('👁 ${NT.t('viewers_title')}${d == null ? '' : ' (${d.views})'}', !_likers, () {
+                  if (_likers) {
+                    _likers = false;
+                    _load();
+                  }
+                }),
+                const SizedBox(width: 10),
+                _chip('❤️ ${NT.t('likers_title')}${d == null ? '' : ' (${d.likes})'}', _likers, () {
+                  if (!_likers) {
+                    _likers = true;
+                    _load();
+                  }
+                }),
+              ]),
+              const SizedBox(height: 12),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xffffd36a)))
+                    : (d == null || d.people.isEmpty)
+                        ? Center(child: Text(NT.t('no_viewers'), style: const TextStyle(color: Colors.white54)))
+                        : ListView.separated(
+                            itemCount: d.people.length,
+                            separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
+                            itemBuilder: (c, i) {
+                              final p = d.people[i];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: const Color(0xff102733),
+                                  backgroundImage: p.hasPhoto ? NetworkImage(StoryService.photoUrl(p.uid)) : null,
+                                  child: p.hasPhoto ? null : const Icon(Icons.person_rounded, color: Color(0xffffd36a)),
+                                ),
+                                title: Text(p.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                                subtitle: Text(_time(p.at), style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                                trailing: p.liked ? const Icon(Icons.favorite_rounded, color: Color(0xffff5c7a), size: 20) : null,
+                              );
+                            },
+                          ),
+              ),
+            ]),
           ),
         ),
       ),
