@@ -134,6 +134,8 @@ class ChatService {
       final uri = Uri.parse('$_base$path').replace(queryParameters: query);
       final req = await client.openUrl(method, uri).timeout(const Duration(seconds: 10));
       req.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      // توکن دستگاه: ورکر برای حساب‌های ثبت‌شده آن را می‌خواهد (بدونش «نشست نامعتبر است»)
+      req.headers.set('X-Cyrus-Token', await BadgeService.deviceToken());
       if (body != null) {
         req.headers.set(HttpHeaders.contentTypeHeader, 'application/json; charset=utf-8');
         req.add(utf8.encode(jsonEncode(body)));
