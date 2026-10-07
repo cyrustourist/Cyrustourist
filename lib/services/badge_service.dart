@@ -77,6 +77,15 @@ class BadgeRequestResult {
 
 /// ارتباط با API تیک آبی/طلایی (Worker پنل). پروفایل کاربر هنوز روی گوشی است؛
 /// فقط یک شناسهٔ تصادفی (user_uid) برای ثبت درخواست‌ها به سرور داده می‌شود.
+class RegisterResult {
+  const RegisterResult({required this.ok, this.code = '', this.message = ''});
+  final bool ok;
+  final String code; // username_taken | username_invalid | auth_failed | net | ...
+  final String message;
+
+  bool get isUsernameError => code == 'username_taken' || code == 'username_invalid';
+}
+
 class BadgeService {
   BadgeService._();
 
@@ -84,6 +93,22 @@ class BadgeService {
   static const String _base = ApiConfig.panelBaseUrl;
 
   static String get baseUrl => _base;
+
+  static const String _tokenKey = 'cyrus_device_token';
+
+  /// توکن محرمانهٔ این دستگاه. user_uid در چت دیده می‌شود، پس بدون این توکن
+  /// هیچ‌کس نمی‌تواند به‌جای کاربر استوری بگذارد یا پروفایل را تغییر دهد.
+  static Future<String> deviceToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    var t = prefs.getString(_tokenKey);
+    if (t == null || t.length < 24) {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      final r = Random.secure();
+      t = List.generate(44, (_) => chars[r.nextInt(chars.length)]).join();
+      await prefs.setString(_tokenKey, t);
+    }
+    return t;
+  }
 
   static Future<String> userUid() async {
     final prefs = await SharedPreferences.getInstance();
@@ -129,6 +154,7 @@ class BadgeService {
       final uri = Uri.parse('$_base$path').replace(queryParameters: query);
       final req = await client.openUrl(method, uri).timeout(const Duration(seconds: 10));
       req.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      req.headers.set('X-Cyrus-Token', await deviceToken());
       if (body != null) {
         req.headers.set(HttpHeaders.contentTypeHeader, 'application/json; charset=utf-8');
         req.add(utf8.encode(jsonEncode(body)));
@@ -144,12 +170,12 @@ class BadgeService {
     }
   }
 
-  /// ثبت/به‌روزرسانی کاربر در سرور (بی‌صدا؛ خطا مهم نیست).
-  static Future<void> registerUser() async {
+  /// ثبت/به‌روزرسانی کاربر در سرور. خطای نام کاربری تکراری در نتیجه برمی‌گردد.
+  static Future<RegisterResult> registerUser() async {
     try {
       final uid = await userUid();
       final p = await UserProfileService.load();
-      await _call('POST', '/api/users/register', body: {
+      final j = await _call('POST', '/api/users/register', query: {'lang': MenuLanguage.current}, body: {
         'user_uid': uid,
         'display_name': p.displayName,
         'username': p.username,
@@ -159,7 +185,12 @@ class BadgeService {
         'video_link': p.videoLink,
         'photo_data': p.photoBase64,
       });
-    } catch (_) {}
+      if (j == null) return const RegisterResult(ok: false, code: 'net');
+      if (j['success'] == true) return const RegisterResult(ok: true);
+      return RegisterResult(ok: false, code: '${j['error'] ?? ''}', message: '${j['message'] ?? ''}');
+    } catch (_) {
+      return const RegisterResult(ok: false, code: 'net');
+    }
   }
 
   static Future<List<BadgePlan>> fetchPlans() async {
