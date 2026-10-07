@@ -296,9 +296,12 @@ class NotificationService {
     // چاپ توکن FCM در Terminal / Logcat بدون باز کردن دیالوگ مزاحم روی صفحه
     try {
       final token = await FirebaseMessaging.instance.getToken();
-      debugPrint('=== CYRUS TOURIST FCM TOKEN ===');
-      debugPrint(token);
-      debugPrint('================================');
+      // امنیت: توکن فقط در نسخهٔ دیباگ چاپ می‌شود؛ در Release هیچ‌چیز در Logcat نمی‌آید
+      if (kDebugMode) {
+        debugPrint('=== CYRUS TOURIST FCM TOKEN ===');
+        debugPrint(token);
+        debugPrint('================================');
+      }
     } catch (e) {
       debugPrint('FCM Token Fetch Error: $e');
     }
