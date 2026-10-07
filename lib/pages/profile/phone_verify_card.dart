@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/language/menu_translations.dart';
 import '../../core/language/new_texts.dart';
 import '../../services/account_service.dart';
+import '../../services/sms_status_service.dart';
+import '../../widgets/cyrus_result_dialog.dart';
 
 const Color _card = Color(0xff0e2433);
 const Color _gold = Color(0xffffd36a);
@@ -23,11 +25,24 @@ class _PhoneVerifyCardState extends State<PhoneVerifyCard> {
   bool _loading = true;
   bool _busy = false;
   bool _codeSent = false;
+  SmsStatus _sms = SmsStatus.open;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadSms();
+  }
+
+  Future<void> _loadSms() async {
+    final st = await SmsStatus.load();
+    if (!mounted) return;
+    setState(() => _sms = st);
+  }
+
+  String _smsNote() {
+    final key = _sms.reason == 'off' ? 'sms_off_note' : (_sms.reason == 'cap' ? 'sms_cap_note' : 'sms_hours_note');
+    return NT.t(key).replaceAll('{a}', '${_sms.from}').replaceAll('{b}', '${_sms.to}');
   }
 
   @override
@@ -46,9 +61,9 @@ class _PhoneVerifyCardState extends State<PhoneVerifyCard> {
     });
   }
 
-  void _snack(String m) {
-    if (!mounted || m.isEmpty) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  Future<void> _result(bool ok, String m) async {
+    if (!mounted) return;
+    await showCyrusResult(context, ok: ok, message: m);
   }
 
   Future<void> _send() async {
@@ -60,7 +75,7 @@ class _PhoneVerifyCardState extends State<PhoneVerifyCard> {
       _busy = false;
       if (r.ok) _codeSent = true;
     });
-    _snack(r.code == 'net' ? NT.t('g_net') : r.message);
+    await _result(r.ok, r.code == 'net' ? NT.t('g_net') : r.message);
   }
 
   Future<void> _verify() async {
@@ -69,11 +84,14 @@ class _PhoneVerifyCardState extends State<PhoneVerifyCard> {
     final r = await AccountService.phoneVerify(_phone.text.trim(), _code.text.trim());
     if (!mounted) return;
     setState(() => _busy = false);
-    _snack(r.code == 'net' ? NT.t('g_net') : r.message);
     if (r.ok) {
       _code.clear();
       setState(() => _codeSent = false);
       await _load();
+      final tk = r.badge == 'gold' ? NT.t('tk_gold') : (r.badge == 'blue' ? NT.t('tk_blue') : NT.t('tk_none'));
+      await _result(true, '${NT.t('ph_done')}\n$tk');
+    } else {
+      await _result(false, r.code == 'net' ? NT.t('g_net') : r.message);
     }
   }
 
@@ -110,6 +128,22 @@ class _PhoneVerifyCardState extends State<PhoneVerifyCard> {
             Directionality(textDirection: TextDirection.ltr, child: Text(_verified!, style: const TextStyle(color: Colors.white, fontSize: 14)))
           else ...[
             Text(NT.t('ph_desc'), style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12.5, height: 1.7)),
+            if (!_sms.canSend) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xffff8a3d).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xffff8a3d).withValues(alpha: 0.5)),
+                ),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Icon(Icons.info_outline_rounded, color: Color(0xffff8a3d), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_smsNote(), style: const TextStyle(color: Colors.white, fontSize: 12.5, height: 1.7))),
+                ]),
+              ),
+            ],
             const SizedBox(height: 10),
             TextField(
               controller: _phone,
@@ -123,7 +157,7 @@ class _PhoneVerifyCardState extends State<PhoneVerifyCard> {
               width: double.infinity,
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(side: const BorderSide(color: _gold), padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                onPressed: _busy ? null : _send,
+                onPressed: (_busy || !_sms.canSend) ? null : _send,
                 child: Text(NT.t('ph_send'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w800)),
               ),
             ),
