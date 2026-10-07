@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../core/language/new_texts.dart';
+import 'account_service.dart';
 import 'badge_service.dart';
 
 class GoogleLinkResult {
@@ -56,6 +57,7 @@ class GoogleLinkService {
       final canon = '${j['user_uid'] ?? ''}';
       if (canon.isNotEmpty && canon != uid) {
         await BadgeService.setUserUid(canon); // حساب قبلی با همین جی‌میل (مثلاً گوشی جدید)
+        await AccountService.pullProfile();
       }
       await BadgeService.registerUser();
       return GoogleLinkResult(ok: true, emailMasked: '${j['email_masked'] ?? ''}');
