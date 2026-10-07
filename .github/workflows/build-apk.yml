@@ -310,6 +310,16 @@ jobs:
             echo "\`${FP1:-not found}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+          # ذخیرهٔ دائمی: فایل اثر انگشت‌ها کنار APKها در هر Release قرار می‌گیرد
+          mkdir -p "$RUNNER_TEMP/apk-out"
+          {
+            echo "Cyrus Tourist - signing certificate fingerprints"
+            echo "(public values; they stay the same while the keystore does not change)"
+            echo ""
+            echo "SHA-1  : ${FP1:-not found}"
+            echo "SHA-256: ${FP:-not found}"
+          } > "$RUNNER_TEMP/apk-out/signing-fingerprints.txt"
+
       - name: Flutter pub get
         shell: bash
         run: |
@@ -536,12 +546,15 @@ jobs:
               --yes
           fi
 
+          NOTES="Automated build from commit ${{ github.sha }}"$'\n\n'"$(cat "$RUNNER_TEMP/apk-out/signing-fingerprints.txt")"
+
           gh release create "$TAG" \
             "$APK" \
             "$APK32" \
+            "$RUNNER_TEMP/apk-out/signing-fingerprints.txt" \
             --repo "${{ github.repository }}" \
             --title "Cyrus Tourist $TAG" \
-            --notes "Automated build from commit ${{ github.sha }}"
+            --notes "$NOTES"
 
           echo "Release created successfully."
 
