@@ -10,6 +10,8 @@ import '../../core/language/new_texts.dart';
 import '../../widgets/linkified_text.dart';
 import 'badge_page.dart';
 import 'google_link_card.dart';
+import 'phone_verify_card.dart';
+import '../../services/account_service.dart';
 
 const Color _bg = Color(0xff071722);
 const Color _card = Color(0xff0e2433);
@@ -179,6 +181,16 @@ class _MyProfilePageState extends State<MyProfilePage> {
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _busy = true);
+    // نام کاربری باید یکتا باشد (بدون حساسیت به حروف بزرگ/کوچک)؛ قبل از ذخیره بررسی می‌شود
+    final wantedUser = _userCtrl.text.trim().replaceAll('@', '');
+    if (wantedUser.isNotEmpty && wantedUser.toLowerCase() != _saved.username.toLowerCase()) {
+      final chk = await AccountService.usernameAvailable(wantedUser);
+      if (!chk.available) {
+        if (mounted) setState(() => _busy = false);
+        _snack(chk.message);
+        return;
+      }
+    }
     final p = UserProfile(
       displayName: _nameCtrl.text.trim(),
       username: _userCtrl.text.trim().replaceAll('@', ''),
@@ -192,8 +204,18 @@ class _MyProfilePageState extends State<MyProfilePage> {
     );
     try {
       await UserProfileService.save(p);
-      BadgeService.registerUser(); // همگام‌سازی نام، بیو و عکس با چت‌روم
+      final rr = await BadgeService.registerUser(); // همگام‌سازی با سرور و چت‌روم
       if (!mounted) return;
+      if (rr.isUsernameError) {
+        // سرور نام را نپذیرفت (مثلاً هم‌زمان کسی گرفته)؛ نام کاربری همان حساب را از سرور برمی‌گردانیم
+        await AccountService.pullProfile();
+        final fresh = await UserProfileService.load();
+        if (!mounted) return;
+        setState(() => _saved = fresh);
+        _fill(fresh);
+        _snack(rr.message.isEmpty ? NT.t('un_invalid') : rr.message);
+        return;
+      }
       setState(() {
         _saved = p;
         _editing = false;
@@ -372,6 +394,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
           ),
         const SizedBox(height: 18),
         const GoogleLinkCard(),
+        const PhoneVerifyCard(),
         if (p.displayName.isNotEmpty && p.photoBase64.isNotEmpty) _badgeCard(),
         if (p.bio.isNotEmpty) _infoCard(Icons.info_outline_rounded, 'دربارهٔ من', p.bio, _gold),
         if (p.city.isNotEmpty) _infoCard(Icons.location_city_rounded, 'شهر', p.city, _sky),
@@ -593,14 +616,12 @@ class _MyProfilePageState extends State<MyProfilePage> {
             controller: _userCtrl,
             textDirection: TextDirection.ltr,
             style: const TextStyle(color: Colors.white),
-            decoration: _dec('نام کاربری', hint: 'cyrus_traveler', icon: Icons.alternate_email_rounded, helper: 'فقط حروف انگلیسی، عدد و _ (حداقل ۴ حرف)'),
-            maxLength: 24,
+            decoration: _dec(NT.t('un_label'), hint: 'cyrus_traveler', icon: Icons.alternate_email_rounded, helper: NT.t('un_helper')),
+            maxLength: 30,
             validator: (v) {
               final t = (v ?? '').trim().replaceAll('@', '');
               if (t.isEmpty) return null; // اختیاری
-              if (!RegExp(r'^[A-Za-z][A-Za-z0-9_]{3,23}$').hasMatch(t)) {
-                return 'نام کاربری معتبر نیست (با حرف شروع شود، حداقل ۴ حرف)';
-              }
+              if (!RegExp(r'^[A-Za-z0-9_.]{3,30}$').hasMatch(t)) return NT.t('un_invalid');
               return null;
             },
           ),
