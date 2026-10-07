@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/language/menu_translations.dart';
 import '../../core/language/new_texts.dart';
 import '../../services/google_link_service.dart';
+import '../../widgets/cyrus_result_dialog.dart';
 
 const Color _card = Color(0xff0e2433);
 const Color _gold = Color(0xffffd36a);
@@ -43,9 +44,10 @@ class _GoogleLinkCardState extends State<GoogleLinkCard> {
     setState(() => _busy = false);
     if (r.ok) {
       setState(() => _email = r.emailMasked.isEmpty ? '✓' : r.emailMasked);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(NT.t('g_ok'))));
+      final tk = r.badge == 'gold' ? NT.t('tk_gold') : (r.badge == 'blue' ? NT.t('tk_blue') : NT.t('tk_none'));
+      await showCyrusResult(context, ok: true, message: '${NT.t('g_ok')}\n$tk');
     } else if (!r.cancelled) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r.message)));
+      await showCyrusResult(context, ok: false, message: r.message);
     }
   }
 
