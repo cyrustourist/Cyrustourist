@@ -8,11 +8,14 @@ class UsernameCheck {
 }
 
 class AccountActionResult {
-  const AccountActionResult({required this.ok, this.message = '', this.code = '', this.switched = false});
+  const AccountActionResult({required this.ok, this.message = '', this.code = '', this.switched = false, this.badge = 'none'});
   final bool ok;
   final String message;
   final String code;
   final bool switched;
+
+  /// تیک مؤثر بعد از تأیید: none | blue | gold
+  final String badge;
 }
 
 class AccountInfo {
@@ -100,6 +103,8 @@ class AccountService {
       await BadgeService.setUserUid(canon);
       await pullProfile();
     }
-    return AccountActionResult(ok: true, message: '${j['message'] ?? ''}', switched: switched);
+    final acc = j['account'];
+    final badge = acc is Map ? '${acc['badge_type'] ?? 'none'}' : 'none';
+    return AccountActionResult(ok: true, message: '${j['message'] ?? ''}', switched: switched, badge: badge);
   }
 }
