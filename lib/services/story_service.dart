@@ -23,7 +23,7 @@ class Story {
   final DateTime? at;
   final bool hasImage;
   int likes;
-  final int? views; // فقط برای صاحب استوری
+  int? views; // تعداد بازدید (برای همه نمایش داده می‌شود)
   bool liked;
   final bool featured;
 
