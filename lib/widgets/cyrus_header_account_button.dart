@@ -95,8 +95,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
     return Directionality(
       textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: PopupMenuButton<String>(
-        tooltip: _tr('حساب کاربری', 'Account', 'الحساب', 'Hesap',
-            'Аккаунт', 'Compte', 'Konto', 'Cuenta', '账户', 'Account'),
+        tooltip: _tr('شناسه کاربری', 'User ID', 'معرّف المستخدم', 'Kullanıcı Kimliği', 'ID пользователя', 'Identifiant', 'Benutzer-ID', 'ID de usuario', '用户ID', 'ID utente'),
         onSelected: (value) {
           switch (value) {
             case 'account':
@@ -216,16 +215,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
                       'Aggiungi foto e nome',
                     ),
               fallbackSubtitle: _tr(
-                'حساب کاربری',
-                'Account',
-                'الحساب',
-                'Hesap',
-                'Аккаунт',
-                'Compte',
-                'Konto',
-                'Cuenta',
-                '账户',
-                'Account',
+                'شناسه کاربری', 'User ID', 'معرّف المستخدم', 'Kullanıcı Kimliği', 'ID пользователя', 'Identifiant', 'Benutzer-ID', 'ID de usuario', '用户ID', 'ID utente',
               ),
             ),
           ),
