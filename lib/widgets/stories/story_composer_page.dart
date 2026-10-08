@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/language/menu_translations.dart';
@@ -50,11 +51,30 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
   }
 
+  static const MethodChannel _imgChannel = MethodChannel('cyrus/image');
+
+  /// فشرده‌ساز: عکس را (روی خود گوشی) تا حدود ۱۸۰ کیلوبایت کوچک می‌کند؛
+  /// اگر کانال بومی در دسترس نبود، همان بایت‌های ورودی برمی‌گردد.
+  Future<Uint8List> _compress(Uint8List raw) async {
+    try {
+      final out = await _imgChannel.invokeMethod<Uint8List>('compress', {
+        'bytes': raw,
+        'maxSide': 1080,
+        'targetBytes': 180000,
+      });
+      if (out != null && out.isNotEmpty) return out;
+    } catch (_) {
+      // MissingPluginException یا خطای رمزگشایی → بدون فشرده‌سازی بومی ادامه بده
+    }
+    return raw;
+  }
+
   Future<void> _pick(ImageSource src) async {
     try {
-      final f = await _picker.pickImage(source: src, maxWidth: 900, maxHeight: 1400, imageQuality: 60);
+      final f = await _picker.pickImage(source: src, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
       if (f == null) return;
-      final b = await f.readAsBytes();
+      final raw = await f.readAsBytes();
+      final b = await _compress(raw);
       if (!mounted) return;
       setState(() => _bytes = b);
     } catch (_) {
