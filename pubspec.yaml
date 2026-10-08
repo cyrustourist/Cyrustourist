@@ -2,7 +2,7 @@ name: cyrustourist_app3
 description: CyrusTourist base app - splash, home and tourist map.
 publish_to: "none"
 
-version: 5.9.126+6318
+version: 5.9.123+6315
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -20,6 +20,7 @@ dependencies:
 
   # انتخاب عکس پروفایل (با فشرده‌سازی هنگام انتخاب)
   image_picker: ^1.1.2
+  image: ^4.2.0
   webview_flutter: ^4.13.0
 
   # آیکون‌های SVG سبک برای دکمه‌های پیام‌رسان
