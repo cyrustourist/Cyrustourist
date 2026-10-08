@@ -11,7 +11,10 @@ const Color _teal = Color(0xff29e0ad);
 
 /// کارت «تأیید جی‌میل با حساب گوگل» (ورود اختیاری). ورود با پیامک بعداً اضافه می‌شود.
 class GoogleLinkCard extends StatefulWidget {
-  const GoogleLinkCard({super.key});
+  const GoogleLinkCard({super.key, this.onChanged});
+
+  /// بعد از اتصال موفق صدا زده می‌شود (برای بازخوانی پروفایل حساب).
+  final Future<void> Function()? onChanged;
 
   @override
   State<GoogleLinkCard> createState() => _GoogleLinkCardState();
@@ -46,6 +49,7 @@ class _GoogleLinkCardState extends State<GoogleLinkCard> {
       setState(() => _email = r.emailMasked.isEmpty ? '✓' : r.emailMasked);
       final tk = r.badge == 'gold' ? NT.t('tk_gold') : (r.badge == 'blue' ? NT.t('tk_blue') : NT.t('tk_none'));
       await showCyrusResult(context, ok: true, message: '${NT.t('g_ok')}\n$tk');
+      if (widget.onChanged != null) await widget.onChanged!();
     } else if (!r.cancelled) {
       await showCyrusResult(context, ok: false, message: r.message);
     }
