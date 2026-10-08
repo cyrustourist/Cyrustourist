@@ -475,7 +475,7 @@ class _AudienceSheetState extends State<_AudienceSheet> {
                                   backgroundImage: p.hasPhoto ? NetworkImage(StoryService.photoUrl(p.uid)) : null,
                                   child: p.hasPhoto ? null : const Icon(Icons.person_rounded, color: Color(0xffffd36a)),
                                 ),
-                                title: Text(p.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                                title: Text((p.name.trim().isEmpty || p.name.trim() == '-') ? NT.t('guest_user') : p.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                                 subtitle: Text(_time(p.at), style: const TextStyle(color: Colors.white38, fontSize: 12)),
                                 trailing: p.liked ? const Icon(Icons.favorite_rounded, color: Color(0xffff5c7a), size: 20) : null,
                               );
