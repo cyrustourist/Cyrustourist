@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "777058902080",
+    "project_id": "cyrustourist-e959e",
+    "storage_bucket": "cyrustourist-e959e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:777058902080:android:3c1789de887a9bd68fbfa5",
+        "android_client_info": {
+          "package_name": "cyrustourist.ir.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "777058902080-2rqn6bhrhm57lesduldj52at9cdtm1j8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cyrustourist.ir.app",
+            "certificate_hash": "15498108e7f262a7a7d5cfa8e2e156074f899ba3"
+          }
+        },
+        {
+          "client_id": "777058902080-9f0nmt7fmbb1s02qhnq8n4655oihhahs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtIALceonbWXJh5LaYgSGarngZnlVp6nc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "777058902080-9f0nmt7fmbb1s02qhnq8n4655oihhahs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
