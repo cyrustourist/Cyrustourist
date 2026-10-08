@@ -26,13 +26,15 @@ class GoogleLinkService {
   static const String webClientId = 'PUT_WEB_CLIENT_ID.apps.googleusercontent.com';
 
   static String _cachedId = '';
+  static bool _netFail = false;
   static GoogleSignIn? _gs;
 
   static Future<String> _clientId() async {
     if (!webClientId.startsWith('PUT_')) return webClientId;
     if (_cachedId.isNotEmpty) return _cachedId;
     final j = await BadgeService.call('GET', '/api/auth/config');
-    final id = (j == null || j['success'] != true) ? '' : '${j['google_client_id'] ?? ''}'.trim();
+    _netFail = j == null || j['success'] != true;
+    final id = _netFail ? '' : '${j['google_client_id'] ?? ''}'.trim();
     if (id.isNotEmpty) _cachedId = id;
     return id;
   }
@@ -48,7 +50,8 @@ class GoogleLinkService {
   static Future<GoogleLinkResult> link() async {
     final id = await _clientId();
     if (id.isEmpty) {
-      return GoogleLinkResult(ok: false, message: NT.t('g_not_set'));
+      // ارتباط با ورکر برقرار نشد، یا ورکر هنوز شناسهٔ کلاینت وب گوگل را ندارد
+      return GoogleLinkResult(ok: false, message: NT.t(_netFail ? 'g_net' : 'g_srv'));
     }
     try {
       _gs ??= GoogleSignIn(scopes: const ['email'], serverClientId: id);
