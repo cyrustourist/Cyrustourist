@@ -10,6 +10,7 @@ import '../../core/language/new_texts.dart';
 import '../../widgets/linkified_text.dart';
 import 'badge_page.dart';
 import 'google_link_card.dart';
+import 'photo_cropper.dart';
 import 'phone_verify_card.dart';
 import '../../services/account_service.dart';
 
@@ -95,6 +96,14 @@ class _MyProfilePageState extends State<MyProfilePage> {
     });
   }
 
+  /// بعد از ورود با گوگل/پیامک: پروفایل همان حساب از سرور می‌آید و نام‌کاربری قابل ویرایش می‌شود (مثل تلگرام).
+  Future<void> _afterLogin() async {
+    await _load();
+    if (!mounted) return;
+    setState(() => _editing = true);
+    _snack('وارد شدید. اکنون می‌توانید نام و نام‌کاربری را ویرایش کنید.');
+  }
+
   void _fill(UserProfile p) {
     _nameCtrl.text = p.displayName;
     _userCtrl.text = p.username;
@@ -118,14 +127,17 @@ class _MyProfilePageState extends State<MyProfilePage> {
     try {
       final file = await _picker.pickImage(
         source: source,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 70,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
       );
       if (file == null) return;
-      final bytes = await file.readAsBytes();
+      final raw = await file.readAsBytes();
       if (!mounted) return;
-      setState(() => _photo = base64Encode(bytes));
+      // کادر دایره‌ای: جابه‌جایی و زوم، خروجی ۴۰۰×۴۰۰ کم‌حجم
+      final cropped = await cropProfilePhoto(context, raw);
+      if (cropped == null || !mounted) return;
+      setState(() => _photo = base64Encode(cropped));
     } catch (_) {
       _snack('امکان انتخاب عکس نبود. دسترسی دوربین/گالری را بررسی کنید.');
     }
@@ -187,7 +199,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
       final chk = await AccountService.usernameAvailable(wantedUser);
       if (!chk.available) {
         if (mounted) setState(() => _busy = false);
-        _snack(chk.message);
+        _snack('${chk.message}\nاگر این نام‌کاربری مال حساب خودتان است، اول با گوگل یا شماره وارد شوید؛ بعد می‌توانید آن را ویرایش کنید.');
         return;
       }
     }
@@ -393,8 +405,8 @@ class _MyProfilePageState extends State<MyProfilePage> {
             ),
           ),
         const SizedBox(height: 18),
-        const GoogleLinkCard(),
-        const PhoneVerifyCard(),
+        GoogleLinkCard(onChanged: _afterLogin),
+        PhoneVerifyCard(onChanged: _afterLogin),
         if (p.displayName.isNotEmpty && p.photoBase64.isNotEmpty) _badgeCard(),
         if (p.bio.isNotEmpty) _infoCard(Icons.info_outline_rounded, 'دربارهٔ من', p.bio, _gold),
         if (p.city.isNotEmpty) _infoCard(Icons.location_city_rounded, 'شهر', p.city, _sky),
