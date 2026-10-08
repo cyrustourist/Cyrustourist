@@ -12,7 +12,10 @@ const Color _teal = Color(0xff29e0ad);
 
 /// تأیید شماره همراه با کد پیامک (OTP). فقط پس از کد درست، شماره «تأییدشده» ثبت می‌شود.
 class PhoneVerifyCard extends StatefulWidget {
-  const PhoneVerifyCard({super.key});
+  const PhoneVerifyCard({super.key, this.onChanged});
+
+  /// بعد از تأیید موفق صدا زده می‌شود (برای بازخوانی پروفایل حساب).
+  final Future<void> Function()? onChanged;
 
   @override
   State<PhoneVerifyCard> createState() => _PhoneVerifyCardState();
@@ -90,6 +93,7 @@ class _PhoneVerifyCardState extends State<PhoneVerifyCard> {
       await _load();
       final tk = r.badge == 'gold' ? NT.t('tk_gold') : (r.badge == 'blue' ? NT.t('tk_blue') : NT.t('tk_none'));
       await _result(true, '${NT.t('ph_done')}\n$tk');
+      if (widget.onChanged != null) await widget.onChanged!();
     } else {
       await _result(false, r.code == 'net' ? NT.t('g_net') : r.message);
     }
