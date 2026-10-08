@@ -65,6 +65,7 @@ class BadgeRequestResult {
     this.status,
     this.price = 0,
     this.existing = false,
+    this.errorCode = '',
   });
 
   final bool ok;
@@ -73,6 +74,7 @@ class BadgeRequestResult {
   final String? status;
   final int price;
   final bool existing;
+  final String errorCode; // terms | need_google | already_active | requires_blue | ...
 }
 
 /// ارتباط با API تیک آبی/طلایی (Worker پنل). پروفایل کاربر هنوز روی گوشی است؛
@@ -220,7 +222,7 @@ class BadgeService {
     );
   }
 
-  static Future<BadgeRequestResult> requestBadge(String code) async {
+  static Future<BadgeRequestResult> requestBadge(String code, {bool termsAccepted = false}) async {
     final uid = await userUid();
     await registerUser();
     final j = await _call('POST', '/api/badges/request', body: {
@@ -228,12 +230,17 @@ class BadgeService {
       'subject_type': 'user',
       'subject_id': uid,
       'badge_code': code,
+      'terms_accepted': termsAccepted,
     });
     if (j == null) {
       return const BadgeRequestResult(ok: false, message: 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.');
     }
     if (j['success'] != true) {
-      return BadgeRequestResult(ok: false, message: '${j['message'] ?? 'درخواست ثبت نشد.'}');
+      return BadgeRequestResult(
+        ok: false,
+        message: '${j['message'] ?? 'درخواست ثبت نشد.'}',
+        errorCode: '${j['error'] ?? ''}',
+      );
     }
     return BadgeRequestResult(
       ok: true,
