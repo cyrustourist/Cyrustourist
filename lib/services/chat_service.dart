@@ -86,6 +86,8 @@ class CompanionPost {
     required this.id,
     this.uid = '',
     required this.title,
+    this.origin = '',
+    this.destination = '',
     required this.details,
     required this.travelDate,
     required this.seats,
@@ -97,6 +99,8 @@ class CompanionPost {
   final int id;
   final String uid;
   final String title;
+  final String origin;
+  final String destination;
   final String details;
   final String travelDate;
   final int seats;
@@ -108,6 +112,8 @@ class CompanionPost {
         id: int.tryParse('${j['id']}') ?? 0,
         uid: '${j['uid'] ?? ''}',
         title: '${j['title'] ?? ''}',
+        origin: '${j['origin'] ?? ''}'.replaceAll('null', ''),
+        destination: '${j['destination'] ?? ''}'.replaceAll('null', ''),
         details: '${j['details'] ?? ''}'.replaceAll('null', ''),
         travelDate: '${j['travel_date'] ?? ''}'.replaceAll('null', ''),
         seats: int.tryParse('${j['seats_left']}') ?? 1,
@@ -209,7 +215,9 @@ class ChatService {
 
   static Future<ChatSendResult> createPost({
     required String city,
-    required String title,
+    required String origin,
+    required String destination,
+    String title = '',
     String details = '',
     String travelDate = '',
     int seats = 1,
@@ -219,6 +227,8 @@ class ChatService {
       'user_uid': uid,
       'city': city,
       'title': title,
+      'origin': origin,
+      'destination': destination,
       'details': details,
       'travel_date': travelDate,
       'seats_left': seats,
