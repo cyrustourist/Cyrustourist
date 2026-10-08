@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../services/badge_service.dart';
 import '../services/chat_service.dart';
 import '../services/user_profile_service.dart';
+import '../core/language/menu_translations.dart';
 import '../core/language/new_texts.dart';
 import '../widgets/linkified_text.dart';
 import 'profile/my_profile_page.dart';
@@ -275,18 +276,26 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   }
 
   Future<void> _newPost() async {
+    final origin = TextEditingController();
+    final dest = TextEditingController();
     final title = TextEditingController();
     final details = TextEditingController();
-    final date = TextEditingController();
+    int? dayOffset;
+    String? timeVal;
     var seats = 1;
+    String? err;
+    final days = List<int>.generate(30, (i) => i);
+    final times = <String>[
+      for (var h = 0; h < 24; h++) ...['${h.toString().padLeft(2, '0')}:00', '${h.toString().padLeft(2, '0')}:30'],
+    ];
     final ok = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: _panel,
       builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
         child: StatefulBuilder(
-          builder: (ctx, setS) => Padding(
+          builder: (ctx, setS) => SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -294,9 +303,34 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
               children: [
                 Text('آگهی همسفر در $_city', style: const TextStyle(color: _gold, fontSize: 16, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 12),
-                _field(title, 'عنوان (مثلاً: همسفر برای کلات)', 80),
+                _field(origin, NT.t('cp_origin'), 60),
                 const SizedBox(height: 8),
-                _field(date, 'تاریخ سفر (اختیاری)', 30),
+                _field(dest, NT.t('cp_dest'), 60),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(
+                    child: _pickBox<int>(
+                      hint: NT.t('cp_date'),
+                      value: dayOffset,
+                      items: [
+                        for (final d in days)
+                          DropdownMenuItem<int>(value: d, child: Text(_dayLabel(d), overflow: TextOverflow.ellipsis)),
+                      ],
+                      onChanged: (v) => setS(() => dayOffset = v),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _pickBox<String>(
+                      hint: NT.t('cp_time'),
+                      value: timeVal,
+                      items: [for (final t in times) DropdownMenuItem<String>(value: t, child: Text(t))],
+                      onChanged: (v) => setS(() => timeVal = v),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                _field(title, NT.t('cp_title_opt'), 80),
                 const SizedBox(height: 8),
                 _field(details, 'توضیح کوتاه (بدون لینک و شماره تلفن)', 300, lines: 3),
                 const SizedBox(height: 8),
@@ -307,10 +341,20 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                   Text('$seats', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
                   IconButton(onPressed: () => setS(() => seats = seats < 20 ? seats + 1 : 20), icon: const Icon(Icons.add_circle_outline, color: _gold)),
                 ]),
-                const SizedBox(height: 8),
+                if (err != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(err!, style: const TextStyle(color: Color(0xffff8f8f), fontSize: 12.5, fontWeight: FontWeight.w700)),
+                  ),
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _bg, padding: const EdgeInsets.symmetric(vertical: 13)),
-                  onPressed: () => Navigator.of(ctx).pop(true),
+                  onPressed: () {
+                    if (origin.text.trim().isEmpty || dest.text.trim().isEmpty) {
+                      setS(() => err = NT.t('cp_need_route'));
+                      return;
+                    }
+                    Navigator.of(ctx).pop(true);
+                  },
                   child: const Text('ثبت آگهی', style: TextStyle(fontWeight: FontWeight.w900)),
                 ),
               ],
@@ -319,14 +363,17 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
         ),
       ),
     );
+    final o = origin.text.trim();
+    final dn = dest.text.trim();
     final t = title.text.trim();
     final d = details.text.trim();
-    final dt = date.text.trim();
+    final dt = [if (dayOffset != null) _dayLabel(dayOffset!, short: true), if (timeVal != null) timeVal!].join(' ');
+    origin.dispose();
+    dest.dispose();
     title.dispose();
     details.dispose();
-    date.dispose();
-    if (ok != true || t.isEmpty) return;
-    final r = await ChatService.createPost(city: _city, title: t, details: d, travelDate: dt, seats: seats);
+    if (ok != true || o.isEmpty || dn.isEmpty) return;
+    final r = await ChatService.createPost(city: _city, origin: o, destination: dn, title: t, details: d, travelDate: dt, seats: seats);
     if (!mounted) return;
     if (r.ok) {
       _toast('آگهی ثبت شد.');
@@ -337,6 +384,69 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     } else {
       _toast(r.message);
     }
+  }
+
+  /// برچسب روز: امروز / فردا / تاریخ (شمسی برای فارسی، میلادی برای بقیهٔ زبان‌ها)
+  String _dayLabel(int offset, {bool short = false}) {
+    final base = DateTime.now().add(Duration(days: offset));
+    String date;
+    if (MenuLanguage.current == 'fa') {
+      final j = _gregorianToJalali(base.year, base.month, base.day);
+      date = '${j[0]}/${j[1].toString().padLeft(2, '0')}/${j[2].toString().padLeft(2, '0')}';
+    } else {
+      date = '${base.year}-${base.month.toString().padLeft(2, '0')}-${base.day.toString().padLeft(2, '0')}';
+    }
+    if (short) return date;
+    if (offset == 0) return '${NT.t('cp_today')} · $date';
+    if (offset == 1) return '${NT.t('cp_tomorrow')} · $date';
+    return date;
+  }
+
+  static List<int> _gregorianToJalali(int gy, int gm, int gd) {
+    const gDm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    var jy = gy > 1600 ? 979 : 0;
+    gy -= gy > 1600 ? 1600 : 621;
+    final gy2 = gm > 2 ? gy + 1 : gy;
+    var days = (365 * gy) + ((gy2 + 3) ~/ 4) - ((gy2 + 99) ~/ 100) + ((gy2 + 399) ~/ 400) - 80 + gd + gDm[gm - 1];
+    jy += 33 * (days ~/ 12053);
+    days %= 12053;
+    jy += 4 * (days ~/ 1461);
+    days %= 1461;
+    if (days > 365) {
+      jy += (days - 1) ~/ 365;
+      days = (days - 1) % 365;
+    }
+    final jm = days < 186 ? 1 + (days ~/ 31) : 7 + ((days - 186) ~/ 30);
+    final jd = 1 + (days < 186 ? (days % 31) : ((days - 186) % 30));
+    return [jy, jm, jd];
+  }
+
+  Widget _pickBox<T>({
+    required String hint,
+    required T? value,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xff0a1c27),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _line),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          isExpanded: true,
+          value: value,
+          dropdownColor: const Color(0xff0e2433),
+          iconEnabledColor: _gold,
+          hint: Text(hint, style: const TextStyle(color: Color(0xff8fa5b2), fontSize: 13)),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
+    );
   }
 
   Widget _field(TextEditingController c, String hint, int max, {int lines = 1}) {
@@ -436,6 +546,11 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                           Expanded(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(p.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                              if (p.origin.isNotEmpty && p.title != '${p.origin} ➜ ${p.destination}')
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text('${p.origin} ➜ ${p.destination}', style: const TextStyle(color: Color(0xffffd36a), fontSize: 12, fontWeight: FontWeight.w700)),
+                                ),
                               if (p.details.isNotEmpty)
                                 LinkifiedText(text: p.details, linkColor: const Color(0xff66d9ff), style: const TextStyle(color: Color(0xffd6cdf3), fontSize: 12, height: 1.7)),
                               Row(children: [
