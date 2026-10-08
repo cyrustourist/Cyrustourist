@@ -83,6 +83,14 @@ class CyrusAccountScreen extends StatelessWidget {
                   context,
                   title: texts.accountSection,
                   items: [
+                    // «پروفایل من + ویرایش اطلاعات + تصویر پروفایل» در یک کلید
+                    _AccountItem(
+                      icon: Icons.account_circle_rounded,
+                      title: texts.profile,
+                      subtitle: texts.profileSubtitle,
+                      iconColor: const Color(0xffffd36a),
+                      actionId: 'profile',
+                    ),
                     _AccountItem(
                       icon: Icons.notifications_active_rounded,
                       title: texts.announcements,
@@ -97,14 +105,6 @@ class CyrusAccountScreen extends StatelessWidget {
                       subtitle: invite.subtitle,
                       iconColor: const Color(0xff29e0ad),
                       actionId: 'invite',
-                    ),
-                    // «پروفایل من + ویرایش اطلاعات + تصویر پروفایل» در یک کلید
-                    _AccountItem(
-                      icon: Icons.account_circle_rounded,
-                      title: texts.profile,
-                      subtitle: texts.profileSubtitle,
-                      iconColor: const Color(0xffffd36a),
-                      actionId: 'profile',
                     ),
                   ],
                 ),
@@ -1042,15 +1042,15 @@ class _AccountTranslations {
   }
 
   static const _fa = _AccountTranslations(
-    title: 'حساب کاربری',
-    account: 'حساب کاربری من',
+    title: 'شناسه کاربری',
+    account: 'شناسه کاربری من',
     accountSubtitle: 'مدیریت اطلاعات و امکانات حساب شما',
     usernamePlaceholder: 'نام کاربری هنوز ثبت نشده',
     accountSection: 'اطلاعات حساب',
     announcements: 'آگهی‌ها',
     announcementsSubtitle: 'مشاهده آخرین اطلاعیه‌ها و بروزرسانی‌ها',
-    profile: 'پروفایل من',
-    profileSubtitle: 'مشاهده اطلاعات حساب کاربری',
+    profile: 'شناسه کاربری',
+    profileSubtitle: 'مشاهده اطلاعات شناسه کاربری',
     editProfile: 'ویرایش اطلاعات',
     editProfileSubtitle: 'ویرایش نام کاربری و اطلاعات حساب',
     profileImage: 'تصویر پروفایل',
@@ -1091,7 +1091,7 @@ class _AccountTranslations {
     travelCompanion: 'همسفریابی',
     destinationRoom: 'اتاق گفت‌وگوی مقصد',
     futureSubtitle: 'در بروزرسانی آینده فعال خواهد شد',
-    logout: 'خروج از حساب کاربری',
+    logout: 'خروج از شناسه کاربری',
     logoutSubtitle:
         'خروج و پاک‌سازی اطلاعات حساب از دستگاه',
     logoutConfirmTitle: 'خروج از حساب',
@@ -1101,18 +1101,18 @@ class _AccountTranslations {
     ok: 'متوجه شدم',
     futureTitle: 'این قابلیت در راه است',
     futureMessage:
-        'این قابلیت در بروزرسانی‌های آینده سایروس توریست ارائه خواهد شد. زیرساخت حساب کاربری از ابتدا برای پشتیبانی از ارتباطات اجتماعی و گردشگری آینده طراحی شده است.',
+        'این قابلیت در بروزرسانی‌های آینده سایروس توریست ارائه خواهد شد. زیرساخت شناسه کاربری از ابتدا برای پشتیبانی از ارتباطات اجتماعی و گردشگری آینده طراحی شده است.',
   );
 
   static const _en = _AccountTranslations(
-    title: 'Account',
-    account: 'My Account',
+    title: 'User ID',
+    account: 'My User ID',
     accountSubtitle: 'Manage your account and travel features',
     usernamePlaceholder: 'Username not set yet',
     accountSection: 'Account Information',
     announcements: 'Announcements',
     announcementsSubtitle: 'View the latest news and updates',
-    profile: 'My Profile',
+    profile: 'User ID',
     profileSubtitle: 'View your account information',
     editProfile: 'Edit Information',
     editProfileSubtitle: 'Edit username and account information',
@@ -1162,14 +1162,14 @@ class _AccountTranslations {
   );
 
   static const _ar = _AccountTranslations(
-    title: 'الحساب',
-    account: 'حسابي',
+    title: 'معرّف المستخدم',
+    account: 'معرّفي',
     accountSubtitle: 'إدارة الحساب وميزات السفر',
     usernamePlaceholder: 'اسم المستخدم غير مسجل بعد',
     accountSection: 'معلومات الحساب',
     announcements: 'الإشعارات',
     announcementsSubtitle: 'عرض آخر الأخبار والتحديثات',
-    profile: 'ملفي الشخصي',
+    profile: 'معرّف المستخدم',
     profileSubtitle: 'عرض معلومات الحساب',
     editProfile: 'تعديل المعلومات',
     editProfileSubtitle: 'تعديل اسم المستخدم ومعلومات الحساب',
@@ -1218,14 +1218,14 @@ class _AccountTranslations {
   );
 
   static const _tr = _AccountTranslations(
-    title: 'Hesap',
-    account: 'Hesabım',
+    title: 'Kullanıcı Kimliği',
+    account: 'Kimliğim',
     accountSubtitle: 'Hesabınızı ve seyahat özelliklerinizi yönetin',
     usernamePlaceholder: 'Kullanıcı adı henüz ayarlanmadı',
     accountSection: 'Hesap Bilgileri',
     announcements: 'Duyurular',
     announcementsSubtitle: 'Son haberleri ve güncellemeleri görün',
-    profile: 'Profilim',
+    profile: 'Kullanıcı Kimliği',
     profileSubtitle: 'Hesap bilgilerinizi görüntüleyin',
     editProfile: 'Bilgileri Düzenle',
     editProfileSubtitle: 'Kullanıcı adı ve hesap bilgilerini düzenle',
@@ -1275,14 +1275,14 @@ class _AccountTranslations {
   );
 
   static const _ru = _AccountTranslations(
-    title: 'Аккаунт',
-    account: 'Мой аккаунт',
+    title: 'ID пользователя',
+    account: 'Мой ID',
     accountSubtitle: 'Управление аккаунтом и функциями путешествий',
     usernamePlaceholder: 'Имя пользователя не задано',
     accountSection: 'Информация аккаунта',
     announcements: 'Объявления',
     announcementsSubtitle: 'Смотреть последние новости и обновления',
-    profile: 'Мой профиль',
+    profile: 'ID пользователя',
     profileSubtitle: 'Просмотр данных аккаунта',
     editProfile: 'Редактировать данные',
     editProfileSubtitle: 'Изменить имя пользователя и данные',
@@ -1329,14 +1329,14 @@ class _AccountTranslations {
   );
 
   static const _fr = _AccountTranslations(
-    title: 'Compte',
-    account: 'Mon compte',
+    title: 'Identifiant',
+    account: 'Mon identifiant',
     accountSubtitle: 'Gérer votre compte et vos fonctions de voyage',
     usernamePlaceholder: 'Nom d’utilisateur non défini',
     accountSection: 'Informations du compte',
     announcements: 'Annonces',
     announcementsSubtitle: 'Voir les dernières actualités et mises à jour',
-    profile: 'Mon profil',
+    profile: 'Identifiant utilisateur',
     profileSubtitle: 'Voir les informations du compte',
     editProfile: 'Modifier les informations',
     editProfileSubtitle: 'Modifier le nom d’utilisateur et les données',
@@ -1386,14 +1386,14 @@ class _AccountTranslations {
   );
 
   static const _de = _AccountTranslations(
-    title: 'Konto',
-    account: 'Mein Konto',
+    title: 'Benutzer-ID',
+    account: 'Meine Benutzer-ID',
     accountSubtitle: 'Konto und Reisefunktionen verwalten',
     usernamePlaceholder: 'Benutzername noch nicht festgelegt',
     accountSection: 'Kontoinformationen',
     announcements: 'Ankündigungen',
     announcementsSubtitle: 'Neueste Neuigkeiten und Updates ansehen',
-    profile: 'Mein Profil',
+    profile: 'Benutzer-ID',
     profileSubtitle: 'Kontoinformationen anzeigen',
     editProfile: 'Informationen bearbeiten',
     editProfileSubtitle: 'Benutzername und Kontodaten bearbeiten',
@@ -1443,14 +1443,14 @@ class _AccountTranslations {
   );
 
   static const _es = _AccountTranslations(
-    title: 'Cuenta',
-    account: 'Mi cuenta',
+    title: 'ID de usuario',
+    account: 'Mi ID de usuario',
     accountSubtitle: 'Gestiona tu cuenta y funciones de viaje',
     usernamePlaceholder: 'Nombre de usuario no configurado',
     accountSection: 'Información de la cuenta',
     announcements: 'Anuncios',
     announcementsSubtitle: 'Ver las últimas noticias y actualizaciones',
-    profile: 'Mi perfil',
+    profile: 'ID de usuario',
     profileSubtitle: 'Ver información de la cuenta',
     editProfile: 'Editar información',
     editProfileSubtitle: 'Editar nombre de usuario y datos',
@@ -1500,14 +1500,14 @@ class _AccountTranslations {
   );
 
   static const _zh = _AccountTranslations(
-    title: '账户',
-    account: '我的账户',
+    title: '用户ID',
+    account: '我的用户ID',
     accountSubtitle: '管理账户和旅行功能',
     usernamePlaceholder: '尚未设置用户名',
     accountSection: '账户信息',
     announcements: '公告',
     announcementsSubtitle: '查看最新消息和更新',
-    profile: '我的资料',
+    profile: '用户ID',
     profileSubtitle: '查看账户信息',
     editProfile: '编辑信息',
     editProfileSubtitle: '编辑用户名和账户信息',
@@ -1552,14 +1552,14 @@ class _AccountTranslations {
   );
 
   static const _it = _AccountTranslations(
-    title: 'Account',
-    account: 'Il mio account',
+    title: 'ID utente',
+    account: 'Il mio ID utente',
     accountSubtitle: 'Gestisci le informazioni e le funzioni del tuo account',
     usernamePlaceholder: 'Nome utente non ancora impostato',
     accountSection: 'Informazioni account',
     announcements: 'Annunci',
     announcementsSubtitle: 'Visualizza le ultime novità e aggiornamenti',
-    profile: 'Il mio profilo',
+    profile: 'ID utente',
     profileSubtitle: 'Visualizza le informazioni dell\u2019account',
     editProfile: 'Modifica informazioni',
     editProfileSubtitle: 'Modifica nome utente e informazioni account',
