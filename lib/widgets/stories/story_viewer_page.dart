@@ -153,8 +153,17 @@ class _StoryViewerPageState extends State<StoryViewerPage> with SingleTickerProv
         onPressed: () => _toggleLike(st),
         icon: Icon(st.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: st.liked ? const Color(0xffff5c7a) : Colors.white, size: 30),
       ),
-      if (st.likes > 0) Text('${st.likes}', style: style),
-      const SizedBox(width: 14),
+      Text('${st.likes}', style: style),
+      const SizedBox(width: 16),
+      Tooltip(
+        message: NT.t('st_views'),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.visibility_rounded, color: Colors.white, size: 21),
+          const SizedBox(width: 5),
+          Text('${st.views ?? 0}', style: style),
+        ]),
+      ),
+      const SizedBox(width: 10),
       IconButton(
         tooltip: NT.t('st_report'),
         onPressed: () => _report(st),
