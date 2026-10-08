@@ -34,7 +34,7 @@ class GoogleLinkService {
     if (_cachedId.isNotEmpty) return _cachedId;
     final j = await BadgeService.call('GET', '/api/auth/config');
     _netFail = j == null || j['success'] != true;
-    final id = _netFail ? '' : '${j['google_client_id'] ?? ''}'.trim();
+    final id = (j == null || _netFail) ? '' : '${j['google_client_id'] ?? ''}'.trim();
     if (id.isNotEmpty) _cachedId = id;
     return id;
   }
