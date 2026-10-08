@@ -151,14 +151,26 @@ class StoryService {
     return StoryActionResult(ok: false, code: '${j['error'] ?? ''}', message: '${j['message'] ?? ''}');
   }
 
+  static bool _registered = false;
+
+  /// سرور بازدید/لایک را فقط برای کاربرِ ثبت‌شده می‌پذیرد؛ بیننده‌ای که هیچ‌وقت
+  /// استوری نگذاشته هنوز ثبت نشده بود و بازدید/لایکش بی‌صدا رد می‌شد.
+  static Future<void> _ensureRegistered() async {
+    if (_registered) return;
+    final r = await BadgeService.registerUser();
+    if (r.ok) _registered = true;
+  }
+
   /// ثبت بازدید (هر کاربر برای هر استوری فقط یک‌بار شمرده می‌شود)
   static Future<void> view(int id) async {
+    await _ensureRegistered();
     final uid = await BadgeService.userUid();
     await BadgeService.call('POST', '/api/stories/view', body: {'user_uid': uid, 'story_id': id});
   }
 
   /// null = خطا
   static Future<int?> like(int id, bool like) async {
+    await _ensureRegistered();
     final uid = await BadgeService.userUid();
     final j = await BadgeService.call('POST', '/api/stories/like', body: {'user_uid': uid, 'story_id': id, 'like': like});
     if (j == null || j['success'] != true) return null;
