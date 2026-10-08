@@ -9,6 +9,15 @@ const Color _gold = Color(0xffffd36a);
 const Color _blue = Color(0xff2a8cff);
 const Color _goldBadge = Color(0xffffc233);
 
+const List<String> _kTermsFa = [
+  'تیک آبی نشان تأیید هویت و تیک طلایی نشان ویژه است؛ هر دو یک‌ساله‌اند و برای ادامه باید تمدید شوند.',
+  'ثبت درخواست به‌معنای دریافت تیک نیست. تیک فقط پس از بررسی و تأیید پشتیبانی فعال می‌شود و پشتیبانی می‌تواند درخواست را رد کند.',
+  'برای دریافت تیک، حساب گوگل (جی‌میل) شما باید در برنامه تأیید شده باشد.',
+  'اطلاعات و مدارکی که ارسال می‌کنید باید واقعی و متعلق به خودتان باشد. ارائهٔ اطلاعات نادرست یا استفاده از هویت دیگران باعث رد درخواست یا لغو تیک می‌شود.',
+  'هزینه طبق مبلغ اعلام‌شده در همین صفحه است و پرداخت و شرایط بازگشت وجه با هماهنگی پشتیبانی انجام می‌شود.',
+  'رعایت قوانین برنامه الزامی است؛ در صورت تخلف، تیک بدون جبران هزینه لغو می‌شود.',
+];
+
 const Map<String, String> _kStatusFa = {
   'pending_payment': 'در انتظار پرداخت',
   'paid': 'پرداخت شد',
@@ -34,6 +43,8 @@ class _BadgePageState extends State<BadgePage> {
   bool _loading = true;
   bool _failed = false;
   String? _busyCode;
+  bool _termsAccepted = false;
+  bool _termsExpanded = true;
 
   @override
   void initState() {
@@ -71,12 +82,22 @@ class _BadgePageState extends State<BadgePage> {
   String _duration(int days) => days == 365 ? 'اعتبار یک‌ساله' : 'اعتبار $days روز';
 
   Future<void> _request(BadgePlan p) async {
+    if (!_termsAccepted) {
+      setState(() => _termsExpanded = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ابتدا متن قوانین را بخوانید و تیک «قوانین را می‌پذیرم» را بزنید.')),
+      );
+      return;
+    }
     setState(() => _busyCode = p.code);
-    final r = await BadgeService.requestBadge(p.code);
+    final r = await BadgeService.requestBadge(p.code, termsAccepted: true);
     if (!mounted) return;
     setState(() => _busyCode = null);
     if (!r.ok) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r.message)));
+      final msg = r.errorCode == 'need_google'
+          ? 'برای درخواست تیک، ابتدا حساب گوگل (جی‌میل) را در «پروفایل من» متصل و تأیید کنید.'
+          : r.message;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       return;
     }
     await _load();
@@ -152,6 +173,59 @@ class _BadgePageState extends State<BadgePage> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xff1d3a4d))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: lines),
+    );
+  }
+
+  Widget _termsCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _termsAccepted ? _blue : const Color(0xff1d3a4d), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _termsExpanded = !_termsExpanded),
+            child: Row(children: [
+              const Icon(Icons.gavel_rounded, color: _gold, size: 22),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('قوانین و شرایط دریافت تیک',
+                    style: TextStyle(color: _gold, fontSize: 14.5, fontWeight: FontWeight.w900)),
+              ),
+              Icon(_termsExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: Colors.white70),
+            ]),
+          ),
+          if (_termsExpanded) ...[
+            const SizedBox(height: 10),
+            for (var i = 0; i < _kTermsFa.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text('${i + 1}. ${_kTermsFa[i]}',
+                    style: const TextStyle(color: Color(0xffcfe0ea), fontSize: 12.8, height: 1.9)),
+              ),
+          ],
+          const SizedBox(height: 4),
+          InkWell(
+            onTap: () => setState(() => _termsAccepted = !_termsAccepted),
+            child: Row(children: [
+              Checkbox(
+                value: _termsAccepted,
+                activeColor: _blue,
+                onChanged: (v) => setState(() => _termsAccepted = v ?? false),
+              ),
+              const Expanded(
+                child: Text('قوانین بالا را خوانده‌ام و می‌پذیرم.',
+                    style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800)),
+              ),
+            ]),
+          ),
+        ],
+      ),
     );
   }
 
@@ -240,8 +314,10 @@ class _BadgePageState extends State<BadgePage> {
                         const SizedBox(height: 10),
                         OutlinedButton(onPressed: _load, child: const Text('تلاش دوباره', style: TextStyle(color: _gold))),
                       ])
-                    else
+                    else ...[
+                      _termsCard(),
                       for (final p in _plans) _planCard(p),
+                    ],
                   ],
                 ),
         ),
