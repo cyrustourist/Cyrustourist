@@ -83,6 +83,7 @@ class NT {
     "ph_done": ["شماره تأیید شد", "Number verified", "تم توثيق الرقم", "Numara doğrulandı", "Номер подтверждён", "Numéro vérifié", "Nummer bestätigt", "Número verificado", "号码已验证", "Numero verificato"],
     "viewers_title": ["بازدیدکنندگان", "Viewers", "المشاهدون", "Görüntüleyenler", "Просмотры", "Vues", "Aufrufe", "Vistas", "查看者", "Visualizzazioni"],
     "likers_title": ["لایک‌ها", "Likes", "الإعجابات", "Beğeniler", "Лайки", "J'aime", "Likes", "Me gusta", "点赞", "Mi piace"],
+    "guest_user": ["کاربر مهمان", "Guest user", "مستخدم ضيف", "Misafir kullanıcı", "Гость", "Utilisateur invité", "Gastnutzer", "Usuario invitado", "访客用户", "Utente ospite"],
     "no_viewers": ["هنوز کسی ندیده است.", "No one has viewed it yet.", "لم يشاهدها أحد بعد.", "Henüz kimse görüntülemedi.", "Пока никто не смотрел.", "Personne ne l'a encore vue.", "Noch hat es niemand angesehen.", "Aún nadie la ha visto.", "暂时还没有人查看。", "Nessuno l'ha ancora vista."],
     "st_report": ["گزارش این استوری", "Report this story", "الإبلاغ عن هذه القصة", "Bu hikayeyi bildir", "Пожаловаться на историю", "Signaler cette story", "Story melden", "Reportar esta historia", "举报此动态", "Segnala questa storia"],
     "r_inappropriate": ["محتوای نامناسب", "Inappropriate content", "محتوى غير لائق", "Uygunsuz içerik", "Неприемлемый контент", "Contenu inapproprié", "Unangemessener Inhalt", "Contenido inapropiado", "不当内容", "Contenuto inappropriato"],
