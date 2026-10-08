@@ -28,16 +28,7 @@ class CyrusSettingsSocialAboutSupport {
         icon: Icons.person_rounded,
         title: _text(
           languageCode,
-          'حساب کاربری',
-          'Account',
-          'الحساب',
-          'Hesap',
-          'Аккаунт',
-          'Compte',
-          'Konto',
-          'Cuenta',
-          '账户',
-          'Account',
+          'شناسه کاربری', 'User ID', 'معرّف المستخدم', 'Kullanıcı Kimliği', 'ID пользователя', 'Identifiant', 'Benutzer-ID', 'ID de usuario', '用户ID', 'ID utente',
         ),
         subtitle: _text(
           languageCode,
