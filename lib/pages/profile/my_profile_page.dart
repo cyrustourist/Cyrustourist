@@ -100,8 +100,18 @@ class _MyProfilePageState extends State<MyProfilePage> {
   Future<void> _afterLogin() async {
     await _load();
     if (!mounted) return;
+    // حساب تأیید شد: نام‌کاربری حالا روی سرور رزرو می‌شود (اگر تکراری بود، پیام می‌دهد تا نام دیگری بگذارید)
+    final rr = await BadgeService.registerUser();
+    if (!mounted) return;
+    if (rr.isUsernameError) {
+      await AccountService.pullProfile();
+      await _load();
+    }
+    if (!mounted) return;
     setState(() => _editing = true);
-    _snack('وارد شدید. اکنون می‌توانید نام و نام‌کاربری را ویرایش کنید.');
+    _snack(rr.isUsernameError
+        ? 'این نام‌کاربری قبلاً توسط حساب تأییدشدهٔ دیگری گرفته شده؛ نام دیگری انتخاب کنید.'
+        : 'وارد شدید. اکنون می‌توانید نام و نام‌کاربری را ویرایش کنید.');
   }
 
   void _fill(UserProfile p) {
