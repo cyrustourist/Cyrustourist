@@ -42,6 +42,7 @@ const Map<String, List<String>> _kChat = {
   'topic1': ['مشکل فنی در برنامه', 'Technical problem in the app', 'مشكلة تقنية في التطبيق', 'Technisches Problem in der App', 'Problema técnico en la app', 'Problème technique dans l\'application', 'Problema tecnico nell\'app', 'Техническая проблема в приложении', 'Uygulamada teknik sorun', '应用技术问题'],
   'topic2': ['تبلیغات و جایگاه VIP', 'Advertising and VIP spot', 'الإعلان ومكان VIP', 'Werbung und VIP-Platz', 'Publicidad y puesto VIP', 'Publicité et place VIP', 'Pubblicità e posto VIP', 'Реклама и VIP-место', 'Reklam ve VIP yeri', '广告与 VIP 位置'],
   'topic3': ['سؤال دیگر', 'Another question', 'سؤال آخر', 'Andere Frage', 'Otra pregunta', 'Autre question', 'Altra domanda', 'Другой вопрос', 'Başka bir soru', '其他问题'],
+  'regText': ['برای ثبت‌نام اقامتگاه / کسب‌وکار، با پشتیبانی در ایتا تماس بگیرید.', 'To register a stay / business, contact support on Eitaa.', 'لتسجيل نشاط / إقامة، تواصل مع الدعم على إيتا.', 'Für die Registrierung von Unterkunft / Unternehmen kontaktieren Sie den Support auf Eitaa.', 'Para registrar un alojamiento / negocio, contacte con soporte en Eitaa.', 'Pour inscrire un hébergement / une entreprise, contactez le support sur Eitaa.', 'Per registrare una struttura / attività, contatta il supporto su Eitaa.', 'Для регистрации размещения / бизнеса свяжитесь с поддержкой в Eitaa.', 'Konaklama / işletme kaydı için Eitaa üzerinden destekle iletişime geçin.', '注册住宿 / 商家，请通过 Eitaa 联系客服。'],
   'hint': ['توضیح کوتاه (اختیاری)', 'Short details (optional)', 'تفاصيل قصيرة (اختياري)', 'Kurze Angaben (optional)', 'Detalles breves (opcional)', 'Détails brefs (facultatif)', 'Dettagli brevi (facoltativo)', 'Краткие детали (необязательно)', 'Kısa ayrıntılar (isteğe bağlı)', '简要说明（可选）'],
   'preview': ['پیش‌نمایش پیام', 'Message preview', 'معاينة الرسالة', 'Nachrichtenvorschau', 'Vista previa del mensaje', 'Aperçu du message', 'Anteprima del messaggio', 'Предпросмотр сообщения', 'Mesaj önizlemesi', '消息预览'],
   'sendVia': ['ارسال از طریق', 'Send via', 'الإرسال عبر', 'Senden über', 'Enviar por', 'Envoyer via', 'Invia tramite', 'Отправить через', 'Şununla gönder', '通过以下方式发送'],
@@ -236,6 +237,21 @@ class _SupportChatPageState extends State<SupportChatPage> {
                     ),
                 ],
               ),
+              if (_topic == 0) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _panel,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xff2e6f8f)),
+                  ),
+                  child: Text(
+                    _s('regText'),
+                    style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.9, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ] else ...[
               const SizedBox(height: 14),
               TextField(
                 controller: _details,
@@ -313,6 +329,7 @@ class _SupportChatPageState extends State<SupportChatPage> {
                       borderRadius: BorderRadius.circular(14)),
                 ),
               ),
+              ],
             ],
           ),
         ),
