@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../widgets/registration_direct_contact.dart';
 import '../../models/agency.dart';
 import 'agency_profile_page.dart';
-import 'agency_registration_form_page.dart';
 
 const Color _bg = Color(0xff06121d);
 const Color _card = Color(0xff0b2636);
@@ -38,6 +37,7 @@ class AgencyRegistrationIntroPage extends StatefulWidget {
 
 class _AgencyRegistrationIntroPageState extends State<AgencyRegistrationIntroPage> {
   bool _accepted = false;
+  bool _proceed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -185,14 +185,7 @@ class _AgencyRegistrationIntroPageState extends State<AgencyRegistrationIntroPag
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  onPressed: _accepted
-                      ? () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AgencyRegistrationFormPage(),
-                            ),
-                          )
-                      : null,
+                  onPressed: _accepted ? () => setState(() => _proceed = true) : null,
                   child: const Text(
                     'ادامه ثبت‌نام',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
@@ -200,9 +193,10 @@ class _AgencyRegistrationIntroPageState extends State<AgencyRegistrationIntroPag
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              RegistrationDirectContact(subject: 'آژانس‌های مسافرتی'),
+              if (_proceed) ...[
+                const SizedBox(height: 24),
+                RegistrationDirectContact(subject: 'آژانس‌های مسافرتی'),
+              ],
             ],
           ),
         ),
