@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/menu_translations.dart';
-import '../widgets/brand_icons.dart';
 
 // ===================== رنگ‌ها (عیناً از CSS سایت: residences.html و residences-registration.js) =====================
 
@@ -26,22 +24,9 @@ const List<Color> _brandGradient = [
   Color(0xff667eea),
 ];
 const List<Color> _primaryGradient = [Color(0xff11998e), Color(0xff38ef7d)];
-const List<Color> _callGradient = [Color(0xff34d399), Color(0xff059669)];
-const List<Color> _telegramGradient = [Color(0xff4fb6e8), Color(0xff229ed9)];
-const List<Color> _whatsappGradient = [Color(0xff34d67a), Color(0xff25d366)];
-const List<Color> _eitaaGradient = [Color(0xff5fc9a8), Color(0xff0f9d78)];
 
-/// اطلاعات پشتیبانی — همان مقادیر residences-registration.js سایت
+/// ویدیوی نمونه (داخل برنامه نمایش داده می‌شود؛ هیچ لینک بیرونی‌ای در این صفحه نیست)
 class _Support {
-  static const String phone = '09153448818';
-  static const String telegram = 'https://t.me/Cyrustourist';
-  static const String whatsapp = 'https://wa.me/989153448818';
-  static const String eitaa = 'https://eitaa.com/cyrustourist';
-  static const String instagram = 'https://www.instagram.com/cyrustourist?igsi=aDc3end6dTNqNW1o';
-  static const String website = 'https://cyrustourist-maker.github.io/Cyrustourist/#residence';
-  static const String youtube = 'https://www.youtube.com/@cyrustourist';
-  static const String tiktok = 'https://www.tiktok.com/@cyrustourist';
-  static const String aparat = 'https://www.aparat.com/cyrustourist';
   static const String sampleVideo =
       'https://www.aparat.com/video/video/embed/videohash/w43c127/vt/frame';
 }
@@ -78,7 +63,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ برگشت',
     'accept': 'قوانین و شرایط خدمات سایروس توریست را مطالعه کرده‌ام و می‌پذیرم.',
     'sendOptsTitle': 'نمونه گزینه‌ها برای ارسال و هماهنگی مستقیم با پشتیبانی',
-    'sendOptsDesc': 'نیازی به پر کردن فرم نیست. برای ثبت‌نام، اطلاعات زیر را از طریق یکی از راه‌های ارتباطی پایین صفحه مستقیم برای پشتیبانی سایروس توریست بفرستید و ثبت‌نام را با پشتیبانی هماهنگ کنید:',
+    'sendOptsDesc': 'برای ثبت‌نام، اطلاعات زیر را آماده کنید و از مسیر بالا به پشتیبانی سایروس توریست اطلاع دهید:',
+    'supportTitle': 'تماس با پشتیبانی',
+    'supportPath': 'برای ثبت‌نام، از منوی «شناسه کاربری» ← «ارتباط با ما» ← «چت با پشتیبانی» اقدام کنید.',
     'sendOpt1': '• نام کسب‌وکار / اقامتگاه',
     'sendOpt2': '• دسته‌بندی (اقامتگاه، کافه، رستوران، لیدر تور، گردشگری سلامت، آژانس مسافرتی و…)',
     'sendOpt3': '• شماره تلفن (همراه، ثابت یا کمکی)',
@@ -137,7 +124,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ Back',
     'accept': 'I have read and accept the Cyrus Tourist terms and conditions.',
     'sendOptsTitle': 'Sample options to send and coordinate directly with support',
-    'sendOptsDesc': 'No form to fill in. To register, send the details below straight to Cyrus Tourist support through any of the contact options at the bottom of the page, and coordinate your registration with them:',
+    'sendOptsDesc': 'To register, prepare the details below and send them to Cyrus Tourist support through the path above:',
+    'supportTitle': 'Contact support',
+    'supportPath': 'To register, open the "User ID" menu → "Contact us" → "Chat with support".',
     'sendOpt1': '• Business / residence name',
     'sendOpt2': '• Category (residence, cafe, restaurant, tour leader, health tourism, travel agency, etc.)',
     'sendOpt3': '• Phone number (mobile, landline or auxiliary)',
@@ -196,7 +185,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ رجوع',
     'accept': 'لقد قرأت شروط خدمات سايروس توريست وأوافق عليها.',
     'sendOptsTitle': 'نموذج الخيارات للإرسال والتنسيق المباشر مع الدعم',
-    'sendOptsDesc': 'لا حاجة لملء نموذج. للتسجيل، أرسل المعلومات التالية مباشرة إلى دعم سايروس توريست عبر إحدى وسائل التواصل أسفل الصفحة ونسّق التسجيل معهم:',
+    'sendOptsDesc': 'للتسجيل، جهّز المعلومات التالية وأرسلها إلى دعم سايروس توريست عبر المسار أعلاه:',
+    'supportTitle': 'التواصل مع الدعم',
+    'supportPath': 'للتسجيل، افتح قائمة «معرّف المستخدم» ← «تواصل معنا» ← «الدردشة مع الدعم».',
     'sendOpt1': '• اسم النشاط / الإقامة',
     'sendOpt2': '• الفئة (إقامة، مقهى، مطعم، قائد جولة، سياحة علاجية، وكالة سفر وغيرها)',
     'sendOpt3': '• رقم الهاتف (جوال أو أرضي أو إضافي)',
@@ -255,7 +246,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ Zurück',
     'accept': 'Ich habe die Geschäftsbedingungen von Cyrus Tourist gelesen und akzeptiere sie.',
     'sendOptsTitle': 'Beispiel-Angaben zum Senden und zur direkten Abstimmung mit dem Support',
-    'sendOptsDesc': 'Kein Formular auszufüllen. Senden Sie für die Registrierung die folgenden Angaben direkt über eine der Kontaktmöglichkeiten am Seitenende an den Cyrus-Tourist-Support und stimmen Sie die Registrierung mit ihm ab:',
+    'sendOptsDesc': 'Halten Sie für die Registrierung die folgenden Angaben bereit und senden Sie sie über den obigen Weg an den Cyrus-Tourist-Support:',
+    'supportTitle': 'Support kontaktieren',
+    'supportPath': 'Zur Registrierung öffnen Sie das Menü „Benutzer-ID“ → „Kontakt“ → „Chat mit dem Support“.',
     'sendOpt1': '• Name des Unternehmens / der Unterkunft',
     'sendOpt2': '• Kategorie (Unterkunft, Café, Restaurant, Tourenleiter, Gesundheitstourismus, Reisebüro usw.)',
     'sendOpt3': '• Telefonnummer (Mobil, Festnetz oder Zusatznummer)',
@@ -314,7 +307,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ Volver',
     'accept': 'He leído y acepto los términos y condiciones de Cyrus Tourist.',
     'sendOptsTitle': 'Ejemplos de datos para enviar y coordinar directamente con soporte',
-    'sendOptsDesc': 'No hay formulario que rellenar. Para registrarse, envíe los siguientes datos directamente al soporte de Cyrus Tourist por cualquiera de las opciones de contacto al final de la página y coordine su registro con ellos:',
+    'sendOptsDesc': 'Para registrarse, prepare los siguientes datos y envíelos al soporte de Cyrus Tourist por la ruta indicada arriba:',
+    'supportTitle': 'Contactar con soporte',
+    'supportPath': 'Para registrarse, abra el menú «ID de usuario» → «Contáctenos» → «Chatea con soporte».',
     'sendOpt1': '• Nombre del negocio / alojamiento',
     'sendOpt2': '• Categoría (alojamiento, cafetería, restaurante, guía de tours, turismo de salud, agencia de viajes, etc.)',
     'sendOpt3': '• Número de teléfono (móvil, fijo o auxiliar)',
@@ -373,7 +368,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ Retour',
     'accept': 'J\'ai lu et j\'accepte les conditions générales de Cyrus Tourist.',
     'sendOptsTitle': 'Exemples d\'éléments à envoyer et à coordonner directement avec le support',
-    'sendOptsDesc': 'Aucun formulaire à remplir. Pour vous inscrire, envoyez les informations ci-dessous directement au support de Cyrus Tourist via l\'une des options de contact en bas de page et coordonnez votre inscription avec lui :',
+    'sendOptsDesc': 'Pour vous inscrire, préparez les informations ci-dessous et transmettez-les au support de Cyrus Tourist par le chemin indiqué ci-dessus :',
+    'supportTitle': 'Contacter le support',
+    'supportPath': 'Pour vous inscrire, ouvrez le menu « Identifiant » → « Nous contacter » → « Discuter avec le support ».',
     'sendOpt1': '• Nom de l\'entreprise / de l\'hébergement',
     'sendOpt2': '• Catégorie (hébergement, café, restaurant, guide de voyage, tourisme de santé, agence de voyages, etc.)',
     'sendOpt3': '• Numéro de téléphone (mobile, fixe ou auxiliaire)',
@@ -432,7 +429,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ Indietro',
     'accept': 'Ho letto e accetto i termini e le condizioni di Cyrus Tourist.',
     'sendOptsTitle': 'Esempi di dati da inviare e coordinare direttamente con il supporto',
-    'sendOptsDesc': 'Nessun modulo da compilare. Per registrarti, invia i dati qui sotto direttamente al supporto di Cyrus Tourist tramite una delle opzioni di contatto in fondo alla pagina e coordina con loro la registrazione:',
+    'sendOptsDesc': 'Per registrarti, prepara i dati qui sotto e inviali al supporto di Cyrus Tourist tramite il percorso indicato sopra:',
+    'supportTitle': 'Contatta il supporto',
+    'supportPath': 'Per registrarti, apri il menu «ID utente» → «Contattaci» → «Chatta con il supporto».',
     'sendOpt1': '• Nome dell\'attività / della struttura',
     'sendOpt2': '• Categoria (alloggio, caffè, ristorante, guida turistica, turismo sanitario, agenzia di viaggi, ecc.)',
     'sendOpt3': '• Numero di telefono (cellulare, fisso o ausiliario)',
@@ -491,7 +490,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ Назад',
     'accept': 'Я прочитал(а) и принимаю условия и положения Cyrus Tourist.',
     'sendOptsTitle': 'Примеры данных для отправки и согласования напрямую с поддержкой',
-    'sendOptsDesc': 'Заполнять форму не нужно. Для регистрации отправьте указанные ниже данные напрямую в поддержку Cyrus Tourist любым из способов связи внизу страницы и согласуйте регистрацию с ней:',
+    'sendOptsDesc': 'Для регистрации подготовьте данные ниже и отправьте их в поддержку Cyrus Tourist по указанному выше пути:',
+    'supportTitle': 'Связаться с поддержкой',
+    'supportPath': 'Для регистрации откройте меню «ID пользователя» → «Связаться с нами» → «Чат с поддержкой».',
     'sendOpt1': '• Название бизнеса / места размещения',
     'sendOpt2': '• Категория (размещение, кафе, ресторан, тур-лидер, медицинский туризм, турагентство и т. д.)',
     'sendOpt3': '• Номер телефона (мобильный, стационарный или дополнительный)',
@@ -550,7 +551,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ Geri',
     'accept': 'Cyrus Tourist şartlarını ve koşullarını okudum ve kabul ediyorum.',
     'sendOptsTitle': 'Destekle doğrudan göndermek ve koordine etmek için örnek seçenekler',
-    'sendOptsDesc': 'Doldurulacak form yok. Kayıt için aşağıdaki bilgileri sayfanın altındaki iletişim seçeneklerinden biriyle doğrudan Cyrus Tourist desteğine gönderin ve kaydınızı onlarla koordine edin:',
+    'sendOptsDesc': 'Kayıt için aşağıdaki bilgileri hazırlayın ve yukarıdaki yoldan Cyrus Tourist desteğine iletin:',
+    'supportTitle': 'Destekle iletişim',
+    'supportPath': 'Kayıt için "Kullanıcı Kimliği" menüsü → "Bize ulaşın" → "Destekle sohbet" yolunu izleyin.',
     'sendOpt1': '• İşletme / konaklama adı',
     'sendOpt2': '• Kategori (konaklama, kafe, restoran, tur lideri, sağlık turizmi, seyahat acentesi vb.)',
     'sendOpt3': '• Telefon numarası (cep, sabit veya yardımcı)',
@@ -609,7 +612,9 @@ const Map<String, Map<String, String>> _kText = {
     'back': '↩ 返回',
     'accept': '我已阅读并接受 Cyrus Tourist 的条款与条件。',
     'sendOptsTitle': '直接发送并与客服协调的示例选项',
-    'sendOptsDesc': '无需填写表单。注册时，请通过页面底部的任一联系方式，将以下信息直接发送给 Cyrus Tourist 客服，并与他们协调注册：',
+    'sendOptsDesc': '注册前请准备以下信息，并通过上述路径发送给 Cyrus Tourist 客服：',
+    'supportTitle': '联系客服',
+    'supportPath': '注册请打开“用户ID”菜单 → “联系我们” → “联系客服”。',
     'sendOpt1': '• 商家 / 住宿名称',
     'sendOpt2': '• 类别（住宿、咖啡馆、餐厅、领队、健康旅游、旅行社等）',
     'sendOpt3': '• 电话号码（手机、座机或备用号码）',
@@ -876,19 +881,6 @@ String _t(String key) {
 
 String _catName(String cat) => _t('cat_$cat');
 
-Future<void> _openUrl(BuildContext context, String url) async {
-  try {
-    final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('linkErr'))));
-    }
-  } catch (_) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('linkErr'))));
-    }
-  }
-}
-
 enum _Step { hub, terms, support }
 
 /// صفحهٔ ثبت‌نام داخل برنامه — همان ظاهر و روال «ثبت‌نام در سایروس توریست» سایت:
@@ -1048,16 +1040,19 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
             ],
           ),
           const SizedBox(height: 16),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _contactChip(_t('callBtn'), _callGradient, () => _openUrl(context, 'tel:${_Support.phone}')),
-              _contactChip(_t('tgBtn'), _telegramGradient, () => _openUrl(context, _Support.telegram)),
-              _contactChip(_t('waBtn'), _whatsappGradient, () => _openUrl(context, _Support.whatsapp)),
-              _contactChip(_t('eitaaBtn'), _eitaaGradient, () => _openUrl(context, _Support.eitaa)),
-            ],
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _boxBorder),
+            ),
+            child: Text(
+              '${_t('supportTitle')}\n${_t('supportPath')}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _titleGold, fontSize: 13, fontWeight: FontWeight.w800, height: 1.9),
+            ),
           ),
         ],
       ),
@@ -1079,24 +1074,6 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
             label,
             style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _contactChip(String label, List<Color> gradient, VoidCallback onTap) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: gradient),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -1289,7 +1266,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
                     Expanded(
                       child: _sampleBtn(
                         _t('sampleRoute'),
-                        () => _openUrl(context, 'https://maps.google.com'),
+                        () {},
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1349,19 +1326,20 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (final e in <List<String>>[
-                      ['sampleInstagram', _Support.instagram],
-                      ['sampleWebsite', _Support.website],
-                      ['sampleYoutube', _Support.youtube],
-                      ['sampleTiktok', _Support.tiktok],
-                      ['sampleAparat', _Support.aparat],
-                      ['sampleTelegram', _Support.telegram],
-                      ['sampleWhatsapp', _Support.whatsapp],
-                      ['sampleEitaa', _Support.eitaa],
+                    // فقط نمونهٔ ظاهر کارت است؛ لمس این دکمه‌ها کاربر را از برنامه خارج نمی‌کند.
+                    for (final k in const [
+                      'sampleInstagram',
+                      'sampleWebsite',
+                      'sampleYoutube',
+                      'sampleTiktok',
+                      'sampleAparat',
+                      'sampleTelegram',
+                      'sampleWhatsapp',
+                      'sampleEitaa',
                     ])
                       SizedBox(
                         width: (MediaQuery.of(context).size.width - 32 - 32 - 8) / 2,
-                        child: _sampleBtn(_t(e[0]), () => _openUrl(context, e[1])),
+                        child: _sampleBtn(_t(k), () {}),
                       ),
                   ],
                 ),
@@ -1402,17 +1380,6 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
   // ===================== مرحلهٔ ۲: گزینه‌های ارسال و هماهنگی مستقیم با پشتیبانی =====================
 
   Widget _supportStep() {
-    final socials = <List<String>>[
-      ['sampleInstagram', _Support.instagram],
-      ['sampleWebsite', _Support.website],
-      ['sampleYoutube', _Support.youtube],
-      ['sampleTiktok', _Support.tiktok],
-      ['sampleAparat', _Support.aparat],
-      ['sampleTelegram', _Support.telegram],
-      ['sampleWhatsapp', _Support.whatsapp],
-      ['sampleEitaa', _Support.eitaa],
-    ];
-    final btnWidth = (MediaQuery.of(context).size.width - 32 - 32 - 8) / 2;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1439,8 +1406,13 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                _t('sendOptsTitle'),
+                _t('supportTitle'),
                 style: const TextStyle(color: _ink, fontSize: 19, fontWeight: FontWeight.w900, height: 1.6),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _t('supportPath'),
+                style: const TextStyle(color: Color(0xff5a6572), fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.9),
               ),
               const SizedBox(height: 10),
               Text(
@@ -1472,21 +1444,6 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
             ],
           ),
         ),
-        const SizedBox(height: 18),
-        _sectionTitle(_t('socialsTitle')),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final e in socials)
-              SizedBox(
-                width: btnWidth,
-                child: _sampleBtn(_t(e[0]), () => _openUrl(context, e[1])),
-              ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        _chatSupportCard(),
         const SizedBox(height: 18),
         _secondaryButton(_t('back'), () => _go(_Step.terms)),
         const SizedBox(height: 10),
@@ -1598,114 +1555,6 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     );
   }
 
-  /// دکمهٔ رنگی با آیکون SVG (همیشه قابل‌دیدن، مستقل از زمینه)
-  Widget _supportButton(String label, List<Color> gradient, String svg, VoidCallback onTap,
-      {String? sub}) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradient),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: gradient.last.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 5))],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: SizedBox(
-            height: 58,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.22),
-                    ),
-                    child: BrandIcon(svg, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          label,
-                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900),
-                        ),
-                        if (sub != null)
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Text(
-                              sub,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.92),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.6,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    _rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
-                    color: Colors.white.withValues(alpha: 0.85),
-                    size: 26,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// بخش «چت مستقیم با پشتیبانی»: ۱) تماس  ۲) تلگرام  ۳) ایتا  ۴) واتساپ
-  Widget _chatSupportCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xfff4fbf8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xffcdeee2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            _t('chatTitle'),
-            style: const TextStyle(color: _ink, fontSize: 19, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _t('chatDesc'),
-            style: const TextStyle(color: Color(0xff5a6572), fontSize: 13, height: 1.9),
-          ),
-          const SizedBox(height: 14),
-          _supportButton(_t('callDirect'), const [Color(0xff10b981), Color(0xff047857)], BrandIcons.phone,
-              () => _openUrl(context, 'tel:${_Support.phone}'),
-              sub: _Support.phone),
-          const SizedBox(height: 12),
-          _supportButton(_t('chatTg'), const [Color(0xff2aabee), Color(0xff1c86c9)], BrandIcons.telegram,
-              () => _openUrl(context, _Support.telegram)),
-          const SizedBox(height: 12),
-          _supportButton(_t('chatEitaa'), const [Color(0xfff7a21b), Color(0xffe2740f)], BrandIcons.eitaa,
-              () => _openUrl(context, _Support.eitaa)),
-          const SizedBox(height: 12),
-          _supportButton(_t('chatWa'), const [Color(0xff25d366), Color(0xff128c7e)], BrandIcons.whatsapp,
-              () => _openUrl(context, _Support.whatsapp)),
-        ],
-      ),
-    );
-  }
 }
 
 /// ویدیوی نمونهٔ کارت معرفی (همان iframe آپارات سایت)
