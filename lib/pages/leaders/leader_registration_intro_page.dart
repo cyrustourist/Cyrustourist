@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/registration_steps_card.dart';
 
 import '../stay_registration_page.dart';
 import '../../models/leader.dart';
@@ -137,6 +138,8 @@ class _LeaderRegistrationIntroPageState extends State<LeaderRegistrationIntroPag
               ),
 
               const SizedBox(height: 24),
+
+              const RegistrationStepsCard(dark: true),
 
               Container(
                 padding: const EdgeInsets.all(14),
