@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../widgets/registration_direct_contact.dart';
+import '../stay_registration_page.dart';
 import '../../models/agency.dart';
 import 'agency_profile_page.dart';
 
@@ -37,7 +37,6 @@ class AgencyRegistrationIntroPage extends StatefulWidget {
 
 class _AgencyRegistrationIntroPageState extends State<AgencyRegistrationIntroPage> {
   bool _accepted = false;
-  bool _proceed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +184,11 @@ class _AgencyRegistrationIntroPageState extends State<AgencyRegistrationIntroPag
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  onPressed: _accepted ? () => setState(() => _proceed = true) : null,
+                  onPressed: _accepted
+                      ? () => Navigator.of(context).pushReplacement(
+                            MaterialPageRoute<void>(builder: (_) => const StayRegistrationPage(kind: 'agency')),
+                          )
+                      : null,
                   child: const Text(
                     'ادامه ثبت‌نام',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
@@ -193,10 +196,6 @@ class _AgencyRegistrationIntroPageState extends State<AgencyRegistrationIntroPag
                 ),
               ),
 
-              if (_proceed) ...[
-                const SizedBox(height: 24),
-                RegistrationDirectContact(subject: 'آژانس‌های مسافرتی'),
-              ],
             ],
           ),
         ),
