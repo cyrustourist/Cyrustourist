@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/menu_translations.dart';
+import '../widgets/registration_steps_card.dart';
 import 'stay_registration_page.dart';
 
 // ===================== رنگ‌ها (عیناً از CSS سایت: residences.html و residences-registration.js) =====================
@@ -1229,6 +1230,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
             ),
           ),
         const SizedBox(height: 11),
+        const RegistrationStepsCard(),
         _sectionTitle(_t('rulesTitle')),
         Container(
           padding: const EdgeInsets.all(18),
