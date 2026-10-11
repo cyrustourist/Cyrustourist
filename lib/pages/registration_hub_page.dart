@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/language/menu_translations.dart';
+import 'stay_registration_page.dart';
 
 // ===================== رنگ‌ها (عیناً از CSS سایت: residences.html و residences-registration.js) =====================
 
@@ -952,6 +953,20 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     }
   }
 
+  /// اقامتگاه (هتل، کلبه، بوم‌گردی و ...) ← فرم ثبت داخل اپ؛ سایر دسته‌ها ← راهنمای پشتیبانی
+  void _enterRegistration() {
+    if (_category == 'residence') {
+      final route = MaterialPageRoute<void>(builder: (_) => const StayRegistrationPage());
+      if (widget.initialCategory != null) {
+        Navigator.of(context).pushReplacement(route);
+      } else {
+        Navigator.of(context).push(route);
+      }
+      return;
+    }
+    _go(_Step.support);
+  }
+
   /// بستن «پنجره» — مثل دکمهٔ ✕ سایت
   void _closeModal() {
     if (widget.initialCategory != null) {
@@ -1228,7 +1243,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
         const SizedBox(height: 18),
         _checkCard(_accepted, _t('accept'), (v) => setState(() => _accepted = v)),
         const SizedBox(height: 18),
-        _enterButton(_t('enterReg'), _accepted ? () => _go(_Step.support) : null),
+        _enterButton(_t('enterReg'), _accepted ? _enterRegistration : null),
       ],
     );
   }
