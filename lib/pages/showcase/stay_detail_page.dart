@@ -277,10 +277,17 @@ class _StayDetailPageState extends State<StayDetailPage> {
                     ),
                   ),
                 ),
-              if (!_playing && hash != null && hash.isNotEmpty)
+              if (!_playing && item.hasVideo)
                 Center(
                   child: GestureDetector(
-                    onTap: () => setState(() => _playing = true),
+                    onTap: () {
+                      if (hash != null && hash.isNotEmpty) {
+                        setState(() => _playing = true);
+                      } else {
+                        // لینک غیرآپارات (مثلاً یوتیوب): در برنامهٔ مرورگر/یوتیوب باز می‌شود
+                        launchUrl(Uri.parse(item.videoUrl!.trim()), mode: LaunchMode.externalApplication);
+                      }
+                    },
                     child: Container(
                       width: 66,
                       height: 66,
@@ -296,7 +303,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
                     ),
                   ),
                 ),
-              if (!_playing && hash != null && hash.isNotEmpty)
+              if (!_playing && item.hasVideo)
                 PositionedDirectional(
                   bottom: 12,
                   start: 14,
