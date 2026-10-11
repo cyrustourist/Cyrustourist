@@ -17,7 +17,7 @@ import 'services/notification_service.dart';
 import 'services/connection_status_service.dart';
 import 'services/pending_queue_service.dart';
 import 'core/network/api_service.dart';
-import 'config/map_ir_config.dart';
+import 'widgets/resilient_tile_layer.dart';
 import 'config/carto_config.dart';
 
 import 'map_place.dart';
@@ -737,7 +737,6 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
 
   LatLng? userLocation;
   bool routingInProgress = false;
-  int mapProviderStep = 0;
 
   static const String currentLocationLabel = 'موقعیت فعلی من';
 
@@ -1723,45 +1722,7 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
               maxZoom: 18,
             ),
             children: [
-              if (mapProviderStep == 0)
-                TileLayer(
-                  urlTemplate: CartoConfig.tileUrlWithKey,
-                  userAgentPackageName: 'com.cyrustourist.app',
-                  errorTileCallback: (_, __, ___) {
-                    if (mounted && mapProviderStep == 0) {
-                      setState(() {
-                        mapProviderStep = 1;
-                      });
-                    }
-                  },
-                )
-              else if (mapProviderStep == 1)
-                TileLayer(
-                  wmsOptions: WMSTileLayerOptions(
-                    baseUrl: 'https://map.ir/shiveh',
-                    layers: const ['Shiveh:Shiveh'],
-                    styles: const [],
-                    format: 'image/png',
-                    version: '1.1.1',
-                    transparent: false,
-                    otherParameters: const {'width': '256', 'height': '256'},
-                  ),
-                  tileProvider: NetworkTileProvider(headers: {'x-api-key': MapIrConfig.apiKey}),
-                  userAgentPackageName: 'com.cyrustourist.app',
-                  errorTileCallback: (_, __, ___) {
-                    if (mounted && mapProviderStep == 1) {
-                      setState(() {
-                        mapProviderStep = 2;
-                      });
-                    }
-                  },
-                )
-              else
-                TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName: 'com.cyrustourist.app',
-                ),
+              const ResilientTileLayer(maxZoom: 18),
               MarkerLayer(markers: markers()),
             ],
           ),
