@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/resilient_tile_layer.dart';
 
 import '../../config/carto_config.dart';
 import '../../core/language/app_language.dart';
@@ -1169,10 +1170,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
                       interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
                     ),
                     children: [
-                      TileLayer(
-                        urlTemplate: CartoConfig.tileUrlWithKey,
-                        userAgentPackageName: 'com.cyrustourist.app',
-                      ),
+                      const ResilientTileLayer(maxZoom: 18),
                       MarkerLayer(
                         markers: [
                           Marker(
