@@ -9,7 +9,10 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
 import '../core/language/menu_translations.dart';
+import '../services/account_service.dart';
 import '../services/badge_service.dart';
+import 'profile/my_profile_page.dart';
+import '../widgets/registration_steps_card.dart';
 
 // ===================== رنگ‌ها (هم‌شکل صفحهٔ ثبت‌نام) =====================
 const Color _bg = Color(0xfff3f6f7);
@@ -48,7 +51,8 @@ const Map<String, Map<String, String>> _kTx = {
     'photoChange': 'تغییر عکس',
     'photoHint': 'یک عکس. پیش از ارسال خودکار فشرده می‌شود.',
     's_social': 'فیلم و شبکه‌های اجتماعی (اختیاری)',
-    'video': 'لینک فیلم (آپارات یا یوتیوب)',
+    'video': '⭐ لینک نمایش فیلم ویژه (لینک آپارات/یوتیوب یا کد Embed)',
+    'videoHint': 'لینک فیلم یا کد Embed کامل آپارات را همان‌طور که کپی کرده‌اید بچسبانید.',
     'instagram': 'اینستاگرام',
     'website': 'وب‌سایت',
     'submit': 'ثبت اقامتگاه',
@@ -96,7 +100,8 @@ const Map<String, Map<String, String>> _kTx = {
     'photoChange': 'Change photo',
     'photoHint': 'One photo. It is compressed automatically before sending.',
     's_social': 'Video and social links (optional)',
-    'video': 'Video link (Aparat or YouTube)',
+    'video': '⭐ Featured film link (Aparat/YouTube link or Embed code)',
+    'videoHint': 'Paste the film link or the full Aparat embed code as copied.',
     'instagram': 'Instagram',
     'website': 'Website',
     'submit': 'Submit accommodation',
@@ -144,7 +149,8 @@ const Map<String, Map<String, String>> _kTx = {
     'photoChange': 'تغيير الصورة',
     'photoHint': 'صورة واحدة. يتم ضغطها تلقائياً قبل الإرسال.',
     's_social': 'الفيديو والشبكات (اختياري)',
-    'video': 'رابط الفيديو (آپارات أو يوتيوب)',
+    'video': '⭐ رابط عرض الفيديو المميز (رابط آپارات/يوتيوب أو كود Embed)',
+    'videoHint': 'الصق رابط الفيديو أو كود Embed الكامل كما نسخته.',
     'instagram': 'إنستغرام',
     'website': 'الموقع',
     'submit': 'تسجيل مكان الإقامة',
@@ -278,11 +284,64 @@ const Map<String, Map<String, String>> _kTx2 = {
   },
 };
 
+// متن‌های تأیید حساب و ویرایش
+const Map<String, Map<String, String>> _kTx3 = {
+  'fa': {
+    'gateTitle': 'ابتدا حساب کاربری را تکمیل کنید',
+    'gateText': 'برای جلوگیری از ثبت‌های جعلی، و برای اینکه بعد از تأیید بتوانید تیک آبی بگیرید و استوری بگذارید، شمارهٔ همراه خود را با کد پیامک تأیید کنید. سپس به همین صفحه برگردید و ثبت‌نام را ادامه دهید.',
+    'gateBtn': 'رفتن به شناسه کاربری',
+    'gateRecheck': 'تأیید کردم، ادامه',
+    'gateStill': 'هنوز حساب شما تأیید نشده است.',
+    'editBtn': 'ویرایش',
+    'editTitle': 'ویرایش اطلاعات',
+    'editIntro': 'تغییرات شما بلافاصله اعمال نمی‌شود؛ ابتدا در صف بررسی پشتیبانی قرار می‌گیرد و پس از تأیید منتشر می‌شود. تا آن زمان اطلاعات قبلی نمایش داده می‌شود.',
+    'editSubmit': 'ارسال ویرایش برای بررسی',
+    'editPending': 'ویرایش در صف بررسی',
+    'editCancel': 'انصراف از ویرایش',
+    'editKeepPhoto': 'عکس فعلی حفظ می‌شود؛ فقط برای تغییر، عکس جدید انتخاب کنید.',
+    'editDoneTitle': 'ویرایش شما ثبت شد',
+    'editDoneText': 'تغییرات در صف بررسی پشتیبانی قرار گرفت. پس از تأیید اعمال می‌شود و وضعیت را در «درخواست‌های من» می‌بینید.',
+  },
+  'en': {
+    'gateTitle': 'Complete your account first',
+    'gateText': 'To prevent fake listings, and so you can later get a blue tick and post stories, verify your mobile number with an SMS code. Then come back to this page and continue.',
+    'gateBtn': 'Go to my account',
+    'gateRecheck': 'I verified, continue',
+    'gateStill': 'Your account is not verified yet.',
+    'editBtn': 'Edit',
+    'editTitle': 'Edit details',
+    'editIntro': 'Your changes are not applied immediately. They go into the support review queue and are published after approval. Until then the previous details stay visible.',
+    'editSubmit': 'Send edit for review',
+    'editPending': 'Edit in review queue',
+    'editCancel': 'Cancel editing',
+    'editKeepPhoto': 'The current photo is kept. Choose a new one only to change it.',
+    'editDoneTitle': 'Your edit was submitted',
+    'editDoneText': 'Your changes are in the support review queue. They apply after approval; follow the status in "My requests".',
+  },
+  'ar': {
+    'gateTitle': 'أكمل حسابك أولاً',
+    'gateText': 'لمنع التسجيلات المزيفة، ولتتمكن لاحقاً من الحصول على العلامة الزرقاء ونشر القصص، أكّد رقم هاتفك برمز SMS ثم عد إلى هذه الصفحة وأكمل التسجيل.',
+    'gateBtn': 'الانتقال إلى حسابي',
+    'gateRecheck': 'تم التأكيد، متابعة',
+    'gateStill': 'لم يتم تأكيد حسابك بعد.',
+    'editBtn': 'تعديل',
+    'editTitle': 'تعديل البيانات',
+    'editIntro': 'لا تُطبَّق تعديلاتك فوراً؛ تدخل أولاً في قائمة مراجعة الدعم وتُنشر بعد الموافقة، وتبقى البيانات السابقة ظاهرة حتى ذلك الحين.',
+    'editSubmit': 'إرسال التعديل للمراجعة',
+    'editPending': 'التعديل قيد المراجعة',
+    'editCancel': 'إلغاء التعديل',
+    'editKeepPhoto': 'تبقى الصورة الحالية. اختر صورة جديدة فقط إذا أردت تغييرها.',
+    'editDoneTitle': 'تم إرسال تعديلك',
+    'editDoneText': 'دخلت تعديلاتك قائمة مراجعة الدعم وستُطبَّق بعد الموافقة. تابع الحالة في «طلباتي».',
+  },
+};
+
 String _t(String key) {
   final lang = MenuLanguage.current;
   final m = _kTx[lang] ?? _kTx['en']!;
   final m2 = _kTx2[lang] ?? _kTx2['en']!;
-  return m[key] ?? m2[key] ?? _kTx['en']![key] ?? _kTx2['en']![key] ?? _kTx['fa']![key] ?? _kTx2['fa']![key] ?? key;
+  final m3 = _kTx3[lang] ?? _kTx3['en']!;
+  return m[key] ?? m2[key] ?? m3[key] ?? _kTx3['en']![key] ?? _kTx['en']![key] ?? _kTx2['en']![key] ?? _kTx['fa']![key] ?? _kTx2['fa']![key] ?? _kTx3['fa']![key] ?? key;
 }
 
 // [کلید، فارسی، انگلیسی، عربی]
@@ -635,6 +694,9 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   bool _busy = false;
   String _doneCode = '';
   List<Map<String, dynamic>> _mine = [];
+  bool? _verified; // null = نامشخص (آفلاین)؛ سرور هنگام ارسال دوباره بررسی می‌کند
+  int? _editId; // وقتی null نیست: در حال ویرایش مورد تأییدشده
+  bool _doneEdit = false;
 
   bool get _rtl => MenuLanguage.isRtl;
   String get _kind => widget.kind;
@@ -656,6 +718,93 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   void initState() {
     super.initState();
     _loadMine();
+    _loadAccount();
+  }
+
+  Future<void> _loadAccount({bool notify = false}) async {
+    final a = await AccountService.me();
+    if (!mounted) return;
+    setState(() => _verified = a == null ? null : (a.phoneVerified || a.emailVerified));
+    if (notify && _verified == false) _snack(_t('gateStill'));
+  }
+
+  Future<void> _openAccount() async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyProfilePage()));
+    await _loadAccount();
+  }
+
+  void _fill(Map<String, dynamic> f) {
+    String v(String k) => '${f[k] ?? ''}';
+    List<String> l(String k) => f[k] is List ? (f[k] as List).map((e) => '$e').toList() : <String>[];
+    _name.text = v('name');
+    _province.text = v('province');
+    _city.text = v('city');
+    _address.text = v('address');
+    _mobile.text = v('mobile');
+    _phone.text = v('phone');
+    _rooms.text = v('rooms');
+    _desc.text = v('description');
+    _video.text = v('video_url');
+    _insta.text = v('instagram');
+    _web.text = v('website');
+    _specialty.text = v('specialty');
+    _doctor.text = v('doctor');
+    _hours.text = v('hours');
+    _manager.text = v('manager');
+    _license.text = v('license');
+    _regions.text = v('regions');
+    _experience.text = v('experience');
+    _areas.text = v('areas');
+    _telegram.text = v('telegram');
+    _type = _kind == 'stay' ? v('accommodation_type') : (_kind == 'health' ? v('health_type') : '');
+    _amen
+      ..clear()
+      ..addAll(l('amenities'));
+    _langs
+      ..clear()
+      ..addAll(l('languages'));
+    _fields
+      ..clear()
+      ..addAll(l('fields'));
+  }
+
+  Future<void> _startEdit(Map<String, dynamic> m) async {
+    final uid = await BadgeService.userUid();
+    final id = int.tryParse('${m['id']}') ?? 0;
+    final j = await BadgeService.call('GET', '/api/stay-reg/item', query: {'user_uid': uid, 'kind': _kind, 'id': '$id'});
+    if (!mounted) return;
+    if (j == null || j['success'] != true || j['form'] is! Map) return _snack('${j?['message'] ?? _t('netErr')}');
+    if (j['editable'] != true) return _snack('${j['message'] ?? _t('netErr')}');
+    setState(() {
+      _fill(Map<String, dynamic>.from(j['form'] as Map));
+      _editId = id;
+      _photo = null;
+      _errors.clear();
+      _doneCode = '';
+      _doneEdit = false;
+    });
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
+
+  Future<void> _submitEdit() async {
+    final uid = await BadgeService.userUid();
+    setState(() => _busy = true);
+    final body = _formBody(uid)..['id'] = _editId;
+    final j = await BadgeService.call('POST', '/api/stay-reg/edit', body: body);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (j == null) return _snack(_t('netErr'));
+    if (j['success'] == true) {
+      setState(() {
+        _doneCode = '${j['tracking_code'] ?? ''}';
+        _doneEdit = true;
+      });
+      _loadMine();
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+      return;
+    }
+    if ('${j['error']}' == 'account_not_verified') setState(() => _verified = false);
+    _snack('${j['message'] ?? _t('netErr')}');
   }
 
   @override
@@ -747,23 +896,8 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     return b.toString();
   }
 
-  Future<void> _submit() async {
-    if (_busy) return;
-    if (!_validate()) {
-      _scroll.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-      return;
-    }
-    // پازل ضد ربات؛ در صورت خطای پازل، پازل تازه نشان داده می‌شود
-    for (var attempt = 0; attempt < 4; attempt++) {
-      final cap = await showDialog<_CaptchaResult>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const _CaptchaDialog(),
-      );
-      if (cap == null || !mounted) return;
-      setState(() => _busy = true);
-      final uid = await BadgeService.userUid();
-      final body = <String, dynamic>{
+  Map<String, dynamic> _formBody(String uid) {
+    return <String, dynamic>{
         'user_uid': uid,
         'kind': _kind,
         'hp': '',
@@ -792,11 +926,33 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         'video_url': _video.text.trim(),
         'instagram': _insta.text.trim(),
         'website': _web.text.trim(),
-        'captcha_id': cap.id,
-        'captcha_x': cap.x,
-        'captcha_trail': cap.trail,
         if (_photo != null) 'photo': 'data:image/jpeg;base64,${base64Encode(_photo!)}',
-      };
+    };
+  }
+
+  Future<void> _submit() async {
+    if (_busy) return;
+    if (!_validate()) {
+      _scroll.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      return;
+    }
+    if (_editId != null) return _submitEdit();
+    // پازل ضد ربات؛ در صورت خطای پازل، پازل تازه نشان داده می‌شود
+    for (var attempt = 0; attempt < 4; attempt++) {
+      final cap = await showDialog<_CaptchaResult>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _CaptchaDialog(),
+      );
+      if (cap == null || !mounted) return;
+      setState(() => _busy = true);
+      final uid = await BadgeService.userUid();
+      final body = _formBody(uid)
+        ..addAll(<String, dynamic>{
+          'captcha_id': cap.id,
+          'captcha_x': cap.x,
+          'captcha_trail': cap.trail,
+        });
       final j = await BadgeService.call('POST', '/api/stay-reg/submit', body: body);
       if (!mounted) return;
       setState(() => _busy = false);
@@ -808,6 +964,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         return;
       }
       final code = '${j['error'] ?? ''}';
+      if (code == 'account_not_verified') setState(() => _verified = false);
       _snack('${j['message'] ?? _t('netErr')}');
       if (!code.startsWith('captcha_')) return;
     }
@@ -825,6 +982,8 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       _photo = null;
       _errors.clear();
       _doneCode = '';
+      _doneEdit = false;
+      _editId = null;
     });
   }
 
@@ -840,7 +999,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
           backgroundColor: _bar,
           foregroundColor: Colors.white,
           elevation: 0,
-          title: Text(_t('title_$_kind'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          title: Text(_editId != null ? _t('editTitle') : _t('title_$_kind'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         ),
         body: SafeArea(
           child: ListView(
@@ -854,10 +1013,44 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     );
   }
 
-  List<Widget> _formChildren() {
+  List<Widget> _gateChildren() {
     return [
       Text(_t('intro_$_kind'), style: const TextStyle(color: _soft, fontSize: 13, height: 1.9)),
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: _gold, width: 1.5)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Icon(Icons.verified_user_rounded, color: _gold, size: 44),
+          const SizedBox(height: 10),
+          Text(_t('gateTitle'), textAlign: TextAlign.center, style: const TextStyle(color: _ink, fontSize: 17, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          Text(_t('gateText'), textAlign: TextAlign.center, style: const TextStyle(color: _soft, fontSize: 13, height: 1.9)),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _openAccount,
+              icon: const Icon(Icons.person_rounded),
+              label: Text(_t('gateBtn'), style: const TextStyle(fontWeight: FontWeight.w900)),
+              style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(onPressed: () => _loadAccount(notify: true), child: Text(_t('gateRecheck'))),
+        ]),
+      ),
+      if (_mine.isNotEmpty) ...[const SizedBox(height: 12), _mineCard()],
+      const SizedBox(height: 24),
+    ];
+  }
+
+  List<Widget> _formChildren() {
+    if (_verified == false && _editId == null) return _gateChildren();
+    return [
+      Text(_editId != null ? _t('editIntro') : _t('intro_$_kind'), style: const TextStyle(color: _soft, fontSize: 13, height: 1.9)),
       const SizedBox(height: 12),
+      if (_editId == null) RegistrationStepsCard(key: ValueKey('v$_verified'), compact: true),
       if (_mine.isNotEmpty) ...[_mineCard(), const SizedBox(height: 12)],
       _card(_t('s_info_$_kind'), [
         _field('name', _name, _t('name_$_kind'), maxLength: 80),
@@ -964,7 +1157,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                _photo == null ? _t('photoHint') : '${(_photo!.length / 1024).round()} KB',
+                _photo == null ? (_editId != null ? _t('editKeepPhoto') : _t('photoHint')) : '${(_photo!.length / 1024).round()} KB',
                 style: const TextStyle(color: _soft, fontSize: 12, height: 1.7),
               ),
             ]),
@@ -972,7 +1165,8 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         ]),
       ]),
       _card(_t('s_social'), [
-        _field('video', _video, _t('video'), keyboard: TextInputType.url, ltr: true),
+        _field('video', _video, _t('video'), lines: 3, keyboard: TextInputType.multiline, ltr: true),
+        Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_t('videoHint'), style: const TextStyle(color: _soft, fontSize: 12, height: 1.7))),
         _field('instagram', _insta, _t('instagram'), ltr: true),
         if (_kind == 'agency' || _kind == 'leader') _field('telegram', _telegram, _t('telegram'), ltr: true),
         _field('website', _web, _t('website'), keyboard: TextInputType.url, ltr: true),
@@ -989,9 +1183,13 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
           ),
           child: _busy
               ? Text(_t('sending'), style: const TextStyle(fontWeight: FontWeight.w800))
-              : Text(_t('submit'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+              : Text(_editId != null ? _t('editSubmit') : _t('submit'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
         ),
       ),
+      if (_editId != null) ...[
+        const SizedBox(height: 8),
+        OutlinedButton(onPressed: _busy ? null : _reset, child: Text(_t('editCancel'))),
+      ],
       const SizedBox(height: 24),
     ];
   }
@@ -1192,6 +1390,19 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
                   ),
                 ),
               ),
+              if (m['status'] == 'approved' && m['pending_edit'] == true)
+                Container(
+                  margin: const EdgeInsetsDirectional.only(start: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: const Color(0xffe6f1ff), borderRadius: BorderRadius.circular(999)),
+                  child: Text(_t('editPending'), style: const TextStyle(color: Color(0xff1d5fb4), fontSize: 11, fontWeight: FontWeight.w800)),
+                )
+              else if (m['status'] == 'approved')
+                IconButton(
+                  tooltip: _t('editBtn'),
+                  onPressed: _busy ? null : () => _startEdit(m),
+                  icon: const Icon(Icons.edit_rounded, color: _teal, size: 20),
+                ),
               if (m['status'] != 'approved')
                 IconButton(
                   tooltip: _t('delete'),
@@ -1215,7 +1426,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       child: Column(children: [
         const CircleAvatar(radius: 34, backgroundColor: _teal, child: Icon(Icons.check_rounded, color: Colors.white, size: 38)),
         const SizedBox(height: 14),
-        Text(_t('doneTitle'), textAlign: TextAlign.center, style: const TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.w900)),
+        Text(_doneEdit ? _t('editDoneTitle') : _t('doneTitle'), textAlign: TextAlign.center, style: const TextStyle(color: _ink, fontSize: 18, fontWeight: FontWeight.w900)),
         const SizedBox(height: 10),
         Text(_t('doneCode'), style: const TextStyle(color: _soft, fontSize: 13)),
         const SizedBox(height: 4),
@@ -1224,7 +1435,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
           child: Text(_doneCode, style: const TextStyle(color: _gold, fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 2)),
         ),
         const SizedBox(height: 10),
-        Text(_t('doneText'), textAlign: TextAlign.center, style: const TextStyle(color: _soft, fontSize: 13, height: 1.9)),
+        Text(_doneEdit ? _t('editDoneText') : _t('doneText'), textAlign: TextAlign.center, style: const TextStyle(color: _soft, fontSize: 13, height: 1.9)),
         const SizedBox(height: 16),
         if (_mine.isNotEmpty) _mineCard(),
         const SizedBox(height: 14),
