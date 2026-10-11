@@ -169,9 +169,120 @@ const Map<String, Map<String, String>> _kTx = {
   },
 };
 
+// متن‌های مخصوص لیدر / آژانس / گردشگری سلامت
+const Map<String, Map<String, String>> _kTx2 = {
+  'fa': {
+    'title_stay': 'ثبت اقامتگاه',
+    'title_health': 'ثبت گردشگری سلامت',
+    'title_agency': 'ثبت آژانس مسافرتی',
+    'title_leader': 'ثبت لیدر گردشگری',
+    'intro_stay': 'اطلاعات اقامتگاه را وارد کنید. پس از بررسی مدیریت، در اپ و روی نقشه نمایش داده می‌شود.',
+    'intro_health': 'اطلاعات مرکز یا خدمت سلامت را وارد کنید. پس از بررسی مدیریت، در بخش گردشگری سلامت نمایش داده می‌شود.',
+    'intro_agency': 'اطلاعات آژانس را وارد کنید. پس از بررسی مدیریت، در بخش آژانس‌های مسافرتی نمایش داده می‌شود.',
+    'intro_leader': 'اطلاعات خود را وارد کنید. پس از بررسی مدیریت، پروفایل شما در بخش لیدرها فعال می‌شود.',
+    'name_stay': 'نام اقامتگاه *',
+    'name_health': 'نام مرکز یا خدمت *',
+    'name_agency': 'نام آژانس *',
+    'name_leader': 'نام و نام خانوادگی *',
+    's_info_stay': 'مشخصات اقامتگاه',
+    's_info_health': 'مشخصات مرکز',
+    's_info_agency': 'مشخصات آژانس',
+    's_info_leader': 'مشخصات فردی',
+    'healthType': 'نوع مرکز *',
+    'specialty': 'تخصص',
+    'doctor': 'پزشک یا مسئول',
+    'hours': 'ساعت کاری',
+    'manager': 'نام مدیر',
+    'license': 'شماره مجوز (در صورت وجود)',
+    'regions': 'مناطق و مقاصد اصلی',
+    'experience': 'سابقه فعالیت',
+    'areas': 'مناطق فعالیت',
+    'fields': 'زمینهٔ فعالیت',
+    'languages': 'زبان‌های مسلط',
+    'services': 'خدمات',
+    'telegram': 'تلگرام یا ایتا',
+    's_prof': 'تخصص و سابقه',
+    'e_htype': 'نوع مرکز را انتخاب کنید',
+    'e_lname': 'نام و نام خانوادگی را کامل وارد کنید',
+    'photo_agency': 'لوگو یا عکس',
+  },
+  'en': {
+    'title_stay': 'Register accommodation',
+    'title_health': 'Register health tourism',
+    'title_agency': 'Register travel agency',
+    'title_leader': 'Register tour leader',
+    'intro_stay': 'Enter your accommodation details. After admin review it appears in the app and on the map.',
+    'intro_health': 'Enter the health center or service details. After admin review it appears in Health Tourism.',
+    'intro_agency': 'Enter your agency details. After admin review it appears in Travel Agencies.',
+    'intro_leader': 'Enter your details. After admin review your profile becomes active in Tour Leaders.',
+    'name_stay': 'Accommodation name *',
+    'name_health': 'Center or service name *',
+    'name_agency': 'Agency name *',
+    'name_leader': 'Full name *',
+    's_info_stay': 'Accommodation details',
+    's_info_health': 'Center details',
+    's_info_agency': 'Agency details',
+    's_info_leader': 'Personal details',
+    'healthType': 'Center type *',
+    'specialty': 'Specialty',
+    'doctor': 'Doctor or manager',
+    'hours': 'Working hours',
+    'manager': 'Manager name',
+    'license': 'License number (if any)',
+    'regions': 'Main regions and destinations',
+    'experience': 'Experience',
+    'areas': 'Areas of activity',
+    'fields': 'Fields of activity',
+    'languages': 'Languages you speak',
+    'services': 'Services',
+    'telegram': 'Telegram or Eitaa',
+    's_prof': 'Expertise and experience',
+    'e_htype': 'Choose a center type',
+    'e_lname': 'Enter your first and last name',
+    'photo_agency': 'Logo or photo',
+  },
+  'ar': {
+    'title_stay': 'تسجيل مكان إقامة',
+    'title_health': 'تسجيل السياحة العلاجية',
+    'title_agency': 'تسجيل وكالة سفر',
+    'title_leader': 'تسجيل مرشد سياحي',
+    'intro_stay': 'أدخل بيانات مكان الإقامة. بعد مراجعة الإدارة سيظهر في التطبيق وعلى الخريطة.',
+    'intro_health': 'أدخل بيانات المركز أو الخدمة. بعد مراجعة الإدارة سيظهر في السياحة العلاجية.',
+    'intro_agency': 'أدخل بيانات الوكالة. بعد مراجعة الإدارة ستظهر في وكالات السفر.',
+    'intro_leader': 'أدخل بياناتك. بعد مراجعة الإدارة يتم تفعيل ملفك في المرشدين.',
+    'name_stay': 'اسم مكان الإقامة *',
+    'name_health': 'اسم المركز أو الخدمة *',
+    'name_agency': 'اسم الوكالة *',
+    'name_leader': 'الاسم الكامل *',
+    's_info_stay': 'بيانات مكان الإقامة',
+    's_info_health': 'بيانات المركز',
+    's_info_agency': 'بيانات الوكالة',
+    's_info_leader': 'البيانات الشخصية',
+    'healthType': 'نوع المركز *',
+    'specialty': 'التخصص',
+    'doctor': 'الطبيب أو المسؤول',
+    'hours': 'ساعات العمل',
+    'manager': 'اسم المدير',
+    'license': 'رقم الترخيص (إن وجد)',
+    'regions': 'المناطق والوجهات الرئيسية',
+    'experience': 'الخبرة',
+    'areas': 'مناطق النشاط',
+    'fields': 'مجال النشاط',
+    'languages': 'اللغات التي تتقنها',
+    'services': 'الخدمات',
+    'telegram': 'تيليجرام أو إيتا',
+    's_prof': 'التخصص والخبرة',
+    'e_htype': 'اختر نوع المركز',
+    'e_lname': 'أدخل الاسم الأول والأخير',
+    'photo_agency': 'الشعار أو صورة',
+  },
+};
+
 String _t(String key) {
-  final m = _kTx[MenuLanguage.current] ?? _kTx['en']!;
-  return m[key] ?? _kTx['en']![key] ?? _kTx['fa']![key] ?? key;
+  final lang = MenuLanguage.current;
+  final m = _kTx[lang] ?? _kTx['en']!;
+  final m2 = _kTx2[lang] ?? _kTx2['en']!;
+  return m[key] ?? m2[key] ?? _kTx['en']![key] ?? _kTx2['en']![key] ?? _kTx['fa']![key] ?? _kTx2['fa']![key] ?? key;
 }
 
 // [کلید، فارسی، انگلیسی، عربی]
@@ -208,6 +319,61 @@ const List<List<String>> _kAmenities = [
   ['pet_friendly', 'حیوان خانگی', 'Pets allowed', 'يسمح بالحيوانات'],
   ['prayer_room', 'نمازخانه', 'Prayer room', 'مصلى'],
   ['tv', 'تلویزیون', 'TV', 'تلفاز'],
+];
+
+const List<List<String>> _kHealthTypes = [
+  ['hospital', 'بیمارستان', 'Hospital', 'مستشفى'],
+  ['clinic', 'کلینیک و درمانگاه', 'Clinic', 'عيادة'],
+  ['dental', 'دندان‌پزشکی', 'Dental', 'أسنان'],
+  ['beauty', 'زیبایی، پوست و مو', 'Beauty and skin', 'تجميل وبشرة'],
+  ['spa', 'آبگرم و اسپا', 'Spa and hot spring', 'منتجع صحي'],
+  ['massage', 'ماساژ و ریلکسیشن', 'Massage', 'تدليك'],
+  ['specialist', 'پزشک متخصص', 'Specialist doctor', 'طبيب مختص'],
+  ['physio', 'فیزیوتراپی و توانبخشی', 'Physiotherapy', 'علاج طبيعي'],
+  ['lab', 'آزمایشگاه و تصویربرداری', 'Lab and imaging', 'مختبر وتصوير'],
+  ['eye', 'چشم‌پزشکی و لیزیک', 'Eye care', 'طب العيون'],
+  ['hair', 'کاشت مو', 'Hair transplant', 'زراعة الشعر'],
+  ['fertility', 'زنان و ناباروری', 'Women and fertility', 'نساء وخصوبة'],
+  ['traditional', 'طب سنتی و گیاهی', 'Traditional medicine', 'طب تقليدي'],
+  ['nutrition', 'تغذیه و رژیم‌درمانی', 'Nutrition', 'تغذية'],
+  ['pharmacy', 'داروخانه', 'Pharmacy', 'صيدلية'],
+  ['wellness', 'سلامت و تندرستی', 'Wellness', 'عافية'],
+  ['other', 'سایر', 'Other', 'أخرى'],
+];
+
+const List<List<String>> _kAgencyServices = [
+  ['licensed', 'دارای مجوز', 'Licensed', 'مرخصة'],
+  ['tour_booking', 'رزرو تور', 'Tour booking', 'حجز جولات'],
+  ['hotel_booking', 'رزرو هتل', 'Hotel booking', 'حجز فنادق'],
+  ['flight_booking', 'رزرو پرواز', 'Flight booking', 'حجز طيران'],
+  ['visa', 'خدمات ویزا', 'Visa services', 'خدمات التأشيرة'],
+  ['insurance', 'بیمه سفر', 'Travel insurance', 'تأمين سفر'],
+  ['transfer', 'ترانسفر', 'Transfer', 'نقل'],
+  ['corporate', 'خدمات سازمانی', 'Corporate', 'خدمات شركات'],
+  ['online_booking', 'رزرو آنلاین', 'Online booking', 'حجز إلكتروني'],
+  ['24h_support', 'پشتیبانی ۲۴ ساعته', '24h support', 'دعم 24 ساعة'],
+  ['multilingual', 'پشتیبانی چندزبانه', 'Multilingual', 'متعدد اللغات'],
+];
+
+// [مقدار فارسی (ارسال به سرور)، English، عربی]
+const List<List<String>> _kLeaderFields = [
+  ['تاریخی و فرهنگی', 'Historical and cultural', 'تاريخي وثقافي'],
+  ['طبیعت‌گردی', 'Nature tours', 'سياحة الطبيعة'],
+  ['کویر و ماجراجویی', 'Desert and adventure', 'صحراء ومغامرة'],
+  ['تور شهری', 'City tours', 'جولات المدينة'],
+  ['تور خانوادگی', 'Family tours', 'جولات عائلية'],
+  ['تور خارجی', 'Outbound tours', 'جولات خارجية'],
+  ['گردشگری سلامت', 'Health tourism', 'السياحة العلاجية'],
+];
+
+const List<List<String>> _kLanguages = [
+  ['فارسی', 'Persian', 'الفارسية'],
+  ['English', 'English', 'الإنجليزية'],
+  ['العربية', 'Arabic', 'العربية'],
+  ['Türkçe', 'Turkish', 'التركية'],
+  ['Русский', 'Russian', 'الروسية'],
+  ['Deutsch', 'German', 'الألمانية'],
+  ['Français', 'French', 'الفرنسية'],
 ];
 
 String _lbl(List<String> row) {
@@ -436,8 +602,12 @@ class _CaptchaDialogState extends State<_CaptchaDialog> {
 }
 
 /// صفحهٔ ثبت اقامتگاه داخل اپ — همهٔ مسیرهای ثبت هتل، کلبه، بوم‌گردی و ... به اینجا می‌رسند.
+///
+/// kind: stay | health | agency | leader — هر نوع به جدول و پنل خودش وصل می‌شود.
 class StayRegistrationPage extends StatefulWidget {
-  const StayRegistrationPage({super.key});
+  const StayRegistrationPage({super.key, this.kind = 'stay'});
+
+  final String kind;
 
   @override
   State<StayRegistrationPage> createState() => _StayRegistrationPageState();
@@ -467,6 +637,20 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   List<Map<String, dynamic>> _mine = [];
 
   bool get _rtl => MenuLanguage.isRtl;
+  String get _kind => widget.kind;
+
+  // فیلدهای مخصوص هر نوع
+  final _specialty = TextEditingController();
+  final _doctor = TextEditingController();
+  final _hours = TextEditingController();
+  final _manager = TextEditingController();
+  final _license = TextEditingController();
+  final _regions = TextEditingController();
+  final _experience = TextEditingController();
+  final _areas = TextEditingController();
+  final _telegram = TextEditingController();
+  final Set<String> _langs = {};
+  final Set<String> _fields = {};
 
   @override
   void initState() {
@@ -476,7 +660,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
 
   @override
   void dispose() {
-    for (final c in [_name, _province, _city, _address, _mobile, _phone, _rooms, _desc, _video, _insta, _web]) {
+    for (final c in [_name, _province, _city, _address, _mobile, _phone, _rooms, _desc, _video, _insta, _web, _specialty, _doctor, _hours, _manager, _license, _regions, _experience, _areas, _telegram]) {
       c.dispose();
     }
     _provinceFocus.dispose();
@@ -488,12 +672,16 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     final uid = await BadgeService.userUid();
     final j = await BadgeService.call('GET', '/api/stay-reg/mine', query: {'user_uid': uid});
     if (!mounted || j == null || j['success'] != true || j['items'] is! List) return;
-    setState(() => _mine = (j['items'] as List).whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList());
+    setState(() => _mine = (j['items'] as List)
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((e) => '${e['kind'] ?? 'stay'}' == _kind)
+        .toList());
   }
 
   Future<void> _deleteMine(int id) async {
     final uid = await BadgeService.userUid();
-    await BadgeService.call('POST', '/api/stay-reg/delete', body: {'user_uid': uid, 'id': id});
+    await BadgeService.call('POST', '/api/stay-reg/delete', body: {'user_uid': uid, 'id': id, 'kind': _kind});
     await _loadMine();
   }
 
@@ -529,7 +717,9 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   bool _validate() {
     final e = <String, String>{};
     if (_name.text.trim().length < 3) e['name'] = _t('e_name');
-    if (_type.isEmpty) e['type'] = _t('e_type');
+    if (_kind == 'leader' && _name.text.trim().split(RegExp(r'\s+')).length < 2) e['name'] = _t('e_lname');
+    if (_kind == 'stay' && _type.isEmpty) e['type'] = _t('e_type');
+    if (_kind == 'health' && _type.isEmpty) e['type'] = _t('e_htype');
     if (_resolveProvince(_province.text) == null) e['province'] = _t('e_province');
     if (_city.text.trim().length < 2) e['city'] = _t('e_city');
     if (!RegExp(r'^09\d{9}$').hasMatch(_digits(_mobile.text).replaceAll(RegExp(r'[\s\-]'), ''))) {
@@ -575,15 +765,28 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       final uid = await BadgeService.userUid();
       final body = <String, dynamic>{
         'user_uid': uid,
+        'kind': _kind,
         'hp': '',
         'name': _name.text.trim(),
-        'accommodation_type': _type,
+        if (_kind == 'stay') 'accommodation_type': _type,
+        if (_kind == 'health') 'health_type': _type,
+        if (_kind == 'health') 'specialty': _specialty.text.trim(),
+        if (_kind == 'health') 'doctor': _doctor.text.trim(),
+        if (_kind == 'health') 'hours': _hours.text.trim(),
+        if (_kind == 'agency') 'manager': _manager.text.trim(),
+        if (_kind == 'agency' || _kind == 'leader') 'license': _license.text.trim(),
+        if (_kind == 'agency') 'regions': _regions.text.trim(),
+        if (_kind == 'agency' || _kind == 'leader') 'experience': _experience.text.trim(),
+        if (_kind == 'leader') 'areas': _areas.text.trim(),
+        if (_kind == 'leader') 'fields': _fields.toList(),
+        if (_kind == 'leader') 'languages': _langs.toList(),
+        if (_kind == 'agency' || _kind == 'leader') 'telegram': _telegram.text.trim(),
         'province': _resolveProvince(_province.text),
         'city': _city.text.trim(),
         'address': _address.text.trim(),
         'mobile': _digits(_mobile.text).replaceAll(RegExp(r'[\s\-]'), ''),
         'phone': _digits(_phone.text).trim(),
-        'rooms': _digits(_rooms.text).trim(),
+        if (_kind == 'stay') 'rooms': _digits(_rooms.text).trim(),
         'description': _desc.text.trim(),
         'amenities': _amen.toList(),
         'video_url': _video.text.trim(),
@@ -611,11 +814,13 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   }
 
   void _reset() {
-    for (final c in [_name, _province, _city, _address, _mobile, _phone, _rooms, _desc, _video, _insta, _web]) {
+    for (final c in [_name, _province, _city, _address, _mobile, _phone, _rooms, _desc, _video, _insta, _web, _specialty, _doctor, _hours, _manager, _license, _regions, _experience, _areas, _telegram]) {
       c.clear();
     }
     setState(() {
       _type = '';
+      _langs.clear();
+      _fields.clear();
       _amen.clear();
       _photo = null;
       _errors.clear();
@@ -635,7 +840,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
           backgroundColor: _bar,
           foregroundColor: Colors.white,
           elevation: 0,
-          title: Text(_t('title'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          title: Text(_t('title_$_kind'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         ),
         body: SafeArea(
           child: ListView(
@@ -651,17 +856,34 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
 
   List<Widget> _formChildren() {
     return [
-      Text(_t('intro'), style: const TextStyle(color: _soft, fontSize: 13, height: 1.9)),
+      Text(_t('intro_$_kind'), style: const TextStyle(color: _soft, fontSize: 13, height: 1.9)),
       const SizedBox(height: 12),
       if (_mine.isNotEmpty) ...[_mineCard(), const SizedBox(height: 12)],
-      _card(_t('s_info'), [
-        _field('name', _name, _t('name'), maxLength: 80),
-        _label(_t('type')),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final r in _kTypes) _chip(_lbl(r), _type == r[0], () => setState(() => _type = r[0])),
-        ]),
-        _errText('type'),
-        const SizedBox(height: 12),
+      _card(_t('s_info_$_kind'), [
+        _field('name', _name, _t('name_$_kind'), maxLength: 80),
+        if (_kind == 'stay') ...[
+          _label(_t('type')),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final r in _kTypes) _chip(_lbl(r), _type == r[0], () => setState(() => _type = r[0])),
+          ]),
+          _errText('type'),
+          const SizedBox(height: 12),
+        ],
+        if (_kind == 'health') ...[
+          _label(_t('healthType')),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final r in _kHealthTypes) _chip(_lbl(r), _type == r[0], () => setState(() => _type = r[0])),
+          ]),
+          _errText('type'),
+          const SizedBox(height: 12),
+          _field('specialty', _specialty, _t('specialty'), maxLength: 80),
+          _field('doctor', _doctor, _t('doctor'), maxLength: 80),
+          _field('hours', _hours, _t('hours'), maxLength: 80),
+        ],
+        if (_kind == 'agency') ...[
+          _field('manager', _manager, _t('manager'), maxLength: 80),
+          _field('license', _license, _t('license'), maxLength: 40, ltr: true),
+        ],
         _label(_t('province')),
         _provinceField(),
         _errText('province'),
@@ -673,16 +895,53 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         _field('mobile', _mobile, _t('mobile'), keyboard: TextInputType.phone, ltr: true, maxLength: 14),
         _field('phone', _phone, _t('phone'), keyboard: TextInputType.phone, ltr: true, maxLength: 16),
       ]),
-      _card(_t('s_more'), [
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final r in _kAmenities)
-            _chip(_lbl(r), _amen.contains(r[0]), () => setState(() => _amen.contains(r[0]) ? _amen.remove(r[0]) : _amen.add(r[0]))),
+      if (_kind == 'stay')
+        _card(_t('s_more'), [
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final r in _kAmenities)
+              _chip(_lbl(r), _amen.contains(r[0]), () => setState(() => _amen.contains(r[0]) ? _amen.remove(r[0]) : _amen.add(r[0]))),
+          ]),
+          const SizedBox(height: 12),
+          _field('rooms', _rooms, _t('rooms'), keyboard: TextInputType.number, maxLength: 3),
+          _field('desc', _desc, _t('desc'), lines: 3, maxLength: 600),
+        ])
+      else if (_kind == 'agency')
+        _card(_t('services'), [
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final r in _kAgencyServices)
+              _chip(_lbl(r), _amen.contains(r[0]), () => setState(() => _amen.contains(r[0]) ? _amen.remove(r[0]) : _amen.add(r[0]))),
+          ]),
+          const SizedBox(height: 12),
+          _field('regions', _regions, _t('regions'), maxLength: 200),
+          _field('experience', _experience, _t('experience'), maxLength: 100),
+          _field('desc', _desc, _t('desc'), lines: 3, maxLength: 600),
+        ])
+      else if (_kind == 'leader')
+        _card(_t('s_prof'), [
+          _label(_t('fields')),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final r in _kLeaderFields)
+              _chip(MenuLanguage.current == 'fa' ? r[0] : (MenuLanguage.current == 'ar' ? r[2] : r[1]), _fields.contains(r[0]),
+                  () => setState(() => _fields.contains(r[0]) ? _fields.remove(r[0]) : _fields.add(r[0]))),
+          ]),
+          const SizedBox(height: 12),
+          _label(_t('languages')),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final r in _kLanguages)
+              _chip(MenuLanguage.current == 'fa' ? r[0] : (MenuLanguage.current == 'ar' ? r[2] : r[1]), _langs.contains(r[0]),
+                  () => setState(() => _langs.contains(r[0]) ? _langs.remove(r[0]) : _langs.add(r[0]))),
+          ]),
+          const SizedBox(height: 12),
+          _field('experience', _experience, _t('experience'), maxLength: 100),
+          _field('license', _license, _t('license'), maxLength: 40, ltr: true),
+          _field('areas', _areas, _t('areas'), maxLength: 200),
+          _field('desc', _desc, _t('desc'), lines: 3, maxLength: 600),
+        ])
+      else
+        _card(_t('desc'), [
+          _field('desc', _desc, _t('desc'), lines: 3, maxLength: 600),
         ]),
-        const SizedBox(height: 12),
-        _field('rooms', _rooms, _t('rooms'), keyboard: TextInputType.number, maxLength: 3),
-        _field('desc', _desc, _t('desc'), lines: 3, maxLength: 600),
-      ]),
-      _card(_t('s_photo'), [
+      _card(_kind == 'agency' ? _t('photo_agency') : _t('s_photo'), [
         Row(children: [
           Container(
             width: 84,
@@ -715,6 +974,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       _card(_t('s_social'), [
         _field('video', _video, _t('video'), keyboard: TextInputType.url, ltr: true),
         _field('instagram', _insta, _t('instagram'), ltr: true),
+        if (_kind == 'agency' || _kind == 'leader') _field('telegram', _telegram, _t('telegram'), ltr: true),
         _field('website', _web, _t('website'), keyboard: TextInputType.url, ltr: true),
       ]),
       const SizedBox(height: 4),
