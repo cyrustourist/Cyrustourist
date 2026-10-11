@@ -1,3 +1,4 @@
+import '../widgets/resilient_tile_layer.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -628,12 +629,7 @@ class _CategoryExplorerPageState
                         maxZoom: 18,
                       ),
                       children: [
-                        TileLayer(
-                          urlTemplate:
-                              CartoConfig.tileUrlWithKey,
-                          userAgentPackageName:
-                              'com.cyrustourist.app',
-                        ),
+                        const ResilientTileLayer(maxZoom: 18),
                         MapMarkersLayer(
                           places: _places,
                           onTap: _onMarkerTap,
