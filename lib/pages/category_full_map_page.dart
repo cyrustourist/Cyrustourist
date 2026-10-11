@@ -1,3 +1,4 @@
+import '../widgets/resilient_tile_layer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -312,11 +313,7 @@ class _CategoryFullMapPageState
             maxZoom: 18,
           ),
           children: [
-            TileLayer(
-              urlTemplate:
-                  CartoConfig.tileUrlWithKey,
-              userAgentPackageName: 'com.cyrustourist.app',
-            ),
+            const ResilientTileLayer(maxZoom: 18),
             MapMarkersLayer(
               places: _places,
               onTap: _onMarkerTap,
