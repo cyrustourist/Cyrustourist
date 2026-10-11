@@ -399,19 +399,19 @@ class SupportPage extends StatelessWidget {
                   onTap: () => _website(context),
                 ),
 
-                // Accommodation Registration / ثبت‌نام اقامتگاه
+                // ایتا (فقط نام و آیکون؛ بدون اشاره به ثبت‌نام)
                 _actionCard(
                   context: context,
-                  icon: Icons.hotel_rounded,
+                  icon: Icons.chat_bubble_rounded,
                   title: _t(
-                    'ثبت‌نام اقامتگاه',
-                    'Accommodation Registration',
-                    'تسجيل أماكن الإقامة',
+                    'ایتا',
+                    'Eitaa',
+                    'إيتا',
                   ),
                   subtitle: _t(
-                    'ثبت و معرفی اقامتگاه در Cyrus Tourist\nایتا: @cyrustourist',
-                    'Register and introduce your accommodation on Cyrus Tourist\nEitaa: @cyrustourist',
-                    'تسجيل وإضافة مكان إقامتك في Cyrus Tourist\nإيتا: @cyrustourist',
+                    'ارتباط مستقیم با پشتیبانی',
+                    'Direct contact with support',
+                    'تواصل مباشر مع الدعم',
                   ),
                   onTap: () => _eitaa(context),
                 ),
