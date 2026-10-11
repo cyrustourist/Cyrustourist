@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../config/carto_config.dart';
 import '../core/language/menu_translations.dart';
+import '../widgets/resilient_tile_layer.dart';
 
 const Color _bg = Color(0xff0b1a24);
 const Color _bar = Color(0xff0e2433);
@@ -48,6 +49,8 @@ const Map<String, Map<String, String>> _tx = {
     'gps': 'موقعیت من',
     'gpsOff': 'دسترسی به موقعیت مکانی ممکن نشد.',
     'netErr': 'ارتباط با سرویس نقشه برقرار نشد.',
+    'layerSwitch': 'لایهٔ نقشه عوض شد',
+    'layerBtn': 'تغییر لایهٔ نقشه',
   },
   'en': {
     'title': 'Pick location on map',
@@ -63,6 +66,8 @@ const Map<String, Map<String, String>> _tx = {
     'gps': 'My location',
     'gpsOff': 'Could not access your location.',
     'netErr': 'Could not reach the map service.',
+    'layerSwitch': 'Map layer changed',
+    'layerBtn': 'Switch map layer',
   },
   'ar': {
     'title': 'اختيار الموقع على الخريطة',
@@ -78,6 +83,8 @@ const Map<String, Map<String, String>> _tx = {
     'gps': 'موقعي',
     'gpsOff': 'تعذر الوصول إلى موقعك.',
     'netErr': 'تعذر الاتصال بخدمة الخرائط.',
+    'layerSwitch': 'تم تغيير طبقة الخريطة',
+    'layerBtn': 'تغيير طبقة الخريطة',
   },
 };
 
@@ -126,6 +133,58 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   int _searchSeq = 0;
   int _revSeq = 0;
   bool _addrTouched = false;
+
+  // لایهٔ نقشه: ۰ = OpenStreetMap ، ۱ = CARTO  (با خطای پیاپیِ کاشی، خودکار لایهٔ بعدی)
+  int _tile = 0;
+  int _tileErr = 0;
+
+  void _nextTile() {
+    if (!mounted) return;
+    setState(() {
+      _tile = (_tile + 1) % 2;
+      _tileErr = 0;
+    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text(_t('layerSwitch'))));
+  }
+
+  void _onTileError(int step) {
+    if (!mounted || step != _tile) return;
+    _tileErr++;
+    // حداکثر یک دور چرخش خودکار؛ پس از آن فقط با دکمهٔ تغییر لایه
+    if (_tileErr >= 4 && _autoSwitches < 1) {
+      _autoSwitches++;
+      _nextTile();
+    }
+  }
+
+  int _autoSwitches = 0;
+
+  Widget _tileLayer() {
+    final Widget online = _tile == 0
+        ? TileLayer(
+            key: const ValueKey('tile-osm'),
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.cyrustourist.app',
+            maxZoom: _maxZoom,
+            errorTileCallback: (_, __, ___) => _onTileError(0),
+          )
+        : TileLayer(
+            key: const ValueKey('tile-carto'),
+            urlTemplate: CartoConfig.tileUrlWithKey,
+            userAgentPackageName: 'com.cyrustourist.app',
+            maxZoom: _maxZoom,
+            errorTileCallback: (_, __, ___) => _onTileError(1),
+          );
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const OfflineBaseTileLayer(maxZoom: _maxZoom),
+        online,
+      ],
+    );
+  }
 
   @override
   void initState() {
@@ -316,6 +375,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 minZoom: 4,
                 maxZoom: _maxZoom,
                 interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+                // با یک ضربه روی نقشه، آن نقطه زیر سنجاق قرمز می‌آید (طول و عرض همان نقطه ثبت می‌شود)
+                onTap: (tapPos, point) {
+                  _addrTouched = false;
+                  _map.move(point, _zoom);
+                },
                 onPositionChanged: (cam, hasGesture) {
                   final z = cam.zoom;
                   final c = cam.center;
@@ -330,11 +394,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 },
               ),
               children: [
-                TileLayer(
-                  urlTemplate: CartoConfig.tileUrlWithKey,
-                  userAgentPackageName: 'com.cyrustourist.app',
-                  maxZoom: _maxZoom,
-                ),
+                _tileLayer(),
               ],
             ),
           ),
@@ -424,6 +484,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
               _fab(Icons.remove_rounded, () => _map.move(_center, (_zoom - 1).clamp(4, _maxZoom).toDouble())),
               const SizedBox(height: 8),
               _fab(_geoBusy ? Icons.hourglass_top_rounded : Icons.my_location_rounded, _gps, tooltip: _t('gps')),
+              const SizedBox(height: 8),
+              _fab(Icons.layers_rounded, () => _nextTile(), tooltip: _t('layerBtn')),
             ]),
           ),
           // کارت پایین
