@@ -12,7 +12,11 @@ import '../core/language/menu_translations.dart';
 import '../services/account_service.dart';
 import '../services/badge_service.dart';
 import 'profile/my_profile_page.dart';
+import 'package:latlong2/latlong.dart';
+
 import '../widgets/registration_steps_card.dart';
+import 'location_picker_page.dart';
+import 'profile/photo_cropper.dart';
 
 // ===================== رنگ‌ها (هم‌شکل صفحهٔ ثبت‌نام) =====================
 const Color _bg = Color(0xfff3f6f7);
@@ -292,6 +296,11 @@ const Map<String, Map<String, String>> _kTx3 = {
     'gateBtn': 'رفتن به شناسه کاربری',
     'gateRecheck': 'تأیید کردم، ادامه',
     'gateStill': 'هنوز حساب شما تأیید نشده است.',
+    'locSearch': 'جستجوی آدرس یا انتخاب از روی نقشه',
+    'locTip': 'برای ثبت مسیریابی دقیق، روی نقشه تا بیشترین حد زوم کنید و نقطه را روی ورودی بگذارید.',
+    'locSet': 'موقعیت روی نقشه ثبت شد',
+    'locChange': 'تغییر',
+    'e_location': 'موقعیت را روی نقشه انتخاب کنید',
     'editBtn': 'ویرایش',
     'editTitle': 'ویرایش اطلاعات',
     'editIntro': 'تغییرات شما بلافاصله اعمال نمی‌شود؛ ابتدا در صف بررسی پشتیبانی قرار می‌گیرد و پس از تأیید منتشر می‌شود. تا آن زمان اطلاعات قبلی نمایش داده می‌شود.',
@@ -308,6 +317,11 @@ const Map<String, Map<String, String>> _kTx3 = {
     'gateBtn': 'Go to my account',
     'gateRecheck': 'I verified, continue',
     'gateStill': 'Your account is not verified yet.',
+    'locSearch': 'Search an address or pick on the map',
+    'locTip': 'For accurate routing, zoom in to the maximum on the map and place the pin on the entrance.',
+    'locSet': 'Map location saved',
+    'locChange': 'Change',
+    'e_location': 'Pick the location on the map',
     'editBtn': 'Edit',
     'editTitle': 'Edit details',
     'editIntro': 'Your changes are not applied immediately. They go into the support review queue and are published after approval. Until then the previous details stay visible.',
@@ -324,6 +338,11 @@ const Map<String, Map<String, String>> _kTx3 = {
     'gateBtn': 'الانتقال إلى حسابي',
     'gateRecheck': 'تم التأكيد، متابعة',
     'gateStill': 'لم يتم تأكيد حسابك بعد.',
+    'locSearch': 'ابحث عن عنوان أو اخترْه على الخريطة',
+    'locTip': 'لتوجيه دقيق، قرّب إلى أقصى حد على الخريطة وضع الدبوس على المدخل.',
+    'locSet': 'تم حفظ الموقع على الخريطة',
+    'locChange': 'تغيير',
+    'e_location': 'اختر الموقع على الخريطة',
     'editBtn': 'تعديل',
     'editTitle': 'تعديل البيانات',
     'editIntro': 'لا تُطبَّق تعديلاتك فوراً؛ تدخل أولاً في قائمة مراجعة الدعم وتُنشر بعد الموافقة، وتبقى البيانات السابقة ظاهرة حتى ذلك الحين.',
@@ -697,6 +716,9 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   bool? _verified; // null = نامشخص (آفلاین)؛ سرور هنگام ارسال دوباره بررسی می‌کند
   int? _editId; // وقتی null نیست: در حال ویرایش مورد تأییدشده
   bool _doneEdit = false;
+  double? _lat;
+  double? _lng;
+  double? _mapZoom;
 
   bool get _rtl => MenuLanguage.isRtl;
   String get _kind => widget.kind;
@@ -756,6 +778,9 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     _experience.text = v('experience');
     _areas.text = v('areas');
     _telegram.text = v('telegram');
+    _lat = double.tryParse(v('latitude'));
+    _lng = double.tryParse(v('longitude'));
+    _mapZoom = double.tryParse(v('map_zoom'));
     _type = _kind == 'stay' ? v('accommodation_type') : (_kind == 'health' ? v('health_type') : '');
     _amen
       ..clear()
@@ -844,9 +869,10 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       final f = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
       if (f == null) return;
       final raw = await f.readAsBytes();
-      final out = await compute(_compressJpeg, raw);
-      if (out.isEmpty) return _snack(_t('photoErr'));
       if (!mounted) return;
+      // ویرایشگر پیشرفته: برش، چرخش، فیلتر و … (خروجی کم‌حجم ۴۰۰×۴۰۰)
+      final out = await cropProfilePhoto(context, raw);
+      if (out == null || out.isEmpty || !mounted) return;
       setState(() => _photo = out);
     } catch (_) {
       _snack(_t('photoErr'));
@@ -871,6 +897,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     if (_kind == 'health' && _type.isEmpty) e['type'] = _t('e_htype');
     if (_resolveProvince(_province.text) == null) e['province'] = _t('e_province');
     if (_city.text.trim().length < 2) e['city'] = _t('e_city');
+    if ((_kind == 'stay' || _kind == 'health') && _lat == null) e['location'] = _t('e_location');
     if (!RegExp(r'^09\d{9}$').hasMatch(_digits(_mobile.text).replaceAll(RegExp(r'[\s\-]'), ''))) {
       e['mobile'] = _t('e_mobile');
     }
@@ -918,6 +945,9 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         'province': _resolveProvince(_province.text),
         'city': _city.text.trim(),
         'address': _address.text.trim(),
+        if (_lat != null && _lng != null) 'latitude': _lat,
+        if (_lat != null && _lng != null) 'longitude': _lng,
+        if (_lat != null && _mapZoom != null) 'map_zoom': _mapZoom,
         'mobile': _digits(_mobile.text).replaceAll(RegExp(r'[\s\-]'), ''),
         'phone': _digits(_phone.text).trim(),
         if (_kind == 'stay') 'rooms': _digits(_rooms.text).trim(),
@@ -984,6 +1014,9 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       _doneCode = '';
       _doneEdit = false;
       _editId = null;
+      _lat = null;
+      _lng = null;
+      _mapZoom = null;
     });
   }
 
@@ -1082,6 +1115,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         _errText('province'),
         const SizedBox(height: 12),
         _field('city', _city, _t('city'), maxLength: 60),
+        if (_kind != 'leader') _locationBox(),
         _field('address', _address, _t('address'), lines: 2, maxLength: 250),
       ]),
       _card(_t('s_contact'), [
@@ -1192,6 +1226,69 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       ],
       const SizedBox(height: 24),
     ];
+  }
+
+  Future<void> _pickLocation() async {
+    final r = await Navigator.of(context).push<PickedLocation>(MaterialPageRoute(
+      builder: (_) => LocationPickerPage(
+        initial: (_lat != null && _lng != null) ? LatLng(_lat!, _lng!) : null,
+        initialZoom: _mapZoom,
+        initialAddress: _address.text,
+      ),
+    ));
+    if (r == null || !mounted) return;
+    setState(() {
+      _lat = r.lat;
+      _lng = r.lng;
+      _mapZoom = r.zoom;
+      _errors.remove('location');
+      if (r.address.isNotEmpty) _address.text = r.address;
+      final st = r.state.replaceAll(RegExp(r'^(استان|محافظة)\s*'), '').replaceAll(RegExp(r'\s*(Province|Provinz)$'), '').trim();
+      final p = _resolveProvince(st);
+      if (p != null) _province.text = p;
+      if (_city.text.trim().isEmpty && r.city.isNotEmpty) _city.text = r.city.replaceAll(RegExp(r'^(شهرستان|شهر)\s*'), '').trim();
+    });
+  }
+
+  /// جستجوی آدرس / انتخاب از روی نقشه (مثل دیوار)
+  Widget _locationBox() {
+    final has = _lat != null && _lng != null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: _busy ? null : _pickLocation,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: has ? const Color(0xffeafaf1) : _bg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _errors.containsKey('location') ? _err : (has ? const Color(0xff1fb36b) : _line), width: 1.5),
+            ),
+            child: Row(children: [
+              Icon(has ? Icons.check_circle_rounded : Icons.search_rounded, color: has ? const Color(0xff1fb36b) : _teal),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(has ? _t('locSet') : _t('locSearch'), style: TextStyle(color: has ? const Color(0xff176b43) : _ink, fontWeight: FontWeight.w800, fontSize: 13.5)),
+                  if (has)
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text('${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)}', style: const TextStyle(color: _soft, fontSize: 12)),
+                    ),
+                ]),
+              ),
+              Icon(has ? Icons.edit_location_alt_rounded : Icons.map_rounded, color: _soft),
+              if (has) Padding(padding: const EdgeInsetsDirectional.only(start: 6), child: Text(_t('locChange'), style: const TextStyle(color: _teal, fontWeight: FontWeight.w800, fontSize: 12))),
+            ]),
+          ),
+        ),
+        _errText('location'),
+        const SizedBox(height: 6),
+        Text(_t('locTip'), style: const TextStyle(color: _soft, fontSize: 12, height: 1.7)),
+      ]),
+    );
   }
 
   Widget _provinceField() {
