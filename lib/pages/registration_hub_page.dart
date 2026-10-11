@@ -953,10 +953,12 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     }
   }
 
-  /// اقامتگاه (هتل، کلبه، بوم‌گردی و ...) ← فرم ثبت داخل اپ؛ سایر دسته‌ها ← راهنمای پشتیبانی
+  /// اقامتگاه، گردشگری سلامت، آژانس و لیدر ← فرم ثبت داخل اپ (هرکدام به پنل خودش)؛ سایر دسته‌ها ← راهنمای پشتیبانی
   void _enterRegistration() {
-    if (_category == 'residence') {
-      final route = MaterialPageRoute<void>(builder: (_) => const StayRegistrationPage());
+    const kinds = {'residence': 'stay', 'health': 'health', 'agency': 'agency', 'tourleader': 'leader'};
+    final kind = kinds[_category];
+    if (kind != null) {
+      final route = MaterialPageRoute<void>(builder: (_) => StayRegistrationPage(kind: kind));
       if (widget.initialCategory != null) {
         Navigator.of(context).pushReplacement(route);
       } else {
