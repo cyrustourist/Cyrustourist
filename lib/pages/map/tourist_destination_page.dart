@@ -1,3 +1,4 @@
+import '../../widgets/resilient_tile_layer.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -910,12 +911,7 @@ class _TouristDestinationPageState
                         initialZoom: 13,
                       ),
                       children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName:
-                              'cyrustourist.ir.app',
-                        ),
+                        const ResilientTileLayer(maxZoom: 15),
 
                         MarkerLayer(
                           markers:
