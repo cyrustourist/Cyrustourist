@@ -714,6 +714,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   String _doneCode = '';
   List<Map<String, dynamic>> _mine = [];
   bool? _verified; // null = نامشخص (آفلاین)؛ سرور هنگام ارسال دوباره بررسی می‌کند
+  final GlobalKey _locKey = GlobalKey();
   int? _editId; // وقتی null نیست: در حال ویرایش مورد تأییدشده
   bool _doneEdit = false;
   double? _lat;
@@ -897,7 +898,8 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     if (_kind == 'health' && _type.isEmpty) e['type'] = _t('e_htype');
     if (_resolveProvince(_province.text) == null) e['province'] = _t('e_province');
     if (_city.text.trim().length < 2) e['city'] = _t('e_city');
-    if ((_kind == 'stay' || _kind == 'health') && _lat == null) e['location'] = _t('e_location');
+    // در ویرایش، اگر اقامتگاه قبلاً مختصات نداشته، ثبت ویرایش نباید بی‌صدا قفل شود
+    if ((_kind == 'stay' || _kind == 'health') && _lat == null && _editId == null) e['location'] = _t('e_location');
     if (!RegExp(r'^09\d{9}$').hasMatch(_digits(_mobile.text).replaceAll(RegExp(r'[\s\-]'), ''))) {
       e['mobile'] = _t('e_mobile');
     }
@@ -963,7 +965,12 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   Future<void> _submit() async {
     if (_busy) return;
     if (!_validate()) {
-      _scroll.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      // قبلاً صفحه فقط به بالا می‌پرید و خطا پایین فرم پنهان می‌ماند؛ حالا پیام خطا نشان داده می‌شود
+      _snack(_errors.values.first);
+      final ctx = _errors.containsKey('location') ? _locKey.currentContext : null;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), alignment: 0.3);
+      }
       return;
     }
     if (_editId != null) return _submitEdit();
@@ -1254,6 +1261,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   Widget _locationBox() {
     final has = _lat != null && _lng != null;
     return Padding(
+      key: _locKey,
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         InkWell(
@@ -1493,8 +1501,15 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(color: const Color(0xffe6f1ff), borderRadius: BorderRadius.circular(999)),
                   child: Text(_t('editPending'), style: const TextStyle(color: Color(0xff1d5fb4), fontSize: 11, fontWeight: FontWeight.w800)),
+                ),
+              // در انتظار تأیید پشتیبانی (درخواست جدید یا ویرایش در صف): دکمهٔ ویرایش قرمز، کنار وضعیت
+              if (m['status'] != 'approved' || m['pending_edit'] == true)
+                IconButton(
+                  tooltip: _t('editBtn'),
+                  onPressed: _busy ? null : () => _startEdit(m),
+                  icon: const Icon(Icons.edit_rounded, color: _err, size: 20),
                 )
-              else if (m['status'] == 'approved')
+              else
                 IconButton(
                   tooltip: _t('editBtn'),
                   onPressed: _busy ? null : () => _startEdit(m),
