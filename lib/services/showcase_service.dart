@@ -180,6 +180,11 @@ class ShowcaseService {
     if (kind == ShowcaseKind.attraction) {
       return [ApiConfig.panelBaseUrl, null];
     }
+    // فیلم‌ها: داده‌ی کامل (تلفن‌ها، شبکه‌ها، مسیر، مختصات، امکانات) فقط در
+    // Worker پنل ساخته می‌شود؛ Worker قدیمی ردیف خام و ناقص می‌دهد.
+    if (kind == ShowcaseKind.video) {
+      return [ApiConfig.panelBaseUrl, null];
+    }
     return [null];
   }
 
