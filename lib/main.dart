@@ -18,6 +18,7 @@ import 'services/connection_status_service.dart';
 import 'services/pending_queue_service.dart';
 import 'core/network/api_service.dart';
 import 'widgets/resilient_tile_layer.dart';
+import 'widgets/map_tools/map_tools.dart';
 import 'config/carto_config.dart';
 
 import 'map_place.dart';
@@ -741,6 +742,7 @@ class SmartMapPage extends StatefulWidget {
 
 class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderStateMixin {
   final MapController mapController = MapController();
+  final MapMeasureController measure = MapMeasureController();
   static const LatLng iranCenter = LatLng(32.4279, 53.6880);
 
   LatLng? userLocation;
@@ -774,6 +776,8 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+
+    SavedPinsService.load();
 
     animationController = AnimationController(
       vsync: this,
@@ -814,6 +818,7 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
     _suggestionsDebounce?.cancel();
     _removeSuggestionsOverlay();
 
+    measure.dispose();
     animationController.dispose();
     originController.dispose();
     destinationController.dispose();
@@ -1641,6 +1646,20 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
         mainAxisSize: MainAxisSize.min,
         children: [
           _mapSideButton(
+            icon: Icons.layers_rounded,
+            tooltip: _localize('لایه‌های نقشه (عوارض زمین و ...)', 'Map layers (terrain, ...)', 'طبقات الخريطة (التضاريس ...)'),
+            onPressed: () => showMapLayerSheet(context),
+          ),
+          _mapSideButton(
+            icon: Icons.straighten_rounded,
+            tooltip: _localize('ابزارهای نقشه (خط‌کش، مساحت، ...)', 'Map tools (ruler, area, ...)', 'أدوات الخريطة (المسطرة، المساحة ...)'),
+            onPressed: () => showMapToolsSheet(
+              context,
+              controller: measure,
+              onGoTo: (p) => mapController.move(p, 15),
+            ),
+          ),
+          _mapSideButton(
             icon: Icons.add,
             tooltip: _localize('بزرگ‌نمایی', 'Zoom in', 'تكبير'),
             onPressed: () {
@@ -1723,15 +1742,27 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
         children: [
           FlutterMap(
             mapController: mapController,
-            options: const MapOptions(
+            options: MapOptions(
               initialCenter: iranCenter,
               initialZoom: 5.2,
               minZoom: 3,
               maxZoom: 18,
+              onTap: (_, point) {
+                if (measure.active) measure.add(point);
+              },
+              onLongPress: (_, point) => showCoordinateSheet(context, point),
             ),
             children: [
               const ResilientTileLayer(maxZoom: 18),
               MarkerLayer(markers: markers()),
+              MapMeasureLayers(
+                controller: measure,
+                onPinTap: (pin) => showCoordinateSheet(
+                  context,
+                  LatLng(pin.lat, pin.lng),
+                  pin: pin,
+                ),
+              ),
             ],
           ),
 
@@ -1761,6 +1792,13 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
                 ),
               ),
             ),
+
+          Positioned(
+            left: 12,
+            right: 72,
+            bottom: 104,
+            child: MapMeasurePanel(controller: measure),
+          ),
 
           if (loading) Positioned.fill(child: loadingScreen()),
 
