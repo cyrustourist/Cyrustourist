@@ -88,6 +88,19 @@ Future<void> _openUrl(BuildContext context, String url) async {
   }
 }
 
+class MovieContact {
+  const MovieContact(this.label, this.number);
+  final String label;
+  final String number;
+}
+
+class MovieSocial {
+  const MovieSocial(this.type, this.label, this.url);
+  final String type;
+  final String label;
+  final String url;
+}
+
 // ============================================================
 // مدل داده‌ی هر «جایگاه فیلم» — با کد یکتا
 // ============================================================
@@ -142,10 +155,30 @@ class MovieSlotData {
     this.isPetFriendly = false,
     this.panelAmenityKeys = const [],
     this.panelAmenityLabels = const {},
+    this.phones = const [],
+    this.socialLinks = const [],
+    this.navigationUrl,
+    this.membershipStatus,
+    this.membershipLabel,
+    this.membershipDaysLeft,
   });
 
   final int code;
   final bool assigned;
+
+  /// همه‌ی شماره‌های ثبت‌شده در پنل: هر عضو {label, number}
+  final List<MovieContact> phones;
+
+  /// شبکه‌ها و پیام‌رسان‌ها: اینستاگرام، تلگرام، واتس‌اپ، ایتا، تیک‌تاک، یوتیوب، آپارات، وب‌سایت
+  final List<MovieSocial> socialLinks;
+
+  /// لینک مسیریابی آماده از ورکر (مختصات / لینک نقشه / آدرس)
+  final String? navigationUrl;
+
+  /// وضعیت عضویت: active / expiring / cancelled
+  final String? membershipStatus;
+  final String? membershipLabel;
+  final int? membershipDaysLeft;
 
   final String? name;
   final String? nameEn;
@@ -1249,28 +1282,8 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // اینستاگرام / وب‌سایت
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _circleLinkButton(
-                            icon: Icons.camera_alt_rounded,
-                            label: 'Instagram',
-                            gradient: _instagramGradient,
-                            onTap: () => _openUrl(context, _d.instagramUrl),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _circleLinkButton(
-                            icon: Icons.public_rounded,
-                            label: t('وب‌سایت', 'Website', 'الموقع الإلكتروني'),
-                            gradient: const [_teal, _tealBright],
-                            onTap: () => _openUrl(context, _d.websiteUrl),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // شبکه‌های اجتماعی و پیام‌رسان‌ها (از پنل)
+                    _socialGrid(),
                   ],
                 ),
               ),
@@ -1315,6 +1328,7 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
               _chip(Icons.location_on_rounded, _d.displayCity),
             if (_d.displayCategory.isNotEmpty)
               _chip(Icons.local_offer_rounded, _d.displayCategory),
+            if (_membershipChip() != null) _membershipChip()!,
           ],
         ),
       ],
@@ -1352,71 +1366,220 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
 
   Widget _descriptionBlock() {
     final full = _d.displayDescription;
-    final isLong = full.length > 140;
+    final isLong = full.length > 140 || '\n'.allMatches(full).length >= 3;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              t('چکیده', 'Summary', 'ملخص'),
-              style: const TextStyle(
-                  color: _goldBright, fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            const Spacer(),
-            _shareButton(),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Text(
-          full,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 13,
-            height: 1.9,
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.notes_rounded, color: _gold, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                t('توضیحات', 'Description', 'الوصف'),
+                style: const TextStyle(
+                    color: _goldBright, fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const Spacer(),
+              _shareButton(),
+            ],
           ),
-        ),
-        if (isLong) ...[
-          const SizedBox(height: 6),
-          InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () {
-              HapticFeedback.selectionClick();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => _FullDescriptionPage(
-                    title: _d.displayName,
-                    description: full,
-                  ),
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.expand_more_rounded,
-                      color: _gold, size: 17),
-                  const SizedBox(width: 4),
-                  Text(
-                    t('ادامه', 'Continue', 'المزيد'),
-                    style: const TextStyle(
-                      color: _gold,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ],
+          const SizedBox(height: 10),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: Text(
+              full,
+              maxLines: _descriptionExpanded ? null : 4,
+              overflow: _descriptionExpanded
+                  ? TextOverflow.visible
+                  : TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13.5,
+                height: 1.95,
               ),
             ),
           ),
+          if (isLong)
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _descriptionExpanded = !_descriptionExpanded);
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                        _descriptionExpanded
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                        color: _gold,
+                        size: 19),
+                    const SizedBox(width: 4),
+                    Text(
+                      _descriptionExpanded
+                          ? t('نمایش کمتر', 'Show less', 'عرض أقل')
+                          : t('ادامه متن', 'Read more', 'قراءة المزيد'),
+                      style: const TextStyle(
+                        color: _gold,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  // ---------- نشان وضعیت عضویت (سه حالت پنل) ----------
+  Widget? _membershipChip() {
+    final st = _d.membershipStatus;
+    if (st == null || st.isEmpty) return null;
+    Color c;
+    IconData ic;
+    String label;
+    switch (st) {
+      case 'expiring':
+        c = const Color(0xfff59e0b);
+        ic = Icons.hourglass_bottom_rounded;
+        label = t('نزدیک به پایان عضویت', 'Membership ending soon', 'العضوية على وشك الانتهاء');
+        break;
+      case 'cancelled':
+        c = const Color(0xffef4444);
+        ic = Icons.block_rounded;
+        label = t('لغو عضویت', 'Membership cancelled', 'ملغاة العضوية');
+        break;
+      default:
+        c = const Color(0xff22c55e);
+        ic = Icons.verified_rounded;
+        label = t('عضو فعال', 'Active member', 'عضو نشط');
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.withValues(alpha: 0.6)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(ic, size: 14, color: c),
+        const SizedBox(width: 5),
+        Text(label, style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
+  // ---------- شبکه‌ها و پیام‌رسان‌ها ----------
+  static const Map<String, List<Color>> _socialColors = {
+    'instagram': _instagramGradient,
+    'telegram': [Color(0xff2aabee), Color(0xff229ed9)],
+    'whatsapp': [Color(0xff25d366), Color(0xff128c7e)],
+    'eitaa': [Color(0xfff97316), Color(0xffea580c)],
+    'tiktok': [Color(0xff25f4ee), Color(0xfffe2c55)],
+    'youtube': [Color(0xffff4e45), Color(0xffcc0000)],
+    'aparat': [Color(0xffed145b), Color(0xffb80f45)],
+  };
+
+  IconData _socialIcon(String type) {
+    switch (type) {
+      case 'instagram':
+        return Icons.camera_alt_rounded;
+      case 'telegram':
+        return Icons.send_rounded;
+      case 'whatsapp':
+        return Icons.chat_rounded;
+      case 'eitaa':
+        return Icons.forum_rounded;
+      case 'tiktok':
+        return Icons.music_note_rounded;
+      case 'youtube':
+      case 'aparat':
+        return Icons.smart_display_rounded;
+      default:
+        return Icons.public_rounded;
+    }
+  }
+
+  List<MovieSocial> get _socials {
+    if (_d.socialLinks.isNotEmpty) return _d.socialLinks;
+    return [
+      MovieSocial('instagram', 'Instagram', _d.instagramUrl),
+      MovieSocial('website', t('وب‌سایت', 'Website', 'الموقع الإلكتروني'), _d.websiteUrl),
+    ];
+  }
+
+  Widget _socialGrid() {
+    final items = _socials.where((e) => e.url.trim().isNotEmpty).toList();
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        for (final e in items)
+          SizedBox(
+            width: (MediaQuery.of(context).size.width - 32 - 12 * 2) / 3,
+            child: _circleLinkButton(
+              icon: _socialIcon(e.type),
+              label: e.type == 'website' || e.type == 'website2'
+                  ? (e.type == 'website2'
+                      ? t('وب‌سایت ۲', 'Website 2', 'الموقع 2')
+                      : t('وب‌سایت', 'Website', 'الموقع الإلكتروني'))
+                  : (e.type == 'instagram'
+                      ? 'Instagram'
+                      : (e.type == 'telegram'
+                          ? t('تلگرام', 'Telegram', 'تيليجرام')
+                          : (e.type == 'whatsapp'
+                              ? t('واتس‌اپ', 'WhatsApp', 'واتساب')
+                              : (e.type == 'eitaa'
+                                  ? t('ایتا', 'Eitaa', 'إيتا')
+                                  : e.label)))),
+              gradient: _socialColors[e.type] ?? const [_teal, _tealBright],
+              onTap: () => _openUrl(context, e.url),
+            ),
+          ),
       ],
     );
+  }
+
+  List<MovieContact> get _contacts {
+    if (_d.phones.isNotEmpty) return _d.phones;
+    return [
+      MovieContact('mobile', _d.mobilePhone),
+      if (_d.landlinePhone != _d.mobilePhone) MovieContact('phone', _d.landlinePhone),
+      if (_d.supportPhone != _d.mobilePhone && _d.supportPhone != _d.landlinePhone)
+        MovieContact('support', _d.supportPhone),
+    ];
+  }
+
+  String _contactLabel(String k) {
+    switch (k) {
+      case 'mobile':
+        return t('تلفن همراه', 'Mobile', 'الجوال');
+      case 'phone':
+        return t('تلفن ثابت', 'Landline', 'الهاتف الأرضي');
+      case 'phone2':
+        return t('تلفن دوم', 'Second phone', 'هاتف ثانٍ');
+      case 'support':
+        return t('تلفن پشتیبان', 'Support line', 'خط الدعم');
+      default:
+        return t('تماس', 'Phone', 'هاتف');
+    }
   }
 
   Future<void> _openRoute() async {
@@ -1425,6 +1588,12 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
     // اگر برای این فیلم مختصات دستی وارد شده باشد، مسیر تا همان‌جا
     // باز می‌شود؛ در غیر این صورت — دقیقاً مثل آب‌وهوا — موقعیت
     // فعلی کاربر (هرجای ایران) روی نقشه نمایش داده می‌شود.
+    final nav = (_d.navigationUrl ?? '').trim();
+    if (nav.isNotEmpty) {
+      if (!mounted) return;
+      await _openUrl(context, nav);
+      return;
+    }
     if (_d.latitude != null && _d.longitude != null) {
       final url = 'https://www.google.com/maps/dir/?api=1'
           '&destination=${_d.latitude},${_d.longitude}';
@@ -1493,21 +1662,16 @@ class _MovieVideoPageState extends State<MovieVideoPage> {
                 ),
               ),
               const SizedBox(height: 14),
-              _contactOption(
-                icon: Icons.smartphone_rounded,
-                label: t('تلفن همراه', 'Mobile', 'الجوال'),
-                phone: _d.mobilePhone,
-              ),
-              _contactOption(
-                icon: Icons.phone_rounded,
-                label: t('تلفن ثابت', 'Landline', 'الهاتف الأرضي'),
-                phone: _d.landlinePhone,
-              ),
-              _contactOption(
-                icon: Icons.support_agent_rounded,
-                label: t('تلفن پشتیبان', 'Support line', 'خط الدعم'),
-                phone: _d.supportPhone,
-              ),
+              for (final c in _contacts)
+                _contactOption(
+                  icon: c.label == 'mobile'
+                      ? Icons.smartphone_rounded
+                      : (c.label == 'support'
+                          ? Icons.support_agent_rounded
+                          : Icons.phone_rounded),
+                  label: _contactLabel(c.label),
+                  phone: c.number,
+                ),
             ],
           ),
         ),
