@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/language/menu_translations.dart';
 import '../services/account_service.dart';
@@ -1459,6 +1460,217 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     );
   }
 
+  // ---------- باتری اعتبار + روزشمار ----------
+  String _tl(String fa, String en, String ar) {
+    switch (MenuLanguage.current) {
+      case 'en':
+        return en;
+      case 'ar':
+        return ar;
+      default:
+        return fa;
+    }
+  }
+
+  final Set<String> _renewSent = <String>{};
+
+  String get _renewModule {
+    switch (_kind) {
+      case 'health':
+        return 'health_tourism';
+      case 'agency':
+        return 'travel_agencies';
+      case 'leader':
+        return 'tour_guides';
+      default:
+        return 'accommodations';
+    }
+  }
+
+  Future<void> _requestRenew(Map<String, dynamic> m) async {
+    final id = int.tryParse('${m['id']}') ?? 0;
+    if (id <= 0) return;
+    final key = '$_kind:$id';
+    final j = await BadgeService.call('POST', '/renewal-requests', body: {'module': _renewModule, 'id': id});
+    if (!mounted) return;
+    if (j != null && j['success'] == true) {
+      setState(() => _renewSent.add(key));
+      _snack(_tl('درخواست تمدید برای پشتیبانی ثبت شد.', 'Renewal request sent to support.', 'تم إرسال طلب التجديد إلى الدعم.'));
+    } else {
+      _snack(_tl('ثبت درخواست ناموفق بود. دوباره تلاش کنید.', 'Could not send the request. Try again.', 'تعذر إرسال الطلب. حاول مرة أخرى.'));
+    }
+  }
+
+  Future<void> _callSupport(String phone) async {
+    final n = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (n.isEmpty) return;
+    try {
+      await launchUrl(Uri.parse('tel:$n'), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      _snack(_tl('امکان باز کردن تماس وجود ندارد.', 'Cannot open the dialer.', 'تعذر فتح الاتصال.'));
+    }
+  }
+
+  Widget _battery(int days, int pct, Color c) {
+    final empty = days <= 0;
+    final w = (pct.clamp(0, 100)) / 100.0;
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Semantics(
+        label: empty
+            ? _tl('اعتبار تمام شده', 'Credit ended', 'انتهى الرصيد')
+            : _tl('$days روز اعتبار باقی مانده', '$days days left', 'متبقي $days يوماً'),
+        child: Row(children: [
+          Expanded(
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: const Color(0xff8da39c), width: 2.2),
+              ),
+              child: Stack(children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: empty ? 0.02 : (w < 0.04 ? 0.04 : w),
+                    heightFactor: 1,
+                    child: Container(decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(5))),
+                  ),
+                ),
+                Center(
+                  child: Text('$pct%', style: const TextStyle(color: _ink, fontSize: 12, fontWeight: FontWeight.w900)),
+                ),
+              ]),
+            ),
+          ),
+          Container(
+            width: 5,
+            height: 13,
+            margin: const EdgeInsets.only(left: 2),
+            decoration: const BoxDecoration(color: Color(0xff8da39c), borderRadius: BorderRadius.only(topRight: Radius.circular(3), bottomRight: Radius.circular(3))),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _mineItem(Map<String, dynamic> m) {
+    final approved = m['status'] == 'approved';
+    final kindKey = '${m['status_kind'] ?? ''}';
+    final days = int.tryParse('${m['days_left']}');
+    final pct = int.tryParse('${m['battery_percent']}') ?? 0;
+    final level = '${m['battery_level'] ?? ''}';
+    final inactive = kindKey == 'inactive' || (days != null && days <= 0 && approved);
+    final low = !inactive && approved && (level == 'low' || (days != null && days <= 15));
+
+    Color fg, bg;
+    String label;
+    if (inactive) {
+      fg = const Color(0xffc0392b);
+      bg = const Color(0xffffe9e6);
+      label = '${m['status_label'] ?? ''}'.isNotEmpty ? '${m['status_label']}' : _tl('غیرفعال، پایان اعتبار', 'Inactive, credit ended', 'غير نشط، انتهى الرصيد');
+    } else if (low) {
+      fg = const Color(0xffb45309);
+      bg = const Color(0xfffff3d6);
+      label = _tl('نزدیک پایان اعتبار', 'Credit ending soon', 'قارب الرصيد على الانتهاء');
+    } else if (approved) {
+      fg = const Color(0xff176b43);
+      bg = const Color(0xffeafaf1);
+      label = '${m['status_label'] ?? ''}'.isNotEmpty ? '${m['status_label']}' : _t('approved');
+    } else {
+      fg = _gold;
+      bg = const Color(0xfffff3d6);
+      label = '${m['status_label'] ?? ''}'.isNotEmpty ? '${m['status_label']}' : _t('pending');
+    }
+    final batColor = inactive ? const Color(0xffdc2626) : (low ? const Color(0xffd97706) : const Color(0xff16a34a));
+
+    final note = inactive
+        ? _tl('اعتبار این ثبت تمام شده است. برای تمدید با پشتیبانی تماس بگیرید.', 'Credit ended. Contact support to renew.', 'انتهى الرصيد. اتصل بالدعم للتجديد.')
+        : (low
+            ? _tl('اعتبار شما رو به پایان است. برای جلوگیری از غیرفعال شدن تمدید کنید.', 'Credit is running out. Renew to stay active.', 'الرصيد على وشك الانتهاء. جدّد للبقاء نشطاً.')
+            : '${m['status_note'] ?? ''}');
+    final support = '${m['support_phone'] ?? ''}'.trim();
+    final key = '$_kind:${m['id']}';
+    final sent = _renewSent.contains(key);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: _line))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('${m['name'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontWeight: FontWeight.w800, fontSize: 15)),
+        Text('${m['tracking_code'] ?? ''} · ${m['province'] ?? ''} ${m['city'] ?? ''}', style: const TextStyle(color: _soft, fontSize: 12)),
+        if (days != null) ...[
+          const SizedBox(height: 10),
+          Row(children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(days <= 0 ? _tl('تمام شد', 'Ended', 'انتهى') : '$days', style: TextStyle(color: batColor, fontWeight: FontWeight.w900, fontSize: 18, height: 1.1)),
+              Text(days <= 0 ? _tl('اعتبار', 'credit', 'الرصيد') : _tl('روز مانده', 'days left', 'يوم متبقٍ'), style: const TextStyle(color: _soft, fontSize: 11)),
+            ]),
+            const SizedBox(width: 12),
+            Expanded(child: _battery(days, pct, batColor)),
+          ]),
+        ],
+        const SizedBox(height: 8),
+        Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 6, runSpacing: 4, children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+            child: Text(label, style: TextStyle(color: fg, fontSize: 12.5, fontWeight: FontWeight.w800)),
+          ),
+          if (approved && m['pending_edit'] == true)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: const Color(0xffe6f1ff), borderRadius: BorderRadius.circular(999)),
+              child: Text(_t('editPending'), style: const TextStyle(color: Color(0xff1d5fb4), fontSize: 11, fontWeight: FontWeight.w800)),
+            ),
+          const SizedBox(width: 2),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: _t('editBtn'),
+            onPressed: _busy ? null : () => _startEdit(m),
+            icon: Icon(Icons.edit_rounded, color: (!approved || m['pending_edit'] == true) ? _err : _teal, size: 20),
+          ),
+          if (!approved)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: _t('delete'),
+              onPressed: () => _deleteMine(int.tryParse('${m['id']}') ?? 0),
+              icon: const Icon(Icons.delete_outline_rounded, color: _err, size: 20),
+            ),
+        ]),
+        if (note.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(note, style: const TextStyle(color: _soft, fontSize: 12.5, height: 1.8))),
+        if (low)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: sent ? null : () => _requestRenew(m),
+                icon: Icon(sent ? Icons.check_rounded : Icons.autorenew_rounded, size: 18),
+                label: Text(sent ? _tl('درخواست تمدید ثبت شد', 'Renewal requested', 'تم طلب التجديد') : _tl('درخواست تمدید', 'Request renewal', 'طلب التجديد')),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xffd97706), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+            ),
+          ),
+        if (inactive)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: support.isEmpty ? null : () => _callSupport(support),
+                icon: const Icon(Icons.call_rounded, size: 18),
+                label: Text(support.isEmpty ? _tl('تماس با پشتیبانی', 'Contact support', 'اتصل بالدعم') : _tl('تماس با پشتیبانی  $support', 'Call support  $support', 'اتصل بالدعم  $support')),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xffdc2626), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+
   Widget _mineCard() {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1469,60 +1681,8 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text(_t('mine'), style: const TextStyle(color: _ink, fontSize: 14, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8),
-        for (final m in _mine)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${m['name'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _ink, fontWeight: FontWeight.w700)),
-                  Text('${m['tracking_code'] ?? ''} · ${m['province'] ?? ''} ${m['city'] ?? ''}', style: const TextStyle(color: _soft, fontSize: 12)),
-                ]),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: m['status'] == 'approved' ? const Color(0xffeafaf1) : const Color(0xfffff3d6),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  m['status'] == 'approved' ? _t('approved') : _t('pending'),
-                  style: TextStyle(
-                    color: m['status'] == 'approved' ? const Color(0xff176b43) : _gold,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              if (m['status'] == 'approved' && m['pending_edit'] == true)
-                Container(
-                  margin: const EdgeInsetsDirectional.only(start: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xffe6f1ff), borderRadius: BorderRadius.circular(999)),
-                  child: Text(_t('editPending'), style: const TextStyle(color: Color(0xff1d5fb4), fontSize: 11, fontWeight: FontWeight.w800)),
-                ),
-              // در انتظار تأیید پشتیبانی (درخواست جدید یا ویرایش در صف): دکمهٔ ویرایش قرمز، کنار وضعیت
-              if (m['status'] != 'approved' || m['pending_edit'] == true)
-                IconButton(
-                  tooltip: _t('editBtn'),
-                  onPressed: _busy ? null : () => _startEdit(m),
-                  icon: const Icon(Icons.edit_rounded, color: _err, size: 20),
-                )
-              else
-                IconButton(
-                  tooltip: _t('editBtn'),
-                  onPressed: _busy ? null : () => _startEdit(m),
-                  icon: const Icon(Icons.edit_rounded, color: _teal, size: 20),
-                ),
-              if (m['status'] != 'approved')
-                IconButton(
-                  tooltip: _t('delete'),
-                  onPressed: () => _deleteMine(int.tryParse('${m['id']}') ?? 0),
-                  icon: const Icon(Icons.delete_outline_rounded, color: _err, size: 20),
-                ),
-            ]),
-          ),
+        const SizedBox(height: 4),
+        for (final m in _mine) _mineItem(m),
       ]),
     );
   }
