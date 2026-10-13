@@ -130,6 +130,21 @@ class _ShowcaseFilmBannerState extends State<ShowcaseFilmBanner>
           .length;
       if (n > 0) _count = n;
     } catch (_) {}
+    _loadCachedCount();
+  }
+
+  // شمارش با آخرین داده‌ی پنل که روی گوشی ذخیره شده (بدون انتظار برای شبکه)
+  Future<void> _loadCachedCount() async {
+    try {
+      final cached = await ShowcaseService.loadCached(_kind);
+      if (cached == null) return;
+      final merged = ShowcaseService.merge(
+          _kind, cached, ShowcaseService.localItems(_kind));
+      final n = merged.items
+          .where((e) => (e.videoUrl ?? '').trim().isNotEmpty)
+          .length;
+      if (n > 0 && n != _count && mounted) setState(() => _count = n);
+    } catch (_) {}
   }
 
   _BannerTheme get _theme {
