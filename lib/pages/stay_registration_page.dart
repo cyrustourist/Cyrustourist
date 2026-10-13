@@ -1511,46 +1511,107 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     }
   }
 
-  Widget _battery(int days, int pct, Color c) {
+  /// کارت «شارژ اعتبار»: باتری گرادیانی با صاعقه، درصد و روز مانده
+  Widget _chargeCard(int days, int pct, Color c) {
     final empty = days <= 0;
     final w = (pct.clamp(0, 100)) / 100.0;
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Semantics(
-        label: empty
-            ? _tl('اعتبار تمام شده', 'Credit ended', 'انتهى الرصيد')
-            : _tl('$days روز اعتبار باقی مانده', '$days days left', 'متبقي $days يوماً'),
+    final c2 = Color.lerp(c, Colors.white, 0.35)!;
+    final title = empty
+        ? _tl('اعتبار تمام شده', 'Credit ended', 'انتهى الرصيد')
+        : _tl('شارژ اعتبار', 'Credit charge', 'شحن الرصيد');
+    return Semantics(
+      label: empty
+          ? _tl('اعتبار تمام شده', 'Credit ended', 'انتهى الرصيد')
+          : _tl('$days روز اعتبار باقی مانده', '$days days left', 'متبقي $days يوماً'),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [c.withValues(alpha: 0.13), c.withValues(alpha: 0.04)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.withValues(alpha: 0.35)),
+        ),
         child: Row(children: [
-          Expanded(
-            child: Container(
-              height: 28,
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: const Color(0xff8da39c), width: 2.2),
-              ),
-              child: Stack(children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: empty ? 0.02 : (w < 0.04 ? 0.04 : w),
-                    heightFactor: 1,
-                    child: Container(decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(5))),
-                  ),
-                ),
-                Center(
-                  child: Text('$pct%', style: const TextStyle(color: _ink, fontSize: 12, fontWeight: FontWeight.w900)),
-                ),
-              ]),
-            ),
-          ),
           Container(
-            width: 5,
-            height: 13,
-            margin: const EdgeInsets.only(left: 2),
-            decoration: const BoxDecoration(color: Color(0xff8da39c), borderRadius: BorderRadius.only(topRight: Radius.circular(3), bottomRight: Radius.circular(3))),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: [c, c2], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              boxShadow: [BoxShadow(color: c.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3))],
+            ),
+            child: Icon(empty ? Icons.battery_alert_rounded : Icons.bolt_rounded, color: Colors.white, size: 24),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Text(title, style: const TextStyle(color: _soft, fontSize: 11.5, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Text(empty ? '0%' : '$pct%', style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w900)),
+              ]),
+              const SizedBox(height: 5),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(children: [
+                  Expanded(
+                    child: Container(
+                      height: 16,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xffb7c7c1), width: 1.6),
+                      ),
+                      child: LayoutBuilder(builder: (context, box) {
+                        return Stack(children: [
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0, end: empty ? 0.02 : (w < 0.05 ? 0.05 : w)),
+                            duration: const Duration(milliseconds: 900),
+                            curve: Curves.easeOutCubic,
+                            builder: (_, v, __) => Container(
+                              width: box.maxWidth * v,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [c, c2]),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                            ),
+                          ),
+                          // خط‌های جداکننده‌ی باتری (۴ بخش)
+                          for (final f in const [0.25, 0.5, 0.75])
+                            Positioned(
+                              left: box.maxWidth * f,
+                              top: 0,
+                              bottom: 0,
+                              child: Container(width: 1.2, color: Colors.white.withValues(alpha: 0.8)),
+                            ),
+                        ]);
+                      }),
+                    ),
+                  ),
+                  Container(
+                    width: 4,
+                    height: 8,
+                    margin: const EdgeInsets.only(left: 1.5),
+                    decoration: const BoxDecoration(
+                      color: Color(0xffb7c7c1),
+                      borderRadius: BorderRadius.only(topRight: Radius.circular(3), bottomRight: Radius.circular(3)),
+                    ),
+                  ),
+                ]),
+              ),
+            ]),
+          ),
+          const SizedBox(width: 12),
+          Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(empty ? '—' : '$days', style: TextStyle(color: c, fontWeight: FontWeight.w900, fontSize: 22, height: 1.0)),
+            const SizedBox(height: 2),
+            Text(empty ? _tl('تمام شد', 'Ended', 'انتهى') : _tl('روز مانده', 'days left', 'يوم متبقٍ'),
+                style: const TextStyle(color: _soft, fontSize: 10.5, fontWeight: FontWeight.w700)),
+          ]),
         ]),
       ),
     );
@@ -1603,14 +1664,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         Text('${m['tracking_code'] ?? ''} · ${m['province'] ?? ''} ${m['city'] ?? ''}', style: const TextStyle(color: _soft, fontSize: 12)),
         if (days != null) ...[
           const SizedBox(height: 10),
-          Row(children: [
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(days <= 0 ? _tl('تمام شد', 'Ended', 'انتهى') : '$days', style: TextStyle(color: batColor, fontWeight: FontWeight.w900, fontSize: 18, height: 1.1)),
-              Text(days <= 0 ? _tl('اعتبار', 'credit', 'الرصيد') : _tl('روز مانده', 'days left', 'يوم متبقٍ'), style: const TextStyle(color: _soft, fontSize: 11)),
-            ]),
-            const SizedBox(width: 12),
-            Expanded(child: _battery(days, pct, batColor)),
-          ]),
+          _chargeCard(days, pct, batColor),
         ],
         const SizedBox(height: 8),
         Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 6, runSpacing: 4, children: [
