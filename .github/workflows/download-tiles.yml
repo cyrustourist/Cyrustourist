@@ -7,6 +7,10 @@ on:
         description: "Compare all tiles with OSM and replace changed ones"
         type: boolean
         default: true
+      tile_url:
+        description: "Optional tile URL template with {z}/{x}/{y} (empty = OpenStreetMap)"
+        type: string
+        default: ""
   schedule:
     # first day of every 3rd month, 03:00 UTC
     - cron: "0 3 1 */3 *"
@@ -22,8 +26,11 @@ jobs:
 
       - name: Download / refresh tiles
         id: dl
+        env:
+          TILE_URL_INPUT: ${{ inputs.tile_url }}
         run: |
           set -euo pipefail
+          if [ -n "${TILE_URL_INPUT:-}" ]; then export TILE_URL="$TILE_URL_INPUT"; fi
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.refresh }}" = "true" ]; then
             python3 tools/download_offline_tiles.py --refresh
           else
