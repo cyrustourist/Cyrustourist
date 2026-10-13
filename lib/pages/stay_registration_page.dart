@@ -814,24 +814,41 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   }
 
   Future<void> _submitEdit() async {
-    final uid = await BadgeService.userUid();
-    setState(() => _busy = true);
-    final body = _formBody(uid)..['id'] = _editId;
-    final j = await BadgeService.call('POST', '/api/stay-reg/edit', body: body);
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (j == null) return _snack(_t('netErr'));
-    if (j['success'] == true) {
-      setState(() {
-        _doneCode = '${j['tracking_code'] ?? ''}';
-        _doneEdit = true;
-      });
-      _loadMine();
-      if (_scroll.hasClients) _scroll.jumpTo(0);
-      return;
+    // پازل ضد ربات؛ در صورت خطای پازل، پازل تازه نشان داده می‌شود
+    for (var attempt = 0; attempt < 4; attempt++) {
+      final cap = await showDialog<_CaptchaResult>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _CaptchaDialog(),
+      );
+      if (cap == null || !mounted) return;
+      final uid = await BadgeService.userUid();
+      setState(() => _busy = true);
+      final body = _formBody(uid)
+        ..['id'] = _editId
+        ..addAll(<String, dynamic>{
+          'captcha_id': cap.id,
+          'captcha_x': cap.x,
+          'captcha_trail': cap.trail,
+        });
+      final j = await BadgeService.call('POST', '/api/stay-reg/edit', body: body);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (j == null) return _snack(_t('netErr'));
+      if (j['success'] == true) {
+        setState(() {
+          _doneCode = '${j['tracking_code'] ?? ''}';
+          _doneEdit = true;
+        });
+        _loadMine();
+        if (_scroll.hasClients) _scroll.jumpTo(0);
+        return;
+      }
+      final code = '${j['error'] ?? ''}';
+      if (code == 'account_not_verified') setState(() => _verified = false);
+      _snack('${j['message'] ?? _t('netErr')}');
+      if (!code.startsWith('captcha_')) return;
     }
-    if ('${j['error']}' == 'account_not_verified') setState(() => _verified = false);
-    _snack('${j['message'] ?? _t('netErr')}');
   }
 
   @override
