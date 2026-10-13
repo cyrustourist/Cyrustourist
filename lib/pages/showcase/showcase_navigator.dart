@@ -7,7 +7,8 @@ import '../../models/stay_details.dart';
 import '../../services/public_link_service.dart';
 import '../agencies/agency_profile_page.dart';
 import '../leaders/leader_profile_page.dart';
-import '../movie_video_page.dart' show MovieSlotData, MovieVideoPage;
+import '../movie_video_page.dart'
+    show MovieContact, MovieSlotData, MovieSocial, MovieVideoPage;
 import '../residence_video_page.dart' show ResidenceVideoData, ResidenceVideoPage;
 import 'showcase_detail_page.dart';
 import 'stay_detail_page.dart';
@@ -86,7 +87,49 @@ class ShowcaseNavigator {
       amenityLabels = StayDetails.parseAmenityLabels(row['amenity_labels']);
     }
 
+    // داده‌های کامل ورکر (فقط برای ردیف‌های سرور)
+    final phones = <MovieContact>[];
+    final socials = <MovieSocial>[];
+    String? navUrl;
+    String? mStatus, mLabel;
+    int? mDays;
+    if (raw is Map) {
+      final row = Map<String, dynamic>.from(raw);
+      final ph = row['phones'];
+      if (ph is List) {
+        for (final e in ph) {
+          if (e is Map) {
+            final n = '${e['number'] ?? ''}'.trim();
+            if (n.isNotEmpty) phones.add(MovieContact('${e['label'] ?? ''}', n));
+          }
+        }
+      }
+      final sl = row['social_links'];
+      if (sl is List) {
+        for (final e in sl) {
+          if (e is Map) {
+            final u = '${e['url'] ?? ''}'.trim();
+            if (u.isNotEmpty) {
+              socials.add(MovieSocial('${e['type'] ?? ''}', '${e['label'] ?? ''}', u));
+            }
+          }
+        }
+      }
+      final nu = '${row['navigation_url'] ?? ''}'.trim();
+      if (nu.isNotEmpty) navUrl = nu;
+      final ms = '${row['membership_status'] ?? ''}'.trim();
+      if (ms.isNotEmpty) mStatus = ms;
+      mLabel = '${row['membership_label'] ?? ''}'.trim();
+      mDays = int.tryParse('${row['membership_days_left']}');
+    }
+
     return MovieSlotData(
+      phones: phones,
+      socialLinks: socials,
+      navigationUrl: navUrl,
+      membershipStatus: mStatus,
+      membershipLabel: mLabel,
+      membershipDaysLeft: mDays,
       code: i.code,
       assigned: true,
       name: _v(i.titles, 'fa') ?? i.title('fa'),
