@@ -26,7 +26,7 @@ class TileDiskCache {
   static bool _trimScheduled = false;
 
   static final HttpClient _client = HttpClient()
-    ..connectionTimeout = const Duration(seconds: 8)
+    ..connectionTimeout = const Duration(seconds: 5)
     ..idleTimeout = const Duration(seconds: 30)
     ..maxConnectionsPerHost = 8;
 
@@ -57,7 +57,7 @@ class TileDiskCache {
       if (etag != null && etag.isNotEmpty) {
         req.headers.set(HttpHeaders.ifNoneMatchHeader, etag);
       }
-      final res = await req.close().timeout(const Duration(seconds: 12));
+      final res = await req.close().timeout(const Duration(seconds: 8));
       if (res.statusCode == 304) {
         await res.drain<void>();
         try {
@@ -76,7 +76,7 @@ class TileDiskCache {
         return null;
       }
       final builder = BytesBuilder(copy: false);
-      await for (final chunk in res.timeout(const Duration(seconds: 12))) {
+      await for (final chunk in res.timeout(const Duration(seconds: 8))) {
         builder.add(chunk);
       }
       final bytes = builder.takeBytes();
