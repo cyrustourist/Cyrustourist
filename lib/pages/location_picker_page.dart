@@ -7,7 +7,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../config/carto_config.dart';
 import '../core/language/menu_translations.dart';
 import '../widgets/resilient_tile_layer.dart';
 
@@ -134,56 +133,20 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   int _revSeq = 0;
   bool _addrTouched = false;
 
-  // لایهٔ نقشه: ۰ = OpenStreetMap ، ۱ = CARTO  (با خطای پیاپیِ کاشی، خودکار لایهٔ بعدی)
-  int _tile = 0;
-  int _tileErr = 0;
+  // لایهٔ نقشه از ResilientTileLayer می‌آید (استاندارد / عوارض / ماهواره / ماهواره+نام‌ها + کش دیسکی)
+  Widget _tileLayer() => const ResilientTileLayer(maxZoom: _maxZoom);
 
-  void _nextTile() {
-    if (!mounted) return;
-    setState(() {
-      _tile = (_tile + 1) % 2;
-      _tileErr = 0;
-    });
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(duration: const Duration(seconds: 2), content: Text(_t('layerSwitch'))));
-  }
-
-  void _onTileError(int step) {
-    if (!mounted || step != _tile) return;
-    _tileErr++;
-    // حداکثر یک دور چرخش خودکار؛ پس از آن فقط با دکمهٔ تغییر لایه
-    if (_tileErr >= 4 && _autoSwitches < 1) {
-      _autoSwitches++;
-      _nextTile();
-    }
-  }
-
-  int _autoSwitches = 0;
-
-  Widget _tileLayer() {
-    final Widget online = _tile == 0
-        ? TileLayer(
-            key: const ValueKey('tile-osm'),
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.cyrustourist.app',
-            maxZoom: _maxZoom,
-            errorTileCallback: (_, __, ___) => _onTileError(0),
-          )
-        : TileLayer(
-            key: const ValueKey('tile-carto'),
-            urlTemplate: CartoConfig.tileUrlWithKey,
-            userAgentPackageName: 'com.cyrustourist.app',
-            maxZoom: _maxZoom,
-            errorTileCallback: (_, __, ___) => _onTileError(1),
-          );
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const OfflineBaseTileLayer(maxZoom: _maxZoom),
-        online,
-      ],
-    );
+  /// مکان‌نمای سریع: آخرین موقعیت شناخته‌شده فوراً (بدون پرسیدن مجوز و بدون انتظار GPS)
+  Future<void> _quickLocate() async {
+    if (widget.initial != null) return;
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) return;
+      final last = await Geolocator.getLastKnownPosition();
+      if (last == null || !mounted) return;
+      _addrTouched = false;
+      _map.move(LatLng(last.latitude, last.longitude), 15);
+    } catch (_) {}
   }
 
   @override
@@ -194,6 +157,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     _addr.text = widget.initialAddress;
     _addrTouched = widget.initialAddress.trim().isNotEmpty;
     _addr.addListener(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) => _quickLocate());
   }
 
   @override
@@ -485,7 +449,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
               const SizedBox(height: 8),
               _fab(_geoBusy ? Icons.hourglass_top_rounded : Icons.my_location_rounded, _gps, tooltip: _t('gps')),
               const SizedBox(height: 8),
-              _fab(Icons.layers_rounded, () => _nextTile(), tooltip: _t('layerBtn')),
+              _fab(Icons.layers_rounded, () => showMapLayerSheet(context), tooltip: _t('layerBtn')),
             ]),
           ),
           // کارت پایین
