@@ -37,6 +37,18 @@ def sha(b):
     return hashlib.sha256(b).hexdigest()
 
 
+# صفحهٔ «403 Access blocked» که OSM به‌جای نقشه می‌فرستد؛ هرگز نباید به‌عنوان کاشی ذخیره شود
+BLOCKED_SHA = "b02c44252dac5a5e820ecef1e9bf9200e9407c042df668a466a1aa81a9ecca7a"
+
+
+def valid_tile(data):
+    return (
+        len(data) > 100
+        and data[:8] == b"\x89PNG\r\n\x1a\n"
+        and sha(data) != BLOCKED_SHA
+    )
+
+
 def main():
     refresh = "--refresh" in sys.argv
     if MAX_ZOOM > 7:
@@ -71,6 +83,11 @@ def main():
             with urllib.request.urlopen(req, timeout=20) as r:
                 data = r.read()
                 et = r.headers.get("ETag")
+            if not valid_tile(data):
+                fail += 1
+                print("FAIL", name, "invalid or blocked response")
+                time.sleep(DELAY)
+                continue
             if et:
                 etags[name] = et
             if not exists:
