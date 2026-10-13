@@ -1325,7 +1325,7 @@ class _SmartMapScreenState
                 initialZoom: 13,
               ),
               children: [
-                const ResilientTileLayer(maxZoom: 15),
+                const ResilientTileLayer(maxZoom: 18),
 
                 if (routePoints.length >=
                     2)
@@ -1949,6 +1949,13 @@ class _SmartMapScreenState
             if (routePoints.length >=
                 2)
               _routeSummary(),
+
+            // دکمهٔ لایه‌های نقشه (عوارض زمین / ماهواره)
+            Positioned(
+              bottom: routePoints.length >= 2 ? 311 : 301,
+              right: 20,
+              child: const MapLayerButton(),
+            ),
 
             // ==================================================
             // MY LOCATION
