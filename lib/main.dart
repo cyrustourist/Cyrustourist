@@ -71,10 +71,18 @@ void main() async {
     debugPrint('Firebase init ignored on web/unsupported platforms: $e');
   }
 
-  await NotificationService.instance.initialize();
   await CyrusHomeStyle.instance.load();
 
   runApp(const CyrusTouristApp());
+
+  // اعلان‌ها/FCM به اینترنت نیاز دارند (توکن، عضویت در Topic)؛ اگر قبل از runApp
+  // منتظرشان بمانیم، با اینترنت قطع برنامه روی اسپلش اولیهٔ اندروید گیر می‌کند.
+  // پس بعد از بالا آمدن برنامه و در پس‌زمینه راه‌اندازی می‌شوند.
+  unawaited(
+    NotificationService.instance.initialize().catchError((Object e) {
+      debugPrint('Notification init failed (offline?): $e');
+    }),
+  );
 
   // لینک‌های عمومی (https://cyrustourist.ir/<نوع>/<شناسه>) مستقیم در برنامه باز می‌شوند
   DeepLinkService.init();
