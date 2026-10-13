@@ -321,6 +321,7 @@ class _CategoryFullMapPageState
           ],
             ),
             _statusCard(),
+            const PositionedDirectional(end: 12, top: 12, child: MapLayerButton()),
           ],
         ),
       ),
