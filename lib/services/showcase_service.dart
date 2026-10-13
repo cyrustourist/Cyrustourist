@@ -325,7 +325,7 @@ class ShowcaseService {
     final cityEn = joinPlace(s(j['city_en']), s(j['province_en']));
     final cityAr = joinPlace(s(j['city_ar']), s(j['province_ar']));
 
-    final descFa = p([j['description_fa'], j['message'], j['bio']]);
+    final descFa = p([j['description_full'], j['description_fa'], j['message'], j['bio']]);
     final descEn = s(j['description_en']);
     final descAr = s(j['description_ar']);
 
@@ -346,7 +346,7 @@ class ShowcaseService {
     final stayPhones = stay?.phones ?? const <String>[];
     final mainPhone = isStay
         ? (stayPhones.isNotEmpty ? stayPhones.first : null)
-        : p([j['phone_mobile'], j['phone'], j['mobile_phone']]);
+        : p([j['phone_primary'], j['phone_mobile'], j['mobile'], j['phone'], j['mobile_phone']]);
     final typeKey = stay?.typeKey ?? '';
 
     return ShowcaseItem(
