@@ -10,6 +10,7 @@ import '../../pages/map/map_places_service.dart' as remote;
 import '../../services/category_nearby_service.dart';
 import '../../services/location_manager.dart';
 import '../../services/map_place_favorites_service.dart';
+import '../image_search_helper.dart';
 import '../voice_search_sheet.dart';
 
 /// کلید ۹ — جستجوی هوشمند سایروس توریست.
@@ -174,9 +175,7 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
                     ),
                     CyrusSmartSearchButton(
                       item: items.image,
-                      futureFeature: true,
-                      onTap: () =>
-                          _futureFeatureTapped(context, items.image),
+                      onTap: () => _startImageSearch(items),
                     ),
                   ],
                 ),
@@ -427,6 +426,85 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
 
     setState(() => _searchController.text = text);
     await _submitFreeTextSearch(text);
+  }
+
+  /// جستجو با تصویر (رایگان، روی گوشی): ۱) مختصات داخل عکس، ۲) تشخیص
+  /// محتوای عکس و تبدیل آن به یک دسته‌ی جستجوی اطراف.
+  Future<void> _startImageSearch(CyrusSearchItems items) async {
+    _searchFocusNode.unfocus();
+
+    final result = await pickAndAnalyzeImage(
+      context,
+      languageCode: languageCode,
+    );
+
+    if (!mounted || result == null) return;
+
+    // ۱) عکس مختصات داشت ← همان نقطه روی نقشه
+    final point = result.point;
+    if (point != null) {
+      _showSnack(ImageSearchTexts.get(languageCode, 'foundGps'));
+      await _openSearchedPlace(
+        SearchedLocation(
+          name: '${point.latitude.toStringAsFixed(5)}, '
+              '${point.longitude.toStringAsFixed(5)}',
+          point: point,
+        ),
+      );
+      return;
+    }
+
+    // ۲) محتوای عکس ← دسته‌ی جستجو
+    CyrusSearchItem? item;
+    remote.MapPlaceType? type;
+    PlaceCategory? display;
+
+    switch (result.category) {
+      case 'restaurant':
+        item = items.restaurant;
+        type = remote.MapPlaceType.restaurant;
+        display = PlaceCategory.restaurant;
+        break;
+      case 'cafe':
+        item = items.cafe;
+        type = remote.MapPlaceType.cafe;
+        display = PlaceCategory.restaurant;
+        break;
+      case 'market':
+        item = items.shopping;
+        type = remote.MapPlaceType.market;
+        display = PlaceCategory.service;
+        break;
+      case 'historical':
+        item = items.historical;
+        type = remote.MapPlaceType.historicalSite;
+        display = PlaceCategory.culture;
+        break;
+      case 'nature':
+        item = items.nature;
+        type = remote.MapPlaceType.natureSite;
+        display = PlaceCategory.attraction;
+        break;
+    }
+
+    if (item == null || type == null || display == null) {
+      _showSnack(ImageSearchTexts.get(languageCode, 'nothing'));
+      return;
+    }
+
+    _showSnack(
+      ImageSearchTexts.get(
+        languageCode,
+        'foundCategory',
+        args: {'cat': item.title},
+      ),
+    );
+
+    await _searchCategory(
+      remoteType: type,
+      displayCategory: display,
+      title: item.title,
+    );
   }
 
   void _focusSearchBox() {
@@ -1406,7 +1484,7 @@ class _SearchTranslations {
       'voice': 'جستجوی صوتی',
       'voiceSub': 'جستجو با فرمان و پرسش صوتی',
       'image': 'جستجو با تصویر',
-      'imageSub': 'پیدا کردن مکان از روی عکس — در بروزرسانی آینده',
+      'imageSub': 'پیدا کردن مکان از روی عکس (موقعیت یا محتوای تصویر)',
       'suggestions': 'پیشنهاد هوشمند هنگام جستجو',
       'suggestionsSub': 'پیشنهاد نتایج مرتبط در زمان جستجو',
       'futureTitle': 'این قابلیت در راه است',
@@ -1445,7 +1523,7 @@ class _SearchTranslations {
       'voice': 'Voice Search',
       'voiceSub': 'Search using your voice',
       'image': 'Image Search',
-      'imageSub': 'Find places from photos — coming in a future update',
+      'imageSub': 'Find places from photos (location or content)',
       'suggestions': 'Smart Search Suggestions',
       'suggestionsSub': 'Relevant suggestions while you search',
       'futureTitle': 'Coming Soon',
@@ -1483,7 +1561,7 @@ class _SearchTranslations {
       'voice': 'البحث الصوتي',
       'voiceSub': 'البحث باستخدام الصوت',
       'image': 'البحث بالصورة',
-      'imageSub': 'العثور على الأماكن من الصور — قريباً',
+      'imageSub': 'العثور على الأماكن من الصور (الموقع أو المحتوى)',
       'suggestions': 'الاقتراحات الذكية',
       'suggestionsSub': 'اقتراح نتائج مرتبطة أثناء البحث',
       'futureTitle': 'هذه الميزة قادمة',
@@ -1521,7 +1599,7 @@ class _SearchTranslations {
       'voice': 'Sesli Arama',
       'voiceSub': 'Sesinizi kullanarak arayın',
       'image': 'Görsel Arama',
-      'imageSub': 'Fotoğraftan yer bulma — gelecekte',
+      'imageSub': 'Fotoğraftan yer bulma (konum veya içerik)',
       'suggestions': 'Akıllı Öneriler',
       'suggestionsSub': 'Arama sırasında ilgili öneriler',
       'futureTitle': 'Yakında',
@@ -1559,7 +1637,7 @@ class _SearchTranslations {
       'voice': 'Голосовой поиск',
       'voiceSub': 'Поиск с помощью голоса',
       'image': 'Поиск по изображению',
-      'imageSub': 'Поиск места по фото — в будущем',
+      'imageSub': 'Поиск места по фото (геометка или содержимое)',
       'suggestions': 'Умные предложения',
       'suggestionsSub': 'Связанные предложения во время поиска',
       'futureTitle': 'Скоро',
@@ -1597,7 +1675,7 @@ class _SearchTranslations {
       'voice': 'Recherche vocale',
       'voiceSub': 'Rechercher avec votre voix',
       'image': 'Recherche par image',
-      'imageSub': 'Trouver un lieu depuis une photo — bientôt',
+      'imageSub': 'Trouver un lieu depuis une photo (position ou contenu)',
       'suggestions': 'Suggestions intelligentes',
       'suggestionsSub': 'Suggestions pertinentes pendant la recherche',
       'futureTitle': 'Bientôt disponible',
@@ -1635,7 +1713,7 @@ class _SearchTranslations {
       'voice': 'Sprachsuche',
       'voiceSub': 'Mit Ihrer Stimme suchen',
       'image': 'Bildsuche',
-      'imageSub': 'Orte anhand von Fotos finden — später',
+      'imageSub': 'Orte anhand von Fotos finden (Standort oder Inhalt)',
       'suggestions': 'Intelligente Vorschläge',
       'suggestionsSub': 'Relevante Vorschläge während der Suche',
       'futureTitle': 'Kommt bald',
@@ -1673,7 +1751,7 @@ class _SearchTranslations {
       'voice': 'Búsqueda por voz',
       'voiceSub': 'Busca usando tu voz',
       'image': 'Búsqueda por imagen',
-      'imageSub': 'Encontrar lugares desde fotos — próximamente',
+      'imageSub': 'Encontrar lugares desde fotos (ubicación o contenido)',
       'suggestions': 'Sugerencias inteligentes',
       'suggestionsSub': 'Sugerencias relevantes mientras buscas',
       'futureTitle': 'Próximamente',
@@ -1711,7 +1789,7 @@ class _SearchTranslations {
       'voice': '语音搜索',
       'voiceSub': '使用语音进行搜索',
       'image': '图片搜索',
-      'imageSub': '通过照片寻找地点 — 未来更新',
+      'imageSub': '通过照片寻找地点（位置或内容）',
       'suggestions': '智能搜索建议',
       'suggestionsSub': '搜索时提供相关建议',
       'futureTitle': '即将推出',
@@ -1748,7 +1826,7 @@ class _SearchTranslations {
       'voice': 'Ricerca vocale',
       'voiceSub': 'Cerca usando la tua voce',
       'image': 'Ricerca per immagine',
-      'imageSub': 'Trova un luogo da una foto — prossimamente',
+      'imageSub': 'Trova un luogo da una foto (posizione o contenuto)',
       'suggestions': 'Suggerimenti intelligenti',
       'suggestionsSub': 'Suggerimenti pertinenti durante la ricerca',
       'futureTitle': 'Disponibile a breve',
