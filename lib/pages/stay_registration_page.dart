@@ -17,6 +17,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/price_pack.dart';
 import '../widgets/price_pack_editor.dart';
 import '../widgets/registration_steps_card.dart';
+import '../widgets/brand_icons.dart';
 import 'price_pack_edit_page.dart';
 import 'location_picker_page.dart';
 import 'profile/photo_cropper.dart';
@@ -313,6 +314,14 @@ const Map<String, Map<String, String>> _kTx3 = {
     'editKeepPhoto': 'عکس فعلی حفظ می‌شود؛ فقط برای تغییر، عکس جدید انتخاب کنید.',
     'editDoneTitle': 'ویرایش شما ثبت شد',
     'editDoneText': 'تغییرات در صف بررسی پشتیبانی قرار گرفت. پس از تأیید اعمال می‌شود و وضعیت را در «درخواست‌های من» می‌بینید.',
+    'phone2': 'شماره کمکی',
+    'grpMessengers': 'شبکه‌های اجتماعی و پیام‌رسان‌ها',
+    'grpWebsites': 'وب‌سایت‌ها',
+    'telegramOnly': 'تلگرام',
+    'whatsapp': 'واتساپ (شماره همراه)',
+    'eitaa': 'ایتا',
+    'website1': 'وب‌سایت ۱',
+    'website2': 'وب‌سایت ۲',
   },
   'en': {
     'gateTitle': 'Complete your account first',
@@ -334,6 +343,14 @@ const Map<String, Map<String, String>> _kTx3 = {
     'editKeepPhoto': 'The current photo is kept. Choose a new one only to change it.',
     'editDoneTitle': 'Your edit was submitted',
     'editDoneText': 'Your changes are in the support review queue. They apply after approval; follow the status in "My requests".',
+    'phone2': 'Helper number',
+    'grpMessengers': 'Social media & messengers',
+    'grpWebsites': 'Websites',
+    'telegramOnly': 'Telegram',
+    'whatsapp': 'WhatsApp (mobile number)',
+    'eitaa': 'Eitaa',
+    'website1': 'Website 1',
+    'website2': 'Website 2',
   },
   'ar': {
     'gateTitle': 'أكمل حسابك أولاً',
@@ -355,6 +372,14 @@ const Map<String, Map<String, String>> _kTx3 = {
     'editKeepPhoto': 'تبقى الصورة الحالية. اختر صورة جديدة فقط إذا أردت تغييرها.',
     'editDoneTitle': 'تم إرسال تعديلك',
     'editDoneText': 'دخلت تعديلاتك قائمة مراجعة الدعم وستُطبَّق بعد الموافقة. تابع الحالة في «طلباتي».',
+    'phone2': 'رقم مساعد',
+    'grpMessengers': 'التواصل الاجتماعي والمراسلة',
+    'grpWebsites': 'المواقع الإلكترونية',
+    'telegramOnly': 'تيليجرام',
+    'whatsapp': 'واتساب (رقم الجوال)',
+    'eitaa': 'إيتا',
+    'website1': 'الموقع 1',
+    'website2': 'الموقع 2',
   },
 };
 
@@ -746,6 +771,10 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   final _experience = TextEditingController();
   final _areas = TextEditingController();
   final _telegram = TextEditingController();
+  final _wa = TextEditingController();
+  final _eit = TextEditingController();
+  final _web2 = TextEditingController();
+  final _phone2 = TextEditingController();
   final Set<String> _langs = {};
   final Set<String> _fields = {};
 
@@ -800,6 +829,10 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     _experience.text = v('experience');
     _areas.text = v('areas');
     _telegram.text = v('telegram');
+    _wa.text = v('whatsapp');
+    _eit.text = v('eitaa');
+    _web2.text = v('website2');
+    _phone2.text = v('phone2');
     _pack = PricePack.tryParse(f['price_pack']) ?? PricePack.empty();
     _packKey++;
     _lat = double.tryParse(v('latitude'));
@@ -876,7 +909,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
 
   @override
   void dispose() {
-    for (final c in [_name, _province, _city, _address, _mobile, _phone, _rooms, _desc, _video, _insta, _web, _specialty, _doctor, _hours, _manager, _license, _regions, _experience, _areas, _telegram]) {
+    for (final c in [_name, _province, _city, _address, _mobile, _phone, _rooms, _desc, _video, _insta, _web, _specialty, _doctor, _hours, _manager, _license, _regions, _experience, _areas, _telegram, _wa, _eit, _web2, _phone2]) {
       c.dispose();
     }
     _provinceFocus.dispose();
@@ -989,7 +1022,11 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         if (_kind == 'leader') 'areas': _areas.text.trim(),
         if (_kind == 'leader') 'fields': _fields.toList(),
         if (_kind == 'leader') 'languages': _langs.toList(),
-        if (_kind == 'agency' || _kind == 'leader') 'telegram': _telegram.text.trim(),
+        'telegram': _telegram.text.trim(),
+        if (_kind == 'stay' || _kind == 'health') 'whatsapp': _wa.text.trim(),
+        if (_kind == 'stay' || _kind == 'health') 'eitaa': _eit.text.trim(),
+        if (_kind == 'stay' || _kind == 'health') 'website2': _web2.text.trim(),
+        if (_kind == 'stay' || _kind == 'health') 'phone2': _digits(_phone2.text).trim(),
         'province': _resolveProvince(_province.text),
         'city': _city.text.trim(),
         'address': _address.text.trim(),
@@ -1084,7 +1121,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   }
 
   void _reset() {
-    for (final c in [_name, _province, _city, _address, _mobile, _phone, _rooms, _desc, _video, _insta, _web, _specialty, _doctor, _hours, _manager, _license, _regions, _experience, _areas, _telegram]) {
+    for (final c in [_name, _province, _city, _address, _mobile, _phone, _rooms, _desc, _video, _insta, _web, _specialty, _doctor, _hours, _manager, _license, _regions, _experience, _areas, _telegram, _wa, _eit, _web2, _phone2]) {
       c.clear();
     }
     setState(() {
@@ -1207,6 +1244,8 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       _card(_t('s_contact'), [
         _field('mobile', _mobile, _t('mobile'), keyboard: TextInputType.phone, ltr: true, maxLength: 14),
         _field('phone', _phone, _t('phone'), keyboard: TextInputType.phone, ltr: true, maxLength: 16),
+        if (_kind == 'stay' || _kind == 'health')
+          _field('phone2', _phone2, _t('phone2'), keyboard: TextInputType.phone, ltr: true, maxLength: 16),
       ]),
       if (_kind == 'stay')
         _card(_t('s_more'), [
@@ -1288,9 +1327,13 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       _card(_t('s_social'), [
         _field('video', _video, _t('video'), lines: 3, keyboard: TextInputType.multiline, ltr: true),
         Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_t('videoHint'), style: const TextStyle(color: _soft, fontSize: 12, height: 1.7))),
-        _field('instagram', _insta, _t('instagram'), ltr: true),
-        if (_kind == 'agency' || _kind == 'leader') _field('telegram', _telegram, _t('telegram'), ltr: true),
-        _field('website', _web, _t('website'), keyboard: TextInputType.url, ltr: true),
+        if (_kind == 'stay' || _kind == 'health')
+          _socialTable()
+        else ...[
+          _field('instagram', _insta, _t('instagram'), ltr: true),
+          if (_kind == 'agency' || _kind == 'leader') _field('telegram', _telegram, _t('telegram'), ltr: true),
+          _field('website', _web, _t('website'), keyboard: TextInputType.url, ltr: true),
+        ],
       ]),
       const SizedBox(height: 4),
       SizedBox(
@@ -1490,6 +1533,92 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         _errText(key),
       ]),
     );
+  }
+
+  // ---------- جدول زیبای شبکه‌های اجتماعی و لینک‌ها (اقامتگاه و سلامت) ----------
+  Widget _socialRow(
+    TextEditingController c,
+    Widget icon,
+    List<Color> colors,
+    String label, {
+    String hint = '',
+    TextInputType? keyboard,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
+          ),
+          child: icon,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: const TextStyle(color: _ink, fontSize: 12.5, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 44,
+              child: TextField(
+                controller: c,
+                keyboardType: keyboard ?? TextInputType.url,
+                textDirection: TextDirection.ltr,
+                style: const TextStyle(color: _ink, fontSize: 14),
+                decoration: _deco(hint),
+              ),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _socialGroup(String title, List<Widget> rows) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xfff1dfb6)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(title, style: const TextStyle(color: _teal, fontSize: 13, fontWeight: FontWeight.w900)),
+        const Divider(height: 14, color: _line),
+        ...rows,
+      ]),
+    );
+  }
+
+  Widget _socialTable() {
+    const w = Colors.white;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _socialGroup(_t('grpMessengers'), [
+        _socialRow(_insta, const Icon(Icons.camera_alt_rounded, color: w, size: 22),
+            const [Color(0xfff58529), Color(0xffdd2a7b), Color(0xff8134af)], _t('instagram'),
+            hint: 'instagram.com/your_page'),
+        _socialRow(_telegram, const BrandIcon(BrandIcons.telegram, size: 23),
+            const [Color(0xff2aabee), Color(0xff1d84c4)], _t('telegramOnly'), hint: 't.me/your_id'),
+        _socialRow(_wa, const BrandIcon(BrandIcons.whatsapp, size: 23),
+            const [Color(0xff25d366), Color(0xff128c7e)], _t('whatsapp'),
+            hint: '09123456789', keyboard: TextInputType.phone),
+        _socialRow(_eit, const BrandIcon(BrandIcons.eitaa, size: 23),
+            const [Color(0xffffa000), Color(0xffe65100)], _t('eitaa'), hint: 'eitaa.com/your_id'),
+      ]),
+      _socialGroup(_t('grpWebsites'), [
+        _socialRow(_web, const Icon(Icons.language_rounded, color: w, size: 22),
+            const [Color(0xff11998e), Color(0xff0b6e69)], _t('website1'),
+            hint: 'https://', keyboard: TextInputType.url),
+        _socialRow(_web2, const Icon(Icons.public_rounded, color: w, size: 22),
+            const [Color(0xffe0a52f), Color(0xffc88a14)], _t('website2'),
+            hint: 'https://', keyboard: TextInputType.url),
+      ]),
+    ]);
   }
 
   Widget _label(String t) => Padding(
