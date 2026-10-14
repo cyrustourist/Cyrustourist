@@ -200,6 +200,15 @@ class PricePack {
 
   bool get isValid => error == null;
 
+  /// شمارهٔ (از صفر) اولین واحدی که خطا دارد؛ اگر خطا مربوط به آفر باشد یا خطایی نباشد -1
+  int get errorUnit {
+    if (units.isEmpty || units.length > 6) return -1;
+    for (var i = 0; i < units.length; i++) {
+      if (units[i].error != null) return i;
+    }
+    return -1;
+  }
+
   /// قیمت پس از آفر
   int afterPromo(int n) => promo.active ? (n * (100 - promo.pct) / 100).round() : n;
 
