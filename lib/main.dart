@@ -44,6 +44,7 @@ import 'widgets/cyrus_header_account_button.dart';
 import 'pages/tourism_tour_page.dart';
 import 'widgets/account/cyrus_account_screen.dart';
 import 'widgets/search/cyrus_smart_search.dart';
+import 'widgets/voice_search_sheet.dart';
 import 'widgets/settings/cyrus_settings_screen.dart';
 import 'pages/favorites_page.dart';
 import 'services/deep_link_service.dart';
@@ -1356,6 +1357,11 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
                     },
                   )
                 : Icon(icon),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.mic_rounded),
+              tooltip: _localize('جستجوی صوتی', 'Voice search', 'البحث الصوتي'),
+              onPressed: () => _voiceFill(controller, isOrigin: isOrigin),
+            ),
             hintText: hint,
             filled: true,
             border: OutlineInputBorder(
@@ -1366,6 +1372,26 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
         ),
       ),
     );
+  }
+
+  /// جستجوی صوتی مبدا/هدف: متن گفته‌شده در کادر قرار می‌گیرد و فهرست
+  /// پیشنهادها (مثل تایپ کردن) نمایش داده می‌شود. زبان = زبان برنامه.
+  Future<void> _voiceFill(
+    TextEditingController controller, {
+    required bool isOrigin,
+  }) async {
+    _removeSuggestionsOverlay();
+    FocusScope.of(context).unfocus();
+
+    final text = await showVoiceSearchSheet(
+      context,
+      languageCode: MenuLanguage.current,
+    );
+
+    if (!mounted || text == null || text.trim().isEmpty) return;
+
+    setState(() => controller.text = text);
+    _onSearchTextChanged(text, isOrigin: isOrigin);
   }
 
   void _onSearchTextChanged(String text, {required bool isOrigin}) {
