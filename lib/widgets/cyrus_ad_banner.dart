@@ -13,11 +13,15 @@ class _AdBannerItem {
   const _AdBannerItem({
     required this.imageProvider,
     this.linkUrl,
+    this.target,
     required this.key,
   });
 
   final ImageProvider imageProvider;
   final String? linkUrl;
+
+  /// دسته‌ی ثبت‌نام داخل اپ (فقط برای عکس‌های پیش‌فرض).
+  final String? target;
   final Object key;
 }
 
@@ -38,7 +42,9 @@ class CyrusAdBanner extends StatefulWidget {
     required this.slot,
     this.borderRadius = 10,
     this.defaultAssets = const [],
+    this.defaultTargets = const [],
     this.onDefaultTap,
+    this.onDefaultTarget,
   });
 
   /// جایگاه تبلیغ (۱، ۲ یا ۳).
@@ -53,6 +59,16 @@ class CyrusAdBanner extends StatefulWidget {
   /// برای هر ۴ عکس پیش‌فرض (۲تای جایگاه ۱ و ۲تای جایگاه ۲) باید به
   /// صفحه‌ی ثبت‌نام اقامتگاه هدایت شود، دقیقاً مثل بقیه‌ی نقاط ثبت‌نام.
   final VoidCallback? onDefaultTap;
+
+  /// دسته‌ی ثبت‌نامِ مخصوص هر عکس پیش‌فرض (هم‌ترتیب با [defaultAssets]،
+  /// مثلاً `health` / `agency` / `residence` / `tourleader`). اگر برای
+  /// عکسی مقدار نبود یا [onDefaultTarget] داده نشد، [onDefaultTap] صدا
+  /// زده می‌شود.
+  final List<String> defaultTargets;
+
+  /// وقتی روی عکس پیش‌فرضی که [defaultTargets] دارد لمس می‌شود؛ مقدار
+  /// ورودی همان دسته‌ی ثبت‌نام آن عکس است.
+  final ValueChanged<String>? onDefaultTarget;
 
   @override
   State<CyrusAdBanner> createState() => _CyrusAdBannerState();
@@ -91,15 +107,17 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
     super.dispose();
   }
 
-  List<_AdBannerItem> _defaultItems() => widget.defaultAssets
-      .map(
-        (path) => _AdBannerItem(
-          imageProvider: AssetImage(path),
-          linkUrl: null,
-          key: path,
-        ),
-      )
-      .toList();
+  List<_AdBannerItem> _defaultItems() => [
+        for (var i = 0; i < widget.defaultAssets.length; i++)
+          _AdBannerItem(
+            imageProvider: AssetImage(widget.defaultAssets[i]),
+            linkUrl: null,
+            target: i < widget.defaultTargets.length
+                ? widget.defaultTargets[i]
+                : null,
+            key: widget.defaultAssets[i],
+          ),
+      ];
 
   /// پنل تبلیغات عکس را گاهی به‌صورت data:image/webp;base64 در دیتابیس
   /// ذخیره می‌کند؛ NetworkImage این نوع آدرس را نمی‌خواند و بنر خالی
@@ -201,11 +219,17 @@ class _CyrusAdBannerState extends State<CyrusAdBanner> {
     final item = _items[_index];
     final hasServerLink = item.linkUrl != null && item.linkUrl!.isNotEmpty;
 
-    // عکس‌های پیش‌فرض لینک سرور ندارند؛ با لمس آن‌ها به صفحه‌ی ثبت‌نام
-    // اقامتگاه هدایت می‌شویم (دقیقاً مثل بقیه‌ی نقاط ثبت‌نام در اپ).
-    final VoidCallback? onTap = hasServerLink
-        ? _openCurrentLink
-        : widget.onDefaultTap;
+    // عکس‌های پیش‌فرض لینک سرور ندارند؛ با لمس هرکدام به صفحه‌ی ثبت‌نام
+    // همان دسته (سلامت، آژانس، اقامتگاه، لیدر تور) داخل اپ هدایت می‌شویم.
+    final target = item.target;
+    final VoidCallback? onTap;
+    if (hasServerLink) {
+      onTap = _openCurrentLink;
+    } else if (target != null && widget.onDefaultTarget != null) {
+      onTap = () => widget.onDefaultTarget!(target);
+    } else {
+      onTap = widget.onDefaultTap;
+    }
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
