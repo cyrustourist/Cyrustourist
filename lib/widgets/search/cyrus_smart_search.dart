@@ -10,6 +10,7 @@ import '../../pages/map/map_places_service.dart' as remote;
 import '../../services/category_nearby_service.dart';
 import '../../services/location_manager.dart';
 import '../../services/map_place_favorites_service.dart';
+import '../voice_search_sheet.dart';
 
 /// کلید ۹ — جستجوی هوشمند سایروس توریست.
 ///
@@ -169,8 +170,7 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
                     ),
                     CyrusSmartSearchButton(
                       item: items.voice,
-                      futureFeature: true,
-                      onTap: () => _futureFeatureTapped(context, items.voice),
+                      onTap: _startVoiceSearch,
                     ),
                     CyrusSmartSearchButton(
                       item: items.image,
@@ -328,9 +328,11 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
             Icons.search_rounded,
             color: Color(0xffffd56d),
           ),
-          suffixIcon: _searchController.text.isEmpty
-              ? null
-              : IconButton(
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_searchController.text.isNotEmpty)
+                IconButton(
                   icon: const Icon(
                     Icons.close_rounded,
                     color: Color(0xffc99b3b),
@@ -340,6 +342,15 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
                     _onSearchChanged('');
                   },
                 ),
+              IconButton(
+                icon: const Icon(
+                  Icons.mic_rounded,
+                  color: Color(0xffffd56d),
+                ),
+                onPressed: _startVoiceSearch,
+              ),
+            ],
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -401,6 +412,21 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
               }).toList(),
             ),
     );
+  }
+
+  /// جستجوی صوتی: زبان تشخیص گفتار = زبان انتخاب‌شده‌ی برنامه.
+  Future<void> _startVoiceSearch() async {
+    _searchFocusNode.unfocus();
+
+    final text = await showVoiceSearchSheet(
+      context,
+      languageCode: languageCode,
+    );
+
+    if (!mounted || text == null || text.trim().isEmpty) return;
+
+    setState(() => _searchController.text = text);
+    await _submitFreeTextSearch(text);
   }
 
   void _focusSearchBox() {
