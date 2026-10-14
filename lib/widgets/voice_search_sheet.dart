@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -111,7 +112,10 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
     for (final l in locales) {
       if (norm(l.localeId).split('_').first == _lang) return l.localeId;
     }
-    return null;
+    // زبان در فهرست «دانلودشده» نیست؛ ولی تشخیص آنلاین گوگل معمولاً فارسی را می‌فهمد.
+    // پس مسدود نمی‌کنیم و همان کد را امتحان می‌کنیم؛ اگر موتور نپذیرفت، خطای
+    // error_language_* می‌آید و راهنمای دانلود زبان نشان داده می‌شود.
+    return wanted;
   }
 
   Future<void> _start() async {
@@ -231,6 +235,14 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
     _closed = true;
     _speech.stop();
     Navigator.of(context).pop(clean);
+  }
+
+  static const MethodChannel _sys = MethodChannel('cyrus/system');
+
+  Future<void> _openVoiceSettings() async {
+    try {
+      await _sys.invokeMethod('openVoiceSettings');
+    } catch (_) {}
   }
 
   void _close() {
@@ -406,6 +418,34 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
     final canSend =
         _state == _VoiceState.listening && _words.trim().isNotEmpty;
 
+    final needSettings =
+        hasError && (_errorKey == 'noLang' || _errorKey == 'unavailable');
+    if (needSettings) {
+      return Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _openVoiceSettings,
+              icon: const Icon(Icons.settings_voice_rounded, size: 19),
+              label: Text(_t('openSettings')),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xff29e0ad),
+                side: const BorderSide(color: Color(0xff29e0ad)),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildBaseActions(hasError, canSend),
+        ],
+      );
+    }
+    return _buildBaseActions(hasError, canSend);
+  }
+
+  Widget _buildBaseActions(bool hasError, bool canSend) {
     return Row(
       children: [
         Expanded(
@@ -458,6 +498,7 @@ const Map<String, Map<String, String>> _kVoiceTexts = {
     'retry': 'تلاش دوباره',
     'cancel': 'بستن',
     'search': 'جستجو',
+    'openSettings': 'باز کردن تنظیمات تایپ صوتی',
   },
   'en': {
     'title': 'Voice Search',
@@ -471,6 +512,7 @@ const Map<String, Map<String, String>> _kVoiceTexts = {
     'retry': 'Try again',
     'cancel': 'Close',
     'search': 'Search',
+    'openSettings': 'Open voice typing settings',
   },
   'ar': {
     'title': 'البحث الصوتي',
@@ -484,6 +526,7 @@ const Map<String, Map<String, String>> _kVoiceTexts = {
     'retry': 'حاول مرة أخرى',
     'cancel': 'إغلاق',
     'search': 'بحث',
+    'openSettings': 'فتح إعدادات الكتابة الصوتية',
   },
   'tr': {
     'title': 'Sesli Arama',
