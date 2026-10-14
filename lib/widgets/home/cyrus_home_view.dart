@@ -77,6 +77,7 @@ class CyrusHomeView extends StatefulWidget {
     required this.onOpenSearch,
     required this.onOpenFavorites,
     required this.onOpenRegister,
+    this.onOpenRegisterCategory,
   });
 
   /// ردیف هدر (همبرگری / زبان / حساب کاربری).
@@ -89,6 +90,10 @@ class CyrusHomeView extends StatefulWidget {
 
   /// لمس عکس پیش‌فرض تبلیغات و کادر «معرفی کسب‌وکار شما».
   final VoidCallback onOpenRegister;
+
+  /// لمس هر عکس تبلیغ پیش‌فرض ← ثبت‌نام همان دسته
+  /// (`health` / `agency` / `residence` / `tourleader`).
+  final ValueChanged<String>? onOpenRegisterCategory;
 
   @override
   State<CyrusHomeView> createState() => _CyrusHomeViewState();
@@ -426,6 +431,8 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
             'assets/images/ads/slot1_default_1.jpg',
             'assets/images/ads/slot1_default_2.jpg',
           ],
+          // ۱ـ۱ گردشگری سلامت ، ۱ـ۲ آژانس مسافرتی
+          targets: const ['health', 'agency'],
         ),
         const SizedBox(height: 14),
         _adFrame(
@@ -436,6 +443,8 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
             'assets/images/ads/slot2_default_1.jpg',
             'assets/images/ads/slot2_default_2.jpg',
           ],
+          // ۲ـ۱ اقامتگاه ، ۲ـ۲ لیدر تور
+          targets: const ['residence', 'tourleader'],
         ),
       ],
     );
@@ -446,6 +455,7 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
     required int slot,
     required double ratio,
     required List<String> defaults,
+    required List<String> targets,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -470,7 +480,9 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
               slot: slot,
               borderRadius: 0,
               defaultAssets: defaults,
+              defaultTargets: targets,
               onDefaultTap: widget.onOpenRegister,
+              onDefaultTarget: widget.onOpenRegisterCategory,
             ),
           ),
         ),
