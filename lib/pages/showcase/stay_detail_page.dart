@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,12 +13,15 @@ import '../../models/stay_details.dart';
 import '../../models/price_pack.dart';
 import '../../widgets/price_pack_view.dart';
 import '../../services/public_link_service.dart';
+import '../../services/location_manager.dart';
 import '../../services/video_favorites_service.dart';
 import '../../widgets/aparat_embed_player.dart';
 import '../../widgets/place_weather_card.dart';
 import '../../widgets/brand_icons.dart';
 import '../../widgets/share_sheet.dart';
+import '../../widgets/stay_rating_section.dart';
 import 'showcase_cover.dart';
+import '../route/stay_route_page.dart';
 
 const Color _bg = Color(0xff06121d);
 const Color _card = Color(0xff0b2636);
@@ -50,6 +54,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
   bool _playing = false;
   bool _descExpanded = false;
   bool _amenAll = false;
+  double? _distKm; // فاصله‌ی هوایی تا کاربر (از آخرین موقعیت ذخیره‌شده، بدون درخواست مجوز)
 
   ShowcaseItem get item => widget.item;
 
@@ -91,6 +96,24 @@ class _StayDetailPageState extends State<StayDetailPage> {
   void initState() {
     super.initState();
     _loadFav();
+    _loadDistance();
+  }
+
+  Future<void> _loadDistance() async {
+    final lat = item.latitude;
+    final lng = item.longitude;
+    if (lat == null || lng == null) return;
+    try {
+      final me = await LocationManager.getLastKnownLocation();
+      if (me == null || !mounted) return;
+      final m = Geolocator.distanceBetween(me.latitude, me.longitude, lat, lng);
+      setState(() => _distKm = m / 1000);
+    } catch (_) {}
+  }
+
+  String _fmtKm(double km) {
+    final v = km < 10 ? km.toStringAsFixed(1) : km.round().toString();
+    return _tr('$v کیلومتر تا شما', '$v km from you', '$v كم منك');
   }
 
   Future<void> _loadFav() async {
@@ -201,7 +224,16 @@ class _StayDetailPageState extends State<StayDetailPage> {
 
   void _openRoute() {
     if (item.latitude != null && item.longitude != null) {
-      _open('https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}');
+      // مسیریابی پیشرفته‌ی داخل برنامه: موقعیت کاربر خودکار + مسیر، زمان سفر، ساعت رسیدن
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => StayRoutePage(
+            destination: LatLng(item.latitude!, item.longitude!),
+            destinationName: item.title(_lang),
+            lang: _lang,
+          ),
+        ),
+      );
     } else if ((stay.mapUrl ?? '').isNotEmpty) {
       _open(stay.mapUrl!);
     } else if ((stay.address ?? '').isNotEmpty) {
@@ -238,6 +270,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
             SliverToBoxAdapter(child: _rulesSection()),
             SliverToBoxAdapter(child: _mapSection()),
             SliverToBoxAdapter(child: _contactSection()),
+            SliverToBoxAdapter(child: _ratingBox()),
             SliverToBoxAdapter(child: _bottomShare()),
             const SliverToBoxAdapter(child: SizedBox(height: 30)),
           ],
@@ -455,6 +488,17 @@ class _StayDetailPageState extends State<StayDetailPage> {
                     ],
                   ),
                 ],
+                if (_distKm != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.near_me_rounded, color: _teal, size: 16),
+                      const SizedBox(width: 4),
+                      Text(_fmtKm(_distKm!),
+                          style: const TextStyle(color: _teal, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ],
                 if (promoOn && hasRating) ...[
                   const SizedBox(height: 6),
                   Row(
@@ -521,10 +565,10 @@ class _StayDetailPageState extends State<StayDetailPage> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        ConstrainedBox(constraints: const BoxConstraints(minHeight: 108), child: headerRow),
+        ConstrainedBox(constraints: const BoxConstraints(minHeight: 160), child: headerRow),
         Positioned(
           left: 12,
-          top: -34,
+          top: 8,
           child: PriceBurst(promo: pack!.promo, lang: _lang),
         ),
       ],
@@ -1315,6 +1359,16 @@ class _StayDetailPageState extends State<StayDetailPage> {
                                 ),
                               ),
                             ),
+                            InkWell(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: phones[i]));
+                                _snack(_tr('شماره کپی شد', 'Number copied', 'تم نسخ الرقم'));
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                child: Icon(Icons.copy_rounded, color: Colors.white38, size: 17),
+                              ),
+                            ),
                             const Icon(Icons.call_made_rounded, color: Colors.white30, size: 16),
                           ],
                         ),
@@ -1364,6 +1418,20 @@ class _StayDetailPageState extends State<StayDetailPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ---------------- ستاره دادن ----------------
+
+  Widget _ratingBox() {
+    if (item.code <= 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+      child: StayRatingSection(
+        kind: _isHealth ? 'health' : 'stay',
+        targetId: item.code,
+        lang: _lang,
       ),
     );
   }
