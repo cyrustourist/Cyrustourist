@@ -2,7 +2,7 @@ name: cyrustourist_app3
 description: CyrusTourist base app - splash, home and tourist map.
 publish_to: "none"
 
-version: 6.1.35+6442
+version: 6.1.34+6441
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -39,6 +39,10 @@ dependencies:
   firebase_core: ^3.8.0
   firebase_messaging: ^15.1.5
   flutter_local_notifications: ^18.0.1
+
+  # جستجو با تصویر (رایگان و روی گوشی): مختصات داخل عکس + تشخیص محتوای عکس
+  exif: ^3.3.0
+  google_mlkit_image_labeling: ">=0.13.0 <0.15.0"
 
   # جستجوی صوتی (نقشه و جستجوی هوشمند) — ۱۰ زبان برنامه
   speech_to_text: ^7.0.0
