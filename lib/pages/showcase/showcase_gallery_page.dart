@@ -1045,6 +1045,12 @@ class _ShowcaseCard extends StatelessWidget {
     final title = item.title(lang);
     final desc = item.description(lang);
     final loc = item.location(lang);
+    final promo = item.stay?.pricePack?.promo;
+    final promoPct = (promo != null && promo.active) ? promo.pct : 0;
+    final tagBottom = promoPct > 0 ? 30.0 : 6.0;
+    final promoLabel = lang == 'fa'
+        ? '٪$promoPct تخفیف'
+        : (lang == 'ar' ? 'خصم $promoPct٪' : '$promoPct% OFF');
 
     return Material(
       color: Colors.transparent,
@@ -1151,7 +1157,7 @@ class _ShowcaseCard extends StatelessWidget {
                         item.tier == ShowcaseTier.normal &&
                         item.categoryLabel(lang).isNotEmpty)
                       PositionedDirectional(
-                        bottom: 6,
+                        bottom: tagBottom,
                         end: 6,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -1168,7 +1174,7 @@ class _ShowcaseCard extends StatelessWidget {
                       ),
                     if (item.tier != ShowcaseTier.normal)
                       PositionedDirectional(
-                        bottom: 6,
+                        bottom: tagBottom,
                         end: 6,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -1181,6 +1187,30 @@ class _ShowcaseCard extends StatelessWidget {
                                 ? 'VIP'
                                 : (lang == 'fa' ? 'ویژه' : (lang == 'ar' ? 'مميز' : 'Featured')),
                             style: const TextStyle(color: _bg, fontSize: 9.5, fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ),
+                    if (promoPct > 0)
+                      PositionedDirectional(
+                        bottom: 6,
+                        end: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Color(0xffff6b4a), Color(0xffe5484d)]),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(color: const Color(0xffe5484d).withValues(alpha: 0.5), blurRadius: 8),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.local_offer_rounded, color: Colors.white, size: 11),
+                              const SizedBox(width: 3),
+                              Text(promoLabel,
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                            ],
                           ),
                         ),
                       ),
