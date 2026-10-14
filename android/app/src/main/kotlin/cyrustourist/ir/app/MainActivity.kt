@@ -1,6 +1,8 @@
 package cyrustourist.ir.app
 
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -52,6 +54,34 @@ class MainActivity : FlutterActivity() {
                             }
                         }.start()
                     }
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+
+        // باز کردن تنظیمات «تایپ صوتی گوگل / زبان‌ها» برای دانلود زبان فارسی تشخیص گفتار
+        MethodChannel(messenger, "cyrus/system").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openVoiceSettings" -> {
+                    val attempts = listOf(
+                        Intent("android.settings.VOICE_INPUT_SETTINGS"),
+                        Intent(Settings.ACTION_INPUT_METHOD_SETTINGS),
+                        Intent(Settings.ACTION_LOCALE_SETTINGS),
+                        Intent(Settings.ACTION_SETTINGS)
+                    )
+                    var opened = false
+                    for (i in attempts) {
+                        try {
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(i)
+                            opened = true
+                            break
+                        } catch (e: Exception) {
+                            // سراغ گزینه‌ی بعدی می‌رویم
+                        }
+                    }
+                    result.success(opened)
                 }
 
                 else -> result.notImplemented()
