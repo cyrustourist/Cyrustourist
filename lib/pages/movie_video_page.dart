@@ -975,7 +975,7 @@ class _MovieSlotCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  t('عضویت یک‌ساله', '1-year membership', 'عضوية لمدة سنة'),
+                  t('ثبت‌نام ویدیو', 'Video registration', 'تسجيل الفيديو'),
                   style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.45), fontSize: 9.5),
                 ),
@@ -1045,9 +1045,9 @@ void _showAvailableSheet(BuildContext context, int code) {
             const SizedBox(height: 14),
             Text(
               t(
-                'این جایگاه هنوز به هیچ فیلمی اختصاص نیافته است. با ثبت‌نام و عضویت یک‌ساله، فیلم گردشگری شما همین‌جا با کد یکتای خودش به گردشگران معرفی می‌شود.',
-                'This slot has not been assigned to any video yet. With a one-year membership, your tourism video will be introduced right here with its own unique code.',
-                'لم يتم تخصيص هذا المكان بعد لأي فيديو. مع عضوية لمدة سنة، سيتم عرض فيديو السياحة الخاص بك هنا برمزه الفريد.',
+                'این جایگاه هنوز به هیچ فیلمی اختصاص نیافته است. با ثبت‌نام، فیلم گردشگری شما همین‌جا با کد یکتای خودش به گردشگران معرفی می‌شود.',
+                'This slot has not been assigned to any video yet. After registration, your tourism video will be introduced right here with its own unique code.',
+                'لم يتم تخصيص هذا المكان بعد لأي فيديو. بعد التسجيل، سيتم عرض فيديو السياحة الخاص بك هنا برمزه الفريد.',
               ),
               style: const TextStyle(
                 color: Colors.white70,
