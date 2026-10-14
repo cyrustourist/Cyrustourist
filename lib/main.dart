@@ -422,6 +422,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// لمس عکس‌های چرخشی تبلیغات ← ثبت‌نام همان دسته (مزایا و قوانین ← فرم ثبت)
+  void _openRegisterCategory(String category) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RegistrationHubPage(initialCategory: category),
+      ),
+    );
+  }
+
   Future<void> _openAccount() async {
     await Navigator.push(
       context,
@@ -531,6 +541,7 @@ class _HomePageState extends State<HomePage> {
         onOpenSearch: _openSmartSearch,
         onOpenFavorites: _openFavorites,
         onOpenRegister: _openResidenceRegister,
+        onOpenRegisterCategory: _openRegisterCategory,
       ),
     );
   }
