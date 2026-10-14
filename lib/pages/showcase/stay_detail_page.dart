@@ -9,6 +9,8 @@ import '../../config/carto_config.dart';
 import '../../core/language/app_language.dart';
 import '../../models/showcase_item.dart';
 import '../../models/stay_details.dart';
+import '../../models/price_pack.dart';
+import '../../widgets/price_pack_view.dart';
 import '../../services/public_link_service.dart';
 import '../../services/video_favorites_service.dart';
 import '../../widgets/aparat_embed_player.dart';
@@ -226,6 +228,7 @@ class _StayDetailPageState extends State<StayDetailPage> {
           slivers: [
             SliverToBoxAdapter(child: _hero(context)),
             SliverToBoxAdapter(child: _headerBlock()),
+            SliverToBoxAdapter(child: _priceSection()),
             SliverToBoxAdapter(child: _quickFacts()),
             SliverToBoxAdapter(child: _workDaysTable()),
             SliverToBoxAdapter(child: _description()),
@@ -388,14 +391,24 @@ class _StayDetailPageState extends State<StayDetailPage> {
     );
   }
 
+  Widget _priceSection() {
+    final pack = stay.pricePack;
+    if (pack == null || pack.units.isEmpty) return const SizedBox.shrink();
+    return PricePackView(pack: pack, lang: _lang);
+  }
+
   Widget _headerBlock() {
     final title = item.title(_lang);
     final loc = item.location(_lang);
     final type = item.categoryLabel(_lang);
     final hasRating = item.rating != null && item.rating! > 0;
+    final pack = stay.pricePack;
+    final hasPack = pack != null && pack.units.isNotEmpty;
+    final promoOn = hasPack && pack!.promo.active;
+    final anyOpen = hasPack && pack!.units.any((u) => u.open);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+    final headerRow = Padding(
+      padding: EdgeInsets.fromLTRB(promoOn ? 142 : 16, 14, 16, 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -442,10 +455,38 @@ class _StayDetailPageState extends State<StayDetailPage> {
                     ],
                   ),
                 ],
+                if (promoOn && hasRating) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, color: _gold, size: 16),
+                      const SizedBox(width: 4),
+                      Text(item.rating!.toStringAsFixed(1),
+                          style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w800)),
+                      if ((item.ratingCount ?? 0) > 0) ...[
+                        const SizedBox(width: 6),
+                        Text('(${item.ratingCount})', style: const TextStyle(color: Colors.white54, fontSize: 11.5)),
+                      ],
+                    ],
+                  ),
+                ],
+                if (hasPack) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: _tag(
+                      anyOpen
+                          ? _tr('موجود برای رزرو', 'Available to book', 'متاح للحجز')
+                          : _tr('فعلاً ناموجود', 'Currently unavailable', 'غير متاح حالياً'),
+                      anyOpen ? const Color(0xff5fd19a) : const Color(0xffff8d85),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          if (hasRating) ...[
+          if (hasRating && !promoOn) ...[
             const SizedBox(width: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -474,6 +515,19 @@ class _StayDetailPageState extends State<StayDetailPage> {
           ],
         ],
       ),
+    );
+
+    if (!promoOn) return headerRow;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ConstrainedBox(constraints: const BoxConstraints(minHeight: 108), child: headerRow),
+        Positioned(
+          left: 12,
+          top: -34,
+          child: PriceBurst(promo: pack!.promo, lang: _lang),
+        ),
+      ],
     );
   }
 
