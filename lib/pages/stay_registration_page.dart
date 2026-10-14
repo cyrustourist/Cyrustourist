@@ -10,7 +10,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/language/menu_translations.dart';
-import '../services/account_service.dart';
 import '../services/badge_service.dart';
 import 'profile/my_profile_page.dart';
 import 'package:latlong2/latlong.dart';
@@ -726,6 +725,8 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   double? _mapZoom;
   PricePack _pack = PricePack.empty();
   int _packKey = 0;
+  int _packFocus = 0; // با هر خطای جدول زیاد می‌شود تا ویرایشگر به واحد دارای خطا برود
+  final GlobalKey _packBoxKey = GlobalKey();
   bool _editPublished = false;
 
   /// پک قیمت فقط برای ثبت جدید یا ویرایش درخواستِ هنوز منتشرنشده در فرم می‌آید؛
@@ -755,10 +756,19 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     _loadAccount();
   }
 
+  /// true = حساب تأییدشده، false = حساب ساخته/تأیید نشده، null = ارتباط با سرور برقرار نشد
+  Future<bool?> _fetchVerified() async {
+    final uid = await BadgeService.userUid();
+    final j = await BadgeService.call('GET', '/api/account/me', query: {'user_uid': uid});
+    if (j == null) return null;
+    final acc = j['account'];
+    return j['success'] == true && acc is Map && (acc['phone_verified'] == true || acc['email_verified'] == true);
+  }
+
   Future<void> _loadAccount({bool notify = false}) async {
-    final a = await AccountService.me();
+    final v = await _fetchVerified();
     if (!mounted) return;
-    setState(() => _verified = a == null ? null : (a.phoneVerified || a.emailVerified));
+    setState(() => _verified = v);
     if (notify && _verified == false) _snack(_t('gateStill'));
   }
 
@@ -926,7 +936,11 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     if (_name.text.trim().length < 3) e['name'] = _t('e_name');
     if (_kind == 'leader' && _name.text.trim().split(RegExp(r'\s+')).length < 2) e['name'] = _t('e_lname');
     if (_kind == 'stay' && _type.isEmpty) e['type'] = _t('e_type');
-    if (_showPack && !_pack.isValid) e['pack'] = _tl('جدول قیمت و آفر را کامل کنید.', 'Complete the price table.', 'أكمل جدول الأسعار.');
+    if (_showPack && !_pack.isValid) {
+      final lg = MenuLanguage.current == 'fa' || MenuLanguage.current == 'ar' ? MenuLanguage.current : 'en';
+      e['pack'] = pricePackErrorText(_pack, lg);
+      _packFocus++;
+    }
     if (_kind == 'health' && _type.isEmpty) e['type'] = _t('e_htype');
     if (_resolveProvince(_province.text) == null) e['province'] = _t('e_province');
     if (_city.text.trim().length < 2) e['city'] = _t('e_city');
@@ -995,14 +1009,40 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     };
   }
 
+  /// قدم اول ثبت: شناسه کاربری (حساب تأییدشده). تا این قدم درست نشود، فرم و جدول بررسی نمی‌شوند.
+  Future<bool> _checkAccountFirst() async {
+    setState(() => _busy = true);
+    final v = await _fetchVerified();
+    if (!mounted) return false;
+    setState(() => _busy = false);
+    if (v == null) {
+      _snack(_t('netErr'));
+      return false;
+    }
+    if (v) {
+      if (_verified != true) setState(() => _verified = true);
+      return true;
+    }
+    // حساب ساخته/تأیید نشده: صفحه‌ی «ابتدا شناسه کاربری را تکمیل کنید» نشان داده می‌شود
+    setState(() => _verified = false);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    _snack(_t('gateTitle'));
+    return false;
+  }
+
   Future<void> _submit() async {
     if (_busy) return;
+    // ۱) اول شناسه کاربری؛ ۲) بعد خطاهای فرم و جدول قیمت
+    if (_editId == null && !await _checkAccountFirst()) return;
+    if (!mounted) return;
     if (!_validate()) {
       // قبلاً صفحه فقط به بالا می‌پرید و خطا پایین فرم پنهان می‌ماند؛ حالا پیام خطا نشان داده می‌شود
       _snack(_errors.values.first);
-      final ctx = _errors.containsKey('location') ? _locKey.currentContext : null;
+      final ctx = _errors.containsKey('location')
+          ? _locKey.currentContext
+          : (_errors.containsKey('pack') ? _packBoxKey.currentContext : null);
       if (ctx != null) {
-        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), alignment: 0.3);
+        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), alignment: 0.1);
       }
       return;
     }
@@ -1034,7 +1074,10 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         return;
       }
       final code = '${j['error'] ?? ''}';
-      if (code == 'account_not_verified') setState(() => _verified = false);
+      if (code == 'account_not_verified' || code == 'not_registered') {
+        setState(() => _verified = false);
+        if (_scroll.hasClients) _scroll.jumpTo(0);
+      }
       _snack('${j['message'] ?? _t('netErr')}');
       if (!code.startsWith('captcha_')) return;
     }
@@ -1483,7 +1526,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   /// پس از تأیید، مالک خودش با پازل آن را منتشر می‌کند.
   Widget _packCard() {
     if (_showPack) {
-      return _card(_tl('💰 جدول قیمت و آفر', '💰 Price table and offer', '💰 جدول الأسعار والعرض'), [
+      return KeyedSubtree(key: _packBoxKey, child: _card(_tl('💰 جدول قیمت و آفر', '💰 Price table and offer', '💰 جدول الأسعار والعرض'), [
         Text(
           _tl(
             'قیمت هر شب، ظرفیت و «هر نفر اضافه (+)» را وارد کنید و در صورت تمایل یک آفر (مثلاً ۲۰٪ جشنواره) بگذارید. این جدول همراه ثبت‌نام برای پشتیبانی نمایش داده می‌شود.',
@@ -1498,9 +1541,9 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
           initial: _pack,
           lang: MenuLanguage.current == 'fa' || MenuLanguage.current == 'ar' ? MenuLanguage.current : 'en',
           showErrors: _errors.containsKey('pack'),
+          focusTick: _packFocus,
           onChanged: (p) => _pack = p,
         ),
-        _errText('pack'),
         const SizedBox(height: 4),
         Text(
           _tl(
@@ -1510,7 +1553,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
           ),
           style: const TextStyle(color: _soft, fontSize: 11.5, height: 1.8),
         ),
-      ]);
+      ]));
     }
     final id = _editId ?? 0;
     return _card(_tl('💰 جدول قیمت و آفر', '💰 Price table and offer', '💰 جدول الأسعار والعرض'), [
