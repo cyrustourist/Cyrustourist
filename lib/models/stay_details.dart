@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'price_pack.dart';
 
 import 'package:flutter/material.dart';
 
@@ -344,6 +345,7 @@ class StayDetails {
     this.amenityLabels = const {},
     this.isHealth = false,
     this.workDays = const [],
+    this.pricePack,
   });
 
   final String typeKey;
@@ -369,6 +371,7 @@ class StayDetails {
   final String? aparat;
   final String? tiktok;
   final String? ownerPhoto;
+  final PricePack? pricePack;
 
   /// تعداد اتاق‌خواب (در پنل داخل ستون امکانات به‌صورت bedrooms:N ذخیره می‌شود)
   final int bedrooms;
@@ -507,6 +510,7 @@ class StayDetails {
       amenityLabels: parseAmenityLabels(j['amenity_labels']),
       isHealth: health,
       workDays: StayWeekdays.parse(j['work_days']),
+      pricePack: PricePack.tryParse(j['price_pack']),
     );
   }
 }
