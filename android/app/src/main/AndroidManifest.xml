@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- جستجوی صوتی (نقشه و جستجوی هوشمند) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Notification permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -92,6 +95,11 @@
         در کلید ۱، ۲، ۳ و ۵ بود.
     -->
     <queries>
+
+        <!-- جستجوی صوتی: دیدن سرویس تشخیص گفتار گوشی (اندروید ۱۱ به بالا) -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
 
         <!-- Text processing support (already existing, kept as-is) -->
         <intent>
