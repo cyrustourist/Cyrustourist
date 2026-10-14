@@ -97,6 +97,14 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 
+// جستجو با تصویر (ML Kit) یک نسخه‌ی قدیمی firebase-iid با خود می‌آورد که
+// کلاس‌هایش با firebase-messaging جدید تکراری است (خطای
+// checkReleaseDuplicateClasses). از نسخه‌ی ۲۳ به بعد این کلاس‌ها داخل
+// firebase-messaging هستند، پس حذف کتابخانه‌ی قدیمی بی‌خطر است.
+configurations.all {
+    exclude(group = "com.google.firebase", module = "firebase-iid")
+}
+
 flutter {
     source = "../.."
 }
