@@ -1,16 +1,12 @@
 import 'package:exif/exif.dart';
 import 'package:flutter/material.dart';
-import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 
 /// جستجو با تصویر (جستجوی هوشمند) — کاملاً رایگان و روی خود گوشی.
 ///
-/// دو روش با هم:
-/// ۱) موقعیت جی‌پی‌اس داخل عکس (EXIF): اگر عکس مختصات داشته باشد، همان نقطه.
-/// ۲) تشخیص محتوای عکس با ML Kit (روی دستگاه، بدون اینترنت): برچسب‌هایی مثل
-///    کوه، مسجد، غذا و ... به یک دسته‌ی جستجو (طبیعت، تاریخی، رستوران،
-///    کافه، خرید) تبدیل می‌شود.
+/// موقعیت جی‌پی‌اس داخل عکس (EXIF): اگر عکس مختصات داشته باشد، همان نقطه.
+/// (تشخیص محتوای عکس با ML Kit حذف شد تا حجم اپ حدود ۱۳ مگ کم شود.)
 class ImageSearchResult {
   const ImageSearchResult({this.point, this.category, this.labels = const []});
 
@@ -118,23 +114,9 @@ Future<ImageSearchResult> _analyze(XFile file) async {
     point = null;
   }
 
-  // ۲) محتوای عکس (فقط اگر مختصات نبود لازم است، ولی برچسب‌ها را هم نگه می‌داریم)
-  List<String> labels = [];
-  String? category;
-  if (point == null) {
-    final labeler = ImageLabeler(
-      options: ImageLabelerOptions(confidenceThreshold: 0.55),
-    );
-    try {
-      final found = await labeler.processImage(
-        InputImage.fromFilePath(file.path),
-      );
-      labels = found.map((l) => l.label).toList();
-      category = _categoryFor(found);
-    } finally {
-      await labeler.close();
-    }
-  }
+  // تشخیص محتوای عکس (ML Kit) برای کم‌کردن حجم اپ حذف شد؛ فقط مختصات EXIF.
+  const List<String> labels = [];
+  const String? category = null;
 
   return ImageSearchResult(point: point, category: category, labels: labels);
 }
@@ -171,54 +153,6 @@ LatLng? _gpsFromExif(Map<String, IfdTag> data) {
   if (lat == 0 && lon == 0) return null;
 
   return LatLng(lat, lon);
-}
-
-const Map<String, List<String>> _kCategoryWords = {
-  'cafe': [
-    'coffee', 'cup', 'espresso', 'latte', 'cappuccino', 'tea', 'cafe',
-    'coffee cup', 'mug', 'dessert', 'cake', 'pastry',
-  ],
-  'restaurant': [
-    'food', 'dish', 'cuisine', 'meal', 'cooking', 'recipe', 'pizza',
-    'sandwich', 'salad', 'soup', 'kebab', 'rice', 'meat', 'dinner', 'lunch',
-    'breakfast', 'tableware', 'restaurant', 'fast food', 'barbecue', 'drink',
-  ],
-  'market': [
-    'shopping', 'market', 'supermarket', 'bazaar', 'retail', 'shopping mall',
-    'store', 'shop', 'marketplace', 'grocery store', 'shelf', 'souk',
-  ],
-  'historical': [
-    'mosque', 'temple', 'palace', 'castle', 'church', 'monument', 'tower',
-    'arch', 'ruins', 'dome', 'minaret', 'landmark', 'fort', 'statue',
-    'place of worship', 'historic site', 'architecture', 'building', 'facade',
-    'column', 'bridge', 'ancient history', 'archaeological site', 'shrine',
-    'tomb', 'museum', 'pyramid', 'synagogue', 'cathedral',
-  ],
-  'nature': [
-    'mountain', 'hill', 'forest', 'lake', 'river', 'beach', 'sea', 'ocean',
-    'waterfall', 'valley', 'cliff', 'tree', 'flower', 'nature', 'desert',
-    'island', 'rock', 'cave', 'plant', 'woodland', 'mountainous landforms',
-    'natural landscape', 'wilderness', 'meadow', 'grass', 'field', 'sky',
-    'sunset', 'sunrise', 'cloud', 'snow', 'canyon', 'coast', 'bay', 'pond',
-    'highland', 'jungle', 'garden', 'park',
-  ],
-};
-
-/// امتیاز هر دسته = جمع اطمینان برچسب‌های مرتبط؛ بالاترین دسته (با آستانه).
-String? _categoryFor(List<ImageLabel> labels) {
-  final scores = <String, double>{};
-  for (final l in labels) {
-    final name = l.label.toLowerCase().trim();
-    _kCategoryWords.forEach((cat, words) {
-      if (words.contains(name)) {
-        scores[cat] = (scores[cat] ?? 0) + l.confidence;
-      }
-    });
-  }
-  if (scores.isEmpty) return null;
-
-  final best = scores.entries.reduce((a, b) => a.value >= b.value ? a : b);
-  return best.value >= 0.55 ? best.key : null;
 }
 
 class _SourceSheet extends StatelessWidget {
