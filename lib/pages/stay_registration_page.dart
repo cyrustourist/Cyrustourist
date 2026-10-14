@@ -15,7 +15,10 @@ import '../services/badge_service.dart';
 import 'profile/my_profile_page.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../models/price_pack.dart';
+import '../widgets/price_pack_editor.dart';
 import '../widgets/registration_steps_card.dart';
+import 'price_pack_edit_page.dart';
 import 'location_picker_page.dart';
 import 'profile/photo_cropper.dart';
 
@@ -721,6 +724,13 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   double? _lat;
   double? _lng;
   double? _mapZoom;
+  PricePack _pack = PricePack.empty();
+  int _packKey = 0;
+  bool _editPublished = false;
+
+  /// پک قیمت فقط برای ثبت جدید یا ویرایش درخواستِ هنوز منتشرنشده در فرم می‌آید؛
+  /// پس از تأیید، قیمت از «ویرایش قیمت» (فوری، ۳ بار در روز) تغییر می‌کند.
+  bool get _showPack => _kind == 'stay' && (_editId == null || !_editPublished);
 
   bool get _rtl => MenuLanguage.isRtl;
   String get _kind => widget.kind;
@@ -780,6 +790,8 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     _experience.text = v('experience');
     _areas.text = v('areas');
     _telegram.text = v('telegram');
+    _pack = PricePack.tryParse(f['price_pack']) ?? PricePack.empty();
+    _packKey++;
     _lat = double.tryParse(v('latitude'));
     _lng = double.tryParse(v('longitude'));
     _mapZoom = double.tryParse(v('map_zoom'));
@@ -803,6 +815,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     if (j == null || j['success'] != true || j['form'] is! Map) return _snack('${j?['message'] ?? _t('netErr')}');
     if (j['editable'] != true) return _snack('${j['message'] ?? _t('netErr')}');
     setState(() {
+      _editPublished = j['published'] == true;
       _fill(Map<String, dynamic>.from(j['form'] as Map));
       _editId = id;
       _photo = null;
@@ -913,6 +926,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     if (_name.text.trim().length < 3) e['name'] = _t('e_name');
     if (_kind == 'leader' && _name.text.trim().split(RegExp(r'\s+')).length < 2) e['name'] = _t('e_lname');
     if (_kind == 'stay' && _type.isEmpty) e['type'] = _t('e_type');
+    if (_showPack && !_pack.isValid) e['pack'] = _tl('جدول قیمت و آفر را کامل کنید.', 'Complete the price table.', 'أكمل جدول الأسعار.');
     if (_kind == 'health' && _type.isEmpty) e['type'] = _t('e_htype');
     if (_resolveProvince(_province.text) == null) e['province'] = _t('e_province');
     if (_city.text.trim().length < 2) e['city'] = _t('e_city');
@@ -971,6 +985,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         'mobile': _digits(_mobile.text).replaceAll(RegExp(r'[\s\-]'), ''),
         'phone': _digits(_phone.text).trim(),
         if (_kind == 'stay') 'rooms': _digits(_rooms.text).trim(),
+        if (_showPack) 'price_pack': _pack.toJson(),
         'description': _desc.text.trim(),
         'amenities': _amen.toList(),
         'video_url': _video.text.trim(),
@@ -1039,6 +1054,9 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       _doneCode = '';
       _doneEdit = false;
       _editId = null;
+      _editPublished = false;
+      _pack = PricePack.empty();
+      _packKey++;
       _lat = null;
       _lng = null;
       _mapZoom = null;
@@ -1193,6 +1211,7 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
         _card(_t('desc'), [
           _field('desc', _desc, _t('desc'), lines: 3, maxLength: 600),
         ]),
+      if (_kind == 'stay') _packCard(),
       _card(_kind == 'agency' ? _t('photo_agency') : _t('s_photo'), [
         Row(children: [
           Container(
@@ -1460,6 +1479,64 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
     );
   }
 
+  /// جدول قیمت و آفر: در ثبت‌نام جدید کامل پر می‌شود و پشتیبانی همراه ثبت‌نام می‌بیند؛
+  /// پس از تأیید، مالک خودش با پازل آن را منتشر می‌کند.
+  Widget _packCard() {
+    if (_showPack) {
+      return _card(_tl('💰 جدول قیمت و آفر', '💰 Price table and offer', '💰 جدول الأسعار والعرض'), [
+        Text(
+          _tl(
+            'قیمت هر شب، ظرفیت و «هر نفر اضافه (+)» را وارد کنید و در صورت تمایل یک آفر (مثلاً ۲۰٪ جشنواره) بگذارید. این جدول همراه ثبت‌نام برای پشتیبانی نمایش داده می‌شود.',
+            'Enter the nightly price, capacity and "each extra guest (+)", and optionally add an offer (e.g. 20% festival). Support sees this table together with your registration.',
+            'أدخل سعر الليلة والسعة و"كل شخص إضافي (+)" وأضف عرضاً اختيارياً (مثلاً 20٪ مهرجان). يراه الدعم مع تسجيلك.',
+          ),
+          style: const TextStyle(color: _soft, fontSize: 12.5, height: 1.9),
+        ),
+        const SizedBox(height: 12),
+        PricePackEditor(
+          key: ValueKey('pack$_packKey'),
+          initial: _pack,
+          lang: MenuLanguage.current == 'fa' || MenuLanguage.current == 'ar' ? MenuLanguage.current : 'en',
+          showErrors: _errors.containsKey('pack'),
+          onChanged: (p) => _pack = p,
+        ),
+        _errText('pack'),
+        const SizedBox(height: 4),
+        Text(
+          _tl(
+            'پس از تأیید پشتیبانی، فقط همین جدول را می‌توانید روزی ۳ بار با پازل ساده و بدون تأیید دوباره منتشر کنید.',
+            'After support approval, only this table can be published up to 3 times a day with a quick puzzle and no further approval.',
+            'بعد موافقة الدعم يمكنك نشر هذا الجدول فقط حتى 3 مرات يومياً بأحجية بسيطة ودون موافقة جديدة.',
+          ),
+          style: const TextStyle(color: _soft, fontSize: 11.5, height: 1.8),
+        ),
+      ]);
+    }
+    final id = _editId ?? 0;
+    return _card(_tl('💰 جدول قیمت و آفر', '💰 Price table and offer', '💰 جدول الأسعار والعرض'), [
+      Text(
+        _tl(
+          'قیمت و آفر را بدون تأیید پشتیبانی و فقط با یک پازل ساده می‌توانید تغییر دهید (روزی ۳ بار مستقیم).',
+          'You can change prices and the offer without support approval, with a quick puzzle (3 direct publishes a day).',
+          'يمكنك تغيير الأسعار والعرض دون موافقة الدعم وبأحجية بسيطة (3 مرات نشر مباشر يومياً).',
+        ),
+        style: const TextStyle(color: _soft, fontSize: 12.5, height: 1.9),
+      ),
+      const SizedBox(height: 10),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: id == 0
+              ? null
+              : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PricePackEditPage(accommodationId: id, name: _name.text))),
+          icon: const Icon(Icons.sell_rounded, size: 18),
+          label: Text(_tl('ویرایش جدول قیمت و آفر', 'Edit price table and offer', 'تعديل جدول الأسعار والعرض')),
+          style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+        ),
+      ),
+    ]);
+  }
+
   Widget _card(String title, List<Widget> children) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1697,6 +1774,17 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
               child: Text(_t('editPending'), style: const TextStyle(color: Color(0xff1d5fb4), fontSize: 11, fontWeight: FontWeight.w800)),
             ),
           const SizedBox(width: 2),
+          if (approved && _kind == 'stay' && !inactive)
+            TextButton.icon(
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact, foregroundColor: _teal),
+              onPressed: _busy
+                  ? null
+                  : () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => PricePackEditPage(accommodationId: int.tryParse('${m['id']}') ?? 0, name: '${m['name'] ?? ''}'),
+                      )),
+              icon: const Icon(Icons.sell_rounded, size: 16),
+              label: Text(_tl('قیمت', 'Prices', 'الأسعار'), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
+            ),
           IconButton(
             visualDensity: VisualDensity.compact,
             tooltip: _t('editBtn'),
@@ -1788,4 +1876,19 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
       ]),
     );
   }
+}
+
+/// برای صفحه‌های دیگر (مثل ویرایش قیمت): نمایش پازل و برگرداندن فیلدهای لازم برای ارسال.
+Future<Map<String, dynamic>?> showStayCaptcha(BuildContext context) async {
+  final cap = await showDialog<_CaptchaResult>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const _CaptchaDialog(),
+  );
+  if (cap == null) return null;
+  return <String, dynamic>{
+    'captcha_id': cap.id,
+    'captcha_x': cap.x,
+    'captcha_trail': cap.trail,
+  };
 }
