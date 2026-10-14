@@ -86,7 +86,7 @@ Future<void> _openUrl(BuildContext context, String url) async {
 //
 // هر «جایگاه» (slot) یک کد یکتا دارد. تا وقتی اقامتگاهی به آن
 // اختصاص نیافته (assigned=false)، فقط کد نمایش داده می‌شود و با
-// تپ روی آن، دعوت به «عضویت یک‌ساله» (ثبت‌نام اقامتگاه) نشان داده
+// تپ روی آن، دعوت به «ثبت‌نام اقامتگاه» نشان داده
 // می‌شود. وقتی مشخصات کامل یک اقامتگاه برای یک کد مشخص داده شود،
 // همان ردیف در kResidenceSlots با assigned:true و داده‌های واقعی
 // جایگزین می‌شود.
@@ -453,7 +453,7 @@ class _SlotCard extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          t('عضویت یک‌ساله', '1-year membership', 'عضوية لمدة سنة'),
+          t('ثبت‌نام اقامتگاه', 'Residence registration', 'تسجيل الإقامة'),
           style: const TextStyle(color: Colors.white30, fontSize: 10),
         ),
       ],
@@ -516,9 +516,9 @@ void _showAvailableSheet(BuildContext context, int code) {
             const SizedBox(height: 14),
             Text(
               t(
-                'این جایگاه هنوز به هیچ اقامتگاهی اختصاص نیافته است. با ثبت‌نام و عضویت یک‌ساله، اقامتگاه شما همین‌جا با فیلم، توضیحات، آب‌وهوا و راه ارتباطی مستقیم به گردشگران معرفی می‌شود.',
-                'This slot has not been assigned to any residence yet. With a one-year membership, your residence will be introduced right here with video, description, weather and a direct way for tourists to reach you.',
-                'لم يتم تخصيص هذا المكان بعد لأي إقامة. مع عضوية لمدة سنة، سيتم عرض إقامتك هنا بالفيديو والوصف والطقس ووسيلة تواصل مباشرة مع السياح.',
+                'این جایگاه هنوز به هیچ اقامتگاهی اختصاص نیافته است. با ثبت‌نام، اقامتگاه شما همین‌جا با فیلم، توضیحات، آب‌وهوا و راه ارتباطی مستقیم به گردشگران معرفی می‌شود.',
+                'This slot has not been assigned to any residence yet. After registration, your residence will be introduced right here with video, description, weather and a direct way for tourists to reach you.',
+                'لم يتم تخصيص هذا المكان بعد لأي إقامة. بعد التسجيل، سيتم عرض إقامتك هنا بالفيديو والوصف والطقس ووسيلة تواصل مباشرة مع السياح.',
               ),
               style: const TextStyle(
                 color: Colors.white70,
@@ -555,9 +555,9 @@ void _showAvailableSheet(BuildContext context, int code) {
                             color: Color(0xff03202a)),
                         const SizedBox(width: 8),
                         Text(
-                          t('ثبت‌نام اقامتگاه (عضویت یک‌ساله)',
-                              'Register Residence (1-year membership)',
-                              'تسجيل الإقامة (عضوية لمدة سنة)'),
+                          t('ثبت‌نام اقامتگاه',
+                              'Register Residence',
+                              'تسجيل الإقامة'),
                           style: const TextStyle(
                             color: Color(0xff03202a),
                             fontWeight: FontWeight.bold,
