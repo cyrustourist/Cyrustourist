@@ -162,6 +162,23 @@ class _NumFormatter extends TextInputFormatter {
 
 int _parse(String s) => int.tryParse(_ascii(s).replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
 
+/// متن دقیق خطای پک قیمت: نام/شمارهٔ واحد + همان فیلدی که ایراد دارد (خالی = بدون خطا)
+String pricePackErrorText(PricePack p, String lang) {
+  final e = p.error;
+  if (e == null) return '';
+  final m = _tx[lang] ?? _tx['en']!;
+  String t(String k) => m[k] ?? _tx['en']![k] ?? k;
+  if (e == 'promo') return t('e_promo');
+  if (e == 'units') return t('e_units');
+  final i = p.errorUnit;
+  var prefix = '';
+  if (i >= 0) {
+    final nm = p.units[i].name.trim();
+    prefix = '${t('unit')} ${i + 1}${nm.isEmpty ? '' : ' ($nm)'}: ';
+  }
+  return '$prefix${t('e_$e')}';
+}
+
 String _group(int n) {
   if (n <= 0) return '';
   final d = '$n';
@@ -176,12 +193,15 @@ String _group(int n) {
 /// ویرایشگر پک قیمت و آفر (فرم ثبت‌نام و صفحه‌ی ویرایش قیمت).
 /// هر تغییر یک نسخه‌ی تازه از پک را از طریق [onChanged] می‌فرستد.
 class PricePackEditor extends StatefulWidget {
-  const PricePackEditor({super.key, required this.initial, required this.onChanged, required this.lang, this.showErrors = false});
+  const PricePackEditor({super.key, required this.initial, required this.onChanged, required this.lang, this.showErrors = false, this.focusTick = 0});
 
   final PricePack initial;
   final ValueChanged<PricePack> onChanged;
   final String lang;
   final bool showErrors;
+
+  /// با هر بار شکست اعتبارسنجی یکی زیاد می‌شود تا ویرایشگر به واحدِ دارای خطا برود
+  final int focusTick;
 
   @override
   State<PricePackEditor> createState() => _PricePackEditorState();
@@ -264,12 +284,16 @@ class _PricePackEditorState extends State<PricePackEditor> {
     _emit();
   }
 
-  String _errText() {
-    final e = _p.error;
-    if (e == null) return '';
-    if (e == 'promo') return _t('e_promo');
-    return _t('e_$e');
+  @override
+  void didUpdateWidget(covariant PricePackEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusTick != oldWidget.focusTick) {
+      final i = _p.errorUnit;
+      if (i >= 0 && i < _p.units.length && i != _sel) setState(() => _sel = i);
+    }
   }
+
+  String _errText() => pricePackErrorText(_p, widget.lang);
 
   @override
   Widget build(BuildContext context) {
