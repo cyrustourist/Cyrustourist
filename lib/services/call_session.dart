@@ -1,0 +1,415 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+
+import 'badge_service.dart';
+
+/// مشخصات یک تماس ورودی (از /api/call/incoming).
+class IncomingCall {
+  const IncomingCall({
+    required this.id,
+    required this.fromUid,
+    required this.fromName,
+    required this.fromUsername,
+    required this.offerSdp,
+  });
+
+  final String id;
+  final String fromUid;
+  final String fromName;
+  final String fromUsername;
+  final String offerSdp;
+
+  static IncomingCall? fromJson(dynamic j) {
+    if (j is! Map) return null;
+    final id = '${j['id'] ?? ''}';
+    final sdp = '${j['offer_sdp'] ?? ''}';
+    if (id.isEmpty || sdp.isEmpty) return null;
+    return IncomingCall(
+      id: id,
+      fromUid: '${j['from_uid'] ?? ''}',
+      fromName: '${j['from_name'] ?? 'کاربر'}',
+      fromUsername: '${j['from_username'] ?? ''}',
+      offerSdp: sdp,
+    );
+  }
+}
+
+enum CallPhase { preparing, ringing, connecting, connected, ended }
+
+/// یک تماس صوتی کامل (WebRTC، فقط صدا).
+/// سیگنالینگ: یک offer و یک answer (بدون trickle) از طریق Worker؛ صدا مستقیم بین دو گوشی.
+class CallSession extends ChangeNotifier {
+  CallSession.outgoing({required this.peerUid, required this.peerName})
+      : isCaller = true,
+        _remoteOffer = null;
+
+  CallSession.incoming(IncomingCall c)
+      : isCaller = false,
+        peerUid = c.fromUid,
+        peerName = c.fromName,
+        callId = c.id,
+        _remoteOffer = c.offerSdp {
+    phase = CallPhase.ringing;
+  }
+
+  final bool isCaller;
+  final String peerUid;
+  final String peerName;
+  String? callId;
+  final String? _remoteOffer;
+
+  CallPhase phase = CallPhase.preparing;
+  String statusText = '';
+  bool muted = false;
+  bool speaker = false;
+  Duration elapsed = Duration.zero;
+
+  RTCPeerConnection? _pc;
+  MediaStream? _local;
+  Timer? _pollTimer;
+  Timer? _clock;
+  Timer? _connectTimeout;
+  Timer? _disconnectTimer;
+  DateTime? _connectedAt;
+  Completer<void>? _gatherDone;
+  bool _answerApplied = false;
+  bool _closed = false;
+  int _pollFails = 0;
+  int _tick = 0;
+
+  bool get isActive => !_closed && phase != CallPhase.ended;
+
+  static const List<Map<String, dynamic>> _fallbackIce = [
+    {
+      'urls': ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']
+    },
+    {
+      'urls': ['stun:stun.cloudflare.com:3478']
+    },
+  ];
+
+  void _set(CallPhase p, String text) {
+    phase = p;
+    statusText = text;
+    if (!_closed || p == CallPhase.ended) notifyListeners();
+  }
+
+  // ------------------------------------------------------------------
+  // آماده‌سازی مشترک: ICE + اتصال + میکروفن
+  // ------------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> _loadIce() async {
+    try {
+      final uid = await BadgeService.userUid();
+      final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid});
+      final list = j?['ice_servers'];
+      if (list is List && list.isNotEmpty) {
+        return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+    } catch (_) {}
+    return _fallbackIce;
+  }
+
+  Future<bool> _preparePeer() async {
+    final ice = await _loadIce();
+    _gatherDone = Completer<void>();
+
+    final pc = await createPeerConnection({
+      'iceServers': ice,
+      'sdpSemantics': 'unified-plan',
+    });
+    _pc = pc;
+
+    pc.onIceGatheringState = (RTCIceGatheringState s) {
+      if (s == RTCIceGatheringState.RTCIceGatheringStateComplete &&
+          _gatherDone != null &&
+          !_gatherDone!.isCompleted) {
+        _gatherDone!.complete();
+      }
+    };
+
+    pc.onConnectionState = (RTCPeerConnectionState s) {
+      if (_closed) return;
+      switch (s) {
+        case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+          _disconnectTimer?.cancel();
+          _connectTimeout?.cancel();
+          if (phase != CallPhase.connected) {
+            _connectedAt = DateTime.now();
+            _clock?.cancel();
+            _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+              if (_connectedAt != null) {
+                elapsed = DateTime.now().difference(_connectedAt!);
+                notifyListeners();
+              }
+            });
+            Helper.setSpeakerphoneOn(speaker);
+            _set(CallPhase.connected, 'وصل شد');
+          }
+          break;
+        case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
+          if (phase == CallPhase.connected) {
+            statusText = 'اتصال ضعیف است…';
+            notifyListeners();
+            _disconnectTimer?.cancel();
+            _disconnectTimer = Timer(const Duration(seconds: 12), () {
+              _finish('اتصال قطع شد.', notifyServer: true);
+            });
+          }
+          break;
+        case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
+          _finish('اتصال برقرار نشد. ممکن است شبکه اجازهٔ ارتباط مستقیم ندهد.', notifyServer: true);
+          break;
+        default:
+          break;
+      }
+    };
+
+    try {
+      _local = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
+    } catch (_) {
+      await _finish('دسترسی به میکروفن داده نشد. در تنظیمات گوشی اجازه را فعال کنید.', notifyServer: false);
+      return false;
+    }
+    for (final t in _local!.getAudioTracks()) {
+      await pc.addTrack(t, _local!);
+    }
+    return true;
+  }
+
+  Future<String?> _localSdpAfterGathering() async {
+    try {
+      await _gatherDone?.future.timeout(const Duration(seconds: 5), onTimeout: () {});
+    } catch (_) {}
+    final d = await _pc?.getLocalDescription();
+    final sdp = d?.sdp;
+    return (sdp == null || sdp.isEmpty) ? null : sdp;
+  }
+
+  // ------------------------------------------------------------------
+  // تماس‌گیرنده
+  // ------------------------------------------------------------------
+  Future<void> startOutgoing() async {
+    _set(CallPhase.preparing, 'در حال آماده‌سازی…');
+    if (!await _preparePeer()) return;
+    try {
+      final offer = await _pc!.createOffer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': 0});
+      await _pc!.setLocalDescription(offer);
+      final sdp = await _localSdpAfterGathering();
+      if (sdp == null) {
+        await _finish('ساخت تماس ناموفق بود.', notifyServer: false);
+        return;
+      }
+      final uid = await BadgeService.userUid();
+      final j = await BadgeService.call('POST', '/api/call/start', body: {
+        'user_uid': uid,
+        'to_uid': peerUid,
+        'offer_sdp': sdp,
+      });
+      if (_closed) {
+        // کاربر در حین آماده‌سازی قطع کرد
+        final id = '${j?['call_id'] ?? ''}';
+        if (id.isNotEmpty) {
+          unawaited(BadgeService.call('POST', '/api/call/action', body: {'user_uid': uid, 'call_id': id, 'action': 'end'}));
+        }
+        return;
+      }
+      if (j == null) {
+        await _finish('ارتباط با سرور برقرار نشد.', notifyServer: false);
+        return;
+      }
+      if (j['success'] != true) {
+        final err = '${j['error'] ?? ''}';
+        final msg = switch (err) {
+          'busy' => 'کاربر در تماس دیگری است.',
+          'cannot_call' => 'امکان تماس با این کاربر وجود ندارد.',
+          'slow_down' => 'تماس‌های شما زیاد شده؛ کمی بعد دوباره تلاش کنید.',
+          'calls_disabled' => 'تماس صوتی موقتاً غیرفعال است.',
+          'not_registered' || 'no_name' => 'برای تماس، ابتدا پروفایل خود را کامل کنید.',
+          _ => '${j['message'] ?? 'تماس برقرار نشد.'}',
+        };
+        await _finish(msg, notifyServer: false);
+        return;
+      }
+      callId = '${j['call_id']}';
+      _set(CallPhase.ringing, 'در حال زنگ زدن…');
+      _startPolling();
+    } catch (e) {
+      debugPrint('call start error: $e');
+      await _finish('تماس برقرار نشد.', notifyServer: false);
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // گیرنده
+  // ------------------------------------------------------------------
+  Future<void> acceptIncoming() async {
+    if (isCaller || _remoteOffer == null || callId == null) return;
+    _set(CallPhase.connecting, 'در حال اتصال…');
+    if (!await _preparePeer()) return;
+    try {
+      await _pc!.setRemoteDescription(RTCSessionDescription(_remoteOffer, 'offer'));
+      final answer = await _pc!.createAnswer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': 0});
+      await _pc!.setLocalDescription(answer);
+      final sdp = await _localSdpAfterGathering();
+      if (sdp == null) {
+        await _finish('پاسخ به تماس ناموفق بود.', notifyServer: true);
+        return;
+      }
+      final uid = await BadgeService.userUid();
+      final j = await BadgeService.call('POST', '/api/call/answer', body: {
+        'user_uid': uid,
+        'call_id': callId,
+        'answer_sdp': sdp,
+      });
+      if (j == null || j['success'] != true) {
+        await _finish('تماس منقضی شده یا لغو شده است.', notifyServer: false);
+        return;
+      }
+      _armConnectTimeout();
+      _startPolling();
+    } catch (e) {
+      debugPrint('call accept error: $e');
+      await _finish('اتصال برقرار نشد.', notifyServer: true);
+    }
+  }
+
+  Future<void> decline() async {
+    await _finish('تماس رد شد.', notifyServer: false, action: 'decline');
+  }
+
+  Future<void> hangUp() async {
+    await _finish('تماس پایان یافت.', notifyServer: true);
+  }
+
+  void toggleMute() {
+    muted = !muted;
+    for (final t in _local?.getAudioTracks() ?? <MediaStreamTrack>[]) {
+      t.enabled = !muted;
+    }
+    notifyListeners();
+  }
+
+  Future<void> toggleSpeaker() async {
+    speaker = !speaker;
+    try {
+      await Helper.setSpeakerphoneOn(speaker);
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  // ------------------------------------------------------------------
+  // پایش وضعیت تماس روی Worker
+  // ------------------------------------------------------------------
+  void _armConnectTimeout() {
+    _connectTimeout?.cancel();
+    _connectTimeout = Timer(const Duration(seconds: 25), () {
+      if (phase != CallPhase.connected) {
+        _finish('اتصال برقرار نشد. ممکن است شبکه اجازهٔ ارتباط مستقیم ندهد.', notifyServer: true);
+      }
+    });
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollOnce());
+  }
+
+  Future<void> _pollOnce() async {
+    if (_closed || callId == null) return;
+    // وقتی وصل هستیم، هر ۲ تیک یک‌بار (کم‌کردن درخواست)
+    _tick++;
+    if (phase == CallPhase.connected && _tick.isOdd) return;
+
+    final uid = await BadgeService.userUid();
+    final j = await BadgeService.call('GET', '/api/call/poll', query: {'user_uid': uid, 'call_id': callId!});
+    if (_closed) return;
+    if (j == null) {
+      _pollFails++;
+      if (_pollFails >= 6 && phase != CallPhase.connected) {
+        await _finish('ارتباط با سرور قطع شد.', notifyServer: false);
+      }
+      return;
+    }
+    _pollFails = 0;
+    if (j['success'] != true) {
+      if ('${j['error']}' == 'not_found') await _finish('تماس پیدا نشد.', notifyServer: false);
+      return;
+    }
+    final status = '${j['status']}';
+
+    if (isCaller && status == 'accepted' && !_answerApplied) {
+      final ans = '${j['answer_sdp'] ?? ''}';
+      if (ans.isNotEmpty) {
+        _answerApplied = true;
+        try {
+          await _pc?.setRemoteDescription(RTCSessionDescription(ans, 'answer'));
+          _set(CallPhase.connecting, 'در حال اتصال…');
+          _armConnectTimeout();
+        } catch (e) {
+          await _finish('اتصال برقرار نشد.', notifyServer: true);
+        }
+      }
+      return;
+    }
+
+    switch (status) {
+      case 'declined':
+        await _finish('تماس رد شد.', notifyServer: false);
+        break;
+      case 'missed':
+        await _finish(isCaller ? 'پاسخ داده نشد.' : 'تماس از دست رفت.', notifyServer: false);
+        break;
+      case 'canceled':
+        await _finish('تماس لغو شد.', notifyServer: false);
+        break;
+      case 'ended':
+        await _finish('تماس پایان یافت.', notifyServer: false);
+        break;
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // پایان (یک‌بار)
+  // ------------------------------------------------------------------
+  Future<void> _finish(String reason, {required bool notifyServer, String action = 'end'}) async {
+    if (_closed) return;
+    _closed = true;
+    _pollTimer?.cancel();
+    _clock?.cancel();
+    _connectTimeout?.cancel();
+    _disconnectTimer?.cancel();
+
+    final id = callId;
+    if (id != null && (notifyServer || action == 'decline')) {
+      try {
+        final uid = await BadgeService.userUid();
+        unawaited(BadgeService.call('POST', '/api/call/action', body: {'user_uid': uid, 'call_id': id, 'action': action}));
+      } catch (_) {}
+    }
+
+    try {
+      for (final t in _local?.getTracks() ?? <MediaStreamTrack>[]) {
+        await t.stop();
+      }
+      await _local?.dispose();
+    } catch (_) {}
+    try {
+      await _pc?.close();
+    } catch (_) {}
+    _local = null;
+    _pc = null;
+
+    phase = CallPhase.ended;
+    statusText = reason;
+    notifyListeners();
+  }
+
+  /// فراخوانی هنگام بسته‌شدن صفحه (مثلاً دکمهٔ برگشت).
+  void disposeSession() {
+    if (!_closed) {
+      unawaited(_finish('تماس پایان یافت.', notifyServer: true, action: (!isCaller && phase == CallPhase.ringing) ? 'decline' : 'end'));
+    }
+  }
+}
