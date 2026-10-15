@@ -689,7 +689,7 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
       title: items.aroundMe.title,
       maxResults: 40,
       fetch: (center) async {
-        final results = await Future.wait([
+        return _mergeNearby([
           _safeNearby(
             remote.MapPlaceType.touristAttraction,
             PlaceCategory.attraction,
@@ -706,27 +706,48 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
             center,
           ),
         ]);
-
-        return results.expand((list) => list).toList();
       },
     );
   }
 
-  /// اگر یکی از چند جستجوی هم‌زمان خطا داد، بقیه‌ی نتیجه‌ها از بین نروند.
   Future<List<MapPlace>> _safeNearby(
     remote.MapPlaceType type,
     PlaceCategory category,
     LatLng center,
+  ) {
+    return _nearbyService.nearbyByRemoteType(
+      remoteType: type,
+      displayCategory: category,
+      center: center,
+    );
+  }
+
+  /// اگر فقط بعضی جستجوها خطا دادند، نتیجه‌ی بقیه نمایش داده می‌شود؛
+  /// اگر همه خطا دادند، خطا بالا می‌رود تا صفحه‌ی نقشه پیام خطا و دکمه‌ی
+  /// «تلاش دوباره» را نشان دهد (به‌جای نقشه‌ی خالیِ بی‌پیام).
+  Future<List<MapPlace>> _mergeNearby(
+    List<Future<List<MapPlace>>> futures,
   ) async {
-    try {
-      return await _nearbyService.nearbyByRemoteType(
-        remoteType: type,
-        displayCategory: category,
-        center: center,
-      );
-    } catch (_) {
-      return <MapPlace>[];
+    var failed = 0;
+    Object? lastError;
+
+    final lists = await Future.wait(
+      futures.map((future) async {
+        try {
+          return await future;
+        } catch (error) {
+          failed++;
+          lastError = error;
+          return <MapPlace>[];
+        }
+      }),
+    );
+
+    if (futures.isNotEmpty && failed == futures.length) {
+      throw lastError ?? Exception('All nearby searches failed');
     }
+
+    return lists.expand((list) => list).toList();
   }
 
   // ============================================================
@@ -950,14 +971,14 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
     await _openLiveMap(
       title: title,
       fetch: (center) async {
-        final results = await Future.wait(
-          selections.map(
-            (selection) =>
-                _safeNearby(selection.type, selection.category, center),
-          ),
+        return _mergeNearby(
+          selections
+              .map(
+                (selection) =>
+                    _safeNearby(selection.type, selection.category, center),
+              )
+              .toList(),
         );
-
-        return results.expand((list) => list).toList();
       },
     );
   }
