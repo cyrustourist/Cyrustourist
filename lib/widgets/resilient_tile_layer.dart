@@ -77,6 +77,13 @@ TileLayer _cachedLayer({
     tileProvider: CachedTileProvider(layerId: id, maxAge: age),
     maxNativeZoom: nativeZoom,
     maxZoom: maxZoom,
+    // سرعت هنگام زوم/جابه‌جایی: کاشی‌های بیشتری آماده نگه داشته و پیش‌بارگذاری می‌شود
+    keepBuffer: 4,
+    panBuffer: 2,
+    // بدون محو شدن؛ لایه آفلاین زیر آن است و صفحه سفید دیده نمی‌شود
+    tileDisplay: const TileDisplay.instantaneous(),
+    // کاشی‌ای که خطا داد، با جابه‌جایی بعدی دوباره تلاش می‌شود (به‌جای ماندن خالی)
+    evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
     errorTileCallback: onError ?? (_, __, ___) {},
   );
 }
@@ -217,6 +224,9 @@ class OfflineBaseTileLayer extends StatelessWidget {
       tileProvider: AssetTileProvider(),
       maxNativeZoom: nativeMaxZoom,
       maxZoom: maxZoom,
+      keepBuffer: 4,
+      panBuffer: 2,
+      tileDisplay: const TileDisplay.instantaneous(),
       errorTileCallback: (_, __, ___) {},
     );
   }
