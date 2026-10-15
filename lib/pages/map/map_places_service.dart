@@ -131,7 +131,16 @@ class MapPlacesService {
       tags: tags,
     );
 
-    final data = await _requestOverpass(query);
+    dynamic data;
+    try {
+      data = await _requestOverpassWithRetry(query);
+    } catch (_) {
+      // اگر همه سرورها جواب ندادند، آخرین نتیجه ذخیره‌شده (هر چقدر قدیمی) نشان داده شود.
+      if (cached != null && cached.places.isNotEmpty) {
+        return cached.places;
+      }
+      rethrow;
+    }
 
     final places = _parseOverpassResults(
       data,
@@ -446,6 +455,26 @@ out center tags qt 200;
 
   /// درخواست هم‌زمان به چند سرور Overpass؛ اولین پاسخ موفق برنده است
   /// (قبلاً سرورها پشت‌سرهم امتحان می‌شدند و انتظار تا ۹۰ ثانیه می‌رسید).
+  /// دو دور تلاش (با ۲ ثانیه وقفه) روی همه سرورها؛ همه‌چیز داخل خود اپ است.
+  Future<dynamic> _requestOverpassWithRetry(
+    String query,
+  ) async {
+    Object? lastError;
+
+    for (var round = 0; round < 2; round++) {
+      try {
+        return await _requestOverpass(query);
+      } catch (error) {
+        lastError = error;
+        if (round == 0) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+        }
+      }
+    }
+
+    throw Exception('Map places service failed: $lastError');
+  }
+
   Future<dynamic> _requestOverpass(
     String query,
   ) async {
@@ -453,6 +482,8 @@ out center tags qt 200;
       'https://overpass-api.de/api/interpreter',
       'https://overpass.kumi.systems/api/interpreter',
       'https://overpass.private.coffee/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+      'https://overpass.osm.ch/api/interpreter',
     ];
 
     final completer = Completer<dynamic>();
