@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../services/badge_service.dart';
 import '../services/chat_service.dart';
+import '../services/call_service.dart';
 import '../services/user_profile_service.dart';
 import '../core/language/menu_translations.dart';
 import '../core/language/new_texts.dart';
@@ -66,12 +67,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    CallService.instance.startWatch();
     _init();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    CallService.instance.stopWatch();
     _timer?.cancel();
     _input.dispose();
     _scroll.dispose();
@@ -235,6 +238,25 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
       ..showSnackBar(SnackBar(content: Text(text)));
   }
 
+  Widget _callButton(IconData icon, String label, Color color, VoidCallback onTap) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: color,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(width: 56, height: 56, child: Icon(icon, color: Colors.white, size: 26)),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ],
+    );
+  }
+
   Future<void> _messageMenu(ChatMessage m) async {
     if (m.mine) return;
     final action = await showModalBottomSheet<String>(
@@ -246,6 +268,18 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _callButton(Icons.call_rounded, 'تماس صوتی', const Color(0xff2fa866), () => Navigator.of(ctx).pop('voice')),
+                    const SizedBox(width: 28),
+                    _callButton(Icons.videocam_rounded, 'تماس تصویری', const Color(0xff3d5566), () => Navigator.of(ctx).pop('video')),
+                  ],
+                ),
+              ),
+              const Divider(color: _line, height: 16),
               ListTile(
                 leading: const Icon(Icons.flag_rounded, color: Color(0xffff8f8f)),
                 title: const Text('گزارش این پیام', style: TextStyle(color: Colors.white)),
@@ -261,6 +295,18 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
         ),
       ),
     );
+    if (action == 'voice') {
+      if (m.uid.isEmpty) {
+        _toast('تماس با این کاربر ممکن نیست.');
+        return;
+      }
+      await CallService.instance.startOutgoing(toUid: m.uid, name: m.name);
+      return;
+    }
+    if (action == 'video') {
+      _toast('تماس تصویری در بروزرسانی بعدی فعال می‌شود.');
+      return;
+    }
     if (action == 'report') {
       final ok = await ChatService.report(m.id);
       _toast(ok ? 'گزارش ثبت شد. ممنون.' : 'گزارش ثبت نشد.');
