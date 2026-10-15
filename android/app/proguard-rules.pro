@@ -64,3 +64,9 @@
 ################################################
 # End
 ################################################
+
+# تماس صوتی WebRTC (flutter_webrtc) — بدون این قانون R8 در Release کلاس‌ها را خراب می‌کند
+-keep class org.webrtc.** { *; }
+-dontwarn org.webrtc.**
+-keep class com.cloudwebrtc.webrtc.** { *; }
+-dontwarn com.cloudwebrtc.webrtc.**
