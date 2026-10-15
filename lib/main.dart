@@ -14,6 +14,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'services/notification_service.dart';
+import 'services/call_service.dart';
 import 'services/connection_status_service.dart';
 import 'services/pending_queue_service.dart';
 import 'core/network/api_service.dart';
@@ -83,6 +84,13 @@ void main() async {
   unawaited(
     NotificationService.instance.initialize().catchError((Object e) {
       debugPrint('Notification init failed (offline?): $e');
+    }),
+  );
+
+  // تماس صوتی: ثبت توکن FCM و کانال اعلان تماس (بعد از بالا آمدن برنامه)
+  unawaited(
+    CallService.instance.init().catchError((Object e) {
+      debugPrint('Call init failed (offline?): $e');
     }),
   );
 
