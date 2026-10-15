@@ -482,28 +482,45 @@ out center tags qt 200;
       'https://overpass-api.de/api/interpreter',
       'https://overpass.kumi.systems/api/interpreter',
       'https://overpass.private.coffee/api/interpreter',
-      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-      'https://overpass.osm.ch/api/interpreter',
     ];
 
     final completer = Completer<dynamic>();
     final clients = <HttpClient>[];
-    var failed = 0;
+    var settled = 0;
     Object? lastError;
+    dynamic emptyResult;
+
+    void finishIfDone() {
+      if (completer.isCompleted || settled != endpoints.length) return;
+
+      if (emptyResult != null) {
+        completer.complete(emptyResult);
+      } else {
+        completer.completeError(
+          Exception('Map places service failed: $lastError'),
+        );
+      }
+    }
 
     for (final endpoint in endpoints) {
       _fetchOverpass(endpoint, query, clients).then((data) {
-        if (!completer.isCompleted) {
-          completer.complete(data);
+        settled++;
+
+        final elements = data is Map ? data['elements'] : null;
+        final hasData = elements is List && elements.isNotEmpty;
+
+        if (hasData) {
+          // اولین جواب دارای نتیجه برنده است.
+          if (!completer.isCompleted) completer.complete(data);
+        } else {
+          // جواب خالی فقط وقتی استفاده می‌شود که هیچ سرور دیگری نتیجه نداد.
+          emptyResult ??= data;
+          finishIfDone();
         }
       }).catchError((Object error) {
+        settled++;
         lastError = error;
-        failed++;
-        if (failed == endpoints.length && !completer.isCompleted) {
-          completer.completeError(
-            Exception('Map places service failed: $lastError'),
-          );
-        }
+        finishIfDone();
       });
     }
 
