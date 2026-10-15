@@ -13,6 +13,7 @@ import '../core/language/menu_translations.dart';
 import '../models/cyrus_announcement.dart';
 import '../pages/announcements_page.dart';
 import 'cache_service.dart';
+import 'call_service.dart';
 
 /// سرویس مرکزی اعلان‌های سایروس توریست.
 class NotificationService {
@@ -366,6 +367,12 @@ class NotificationService {
   }
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
+    // تماس صوتی ورودی: مستقیم صفحهٔ تماس را باز کن (وابسته به تنظیم اعلان‌های عمومی نیست)
+    if (message.data['type'] == 'call') {
+      unawaited(CallService.instance.handlePush(Map<String, dynamic>.from(message.data)));
+      return;
+    }
+
     if (!await isPushEnabled()) {
       return;
     }
@@ -408,6 +415,11 @@ class NotificationService {
       final data = jsonDecode(payload);
 
       if (data is! Map<String, dynamic>) {
+        return;
+      }
+
+      if (data['type'] == 'call') {
+        unawaited(CallService.instance.handlePush(data));
         return;
       }
 
