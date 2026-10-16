@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/language/menu_translations.dart';
 import '../services/call_service.dart';
+import '../services/call_session.dart';
 import '../services/call_texts.dart';
 import '../services/friends_service.dart';
 import '../widgets/call_widgets.dart';
@@ -38,6 +39,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    unawaited(CallSession.prefetchIce());
     _load();
   }
 
