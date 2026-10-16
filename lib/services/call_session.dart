@@ -202,6 +202,11 @@ class CallSession extends ChangeNotifier {
   bool _fgStarted = false;
 
   Future<bool> _preparePeer() async {
+    // میکروفن و تنظیمات ICE هم‌زمان آماده می‌شوند (قبلاً پشت‌سرهم بودند)
+    final micF = navigator.mediaDevices
+        .getUserMedia({'audio': true, 'video': false})
+        .then<MediaStream?>((m) => m)
+        .catchError((Object _) => null);
     final ice = await _loadIce();
     _gatherDone = Completer<void>();
     _candidateReady = Completer<void>();
@@ -273,9 +278,8 @@ class CallSession extends ChangeNotifier {
       }
     };
 
-    try {
-      _local = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
-    } catch (_) {
+    _local = await micF;
+    if (_local == null) {
       await _finish('دسترسی به میکروفن داده نشد. در تنظیمات گوشی اجازه را فعال کنید.', notifyServer: false);
       return false;
     }
@@ -354,7 +358,7 @@ class CallSession extends ChangeNotifier {
   Future<String?> _localSdpAfterGathering() async {
     try {
       final done = _gatherDone?.future;
-      final early = _candidateReady?.future.then((_) => Future<void>.delayed(const Duration(milliseconds: 700)));
+      final early = _candidateReady?.future.then((_) => Future<void>.delayed(const Duration(milliseconds: 250)));
       final waits = <Future<void>>[if (done != null) done, if (early != null) early];
       if (waits.isNotEmpty) {
         await Future.any<void>(waits).timeout(const Duration(seconds: 4), onTimeout: () {});
@@ -502,7 +506,7 @@ class CallSession extends ChangeNotifier {
 
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 1), (_) => _pollOnce());
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) => _pollOnce());
   }
 
   /// پایش لغو/پایان تماس هنگام زنگ خوردن در گوشی گیرنده (تا زنگ بعد از لغو ادامه پیدا نکند).
@@ -519,7 +523,7 @@ class CallSession extends ChangeNotifier {
     // فاصلهٔ پایش: تماس‌گیرنده هنگام زنگ هر ۱ ثانیه (پاسخ زودتر دیده شود)، هنگام اتصال هر ۲ ثانیه،
     // وقتی وصل هستیم هر ۴ ثانیه (کم‌کردن درخواست)
     _tick++;
-    final every = phase == CallPhase.connected ? 4 : ((isCaller && phase == CallPhase.ringing) ? 1 : 2);
+    final every = phase == CallPhase.connected ? 8 : ((isCaller && phase == CallPhase.ringing) ? 1 : (phase == CallPhase.connecting ? 2 : 4));
     if (_tick % every != 0) return;
     _pollBusy = true;
     try {
