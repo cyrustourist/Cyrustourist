@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.os.Build
+import android.os.Bundle
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -30,6 +31,27 @@ import java.io.ByteArrayOutputStream
 class MainActivity : FlutterActivity() {
 
     private var sensorListener: SensorEventListener? = null
+
+    // اگر اپ با اعلان «تماس ورودی» باز شد، صفحه‌ی تماس روی قفل گوشی دیده شود و صفحه روشن شود.
+    // برای بقیهٔ اعلان‌ها این حالت خاموش می‌ماند (چیزی بدون باز کردن قفل دیده نمی‌شود).
+    override fun onCreate(savedInstanceState: Bundle?) {
+        applyCallLockFlags(intent)
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        applyCallLockFlags(intent)
+        super.onNewIntent(intent)
+    }
+
+    private fun applyCallLockFlags(i: Intent?) {
+        val payload = i?.getStringExtra("payload") ?: ""
+        val isCall = payload.contains("\"type\":\"call\"")
+        if (Build.VERSION.SDK_INT >= 27) {
+            setShowWhenLocked(isCall)
+            setTurnScreenOn(isCall)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
