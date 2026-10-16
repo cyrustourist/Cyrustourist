@@ -229,6 +229,19 @@ class FriendsService {
     return _parse<List<BlockedItem>>(j, (m) => _items<BlockedItem>(m['items'], BlockedItem.fromJson));
   }
 
+  /// حذف واقعی از تاریخچهٔ تماس روی سرور (فقط برای خودم). یا چند شناسه، یا all: true برای «پاک کردن همه».
+  static Future<ApiResult<void>> deleteCalls({List<String>? ids, bool all = false}) async {
+    final uid = await BadgeService.userUid();
+    final body = <String, dynamic>{'user_uid': uid};
+    if (all) {
+      body['all'] = true;
+    } else {
+      body['ids'] = ids ?? const <String>[];
+    }
+    final j = await BadgeService.call('POST', '/api/call/delete', body: body);
+    return _parse<void>(j, (m) {});
+  }
+
   static Future<ApiResult<List<CallLogItem>>> history() async {
     final uid = await BadgeService.userUid();
     final j = await BadgeService.call('GET', '/api/call/history', query: {'user_uid': uid});
