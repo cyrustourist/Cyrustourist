@@ -6,6 +6,10 @@ import 'package:flutter/services.dart';
 
 import '../../core/language/menu_translations.dart';
 import '../../core/language/new_texts.dart';
+import '../../services/badge_service.dart';
+import '../../services/call_service.dart';
+import '../../services/call_texts.dart';
+import '../../services/friends_service.dart';
 import '../../services/public_profile_service.dart';
 import '../../widgets/linkified_text.dart';
 
@@ -30,6 +34,9 @@ class PublicProfilePage extends StatefulWidget {
 class _PublicProfilePageState extends State<PublicProfilePage> {
   PublicProfile? _p;
   bool _loading = true;
+  String _me = '';
+  bool _isFriend = false;
+  bool _addingFriend = false;
 
   @override
   void initState() {
@@ -40,12 +47,74 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
   Future<void> _load() async {
     setState(() => _loading = true);
     final p = await PublicProfileService.fetch(widget.uid);
+    final me = await BadgeService.userUid();
+    final friend = me == widget.uid ? false : await FriendsService.isFriend(widget.uid);
     if (!mounted) return;
     setState(() {
       _p = p;
+      _me = me;
+      _isFriend = friend;
       _loading = false;
     });
   }
+
+  void _toast(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _addFriend() async {
+    if (_addingFriend) return;
+    setState(() => _addingFriend = true);
+    final r = await FriendsService.add(friendUid: widget.uid);
+    if (!mounted) return;
+    setState(() {
+      _addingFriend = false;
+      if (r.ok) _isFriend = true;
+    });
+    if (r.ok) {
+      _toast(CT.t(r.raw?['already'] == true ? 'friend_exists' : 'friend_added', {'name': widget.name}));
+    } else {
+      _toast(r.needsProfile ? CT.t('need_profile') : r.text);
+    }
+  }
+
+  Widget _action(IconData icon, String label, Color color, VoidCallback? onTap) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: color.withValues(alpha: 0.16),
+            shape: CircleBorder(side: BorderSide(color: color.withValues(alpha: 0.7), width: 1.3)),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: SizedBox(width: 56, height: 56, child: Icon(icon, color: color, size: 26)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        ],
+      );
+
+  /// تماس صوتی، تماس تصویری (به‌زودی) و افزودن به دوستان
+  Widget _actions() => Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _action(Icons.call_rounded, CT.t('profile_call'), const Color(0xff2fb36a), () {
+              CallService.instance.startOutgoing(toUid: widget.uid, name: widget.name, isFriend: _isFriend);
+            }),
+            _action(Icons.videocam_rounded, CT.t('profile_video'), _sky, () => _toast(CT.t('video_soon'))),
+            _isFriend
+                ? _action(Icons.check_circle_rounded, CT.t('in_friends'), _teal, null)
+                : _action(Icons.person_add_alt_1_rounded, CT.t('add_to_friends'), _gold, _addingFriend ? null : _addFriend),
+          ],
+        ),
+      );
 
   Widget _tick(String? b) => b == null
       ? const SizedBox.shrink()
@@ -137,6 +206,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
               child: Text('@${p.username}', textDirection: TextDirection.ltr, style: const TextStyle(color: _teal, fontSize: 14, fontWeight: FontWeight.w600)),
             ),
           ),
+        if (_me.isNotEmpty && _me != widget.uid) _actions(),
         const SizedBox(height: 18),
         if (!p.visible)
           _closed(p.visibility == 'friends' ? NT.t('pp_friends') : NT.t('pp_none'))
