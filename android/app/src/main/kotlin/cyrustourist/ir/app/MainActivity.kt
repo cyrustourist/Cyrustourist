@@ -2,6 +2,7 @@ package cyrustourist.ir.app
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -31,6 +32,16 @@ import java.io.ByteArrayOutputStream
 class MainActivity : FlutterActivity() {
 
     private var sensorListener: SensorEventListener? = null
+    private var callAudio: CallAudio? = null
+
+    private fun audio(): CallAudio {
+        var a = callAudio
+        if (a == null) {
+            a = CallAudio(applicationContext)
+            callAudio = a
+        }
+        return a
+    }
 
     // اگر اپ با اعلان «تماس ورودی» باز شد، صفحه‌ی تماس روی قفل گوشی دیده شود و صفحه روشن شود.
     // برای بقیهٔ اعلان‌ها این حالت خاموش می‌ماند (چیزی بدون باز کردن قفل دیده نمی‌شود).
@@ -107,6 +118,77 @@ class MainActivity : FlutterActivity() {
                 }
 
                 else -> result.notImplemented()
+            }
+        }
+
+        // صداهای تماس (بوق انتظار / بوق وصل شدن / زنگ) و مسیر صدا (گوشی / بلندگو)
+        MethodChannel(messenger, "cyrus/callaudio").setMethodCallHandler { call, result ->
+            try {
+                when (call.method) {
+                    "enterCall" -> {
+                        audio().enterCall()
+                        result.success(true)
+                    }
+
+                    "leaveCall" -> {
+                        audio().leaveCall()
+                        result.success(true)
+                    }
+
+                    "setSpeaker" -> {
+                        val on = call.argument<Boolean>("on") ?: false
+                        result.success(audio().setSpeaker(on))
+                    }
+
+                    "tone" -> {
+                        audio().playTone(call.argument<String>("kind") ?: "")
+                        result.success(true)
+                    }
+
+                    "stopTone" -> {
+                        audio().stopTone()
+                        result.success(true)
+                    }
+
+                    "startRing" -> {
+                        audio().startRing()
+                        result.success(true)
+                    }
+
+                    "stopRing" -> {
+                        audio().stopRing()
+                        result.success(true)
+                    }
+
+                    "stopAll" -> {
+                        audio().stopAll()
+                        result.success(true)
+                    }
+
+                    "canFullScreen" -> result.success(audio().canFullScreen())
+
+                    "openFullScreenSettings" -> {
+                        var opened = false
+                        if (Build.VERSION.SDK_INT >= 34) {
+                            try {
+                                val i = Intent(
+                                    Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                                    Uri.parse("package:" + packageName)
+                                )
+                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(i)
+                                opened = true
+                            } catch (e: Exception) {
+                                opened = false
+                            }
+                        }
+                        result.success(opened)
+                    }
+
+                    else -> result.notImplemented()
+                }
+            } catch (e: Throwable) {
+                result.error("CALL_AUDIO_ERROR", e.message, null)
             }
         }
 
@@ -192,6 +274,10 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         stopCompass()
+        try {
+            callAudio?.stopAll()
+        } catch (_: Throwable) {
+        }
         super.onDestroy()
     }
 
