@@ -95,6 +95,8 @@ class CallSession extends ChangeNotifier {
   Timer? _disconnectTimer;
   DateTime? _connectedAt;
   Completer<void>? _gatherDone;
+  Completer<void>? _candidateReady;
+  bool _wantRelay = false;
   bool _answerApplied = false;
   bool _closed = false;
   int _pollFails = 0;
@@ -120,16 +122,44 @@ class CallSession extends ChangeNotifier {
   // ------------------------------------------------------------------
   // آماده‌سازی مشترک: ICE + اتصال + میکروفن
   // ------------------------------------------------------------------
-  Future<List<Map<String, dynamic>>> _loadIce() async {
+  // تنظیمات ICE از ورکر؛ حدود ۴۰ دقیقه نگه داشته می‌شود (اعتبار TURN یک‌ساعته است)
+  static List<Map<String, dynamic>>? _iceCache;
+  static DateTime? _iceAt;
+
+  /// پیش‌دریافت تنظیمات اتصال تا موقع تماس یک درخواست کمتر لازم باشد.
+  static Future<void> prefetchIce() async {
+    await _loadIceStatic();
+  }
+
+  static Future<List<Map<String, dynamic>>> _loadIceStatic() async {
+    final cached = _iceCache;
+    final at = _iceAt;
+    if (cached != null && at != null && DateTime.now().difference(at) < const Duration(minutes: 40)) {
+      return cached;
+    }
     try {
       final uid = await BadgeService.userUid();
       final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid});
       final list = j?['ice_servers'];
       if (list is List && list.isNotEmpty) {
-        return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        final parsed = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        _iceCache = parsed;
+        _iceAt = DateTime.now();
+        return parsed;
       }
     } catch (_) {}
-    return _fallbackIce;
+    return cached ?? _fallbackIce;
+  }
+
+  Future<List<Map<String, dynamic>>> _loadIce() => _loadIceStatic();
+
+  static bool _hasTurn(List<Map<String, dynamic>> ice) {
+    for (final s in ice) {
+      final u = s['urls'];
+      final list = u is List ? u : [u];
+      if (list.any((e) => '$e'.startsWith('turn:') || '$e'.startsWith('turns:'))) return true;
+    }
+    return false;
   }
 
   bool _fgStarted = false;
@@ -137,12 +167,23 @@ class CallSession extends ChangeNotifier {
   Future<bool> _preparePeer() async {
     final ice = await _loadIce();
     _gatherDone = Completer<void>();
+    _candidateReady = Completer<void>();
+    _wantRelay = _hasTurn(ice);
 
     final pc = await createPeerConnection({
       'iceServers': ice,
       'sdpSemantics': 'unified-plan',
     });
     _pc = pc;
+
+    // به‌محض رسیدن اولین آدرس عمومی (srflx؛ و اگر TURN داریم relay) دیگر منتظر پایان کامل نمی‌مانیم
+    pc.onIceCandidate = (RTCIceCandidate c) {
+      final line = c.candidate ?? '';
+      final good = _wantRelay ? line.contains(' typ relay') : (line.contains(' typ srflx') || line.contains(' typ relay'));
+      if (good && _candidateReady != null && !_candidateReady!.isCompleted) {
+        _candidateReady!.complete();
+      }
+    };
 
     pc.onIceGatheringState = (RTCIceGatheringState s) {
       if (s == RTCIceGatheringState.RTCIceGatheringStateComplete &&
@@ -219,7 +260,12 @@ class CallSession extends ChangeNotifier {
 
   Future<String?> _localSdpAfterGathering() async {
     try {
-      await _gatherDone?.future.timeout(const Duration(seconds: 5), onTimeout: () {});
+      final done = _gatherDone?.future;
+      final early = _candidateReady?.future.then((_) => Future<void>.delayed(const Duration(milliseconds: 700)));
+      final waits = <Future<void>>[if (done != null) done, if (early != null) early];
+      if (waits.isNotEmpty) {
+        await Future.any<void>(waits).timeout(const Duration(seconds: 4), onTimeout: () {});
+      }
     } catch (_) {}
     final d = await _pc?.getLocalDescription();
     final sdp = d?.sdp;
@@ -352,21 +398,40 @@ class CallSession extends ChangeNotifier {
 
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollOnce());
+    _pollTimer = Timer.periodic(const Duration(seconds: 1), (_) => _pollOnce());
   }
 
+  /// پایش لغو/پایان تماس هنگام زنگ خوردن در گوشی گیرنده (تا زنگ بعد از لغو ادامه پیدا نکند).
+  void startRingWatch() {
+    if (isCaller || callId == null) return;
+    _startPolling();
+  }
+
+  bool _pollBusy = false;
+
   Future<void> _pollOnce() async {
-    if (_closed || callId == null) return;
-    // وقتی وصل هستیم، هر ۲ تیک یک‌بار (کم‌کردن درخواست)
+    if (_closed || callId == null || _pollBusy) return;
+    // فاصلهٔ پایش: تماس‌گیرنده هنگام زنگ هر ۱ ثانیه (پاسخ زودتر دیده شود)، هنگام اتصال هر ۲ ثانیه،
+    // وقتی وصل هستیم هر ۴ ثانیه (کم‌کردن درخواست)
     _tick++;
-    if (phase == CallPhase.connected && _tick.isOdd) return;
+    final every = phase == CallPhase.connected ? 4 : ((isCaller && phase == CallPhase.ringing) ? 1 : 2);
+    if (_tick % every != 0) return;
+    _pollBusy = true;
+    try {
+      await _pollInner();
+    } finally {
+      _pollBusy = false;
+    }
+  }
+
+  Future<void> _pollInner() async {
 
     final uid = await BadgeService.userUid();
     final j = await BadgeService.call('GET', '/api/call/poll', query: {'user_uid': uid, 'call_id': callId!});
     if (_closed) return;
     if (j == null) {
       _pollFails++;
-      if (_pollFails >= 6 && phase != CallPhase.connected) {
+      if (_pollFails >= 8 && phase != CallPhase.connected) {
         await _finish('ارتباط با سرور قطع شد.', notifyServer: false);
       }
       return;
