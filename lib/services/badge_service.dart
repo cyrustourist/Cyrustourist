@@ -151,7 +151,8 @@ class BadgeService {
     Map<String, String>? query,
     Map<String, dynamic>? body,
   }) async {
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+    // یک کلاینت مشترک با اتصال زنده (keep-alive): هر درخواست دیگر دست‌دادن TLS تازه نمی‌خواهد.
+    final client = _sharedClient;
     try {
       final uri = Uri.parse('$_base$path').replace(queryParameters: query);
       final req = await client.openUrl(method, uri).timeout(const Duration(seconds: 10));
@@ -167,10 +168,13 @@ class BadgeService {
       return decoded is Map<String, dynamic> ? decoded : null;
     } catch (_) {
       return null;
-    } finally {
-      client.close(force: true);
     }
   }
+
+  static final HttpClient _sharedClient = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 8)
+    ..idleTimeout = const Duration(seconds: 90)
+    ..maxConnectionsPerHost = 6;
 
   /// ثبت/به‌روزرسانی کاربر در سرور. خطای نام کاربری تکراری در نتیجه برمی‌گردد.
   static Future<RegisterResult> registerUser() async {
