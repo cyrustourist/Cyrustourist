@@ -368,8 +368,8 @@ class NotificationService {
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
     // تماس صوتی ورودی: مستقیم صفحهٔ تماس را باز کن (وابسته به تنظیم اعلان‌های عمومی نیست)
-    if (message.data['type'] == 'call') {
-      unawaited(CallService.instance.handlePush(Map<String, dynamic>.from(message.data)));
+    if (message.data['type'] == 'call' || message.data['type'] == 'call_msg') {
+      unawaited(CallService.handleForegroundData(Map<String, dynamic>.from(message.data)));
       return;
     }
 
@@ -418,7 +418,7 @@ class NotificationService {
         return;
       }
 
-      if (data['type'] == 'call') {
+      if (data['type'] == 'call' || data['type'] == 'call_msg') {
         unawaited(CallService.instance.handlePush(data));
         return;
       }
