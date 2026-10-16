@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import 'badge_service.dart';
+import 'call_audio.dart';
 import 'call_service.dart';
 import 'call_texts.dart';
 
@@ -99,6 +100,10 @@ class CallSession extends ChangeNotifier {
   bool _wantRelay = false;
   bool _answerApplied = false;
   bool _closed = false;
+  bool _everConnected = false;
+  bool _audioEntered = false;
+  // تعداد تماس‌هایی که حالت صدای تماس را باز نگه داشته‌اند (تا پایان یک تماس، تماس بعدی را خراب نکند)
+  static int _audioUsers = 0;
   int _pollFails = 0;
   int _tick = 0;
 
@@ -106,17 +111,49 @@ class CallSession extends ChangeNotifier {
 
   static const List<Map<String, dynamic>> _fallbackIce = [
     {
-      'urls': ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']
+      'urls': ['stun:stun.cloudflare.com:3478']
     },
     {
-      'urls': ['stun:stun.cloudflare.com:3478']
+      'urls': ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']
     },
   ];
 
   void _set(CallPhase p, String text) {
     phase = p;
     statusText = text;
+    if (!_closed) _applySound(p);
     if (!_closed || p == CallPhase.ended) notifyListeners();
+  }
+
+  /// صدای هر مرحله: انتظار = بوق بلند تکراری، وصل شد = دو بیپ کوتاه، (پایان در _finish)
+  void _applySound(CallPhase p) {
+    switch (p) {
+      case CallPhase.ringing:
+        if (isCaller) {
+          unawaited(CallAudio.ringback());
+        } else {
+          unawaited(CallAudio.startRing());
+        }
+        break;
+      case CallPhase.connecting:
+        unawaited(CallAudio.stopTone());
+        unawaited(CallAudio.stopRing());
+        break;
+      case CallPhase.connected:
+        unawaited(CallAudio.stopRing());
+        unawaited(CallAudio.connected());
+        break;
+      default:
+        break;
+    }
+  }
+
+  /// حالت «تماس» سیستم صدا را (یک‌بار برای هر تماس) باز می‌کند.
+  Future<void> _enterAudio() async {
+    if (_audioEntered) return;
+    _audioEntered = true;
+    _audioUsers++;
+    await CallAudio.enterCall();
   }
 
   // ------------------------------------------------------------------
@@ -208,8 +245,14 @@ class CallSession extends ChangeNotifier {
                 notifyListeners();
               }
             });
-            Helper.setSpeakerphoneOn(speaker);
+            _everConnected = true;
             _set(CallPhase.connected, 'وصل شد');
+            // مسیر صدا (گوشی/بلندگو) را بعد از شروع صدای تماس دوباره اعمال می‌کنیم؛
+            // WebRTC گاهی هنگام شروع صدا مسیر را به‌هم می‌زند.
+            unawaited(_applyRoute());
+            Future<void>.delayed(const Duration(milliseconds: 900), () {
+              if (!_closed) unawaited(_applyRoute());
+            });
           }
           break;
         case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
@@ -277,6 +320,8 @@ class CallSession extends ChangeNotifier {
   // ------------------------------------------------------------------
   Future<void> startOutgoing() async {
     _set(CallPhase.preparing, 'در حال آماده‌سازی…');
+    await _enterAudio();
+    if (_closed) return;
     if (!await _preparePeer()) return;
     try {
       final offer = await _pc!.createOffer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': 0});
@@ -332,6 +377,8 @@ class CallSession extends ChangeNotifier {
   Future<void> acceptIncoming() async {
     if (isCaller || _remoteOffer == null || callId == null) return;
     _set(CallPhase.connecting, 'در حال اتصال…');
+    await _enterAudio();
+    if (_closed) return;
     if (!await _preparePeer()) return;
     try {
       await _pc!.setRemoteDescription(RTCSessionDescription(_remoteOffer, 'offer'));
@@ -378,10 +425,17 @@ class CallSession extends ChangeNotifier {
 
   Future<void> toggleSpeaker() async {
     speaker = !speaker;
+    notifyListeners();
+    await _applyRoute();
+  }
+
+  /// بلندگو/گوشی: هم از طریق flutter_webrtc و هم مستقیم از AudioManager اندروید
+  /// (اگر یکی کار نکرد دیگری مسیر را درست می‌کند).
+  Future<void> _applyRoute() async {
     try {
       await Helper.setSpeakerphoneOn(speaker);
     } catch (_) {}
-    notifyListeners();
+    await CallAudio.setSpeaker(speaker);
   }
 
   // ------------------------------------------------------------------
@@ -404,6 +458,7 @@ class CallSession extends ChangeNotifier {
   /// پایش لغو/پایان تماس هنگام زنگ خوردن در گوشی گیرنده (تا زنگ بعد از لغو ادامه پیدا نکند).
   void startRingWatch() {
     if (isCaller || callId == null) return;
+    unawaited(CallAudio.startRing());
     _startPolling();
   }
 
@@ -474,6 +529,12 @@ class CallSession extends ChangeNotifier {
       case 'canceled':
         await _finish('تماس لغو شد.', notifyServer: false);
         break;
+      case 'accepted':
+        // حساب من روی چند گوشی است و تماس را گوشی دیگر جواب داده
+        if (!isCaller && phase == CallPhase.ringing) {
+          await _finish('تماس روی دستگاه دیگر پاسخ داده شد.', notifyServer: false);
+        }
+        break;
       case 'ended':
         await _finish('تماس پایان یافت.', notifyServer: false);
         break;
@@ -485,7 +546,17 @@ class CallSession extends ChangeNotifier {
   // ------------------------------------------------------------------
   Future<void> _finish(String reason, {required bool notifyServer, String action = 'end', String? msgKey}) async {
     if (_closed) return;
+    // بوق پایان: اگر تماس وصل بوده، در حال اتصال بوده یا تماس‌گیرنده منتظر جواب بوده
+    final playEnd = _everConnected ||
+        phase == CallPhase.connecting ||
+        (isCaller && phase == CallPhase.ringing);
     _closed = true;
+    unawaited(CallAudio.stopRing());
+    if (playEnd) {
+      unawaited(CallAudio.ended());
+    } else {
+      unawaited(CallAudio.stopTone());
+    }
     _pollTimer?.cancel();
     _clock?.cancel();
     _connectTimeout?.cancel();
@@ -523,6 +594,18 @@ class CallSession extends ChangeNotifier {
     phase = CallPhase.ended;
     statusText = reason;
     notifyListeners();
+    _leaveAudioLater(playEnd);
+  }
+
+  /// حالت صدای تماس را (بعد از پخش بوق پایان) به حالت عادی برمی‌گرداند،
+  /// مگر اینکه تماس دیگری همین حالا شروع شده باشد.
+  void _leaveAudioLater(bool waitForTone) {
+    if (!_audioEntered) return;
+    _audioEntered = false;
+    Future<void>.delayed(Duration(milliseconds: waitForTone ? 800 : 50), () {
+      if (_audioUsers > 0) _audioUsers--;
+      if (_audioUsers == 0) unawaited(CallAudio.leaveCall());
+    });
   }
 
   /// فراخوانی هنگام بسته‌شدن صفحه (مثلاً دکمهٔ برگشت).
