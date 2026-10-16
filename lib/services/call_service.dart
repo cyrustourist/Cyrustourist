@@ -48,8 +48,14 @@ class CallService with WidgetsBindingObserver {
   DateTime? _registeredAt;
   Timer? _registerRetry;
   Timer? _watchTimer;
+  Timer? _fgWatch;
+  bool _checking = false;
   int _watchRefs = 0;
   String? _lastShownCallId;
+  String? _lastNotifiedCallId;
+  AppLifecycleState? _lifecycle;
+
+  bool get _inForeground => (_lifecycle ?? WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) == AppLifecycleState.resumed;
 
   bool get pageOpen => _pageOpen;
 
@@ -95,6 +101,7 @@ class CallService with WidgetsBindingObserver {
     try {
       WidgetsBinding.instance.addObserver(this);
     } catch (_) {}
+    if (_inForeground) _startFgWatch();
     // اگر اپ با اعلان تمام‌صفحهٔ تماس باز شده باشد، بعد از ثبت توکن تماس در حال زنگ را نشان می‌دهیم
     unawaited(registerToken().then((ok) {
       if (ok) {
@@ -124,6 +131,14 @@ class CallService with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lifecycle = state;
+    // وقتی اپ جلوی صفحه است، تماس ورودی را هر ۳ ثانیه هم از ورکر می‌پرسیم (پشتیبان FCM که در ایران دیر می‌رسد)؛
+    // در پس‌زمینه متوقف می‌شود تا باتری مصرف نشود.
+    if (state == AppLifecycleState.resumed) {
+      _startFgWatch();
+    } else {
+      _stopFgWatch();
+    }
     if (state == AppLifecycleState.resumed) {
       // هر بار که برنامه باز می‌شود توکن دوباره (در صورت لزوم) ثبت می‌شود
       unawaited(registerToken().then((ok) {
@@ -131,6 +146,17 @@ class CallService with WidgetsBindingObserver {
       }));
       if (_registeredToken != null) unawaited(checkIncoming());
     }
+  }
+
+  void _startFgWatch() {
+    _fgWatch ??= Timer.periodic(const Duration(seconds: 3), (_) {
+      if (_registeredToken != null) unawaited(checkIncoming());
+    });
+  }
+
+  void _stopFgWatch() {
+    _fgWatch?.cancel();
+    _fgWatch = null;
   }
 
   /// ثبت توکن این گوشی روی ورکر. اگر کاربر هنوز پروفایل نساخته باشد ناموفق است
@@ -192,13 +218,29 @@ class CallService with WidgetsBindingObserver {
   }
 
   Future<void> checkIncoming() async {
-    if (_pageOpen) return;
+    if (_pageOpen || _checking) return;
+    _checking = true;
     try {
       final uid = await BadgeService.userUid();
       final j = await BadgeService.call('GET', '/api/call/incoming', query: {'user_uid': uid});
       final call = IncomingCall.fromJson(j?['call']);
       if (call == null) return;
       if (_lastShownCallId == call.id) return;
+      // اپ در پس‌زمینه است (مثلاً پایش ۵ثانیه‌ای چت): صفحهٔ تماس پشت صحنه باز می‌شد و فقط صدای زنگ می‌آمد.
+      // به‌جای آن اعلان تمام‌صفحه نشان بده؛ با زدن اعلان یا برگشتن به اپ، صفحهٔ تماس جلو می‌آید.
+      if (!_inForeground) {
+        if (_lastNotifiedCallId != call.id) {
+          _lastNotifiedCallId = call.id;
+          await _showIncomingNotification({
+            'type': 'call',
+            'call_id': call.id,
+            'from_name': call.fromName,
+            'title': CT.t('incoming'),
+            'body': call.fromName,
+          }, initializePlugin: false);
+        }
+        return;
+      }
       final nav = navigatorKey.currentState;
       if (nav == null || _pageOpen) return;
       _lastShownCallId = call.id;
@@ -207,6 +249,8 @@ class CallService with WidgetsBindingObserver {
       await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session)));
     } catch (e) {
       debugPrint('incoming check error: $e');
+    } finally {
+      _checking = false;
     }
   }
 
