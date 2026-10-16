@@ -62,6 +62,11 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  // تماس ورودی / پیام رد تماس (data-only): اعلان تمام‌صفحه یا اعلان پیام می‌سازد
+  final type = message.data['type'];
+  if (type == 'call' || type == 'call_msg') {
+    await CallService.handleBackgroundData(Map<String, dynamic>.from(message.data));
+  }
 }
 
 void main() async {
