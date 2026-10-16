@@ -409,7 +409,6 @@ class CallSession extends ChangeNotifier {
           'busy' => 'کاربر در تماس دیگری است.',
           'cannot_call' => 'امکان تماس با این کاربر وجود ندارد.',
           'slow_down' => 'تماس‌های شما زیاد شده؛ کمی بعد دوباره تلاش کنید.',
-          'calls_disabled' => 'تماس صوتی موقتاً غیرفعال است.',
           'not_registered' || 'no_name' => 'برای تماس، ابتدا پروفایل خود را کامل کنید.',
           _ => '${j['message'] ?? 'تماس برقرار نشد.'}',
         };
@@ -510,9 +509,9 @@ class CallSession extends ChangeNotifier {
   }
 
   /// پایش لغو/پایان تماس هنگام زنگ خوردن در گوشی گیرنده (تا زنگ بعد از لغو ادامه پیدا نکند).
-  void startRingWatch() {
+  void startRingWatch({bool silent = false}) {
     if (isCaller || callId == null) return;
-    unawaited(CallAudio.startRing());
+    if (!silent) unawaited(CallAudio.startRing());
     _startPolling();
   }
 
