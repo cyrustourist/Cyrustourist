@@ -102,6 +102,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
     setState(() => _hiddenIds = {..._hiddenIds, c.id});
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_hiddenKey, _hiddenIds.toList());
+    unawaited(FriendsService.deleteCalls(ids: [c.id]));
     _toast(CT.t('deleted_one'));
   }
 
@@ -125,6 +126,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
     setState(() => _clearedAtMs = now);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_clearedAtKey, now);
+    unawaited(FriendsService.deleteCalls(all: true));
     _toast(CT.t('deleted_all'));
   }
 
