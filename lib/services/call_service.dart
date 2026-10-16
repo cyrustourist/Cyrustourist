@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -7,16 +8,34 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../main.dart' show navigatorKey;
 import '../pages/call_page.dart';
+import '../pages/calls_page.dart';
 import 'badge_service.dart';
 import 'call_session.dart';
+import 'call_texts.dart';
 
-/// هماهنگ‌کنندهٔ تماس صوتی: ثبت توکن FCM، دریافت تماس ورودی، باز کردن صفحهٔ تماس.
-class CallService {
+/// هماهنگ‌کنندهٔ تماس صوتی: ثبت توکن FCM، دریافت تماس ورودی، باز کردن صفحهٔ تماس،
+/// اعلان تمام‌صفحه روی قفل گوشی و سرویس پیش‌زمینه هنگام تماس.
+class CallService with WidgetsBindingObserver {
   CallService._();
 
   static final CallService instance = CallService._();
 
   static const String channelId = 'cyrus_calls';
+  static const String _activeChannelId = 'cyrus_call_active';
+  static const String _msgChannelId = 'cyrus_call_msgs';
+
+  static const int _incomingNotifId = 7001;
+  static const int _fgNotifId = 7002;
+  static const int _msgNotifId = 7003;
+
+  static const AndroidNotificationChannel _callChannel = AndroidNotificationChannel(
+    channelId,
+    'تماس ورودی',
+    description: 'اعلان تماس صوتی ورودی',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
+  );
 
   bool _inited = false;
   bool _pageOpen = false;
@@ -26,7 +45,14 @@ class CallService {
   String? _lastShownCallId;
 
   bool get pageOpen => _pageOpen;
-  void markPage(bool open) => _pageOpen = open;
+
+  void markPage(bool open) {
+    _pageOpen = open;
+    if (open) {
+      // اعلان زنگ دیگر لازم نیست
+      unawaited(FlutterLocalNotificationsPlugin().cancel(_incomingNotifId).catchError((Object _) {}));
+    }
+  }
 
   /// یک‌بار هنگام شروع برنامه (بعد از Firebase).
   Future<void> init() async {
@@ -35,13 +61,20 @@ class CallService {
     try {
       final android = FlutterLocalNotificationsPlugin()
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await android?.createNotificationChannel(_callChannel);
       await android?.createNotificationChannel(const AndroidNotificationChannel(
-        channelId,
-        'تماس ورودی',
-        description: 'اعلان تماس صوتی ورودی',
-        importance: Importance.max,
-        playSound: true,
-        enableVibration: true,
+        _activeChannelId,
+        'تماس در جریان',
+        description: 'نمایش تماس صوتی در حال انجام',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+      ));
+      await android?.createNotificationChannel(const AndroidNotificationChannel(
+        _msgChannelId,
+        'پیام رد تماس',
+        description: 'پیام کوتاهی که طرف مقابل هنگام رد تماس می‌فرستد',
+        importance: Importance.high,
       ));
     } catch (e) {
       debugPrint('call channel error: $e');
@@ -49,7 +82,22 @@ class CallService {
     try {
       FirebaseMessaging.instance.onTokenRefresh.listen((t) => registerToken(token: t));
     } catch (_) {}
-    unawaited(registerToken());
+    try {
+      WidgetsBinding.instance.addObserver(this);
+    } catch (_) {}
+    // اگر اپ با اعلان تمام‌صفحهٔ تماس باز شده باشد، بعد از ثبت توکن تماس در حال زنگ را نشان می‌دهیم
+    unawaited(registerToken().then((ok) {
+      if (ok) {
+        Future<void>.delayed(const Duration(milliseconds: 1500), checkIncoming);
+      }
+    }));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _registeredToken != null) {
+      unawaited(checkIncoming());
+    }
   }
 
   /// ثبت توکن این گوشی روی ورکر. اگر کاربر هنوز پروفایل نساخته باشد ناموفق است
@@ -75,20 +123,30 @@ class CallService {
   // ------------------------------------------------------------------
   // تماس خروجی
   // ------------------------------------------------------------------
-  Future<void> startOutgoing({required String toUid, required String name}) async {
+  Future<void> startOutgoing({
+    required String toUid,
+    required String name,
+    bool isFriend = false,
+    bool hasPhoto = true,
+  }) async {
     if (_pageOpen) return;
     final nav = navigatorKey.currentState;
     if (nav == null) return;
     unawaited(registerToken());
-    final session = CallSession.outgoing(peerUid: toUid, peerName: name);
+    final session = CallSession.outgoing(peerUid: toUid, peerName: name, isFriend: isFriend, hasPhoto: hasPhoto);
     await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session)));
   }
 
   // ------------------------------------------------------------------
   // تماس ورودی
   // ------------------------------------------------------------------
-  /// وقتی نوتیفیکیشن تماس رسید یا کاربر روی آن زد.
+  /// وقتی پیام FCM تماس رسید یا کاربر روی اعلان زد.
   Future<void> handlePush(Map<String, dynamic> data) async {
+    if (data['type'] == 'call_msg') {
+      // اعلان «پیام رد تماس» زده شد: صفحهٔ تماس‌ها را نشان بده
+      navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const CallsPage()));
+      return;
+    }
     if (data['type'] != 'call') return;
     await checkIncoming();
   }
@@ -101,9 +159,9 @@ class CallService {
       final call = IncomingCall.fromJson(j?['call']);
       if (call == null) return;
       if (_lastShownCallId == call.id) return;
-      _lastShownCallId = call.id;
       final nav = navigatorKey.currentState;
       if (nav == null || _pageOpen) return;
+      _lastShownCallId = call.id;
       final session = CallSession.incoming(call);
       await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session)));
     } catch (e) {
@@ -123,6 +181,152 @@ class CallService {
     if (_watchRefs == 0) {
       _watchTimer?.cancel();
       _watchTimer = null;
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // پیام‌های data-only از ورکر
+  // ------------------------------------------------------------------
+  /// وقتی اپ در پس‌زمینه/بسته است (از main.dart فراخوانی می‌شود، داخل isolate پس‌زمینه).
+  static Future<void> handleBackgroundData(Map<String, dynamic> data) async {
+    final type = data['type'];
+    if (type == 'call') {
+      await _showIncomingNotification(data, initializePlugin: true);
+    } else if (type == 'call_msg') {
+      await _showMessageNotification(data, initializePlugin: true);
+    }
+  }
+
+  /// وقتی اپ باز است (onMessage).
+  static Future<void> handleForegroundData(Map<String, dynamic> data) async {
+    final type = data['type'];
+    if (type == 'call') {
+      unawaited(instance.handlePush(data));
+    } else if (type == 'call_msg') {
+      // اگر همین الان روی صفحهٔ تماس هستیم، پیام از خود صفحه دیده می‌شود
+      if (!instance.pageOpen) {
+        await _showMessageNotification(data, initializePlugin: false);
+      }
+    }
+  }
+
+  static Future<FlutterLocalNotificationsPlugin> _plugin(bool initializePlugin) async {
+    final plugin = FlutterLocalNotificationsPlugin();
+    if (initializePlugin) {
+      await plugin.initialize(const InitializationSettings(
+        android: AndroidInitializationSettings('@drawable/ic_stat_notify'),
+      ));
+      final android = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await android?.createNotificationChannel(_callChannel);
+      await android?.createNotificationChannel(const AndroidNotificationChannel(
+        _msgChannelId,
+        'پیام رد تماس',
+        description: 'پیام کوتاهی که طرف مقابل هنگام رد تماس می‌فرستد',
+        importance: Importance.high,
+      ));
+    }
+    return plugin;
+  }
+
+  static Future<void> _showIncomingNotification(Map<String, dynamic> data, {required bool initializePlugin}) async {
+    try {
+      final plugin = await _plugin(initializePlugin);
+      final title = '${data['title'] ?? ''}'.isNotEmpty ? '${data['title']}' : CT.t('incoming');
+      final body = '${data['body'] ?? data['from_name'] ?? ''}';
+      await plugin.show(
+        _incomingNotifId,
+        title,
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            channelId,
+            'تماس ورودی',
+            channelDescription: 'اعلان تماس صوتی ورودی',
+            importance: Importance.max,
+            priority: Priority.max,
+            category: AndroidNotificationCategory.call,
+            fullScreenIntent: true,
+            ongoing: true,
+            autoCancel: true,
+            timeoutAfter: 45000,
+            visibility: NotificationVisibility.public,
+            icon: '@drawable/ic_stat_notify',
+            playSound: true,
+            enableVibration: true,
+          ),
+        ),
+        payload: jsonEncode(data),
+      );
+    } catch (e) {
+      debugPrint('incoming call notification error: $e');
+    }
+  }
+
+  static Future<void> _showMessageNotification(Map<String, dynamic> data, {required bool initializePlugin}) async {
+    try {
+      final plugin = await _plugin(initializePlugin);
+      final name = '${data['from_name'] ?? ''}';
+      final key = '${data['msg_key'] ?? ''}';
+      final text = key.isNotEmpty ? CT.msg(key) : '${data['body'] ?? ''}';
+      if (text.isEmpty) return;
+      await plugin.show(
+        _msgNotifId,
+        CT.t('missed_msg_title', {'name': name}),
+        text,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _msgChannelId,
+            'پیام رد تماس',
+            channelDescription: 'پیام کوتاهی که طرف مقابل هنگام رد تماس می‌فرستد',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@drawable/ic_stat_notify',
+          ),
+        ),
+        payload: jsonEncode(data),
+      );
+    } catch (e) {
+      debugPrint('call message notification error: $e');
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // سرویس پیش‌زمینه (میکروفن) هنگام تماس
+  // ------------------------------------------------------------------
+  static Future<void> startForegroundCall(String peerName) async {
+    try {
+      final android = FlutterLocalNotificationsPlugin()
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await android?.startForegroundService(
+        _fgNotifId,
+        CT.t('ongoing_title'),
+        peerName,
+        notificationDetails: const AndroidNotificationDetails(
+          _activeChannelId,
+          'تماس در جریان',
+          channelDescription: 'نمایش تماس صوتی در حال انجام',
+          importance: Importance.low,
+          priority: Priority.low,
+          ongoing: true,
+          playSound: false,
+          enableVibration: false,
+          icon: '@drawable/ic_stat_notify',
+          category: AndroidNotificationCategory.call,
+        ),
+        foregroundServiceTypes: {AndroidServiceForegroundType.foregroundServiceTypeMicrophone},
+      );
+    } catch (e) {
+      debugPrint('foreground call start error: $e');
+    }
+  }
+
+  static Future<void> stopForegroundCall() async {
+    try {
+      final android = FlutterLocalNotificationsPlugin()
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await android?.stopForegroundService();
+    } catch (e) {
+      debugPrint('foreground call stop error: $e');
     }
   }
 }
