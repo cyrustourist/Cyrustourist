@@ -38,6 +38,8 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
     s.addListener(_onChange);
     if (s.isCaller) {
       unawaited(s.startOutgoing());
+    } else {
+      s.startRingWatch();
     }
   }
 
