@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import 'badge_service.dart';
+import 'call_service.dart';
+import 'call_texts.dart';
 
 /// مشخصات یک تماس ورودی (از /api/call/incoming).
 class IncomingCall {
@@ -13,6 +15,8 @@ class IncomingCall {
     required this.fromName,
     required this.fromUsername,
     required this.offerSdp,
+    this.hasPhoto = true,
+    this.isFriend = false,
   });
 
   final String id;
@@ -20,6 +24,8 @@ class IncomingCall {
   final String fromName;
   final String fromUsername;
   final String offerSdp;
+  final bool hasPhoto;
+  final bool isFriend;
 
   static IncomingCall? fromJson(dynamic j) {
     if (j is! Map) return null;
@@ -32,6 +38,8 @@ class IncomingCall {
       fromName: '${j['from_name'] ?? 'کاربر'}',
       fromUsername: '${j['from_username'] ?? ''}',
       offerSdp: sdp,
+      hasPhoto: j['from_has_photo'] != false,
+      isFriend: j['is_friend'] == true,
     );
   }
 }
@@ -41,8 +49,12 @@ enum CallPhase { preparing, ringing, connecting, connected, ended }
 /// یک تماس صوتی کامل (WebRTC، فقط صدا).
 /// سیگنالینگ: یک offer و یک answer (بدون trickle) از طریق Worker؛ صدا مستقیم بین دو گوشی.
 class CallSession extends ChangeNotifier {
-  CallSession.outgoing({required this.peerUid, required this.peerName})
-      : isCaller = true,
+  CallSession.outgoing({
+    required this.peerUid,
+    required this.peerName,
+    this.isFriend = false,
+    this.hasPhoto = true,
+  })  : isCaller = true,
         _remoteOffer = null;
 
   CallSession.incoming(IncomingCall c)
@@ -50,6 +62,8 @@ class CallSession extends ChangeNotifier {
         peerUid = c.fromUid,
         peerName = c.fromName,
         callId = c.id,
+        isFriend = c.isFriend,
+        hasPhoto = c.hasPhoto,
         _remoteOffer = c.offerSdp {
     phase = CallPhase.ringing;
   }
@@ -57,6 +71,13 @@ class CallSession extends ChangeNotifier {
   final bool isCaller;
   final String peerUid;
   final String peerName;
+  final bool hasPhoto;
+
+  /// طرف مقابل در لیست دوستان من هست؟ (در حین تماس با «افزودن به دوستان» true می‌شود)
+  bool isFriend;
+
+  /// اگر گیرنده تماس را با پیام آماده رد کرد (فقط برای تماس‌گیرنده)
+  String? peerMessageKey;
   String? callId;
   final String? _remoteOffer;
 
@@ -110,6 +131,8 @@ class CallSession extends ChangeNotifier {
     } catch (_) {}
     return _fallbackIce;
   }
+
+  bool _fgStarted = false;
 
   Future<bool> _preparePeer() async {
     final ice = await _loadIce();
@@ -175,6 +198,22 @@ class CallSession extends ChangeNotifier {
     for (final t in _local!.getAudioTracks()) {
       await pc.addTrack(t, _local!);
     }
+    if (_closed) {
+      // کاربر در حین آماده‌سازی قطع کرده بود
+      try {
+        for (final t in _local?.getTracks() ?? <MediaStreamTrack>[]) {
+          await t.stop();
+        }
+        await _local?.dispose();
+        await pc.close();
+      } catch (_) {}
+      _local = null;
+      _pc = null;
+      return false;
+    }
+    // سرویس پیش‌زمینه: تا وقتی کاربر از برنامه بیرون می‌رود، اندروید میکروفن را قطع نکند
+    _fgStarted = true;
+    unawaited(CallService.startForegroundCall(peerName));
     return true;
   }
 
@@ -275,8 +314,8 @@ class CallSession extends ChangeNotifier {
     }
   }
 
-  Future<void> decline() async {
-    await _finish('تماس رد شد.', notifyServer: false, action: 'decline');
+  Future<void> decline({String? msgKey, String? reason}) async {
+    await _finish(reason ?? 'تماس رد شد.', notifyServer: false, action: 'decline', msgKey: msgKey);
   }
 
   Future<void> hangUp() async {
@@ -356,7 +395,13 @@ class CallSession extends ChangeNotifier {
 
     switch (status) {
       case 'declined':
-        await _finish('تماس رد شد.', notifyServer: false);
+        final mk = '${j['message'] ?? ''}';
+        if (isCaller && mk.isNotEmpty) {
+          peerMessageKey = mk;
+          await _finish(CT.t('peer_msg', {'name': peerName, 'msg': CT.msg(mk)}), notifyServer: false);
+        } else {
+          await _finish('تماس رد شد.', notifyServer: false);
+        }
         break;
       case 'missed':
         await _finish(isCaller ? 'پاسخ داده نشد.' : 'تماس از دست رفت.', notifyServer: false);
@@ -373,7 +418,7 @@ class CallSession extends ChangeNotifier {
   // ------------------------------------------------------------------
   // پایان (یک‌بار)
   // ------------------------------------------------------------------
-  Future<void> _finish(String reason, {required bool notifyServer, String action = 'end'}) async {
+  Future<void> _finish(String reason, {required bool notifyServer, String action = 'end', String? msgKey}) async {
     if (_closed) return;
     _closed = true;
     _pollTimer?.cancel();
@@ -385,8 +430,17 @@ class CallSession extends ChangeNotifier {
     if (id != null && (notifyServer || action == 'decline')) {
       try {
         final uid = await BadgeService.userUid();
-        unawaited(BadgeService.call('POST', '/api/call/action', body: {'user_uid': uid, 'call_id': id, 'action': action}));
+        unawaited(BadgeService.call('POST', '/api/call/action', body: {
+          'user_uid': uid,
+          'call_id': id,
+          'action': action,
+          if (msgKey != null && action == 'decline') 'msg': msgKey,
+        }));
       } catch (_) {}
+    }
+    if (_fgStarted) {
+      _fgStarted = false;
+      unawaited(CallService.stopForegroundCall());
     }
 
     try {
