@@ -4,7 +4,9 @@ import '../../pages/announcements_page.dart';
 import '../../pages/profile/my_profile_page.dart';
 import '../../services/user_profile_service.dart';
 import '../../pages/residence_register_page.dart';
+import '../../pages/calls_page.dart';
 import '../../pages/chat_room_page.dart';
+import '../../services/call_texts.dart';
 import '../../pages/support_chat_page.dart';
 import '../../services/notification_service.dart';
 import '../../services/public_link_service.dart';
@@ -344,6 +346,36 @@ class CyrusAccountScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Builder(
+            builder: (ctx) => InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => const CallsPage())),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xff2fb36a).withOpacity(0.16),
+                        border: Border.all(color: const Color(0xff2fb36a).withOpacity(0.7), width: 1.4),
+                      ),
+                      child: const Icon(Icons.call_rounded, color: Color(0xff2fb36a), size: 24),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      CT.t('calls_title'),
+                      style: const TextStyle(color: Colors.white70, fontSize: 11.5, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
