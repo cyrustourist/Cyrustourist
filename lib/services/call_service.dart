@@ -6,6 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart' show navigatorKey;
 import '../pages/call_page.dart';
@@ -13,6 +15,14 @@ import '../pages/calls_page.dart';
 import 'badge_service.dart';
 import 'call_session.dart';
 import 'call_texts.dart';
+
+/// دکمهٔ «رد» اعلان تماس وقتی اپ بسته/پس‌زمینه است (بدون باز کردن اپ).
+@pragma('vm:entry-point')
+void callNotificationBackgroundTap(NotificationResponse response) {
+  if (response.actionId == CallService.actionDecline) {
+    unawaited(CallService.declineFromPayload(response.payload));
+  }
+}
 
 /// هماهنگ‌کنندهٔ تماس صوتی: ثبت توکن FCM، دریافت تماس ورودی، باز کردن صفحهٔ تماس،
 /// اعلان تمام‌صفحه روی قفل گوشی و سرویس پیش‌زمینه هنگام تماس.
@@ -27,6 +37,8 @@ class CallService with WidgetsBindingObserver {
   static const String _activeChannelId = 'cyrus_call_active';
   static const String _msgChannelId = 'cyrus_call_msgs';
 
+  static const String actionAnswer = 'call_answer';
+  static const String actionDecline = 'call_decline';
   static const int _incomingNotifId = 7001;
   static const int _fgNotifId = 7002;
   static const int _msgNotifId = 7003;
@@ -53,6 +65,8 @@ class CallService with WidgetsBindingObserver {
   int _watchRefs = 0;
   String? _lastShownCallId;
   String? _lastNotifiedCallId;
+  String? _autoAnswerId;
+  DateTime? _autoAnswerAt;
   AppLifecycleState? _lifecycle;
 
   bool get _inForeground => (_lifecycle ?? WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) == AppLifecycleState.resumed;
@@ -102,6 +116,14 @@ class CallService with WidgetsBindingObserver {
       WidgetsBinding.instance.addObserver(this);
     } catch (_) {}
     if (_inForeground) _startFgWatch();
+    // اگر اپ بسته بود و کاربر روی دکمهٔ «پاسخ» اعلان زد، بعد از بالا آمدن اپ خودکار پاسخ داده شود
+    try {
+      final d = await FlutterLocalNotificationsPlugin().getNotificationAppLaunchDetails();
+      final r = d?.notificationResponse;
+      if (d != null && d.didNotificationLaunchApp && r?.actionId == actionAnswer) {
+        _markAutoAnswer(r?.payload);
+      }
+    } catch (_) {}
     // اگر اپ با اعلان تمام‌صفحهٔ تماس باز شده باشد، بعد از ثبت توکن تماس در حال زنگ را نشان می‌دهیم
     unawaited(registerToken().then((ok) {
       if (ok) {
@@ -187,6 +209,129 @@ class CallService with WidgetsBindingObserver {
   }
 
   // ------------------------------------------------------------------
+  // دکمه‌های اعلان تماس (پاسخ / رد)
+  // ------------------------------------------------------------------
+  static String? _callIdFromPayload(String? payload) {
+    if (payload == null || payload.isEmpty) return null;
+    try {
+      final m = jsonDecode(payload);
+      if (m is Map && '${m['call_id'] ?? ''}'.isNotEmpty) return '${m['call_id']}';
+    } catch (_) {}
+    return null;
+  }
+
+  void _markAutoAnswer(String? payload) {
+    final id = _callIdFromPayload(payload);
+    if (id == null) return;
+    _autoAnswerId = id;
+    _autoAnswerAt = DateTime.now();
+  }
+
+  /// از onDidReceiveNotificationResponse صدا زده می‌شود؛ true یعنی اعلان از آنِ تماس بود و رسیدگی شد.
+  static bool handleNotificationAction(NotificationResponse r) {
+    if (r.actionId == actionAnswer) {
+      instance._markAutoAnswer(r.payload);
+      instance._lastShownCallId = null;
+      unawaited(instance.checkIncoming());
+      return true;
+    }
+    if (r.actionId == actionDecline) {
+      unawaited(declineFromPayload(r.payload));
+      return true;
+    }
+    return false;
+  }
+
+  static Future<void> declineFromPayload(String? payload) async {
+    final id = _callIdFromPayload(payload);
+    if (id == null) return;
+    try {
+      final uid = await BadgeService.userUid();
+      await BadgeService.call('POST', '/api/call/action', body: {'user_uid': uid, 'call_id': id, 'action': 'decline'});
+    } catch (_) {}
+  }
+
+  // ------------------------------------------------------------------
+  // مجوز میکروفن (از قبل، تا وسط تماس پنجرهٔ سیستم معطل نکند)
+  // ------------------------------------------------------------------
+  static const String _micGrantedKey = 'call_mic_granted_v1';
+  static const String _micAskedKey = 'call_mic_asked_v1';
+
+  /// پنجرهٔ سیستم مجوز میکروفن را باز می‌کند. true = مجوز داده شد.
+  Future<bool> requestMicNow() async {
+    try {
+      final stream = await rtc.navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
+      for (final t in stream.getTracks()) {
+        await t.stop();
+      }
+      await stream.dispose();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_micGrantedKey, true);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _micKnownGranted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_micGrantedKey) == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _micExplain(BuildContext ctx) async {
+    final ok = await showDialog<bool>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        title: Text(CT.t('mic_title')),
+        content: Text(CT.t('mic_body'), style: const TextStyle(height: 1.7)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(c).pop(false), child: Text(CT.t('cancel'))),
+          TextButton(onPressed: () => Navigator.of(c).pop(true), child: Text(CT.t('mic_allow'))),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _micDeniedDialog(BuildContext ctx) async {
+    await showDialog<void>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        content: Text(CT.t('mic_denied'), style: const TextStyle(height: 1.7)),
+        actions: [TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('OK'))],
+      ),
+    );
+  }
+
+  /// قبل از تماس خروجی: اگر مجوز هنوز نیست توضیح بده و بگیر. false = کاربر مجوز نداد (تماس شروع نشود).
+  Future<bool> ensureMicForCall(BuildContext ctx) async {
+    if (await _micKnownGranted()) return true;
+    if (!ctx.mounted) return false;
+    if (!await _micExplain(ctx)) return false;
+    final ok = await requestMicNow();
+    if (!ok && ctx.mounted) await _micDeniedDialog(ctx);
+    return ok;
+  }
+
+  /// هنگام اولین ورود به صفحهٔ «تماس‌ها»: فقط یک‌بار توضیح بده و مجوز را بگیر (تا اولین تماس معطل نشود).
+  Future<void> promptMicOnce(BuildContext ctx) async {
+    try {
+      if (await _micKnownGranted()) return;
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_micAskedKey) == true) return;
+      await prefs.setBool(_micAskedKey, true);
+      if (!ctx.mounted) return;
+      if (!await _micExplain(ctx)) return;
+      final ok = await requestMicNow();
+      if (!ok && ctx.mounted) await _micDeniedDialog(ctx);
+    } catch (_) {}
+  }
+
+  // ------------------------------------------------------------------
   // تماس خروجی
   // ------------------------------------------------------------------
   Future<void> startOutgoing({
@@ -198,9 +343,43 @@ class CallService with WidgetsBindingObserver {
     if (_pageOpen) return;
     final nav = navigatorKey.currentState;
     if (nav == null) return;
+    // اگر تماس صوتی از پنل مدیریت خاموش است، همین‌جا (قبل از باز شدن صفحهٔ تماس و درخواست میکروفن) پیام را نشان بده
+    final off = await _disabledMessage();
+    if (off != null) {
+      final ctx = navigatorKey.currentState?.overlay?.context;
+      if (ctx != null && ctx.mounted) {
+        await showDialog<void>(
+          context: ctx,
+          builder: (c) => AlertDialog(
+            content: Text(off, style: const TextStyle(height: 1.7)),
+            actions: [TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('OK'))],
+          ),
+        );
+      }
+      return;
+    }
+    final mctx = navigatorKey.currentState?.overlay?.context;
+    if (mctx != null && mctx.mounted) {
+      if (!await ensureMicForCall(mctx)) return;
+    }
     unawaited(registerToken());
     final session = CallSession.outgoing(peerUid: toUid, peerName: name, isFriend: isFriend, hasPhoto: hasPhoto);
     await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session)));
+  }
+
+  /// پیام «تماس خاموش است» از ورکر؛ null یعنی تماس صوتی روشن است (یا ورکر در دسترس نبود: اجازه می‌دهیم تماس امتحان شود).
+  Future<String?> _disabledMessage() async {
+    try {
+      final uid = await BadgeService.userUid();
+      final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid});
+      final f = j?['features'];
+      if (f is! Map) return null;
+      if (f['voice_enabled'] == false) {
+        final m = '${f['message'] ?? ''}'.trim();
+        return m.isNotEmpty ? m : 'در حال بروزرسانی نوین هستیم؛ سپاسگزاریم.';
+      }
+    } catch (_) {}
+    return null;
   }
 
   // ------------------------------------------------------------------
@@ -228,7 +407,9 @@ class CallService with WidgetsBindingObserver {
       if (_lastShownCallId == call.id) return;
       // اپ در پس‌زمینه است (مثلاً پایش ۵ثانیه‌ای چت): صفحهٔ تماس پشت صحنه باز می‌شد و فقط صدای زنگ می‌آمد.
       // به‌جای آن اعلان تمام‌صفحه نشان بده؛ با زدن اعلان یا برگشتن به اپ، صفحهٔ تماس جلو می‌آید.
-      if (!_inForeground) {
+      final autoAt = _autoAnswerAt;
+      final autoAnswer = _autoAnswerId == call.id && autoAt != null && DateTime.now().difference(autoAt) < const Duration(seconds: 60);
+      if (!_inForeground && !autoAnswer) {
         if (_lastNotifiedCallId != call.id) {
           _lastNotifiedCallId = call.id;
           await _showIncomingNotification({
@@ -246,7 +427,11 @@ class CallService with WidgetsBindingObserver {
       _lastShownCallId = call.id;
       unawaited(CallSession.prefetchIce());
       final session = CallSession.incoming(call);
-      await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session)));
+      if (autoAnswer) {
+        _autoAnswerId = null;
+        _autoAnswerAt = null;
+      }
+      await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session, autoAccept: autoAnswer)));
     } catch (e) {
       debugPrint('incoming check error: $e');
     } finally {
@@ -298,9 +483,12 @@ class CallService with WidgetsBindingObserver {
   static Future<FlutterLocalNotificationsPlugin> _plugin(bool initializePlugin) async {
     final plugin = FlutterLocalNotificationsPlugin();
     if (initializePlugin) {
-      await plugin.initialize(const InitializationSettings(
-        android: AndroidInitializationSettings('@drawable/ic_stat_notify'),
-      ));
+      await plugin.initialize(
+        const InitializationSettings(
+          android: AndroidInitializationSettings('@drawable/ic_stat_notify'),
+        ),
+        onDidReceiveBackgroundNotificationResponse: callNotificationBackgroundTap,
+      );
       final android = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       await android?.createNotificationChannel(_callChannel);
       await android?.createNotificationChannel(const AndroidNotificationChannel(
@@ -342,6 +530,20 @@ class CallService with WidgetsBindingObserver {
             enableVibration: true,
             // FLAG_INSISTENT (۴): زنگ تا جواب دادن/رد کردن/۴۵ ثانیه تکرار می‌شود (فقط یک‌بار پخش نشود)
             additionalFlags: Int32List.fromList(<int>[4]),
+            actions: <AndroidNotificationAction>[
+              AndroidNotificationAction(
+                actionDecline,
+                CT.t('decline_btn'),
+                showsUserInterface: false,
+                cancelNotification: true,
+              ),
+              AndroidNotificationAction(
+                actionAnswer,
+                CT.t('accept'),
+                showsUserInterface: true,
+                cancelNotification: true,
+              ),
+            ],
           ),
         ),
         payload: jsonEncode(data),
