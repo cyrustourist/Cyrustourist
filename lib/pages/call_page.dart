@@ -11,9 +11,12 @@ import '../widgets/call_widgets.dart';
 
 /// صفحهٔ تماس صوتی (خروجی و ورودی) با ظاهر شبیه تلگرام.
 class CallPage extends StatefulWidget {
-  const CallPage({super.key, required this.session});
+  const CallPage({super.key, required this.session, this.autoAccept = false});
 
   final CallSession session;
+
+  /// وقتی کاربر از دکمهٔ «پاسخ» روی خود اعلان آمده، تماس بدون زنگ و بدون لمس دوباره پاسخ داده می‌شود.
+  final bool autoAccept;
 
   @override
   State<CallPage> createState() => _CallPageState();
@@ -39,7 +42,8 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
     if (s.isCaller) {
       unawaited(s.startOutgoing());
     } else {
-      s.startRingWatch();
+      s.startRingWatch(silent: widget.autoAccept);
+      if (widget.autoAccept) unawaited(s.acceptIncoming());
     }
   }
 
