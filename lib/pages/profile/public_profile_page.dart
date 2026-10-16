@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -8,6 +9,7 @@ import '../../core/language/menu_translations.dart';
 import '../../core/language/new_texts.dart';
 import '../../services/badge_service.dart';
 import '../../services/call_service.dart';
+import '../../services/call_session.dart';
 import '../../services/call_texts.dart';
 import '../../services/friends_service.dart';
 import '../../services/public_profile_service.dart';
@@ -41,6 +43,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
   @override
   void initState() {
     super.initState();
+    unawaited(CallSession.prefetchIce());
     _load();
   }
 
