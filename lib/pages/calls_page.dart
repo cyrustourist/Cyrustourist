@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,12 +39,93 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
   List<CallLogItem> _log = const [];
   List<BlockedItem> _blocked = const [];
 
+  // حافظهٔ محلی: صفحه فوراً با آخرین داده باز می‌شود و سرور در پس‌زمینه تازه‌اش می‌کند.
+  static const String _cacheKey = 'calls_cache_v1';
+  static const String _hiddenKey = 'calls_hidden_ids_v1';
+  static const String _clearedAtKey = 'calls_cleared_at_v1';
+  Set<String> _hiddenIds = <String>{};
+  int _clearedAtMs = 0;
+
   @override
   void initState() {
     super.initState();
     unawaited(CallSession.prefetchIce());
-    _load();
+    unawaited(_boot());
     unawaited(_askFullScreenOnce());
+  }
+
+  Future<void> _boot() async {
+    await _readCache();
+    if (!mounted) return;
+    // اگر داده‌ای در حافظه بود، بدون اسپینر نمایش بده و بی‌صدا تازه کن
+    await _load(silent: !_loading);
+  }
+
+  Future<void> _readCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _hiddenIds = (prefs.getStringList(_hiddenKey) ?? const <String>[]).toSet();
+      _clearedAtMs = prefs.getInt(_clearedAtKey) ?? 0;
+      final raw = prefs.getString(_cacheKey);
+      if (raw == null || raw.isEmpty) return;
+      final m = jsonDecode(raw);
+      if (m is! Map) return;
+      List<T> items<T>(dynamic l, T? Function(dynamic) f) => [
+            if (l is List)
+              for (final e in l)
+                if (f(e) != null) f(e) as T,
+          ];
+      final fr = items<FriendItem>(m['friends'], FriendItem.fromJson);
+      final lg = items<CallLogItem>(m['log'], CallLogItem.fromJson);
+      final bl = items<BlockedItem>(m['blocked'], BlockedItem.fromJson);
+      if (!mounted) return;
+      setState(() {
+        _friends = fr;
+        _log = lg;
+        _blocked = bl;
+        _loading = false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _saveCache(List<dynamic> friendsRaw, List<dynamic> logRaw, List<dynamic> blockedRaw) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cacheKey, jsonEncode({'friends': friendsRaw, 'log': logRaw, 'blocked': blockedRaw}));
+    } catch (_) {}
+  }
+
+  List<CallLogItem> get _visibleLog =>
+      _log.where((c) => c.atMs > _clearedAtMs && !_hiddenIds.contains(c.id)).toList();
+
+  Future<void> _hideOne(CallLogItem c) async {
+    setState(() => _hiddenIds = {..._hiddenIds, c.id});
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_hiddenKey, _hiddenIds.toList());
+    _toast(CT.t('deleted_one'));
+  }
+
+  Future<void> _hideAll() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: _card,
+          content: Text(CT.t('delete_all_confirm'), style: const TextStyle(color: Colors.white, height: 1.7)),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(CT.t('cancel'), style: const TextStyle(color: Colors.white70))),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(CT.t('delete_all'), style: const TextStyle(color: _red))),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    setState(() => _clearedAtMs = now);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_clearedAtKey, now);
+    _toast(CT.t('deleted_all'));
   }
 
   /// اندروید ۱۴ به بالا: برای زنگ خوردن روی قفل گوشی کاربر باید «اعلان تمام‌صفحه» را دستی روشن کند.
@@ -88,28 +170,58 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
         _needProfile = false;
       });
     }
-    final fr = await FriendsService.list();
-    if (!mounted) return;
-    if (!fr.ok) {
-      setState(() {
-        _loading = false;
-        _needProfile = fr.needsProfile;
-        _error = fr.needsProfile ? null : fr.text;
-      });
-      return;
-    }
+    // سه درخواست هم‌زمان (قبلاً پشت‌سرهم بودند)
+    final frF = FriendsService.list();
     final histF = FriendsService.history();
     final blockF = FriendsService.blocked();
+    final fr = await frF;
     final hist = await histF;
     final blk = await blockF;
     if (!mounted) return;
+    if (!fr.ok) {
+      // اگر داده‌ی محلی داریم، خطای شبکه صفحه را خراب نکند
+      final hasLocal = _friends.isNotEmpty || _log.isNotEmpty || _blocked.isNotEmpty;
+      setState(() {
+        _loading = false;
+        _needProfile = fr.needsProfile;
+        _error = (fr.needsProfile || hasLocal) ? null : fr.text;
+      });
+      return;
+    }
     setState(() {
       _loading = false;
+      _needProfile = false;
+      _error = null;
       _friends = fr.data ?? const [];
       _log = hist.data ?? _log;
       _blocked = blk.data ?? _blocked;
     });
+    unawaited(_saveCache(
+      _friends.map(_friendJson).toList(),
+      _log.map(_logJson).toList(),
+      _blocked.map(_blockedJson).toList(),
+    ));
   }
+
+  Map<String, dynamic> _friendJson(FriendItem f) =>
+      {'uid': f.uid, 'name': f.name, 'username': f.username, 'has_photo': f.hasPhoto, 'badge': f.badge};
+
+  Map<String, dynamic> _logJson(CallLogItem c) => {
+        'id': c.id,
+        'peer_uid': c.peerUid,
+        'peer_name': c.peerName,
+        'peer_username': c.peerUsername,
+        'has_photo': c.hasPhoto,
+        'direction': c.outgoing ? 'out' : 'in',
+        'status': c.status,
+        'at': c.atMs,
+        'duration_s': c.durationS,
+        'msg': c.msgKey,
+        'is_friend': c.isFriend,
+      };
+
+  Map<String, dynamic> _blockedJson(BlockedItem b) =>
+      {'uid': b.uid, 'name': b.name, 'username': b.username, 'has_photo': b.hasPhoto, 'until_at': b.untilMs};
 
   void _toast(String text) {
     if (!mounted) return;
@@ -277,6 +389,16 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
           iconTheme: const IconThemeData(color: _gold),
           title: Text(CT.t('calls_title'), style: const TextStyle(color: _gold, fontSize: 18, fontWeight: FontWeight.bold)),
           actions: [
+            AnimatedBuilder(
+              animation: _tabs,
+              builder: (_, __) => (_tabs.index == 1 && _visibleLog.isNotEmpty)
+                  ? IconButton(
+                      tooltip: CT.t('delete_all'),
+                      icon: const Icon(Icons.delete_sweep_rounded),
+                      onPressed: _hideAll,
+                    )
+                  : const SizedBox.shrink(),
+            ),
             IconButton(
               tooltip: CT.t('add_friend'),
               icon: const Icon(Icons.person_add_alt_1_rounded),
@@ -475,21 +597,22 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
   }
 
   Widget _recentTab() {
-    if (_log.isEmpty) return _empty(Icons.history_rounded, CT.t('recent_empty'));
+    final log = _visibleLog;
+    if (log.isEmpty) return _empty(Icons.history_rounded, CT.t('recent_empty'));
     return RefreshIndicator(
       color: _gold,
       onRefresh: () => _load(silent: true),
       child: ListView.separated(
         padding: const EdgeInsets.only(bottom: 90),
-        itemCount: _log.length,
+        itemCount: log.length,
         separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 1, indent: 72),
         itemBuilder: (context, i) {
-          final c = _log[i];
+          final c = log[i];
           final bad = c.isMissedForMe || (!c.outgoing && c.status == 'declined');
           final IconData arrow = c.status == 'answered'
               ? (c.outgoing ? Icons.call_made_rounded : Icons.call_received_rounded)
               : (c.outgoing ? Icons.call_made_rounded : Icons.call_missed_rounded);
-          return ListTile(
+          final tile = ListTile(
             onTap: () => _call(c.peerUid, c.peerName, hasPhoto: c.hasPhoto),
             leading: CallAvatar(uid: c.peerUid, name: c.peerName, radius: 23, hasPhoto: c.hasPhoto),
             title: Text(c.peerName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: bad ? _red : Colors.white, fontWeight: FontWeight.w700)),
@@ -521,8 +644,19 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
                   icon: const Icon(Icons.call_rounded, color: _green),
                   onPressed: () => _call(c.peerUid, c.peerName, hasPhoto: c.hasPhoto),
                 ),
+                IconButton(
+                  tooltip: CT.t('delete_one'),
+                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.white38, size: 22),
+                  onPressed: () => _hideOne(c),
+                ),
               ],
             ),
+          );
+          return Dismissible(
+            key: ValueKey('log_${c.id}_${c.atMs}'),
+            background: Container(color: const Color(0x33ff5a5a)),
+            onDismissed: (_) => _hideOne(c),
+            child: tile,
           );
         },
       ),
@@ -542,9 +676,18 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
           leading: CallAvatar(uid: b.uid, name: b.name, radius: 23, hasPhoto: b.hasPhoto),
           title: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           subtitle: Text(CT.remaining(b.untilMs), style: const TextStyle(color: Colors.white54, fontSize: 12.5)),
-          trailing: TextButton(
-            onPressed: () => _unblock(b),
-            child: Text(CT.t('unblock'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w800)),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () => _unblock(b),
+                child: Text(CT.t('back_btn'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w800)),
+              ),
+              TextButton(
+                onPressed: () => _blockCalls(b.uid, b.name),
+                child: Text(CT.t('block_btn'), style: const TextStyle(color: _red, fontWeight: FontWeight.w800)),
+              ),
+            ],
           ),
         );
       },
