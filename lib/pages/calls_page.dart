@@ -51,7 +51,10 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
     super.initState();
     unawaited(CallSession.prefetchIce());
     unawaited(_boot());
-    unawaited(_askFullScreenOnce());
+    // اول مجوز «اعلان تمام‌صفحه»، بعد مجوز میکروفن (دو پنجره روی هم نیایند)
+    unawaited(_askFullScreenOnce().then((_) async {
+      if (mounted) await CallService.instance.promptMicOnce(context);
+    }));
   }
 
   Future<void> _boot() async {
