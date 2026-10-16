@@ -255,8 +255,11 @@ class NotificationService {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (response) {
+        // دکمه‌های «پاسخ» / «رد» اعلان تماس
+        if (CallService.handleNotificationAction(response)) return;
         _handleTap(response.payload);
       },
+      onDidReceiveBackgroundNotificationResponse: callNotificationBackgroundTap,
     );
 
     const channel = AndroidNotificationChannel(
