@@ -88,6 +88,7 @@ class CallService with WidgetsBindingObserver {
     // اگر اپ با اعلان تمام‌صفحهٔ تماس باز شده باشد، بعد از ثبت توکن تماس در حال زنگ را نشان می‌دهیم
     unawaited(registerToken().then((ok) {
       if (ok) {
+        unawaited(CallSession.prefetchIce());
         Future<void>.delayed(const Duration(milliseconds: 1500), checkIncoming);
       }
     }));
@@ -162,6 +163,7 @@ class CallService with WidgetsBindingObserver {
       final nav = navigatorKey.currentState;
       if (nav == null || _pageOpen) return;
       _lastShownCallId = call.id;
+      unawaited(CallSession.prefetchIce());
       final session = CallSession.incoming(call);
       await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session)));
     } catch (e) {
