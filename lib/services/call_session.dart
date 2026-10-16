@@ -301,6 +301,56 @@ class CallSession extends ChangeNotifier {
     return true;
   }
 
+  // سقف بیت‌ریت صدا (Opus): حجم مصرف TURN و پهنای باند را کم می‌کند.
+  // اگر کیفیت کافی نبود فقط همین عدد را بالا ببرید (مثلاً 32000).
+  static const int _opusMaxBitrate = 24000;
+
+  /// پارامترهای Opus را در SDP محدود می‌کند (maxaveragebitrate + مونو + FEC + DTX).
+  /// هر طرف در SDP خودش می‌گوید «حداکثر چقدر برایم بفرست»؛ پس روی هر دو گوشی اعمال می‌شود.
+  static String _capOpus(String? sdp) {
+    if (sdp == null || sdp.isEmpty) return sdp ?? '';
+    try {
+      final eol = sdp.contains('\r\n') ? '\r\n' : '\n';
+      final lines = sdp.split(eol);
+      String? pt;
+      int rtpmapIdx = -1;
+      for (var i = 0; i < lines.length; i++) {
+        final m = RegExp(r'^a=rtpmap:(\d+) opus/48000', caseSensitive: false).firstMatch(lines[i]);
+        if (m != null) {
+          pt = m.group(1);
+          rtpmapIdx = i;
+          break;
+        }
+      }
+      if (pt == null) return sdp;
+      final want = <String, String>{
+        'maxaveragebitrate': '$_opusMaxBitrate',
+        'stereo': '0',
+        'useinbandfec': '1',
+        'usedtx': '1',
+      };
+      final fmtpPrefix = 'a=fmtp:$pt ';
+      var fmtpIdx = -1;
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith(fmtpPrefix)) {
+          fmtpIdx = i;
+          break;
+        }
+      }
+      if (fmtpIdx >= 0) {
+        final old = lines[fmtpIdx].substring(fmtpPrefix.length).split(';').map((e) => e.trim()).where((e) => e.isNotEmpty);
+        final kept = old.where((e) => !want.containsKey(e.split('=').first.toLowerCase())).toList();
+        final merged = [...kept, ...want.entries.map((e) => '${e.key}=${e.value}')];
+        lines[fmtpIdx] = fmtpPrefix + merged.join(';');
+      } else {
+        lines.insert(rtpmapIdx + 1, fmtpPrefix + want.entries.map((e) => '${e.key}=${e.value}').join(';'));
+      }
+      return lines.join(eol);
+    } catch (_) {
+      return sdp;
+    }
+  }
+
   Future<String?> _localSdpAfterGathering() async {
     try {
       final done = _gatherDone?.future;
@@ -325,7 +375,7 @@ class CallSession extends ChangeNotifier {
     if (!await _preparePeer()) return;
     try {
       final offer = await _pc!.createOffer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': 0});
-      await _pc!.setLocalDescription(offer);
+      await _pc!.setLocalDescription(RTCSessionDescription(_capOpus(offer.sdp), offer.type));
       final sdp = await _localSdpAfterGathering();
       if (sdp == null) {
         await _finish('ساخت تماس ناموفق بود.', notifyServer: false);
@@ -383,7 +433,7 @@ class CallSession extends ChangeNotifier {
     try {
       await _pc!.setRemoteDescription(RTCSessionDescription(_remoteOffer, 'offer'));
       final answer = await _pc!.createAnswer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': 0});
-      await _pc!.setLocalDescription(answer);
+      await _pc!.setLocalDescription(RTCSessionDescription(_capOpus(answer.sdp), answer.type));
       final sdp = await _localSdpAfterGathering();
       if (sdp == null) {
         await _finish('پاسخ به تماس ناموفق بود.', notifyServer: true);
