@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/language/menu_translations.dart';
+import '../services/call_audio.dart';
 import '../services/call_service.dart';
 import '../services/call_session.dart';
 import '../services/call_texts.dart';
@@ -41,6 +43,35 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
     super.initState();
     unawaited(CallSession.prefetchIce());
     _load();
+    unawaited(_askFullScreenOnce());
+  }
+
+  /// اندروید ۱۴ به بالا: برای زنگ خوردن روی قفل گوشی کاربر باید «اعلان تمام‌صفحه» را دستی روشن کند.
+  /// فقط یک‌بار و با توضیح نشان داده می‌شود.
+  Future<void> _askFullScreenOnce() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('call_fsi_asked_v1') == true) return;
+      if (await CallAudio.canFullScreen()) return;
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => Directionality(
+          textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: AlertDialog(
+            title: Text(CT.t('fsi_title')),
+            content: Text(CT.t('fsi_body')),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(CT.t('fsi_later'))),
+              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(CT.t('fsi_open'))),
+            ],
+          ),
+        ),
+      );
+      await prefs.setBool('call_fsi_asked_v1', true);
+      if (go == true) await CallAudio.openFullScreenSettings();
+    } catch (_) {}
   }
 
   @override
