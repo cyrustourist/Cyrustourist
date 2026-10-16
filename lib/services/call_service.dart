@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -20,7 +21,9 @@ class CallService with WidgetsBindingObserver {
 
   static final CallService instance = CallService._();
 
-  static const String channelId = 'cyrus_calls';
+  // v2: کانال جدید با آهنگ زنگ سیستم (تنظیمات کانال بعد از ساخته شدن قابل تغییر نیست)
+  static const String channelId = 'cyrus_calls_v2';
+  static const String _oldChannelId = 'cyrus_calls';
   static const String _activeChannelId = 'cyrus_call_active';
   static const String _msgChannelId = 'cyrus_call_msgs';
 
@@ -34,12 +37,16 @@ class CallService with WidgetsBindingObserver {
     description: 'اعلان تماس صوتی ورودی',
     importance: Importance.max,
     playSound: true,
+    sound: UriAndroidNotificationSound('content://settings/system/ringtone'),
+    audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
     enableVibration: true,
   );
 
   bool _inited = false;
   bool _pageOpen = false;
   String? _registeredToken;
+  DateTime? _registeredAt;
+  Timer? _registerRetry;
   Timer? _watchTimer;
   int _watchRefs = 0;
   String? _lastShownCallId;
@@ -61,6 +68,9 @@ class CallService with WidgetsBindingObserver {
     try {
       final android = FlutterLocalNotificationsPlugin()
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      try {
+        await android?.deleteNotificationChannel(_oldChannelId);
+      } catch (_) {}
       await android?.createNotificationChannel(_callChannel);
       await android?.createNotificationChannel(const AndroidNotificationChannel(
         _activeChannelId,
@@ -90,14 +100,36 @@ class CallService with WidgetsBindingObserver {
       if (ok) {
         unawaited(CallSession.prefetchIce());
         Future<void>.delayed(const Duration(milliseconds: 1500), checkIncoming);
+      } else {
+        _startRegisterRetry();
       }
     }));
   }
 
+  /// اگر ثبت توکن در شروع برنامه نشد (اینترنت قطع بود یا هنوز پروفایل ساخته نشده بود)،
+  /// هر ۳۰ ثانیه تا ۲۰ بار دوباره تلاش می‌کند؛ بدون ثبت توکن، گوشی هرگز زنگ نمی‌خورد.
+  void _startRegisterRetry() {
+    _registerRetry?.cancel();
+    var tries = 0;
+    _registerRetry = Timer.periodic(const Duration(seconds: 30), (t) async {
+      tries++;
+      final ok = await registerToken();
+      if (ok || tries >= 20) {
+        t.cancel();
+        _registerRetry = null;
+        if (ok) unawaited(CallSession.prefetchIce());
+      }
+    });
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _registeredToken != null) {
-      unawaited(checkIncoming());
+    if (state == AppLifecycleState.resumed) {
+      // هر بار که برنامه باز می‌شود توکن دوباره (در صورت لزوم) ثبت می‌شود
+      unawaited(registerToken().then((ok) {
+        if (!ok && _registerRetry == null) _startRegisterRetry();
+      }));
+      if (_registeredToken != null) unawaited(checkIncoming());
     }
   }
 
@@ -107,14 +139,21 @@ class CallService with WidgetsBindingObserver {
     try {
       final t = token ?? await FirebaseMessaging.instance.getToken();
       if (t == null || t.isEmpty) return false;
-      if (t == _registeredToken) return true;
+      // اگر همین توکن کمتر از ۳۰ دقیقه پیش ثبت شده، دوباره نمی‌فرستیم
+      final at = _registeredAt;
+      if (t == _registeredToken && at != null && DateTime.now().difference(at) < const Duration(minutes: 30)) {
+        return true;
+      }
       final uid = await BadgeService.userUid();
       final j = await BadgeService.call('POST', '/api/call/register-token', body: {
         'user_uid': uid,
         'fcm_token': t,
       });
       final ok = j?['success'] == true;
-      if (ok) _registeredToken = t;
+      if (ok) {
+        _registeredToken = t;
+        _registeredAt = DateTime.now();
+      }
       return ok;
     } catch (_) {
       return false;
@@ -239,7 +278,7 @@ class CallService with WidgetsBindingObserver {
         _incomingNotifId,
         title,
         body,
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
             channelId,
             'تماس ورودی',
@@ -254,7 +293,11 @@ class CallService with WidgetsBindingObserver {
             visibility: NotificationVisibility.public,
             icon: '@drawable/ic_stat_notify',
             playSound: true,
+            sound: UriAndroidNotificationSound('content://settings/system/ringtone'),
+            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
             enableVibration: true,
+            // FLAG_INSISTENT (۴): زنگ تا جواب دادن/رد کردن/۴۵ ثانیه تکرار می‌شود (فقط یک‌بار پخش نشود)
+            additionalFlags: Int32List.fromList(<int>[4]),
           ),
         ),
         payload: jsonEncode(data),
