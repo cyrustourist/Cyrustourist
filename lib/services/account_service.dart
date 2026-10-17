@@ -71,14 +71,20 @@ class AccountService {
     final p = j['profile'] as Map;
     final cur = await UserProfileService.load();
     final vis = '${p['profile_visibility'] ?? 'all'}';
+    // مقدار خالیِ سرور هرگز نام/عکس/توضیحات پر شدهٔ داخل گوشی را پاک نمی‌کند.
+    String pick(dynamic server, String local) {
+      final v = '${server ?? ''}'.trim();
+      return v.isNotEmpty ? v : local;
+    }
+
     await UserProfileService.save(cur.copyWith(
-      displayName: '${p['display_name'] ?? ''}',
-      username: '${p['username'] ?? ''}',
-      city: '${p['city'] ?? ''}',
-      bio: '${p['bio'] ?? ''}',
-      photoBase64: '${p['photo_data'] ?? ''}',
-      videoLink: '${p['video_link'] ?? ''}',
-      visibility: ['all', 'friends', 'none'].contains(vis) ? vis : 'all',
+      displayName: pick(p['display_name'], cur.displayName),
+      username: pick(p['username'], cur.username),
+      city: pick(p['city'], cur.city),
+      bio: pick(p['bio'], cur.bio),
+      photoBase64: pick(p['photo_data'], cur.photoBase64),
+      videoLink: pick(p['video_link'], cur.videoLink),
+      visibility: ['all', 'friends', 'none'].contains(vis) ? vis : cur.visibility,
     ));
   }
 
