@@ -18,6 +18,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
 
+import 'offline_tiles.dart';
+
 class TileDiskCache {
   TileDiskCache._();
 
@@ -141,6 +143,7 @@ class CachedTileProvider extends TileProvider {
     String userAgent = 'CyrusTourist/1.0 (cyrustourist.ir)',
   }) : super(headers: {'User-Agent': userAgent}) {
     TileDiskCache.scheduleTrim();
+    OfflineTiles.init();
   }
 
   final String layerId;
@@ -151,13 +154,18 @@ class CachedTileProvider extends TileProvider {
     final url = getTileUrl(coordinates, options);
     final file = File(
         '${TileDiskCache.dirFor(layerId).path}/${coordinates.z}_${coordinates.x}_${coordinates.y}.t');
-    return _CachedTileImage(url, file, Map<String, String>.of(headers), maxAge);
+    // نقشهٔ دانلودشدهٔ آفلاین فقط برای لایه‌های استاندارد (OSM/CARTO) استفاده می‌شود
+    final offline = (layerId == 'osm' || layerId == 'carto')
+        ? OfflineTiles.fileFor(coordinates.z, coordinates.x, coordinates.y)
+        : null;
+    return _CachedTileImage(url, file, Map<String, String>.of(headers), maxAge, offline);
   }
 }
 
 class _CachedTileImage extends ImageProvider<_CachedTileImage> {
-  const _CachedTileImage(this.url, this.file, this.headers, this.maxAge);
+  const _CachedTileImage(this.url, this.file, this.headers, this.maxAge, this.offline);
 
+  final File? offline;
   final String url;
   final File file;
   final Map<String, String> headers;
@@ -180,6 +188,18 @@ class _CachedTileImage extends ImageProvider<_CachedTileImage> {
   Future<ui.Codec> _load(_CachedTileImage key, ImageDecoderCallback decode) async {
     Uint8List? bytes;
     var stale = false;
+    // ۱) نقشهٔ آفلاینِ دانلودشده (بدون اینترنت، بدون صفحهٔ سفید)
+    final off = key.offline;
+    if (off != null) {
+      try {
+        if (await off.exists()) {
+          final ob = await off.readAsBytes();
+          if (ob.isNotEmpty) {
+            return await decode(await ui.ImmutableBuffer.fromUint8List(ob));
+          }
+        }
+      } catch (_) {}
+    }
     try {
       if (await key.file.exists()) {
         bytes = await key.file.readAsBytes();
