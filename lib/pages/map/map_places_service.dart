@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:latlong2/latlong.dart';
 
+import '../../services/json_disk_cache.dart';
+
 /// نوع اطلاعاتی که از نقشه درخواست می‌شود.
 enum MapPlaceType {
   healthTourism,
@@ -123,39 +125,97 @@ class MapPlacesService {
       return cached.places;
     }
 
-    final tags = _buildTags(type);
+    // ۱) کش دیسکی (فوری، بدون اینترنت): تا ۲۴ ساعت مستقیم استفاده می‌شود؛
+    //    اگر از ۱۵ دقیقه قدیمی‌تر بود، در پس‌زمینه از OpenStreetMap تازه می‌شود.
+    final diskKey = 'ov|$cacheKey';
+    final disk = await JsonDiskCache.read(diskKey);
+    List<MapPlace>? diskPlaces;
+    if (disk != null) {
+      diskPlaces = _parseCachedOverpass(disk.body, type, language);
+      if (diskPlaces != null && diskPlaces.isNotEmpty && disk.age < const Duration(hours: 24)) {
+        _putNearbyCache(cacheKey, diskPlaces, disk.time);
+        if (disk.age > _cacheTtl) {
+          unawaited(_refreshNearby(cacheKey, diskKey, center, type, radiusMeters, language));
+        }
+        return diskPlaces;
+      }
+    }
 
-    final query = _buildOverpassQuery(
-      center: center,
-      radiusMeters: radiusMeters,
-      tags: tags,
-    );
-
-    dynamic data;
+    // ۲) OpenStreetMap (Overpass)
     try {
-      data = await _requestOverpassWithRetry(query);
+      final places = await _fetchNearby(cacheKey, diskKey, center, type, radiusMeters, language);
+      return places;
     } catch (_) {
       // اگر همه سرورها جواب ندادند، آخرین نتیجه ذخیره‌شده (هر چقدر قدیمی) نشان داده شود.
       if (cached != null && cached.places.isNotEmpty) {
         return cached.places;
       }
+      if (diskPlaces != null && diskPlaces.isNotEmpty) {
+        return diskPlaces;
+      }
       rethrow;
     }
+  }
 
-    final places = _parseOverpassResults(
-      data,
-      type,
-      language,
+  final Set<String> _refreshing = {};
+
+  void _putNearbyCache(String key, List<MapPlace> places, DateTime time) {
+    if (_nearbyCache.length > 40) {
+      _nearbyCache.remove(_nearbyCache.keys.first);
+    }
+    _nearbyCache[key] = _NearbyCacheEntry(places, time);
+  }
+
+  List<MapPlace>? _parseCachedOverpass(String body, MapPlaceType type, String language) {
+    try {
+      return _parseOverpassResults(jsonDecode(body), type, language);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<MapPlace>> _fetchNearby(
+    String cacheKey,
+    String diskKey,
+    LatLng center,
+    MapPlaceType type,
+    double radiusMeters,
+    String language,
+  ) async {
+    final query = _buildOverpassQuery(
+      center: center,
+      radiusMeters: radiusMeters,
+      tags: _buildTags(type),
     );
 
+    final data = await _requestOverpassWithRetry(query);
+    final places = _parseOverpassResults(data, type, language);
+
     if (places.isNotEmpty) {
-      if (_nearbyCache.length > 40) {
-        _nearbyCache.remove(_nearbyCache.keys.first);
-      }
-      _nearbyCache[cacheKey] = _NearbyCacheEntry(places, DateTime.now());
+      _putNearbyCache(cacheKey, places, DateTime.now());
+      try {
+        unawaited(JsonDiskCache.write(diskKey, jsonEncode(data)));
+      } catch (_) {}
     }
 
     return places;
+  }
+
+  Future<void> _refreshNearby(
+    String cacheKey,
+    String diskKey,
+    LatLng center,
+    MapPlaceType type,
+    double radiusMeters,
+    String language,
+  ) async {
+    if (!_refreshing.add(cacheKey)) return;
+    try {
+      await _fetchNearby(cacheKey, diskKey, center, type, radiusMeters, language);
+    } catch (_) {
+    } finally {
+      _refreshing.remove(cacheKey);
+    }
   }
 
   static const Duration _cacheTtl = Duration(minutes: 15);
@@ -177,6 +237,32 @@ class MapPlacesService {
       return [];
     }
 
+    // کش خودکار: همان جستجو قبلاً انجام شده بود ← فوری (تا ۳۰ روز)؛ اگر از یک روز قدیمی‌تر بود در پس‌زمینه تازه می‌شود
+    final cityKey = 'nm|${_languageCode(language)}|$limit|${cleanCity.toLowerCase()}';
+    final cityHit = await JsonDiskCache.read(cityKey);
+    if (cityHit != null && cityHit.age < const Duration(days: 30)) {
+      final parsed = _parseCities(cityHit.body, cleanCity);
+      if (parsed.isNotEmpty) {
+        if (cityHit.age > const Duration(days: 1)) {
+          unawaited(_fetchCityBody(cleanCity, language, limit, cityKey).catchError((Object _) {}));
+        }
+        return parsed;
+      }
+    }
+
+    try {
+      final body = await _fetchCityBody(cleanCity, language, limit, cityKey);
+      return _parseCities(body, cleanCity);
+    } catch (_) {
+      if (cityHit != null) {
+        final parsed = _parseCities(cityHit.body, cleanCity);
+        if (parsed.isNotEmpty) return parsed;
+      }
+      rethrow;
+    }
+  }
+
+  Future<String> _fetchCityBody(String cleanCity, String language, int limit, String cityKey) async {
     final uri = Uri.https(
       _nominatimHost,
       '/search',
@@ -194,7 +280,7 @@ class MapPlacesService {
     try {
       client.userAgent = _userAgent;
 
-      client.connectionTimeout = const Duration(seconds: 8);
+      client.connectionTimeout = const Duration(seconds: 5);
 
       final request = await client
           .getUrl(uri)
@@ -221,44 +307,43 @@ class MapPlacesService {
           .timeout(const Duration(seconds: 10));
 
       final decoded = jsonDecode(body);
-
-      if (decoded is! List) {
-        return [];
+      if (decoded is List) {
+        unawaited(JsonDiskCache.write(cityKey, body));
       }
-
-      final cities = <MapPlaceCity>[];
-
-      for (final item in decoded) {
-        if (item is! Map) continue;
-
-        final lat = double.tryParse(
-          item['lat']?.toString() ?? '',
-        );
-
-        final lon = double.tryParse(
-          item['lon']?.toString() ?? '',
-        );
-
-        if (lat == null || lon == null) {
-          continue;
-        }
-
-        cities.add(
-          MapPlaceCity(
-            name: item['display_name']?.toString() ??
-                cleanCity,
-            point: LatLng(lat, lon),
-            placeId: item['place_id']?.toString(),
-            osmType: item['osm_type']?.toString(),
-            osmId: item['osm_id']?.toString(),
-          ),
-        );
-      }
-
-      return cities;
+      return body;
     } finally {
       client.close(force: true);
     }
+  }
+
+  List<MapPlaceCity> _parseCities(String body, String cleanCity) {
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(body);
+    } catch (_) {
+      return [];
+    }
+    if (decoded is! List) return [];
+
+    final cities = <MapPlaceCity>[];
+    for (final item in decoded) {
+      if (item is! Map) continue;
+
+      final lat = double.tryParse(item['lat']?.toString() ?? '');
+      final lon = double.tryParse(item['lon']?.toString() ?? '');
+      if (lat == null || lon == null) continue;
+
+      cities.add(
+        MapPlaceCity(
+          name: item['display_name']?.toString() ?? cleanCity,
+          point: LatLng(lat, lon),
+          placeId: item['place_id']?.toString(),
+          osmType: item['osm_type']?.toString(),
+          osmId: item['osm_id']?.toString(),
+        ),
+      );
+    }
+    return cities;
   }
 
   // ============================================================
@@ -467,7 +552,7 @@ out center tags qt 200;
       } catch (error) {
         lastError = error;
         if (round == 0) {
-          await Future<void>.delayed(const Duration(seconds: 2));
+          await Future<void>.delayed(const Duration(seconds: 1));
         }
       }
     }
@@ -542,7 +627,7 @@ out center tags qt 200;
     clients.add(client);
 
     client.userAgent = _userAgent;
-    client.connectionTimeout = const Duration(seconds: 8);
+    client.connectionTimeout = const Duration(seconds: 5);
 
     final request = await client.postUrl(Uri.parse(endpoint));
 
