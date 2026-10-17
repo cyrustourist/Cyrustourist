@@ -18,6 +18,7 @@ class IncomingCall {
     required this.offerSdp,
     this.hasPhoto = true,
     this.isFriend = false,
+    this.isVideo = false,
   });
 
   final String id;
@@ -27,6 +28,7 @@ class IncomingCall {
   final String offerSdp;
   final bool hasPhoto;
   final bool isFriend;
+  final bool isVideo;
 
   static IncomingCall? fromJson(dynamic j) {
     if (j is! Map) return null;
@@ -41,6 +43,7 @@ class IncomingCall {
       offerSdp: sdp,
       hasPhoto: j['from_has_photo'] != false,
       isFriend: j['is_friend'] == true,
+      isVideo: '${j['call_type'] ?? ''}' == 'video',
     );
   }
 }
@@ -55,8 +58,11 @@ class CallSession extends ChangeNotifier {
     required this.peerName,
     this.isFriend = false,
     this.hasPhoto = true,
+    this.isVideo = false,
   })  : isCaller = true,
-        _remoteOffer = null;
+        _remoteOffer = null {
+    speaker = isVideo;
+  }
 
   CallSession.incoming(IncomingCall c)
       : isCaller = false,
@@ -65,11 +71,16 @@ class CallSession extends ChangeNotifier {
         callId = c.id,
         isFriend = c.isFriend,
         hasPhoto = c.hasPhoto,
+        isVideo = c.isVideo,
         _remoteOffer = c.offerSdp {
     phase = CallPhase.ringing;
+    speaker = isVideo;
   }
 
   final bool isCaller;
+
+  /// تماس تصویری؟ (با کلید «تماس تصویری» در پنل مدیریت روشن/خاموش می‌شود)
+  final bool isVideo;
   final String peerUid;
   final String peerName;
   final bool hasPhoto;
@@ -86,6 +97,17 @@ class CallSession extends ChangeNotifier {
   String statusText = '';
   bool muted = false;
   bool speaker = false;
+
+  // تماس تصویری
+  final RTCVideoRenderer localRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
+  bool _renderersReady = false;
+  bool remoteVideoOn = false;
+  bool cameraOff = false;
+  bool frontCamera = true;
+
+  /// نمایش‌دهنده‌های تصویر آمادهٔ استفاده‌اند (بعد از پایان تماس false می‌شود)
+  bool get videoReady => _renderersReady && !_closed;
   Duration elapsed = Duration.zero;
 
   RTCPeerConnection? _pc;
@@ -204,7 +226,17 @@ class CallSession extends ChangeNotifier {
   Future<bool> _preparePeer() async {
     // میکروفن و تنظیمات ICE هم‌زمان آماده می‌شوند (قبلاً پشت‌سرهم بودند)
     final micF = navigator.mediaDevices
-        .getUserMedia({'audio': true, 'video': false})
+        .getUserMedia({
+          'audio': true,
+          // تصویر سبک (حدود 320 تا 640 پیکسل، 15 فریم) تا پهنای باند و TURN کمتر مصرف شود
+          'video': isVideo
+              ? {
+                  'mandatory': {'minWidth': '320', 'minHeight': '240', 'minFrameRate': '15'},
+                  'facingMode': 'user',
+                  'optional': [],
+                }
+              : false,
+        })
         .then<MediaStream?>((m) => m)
         .catchError((Object _) => null);
     final ice = await _loadIce();
@@ -217,6 +249,13 @@ class CallSession extends ChangeNotifier {
       'sdpSemantics': 'unified-plan',
     });
     _pc = pc;
+    if (isVideo) {
+      try {
+        await localRenderer.initialize();
+        await remoteRenderer.initialize();
+        _renderersReady = true;
+      } catch (_) {}
+    }
 
     // به‌محض رسیدن اولین آدرس عمومی (srflx؛ و اگر TURN داریم relay) دیگر منتظر پایان کامل نمی‌مانیم
     pc.onIceCandidate = (RTCIceCandidate c) {
@@ -232,6 +271,15 @@ class CallSession extends ChangeNotifier {
           _gatherDone != null &&
           !_gatherDone!.isCompleted) {
         _gatherDone!.complete();
+      }
+    };
+
+    pc.onTrack = (RTCTrackEvent e) {
+      if (_closed || !isVideo || !_renderersReady) return;
+      if (e.track.kind == 'video' && e.streams.isNotEmpty) {
+        remoteRenderer.srcObject = e.streams.first;
+        remoteVideoOn = true;
+        notifyListeners();
       }
     };
 
@@ -280,12 +328,13 @@ class CallSession extends ChangeNotifier {
 
     _local = await micF;
     if (_local == null) {
-      await _finish('دسترسی به میکروفن داده نشد. در تنظیمات گوشی اجازه را فعال کنید.', notifyServer: false);
+      await _finish(isVideo ? 'دسترسی به میکروفن یا دوربین داده نشد. در تنظیمات گوشی اجازه را فعال کنید.' : 'دسترسی به میکروفن داده نشد. در تنظیمات گوشی اجازه را فعال کنید.', notifyServer: false);
       return false;
     }
-    for (final t in _local!.getAudioTracks()) {
+    for (final t in _local!.getTracks()) {
       await pc.addTrack(t, _local!);
     }
+    if (isVideo && _renderersReady) localRenderer.srcObject = _local;
     if (_closed) {
       // کاربر در حین آماده‌سازی قطع کرده بود
       try {
@@ -303,6 +352,30 @@ class CallSession extends ChangeNotifier {
     _fgStarted = true;
     unawaited(CallService.startForegroundCall(peerName));
     return true;
+  }
+
+  // سقف پهنای باند تصویر (کیلوبیت بر ثانیه) در SDP؛ مصرف TURN و اینترنت کاربر را کم می‌کند.
+  static const int _videoMaxKbps = 500;
+
+  static String _capVideo(String sdp) {
+    if (sdp.isEmpty || !sdp.contains('m=video')) return sdp;
+    try {
+      final eol = sdp.contains('\r\n') ? '\r\n' : '\n';
+      final lines = sdp.split(eol);
+      final out = <String>[];
+      var inVideo = false;
+      for (var i = 0; i < lines.length; i++) {
+        final l = lines[i];
+        if (l.startsWith('m=')) inVideo = l.startsWith('m=video');
+        out.add(l);
+        if (inVideo && l.startsWith('c=') && !(i + 1 < lines.length && lines[i + 1].startsWith('b='))) {
+          out.add('b=AS:$_videoMaxKbps');
+        }
+      }
+      return out.join(eol);
+    } catch (_) {
+      return sdp;
+    }
   }
 
   // سقف بیت‌ریت صدا (Opus): حجم مصرف TURN و پهنای باند را کم می‌کند.
@@ -378,8 +451,8 @@ class CallSession extends ChangeNotifier {
     if (_closed) return;
     if (!await _preparePeer()) return;
     try {
-      final offer = await _pc!.createOffer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': 0});
-      await _pc!.setLocalDescription(RTCSessionDescription(_capOpus(offer.sdp), offer.type));
+      final offer = await _pc!.createOffer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': isVideo ? 1 : 0});
+      await _pc!.setLocalDescription(RTCSessionDescription(_capVideo(_capOpus(offer.sdp)), offer.type));
       final sdp = await _localSdpAfterGathering();
       if (sdp == null) {
         await _finish('ساخت تماس ناموفق بود.', notifyServer: false);
@@ -390,6 +463,7 @@ class CallSession extends ChangeNotifier {
         'user_uid': uid,
         'to_uid': peerUid,
         'offer_sdp': sdp,
+        'call_type': isVideo ? 'video' : 'voice',
       });
       if (_closed) {
         // کاربر در حین آماده‌سازی قطع کرد
@@ -435,8 +509,8 @@ class CallSession extends ChangeNotifier {
     if (!await _preparePeer()) return;
     try {
       await _pc!.setRemoteDescription(RTCSessionDescription(_remoteOffer, 'offer'));
-      final answer = await _pc!.createAnswer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': 0});
-      await _pc!.setLocalDescription(RTCSessionDescription(_capOpus(answer.sdp), answer.type));
+      final answer = await _pc!.createAnswer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': isVideo ? 1 : 0});
+      await _pc!.setLocalDescription(RTCSessionDescription(_capVideo(_capOpus(answer.sdp)), answer.type));
       final sdp = await _localSdpAfterGathering();
       if (sdp == null) {
         await _finish('پاسخ به تماس ناموفق بود.', notifyServer: true);
@@ -474,6 +548,24 @@ class CallSession extends ChangeNotifier {
       t.enabled = !muted;
     }
     notifyListeners();
+  }
+
+  void toggleCamera() {
+    cameraOff = !cameraOff;
+    for (final t in _local?.getVideoTracks() ?? <MediaStreamTrack>[]) {
+      t.enabled = !cameraOff;
+    }
+    notifyListeners();
+  }
+
+  Future<void> switchCamera() async {
+    final tracks = _local?.getVideoTracks() ?? <MediaStreamTrack>[];
+    if (tracks.isEmpty) return;
+    try {
+      await Helper.switchCamera(tracks.first);
+      frontCamera = !frontCamera;
+      notifyListeners();
+    } catch (_) {}
   }
 
   Future<void> toggleSpeaker() async {
@@ -604,6 +696,8 @@ class CallSession extends ChangeNotifier {
         phase == CallPhase.connecting ||
         (isCaller && phase == CallPhase.ringing);
     _closed = true;
+    final disposeRenderers = _renderersReady;
+    _renderersReady = false;
     unawaited(CallAudio.stopRing());
     if (playEnd) {
       unawaited(CallAudio.ended());
@@ -641,6 +735,17 @@ class CallSession extends ChangeNotifier {
     try {
       await _pc?.close();
     } catch (_) {}
+    if (disposeRenderers) {
+      // یک فریم صبر می‌کنیم تا نمایش تصویر از صفحه برداشته شود، بعد نمایش‌دهنده‌ها بسته شوند
+      notifyListeners();
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      try {
+        localRenderer.srcObject = null;
+        remoteRenderer.srcObject = null;
+        await localRenderer.dispose();
+        await remoteRenderer.dispose();
+      } catch (_) {}
+    }
     _local = null;
     _pc = null;
 
