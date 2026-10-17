@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'safe_prefs.dart';
 
 import '../config/api_config.dart';
 import '../core/language/menu_translations.dart';
