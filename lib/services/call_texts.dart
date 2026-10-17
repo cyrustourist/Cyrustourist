@@ -7,7 +7,7 @@ class CT {
   static bool get fa => MenuLanguage.current == 'fa';
 
   static String t(String key, [Map<String, String>? params]) {
-    final table = fa ? _fa : _en;
+    final table = fa ? _fa : (MenuLanguage.current == 'ar' ? _ar : _en);
     var s = table[key] ?? _en[key] ?? key;
     if (params != null) {
       params.forEach((k, v) => s = s.replaceAll('{$k}', v));
@@ -125,6 +125,12 @@ class CT {
     'mic_title': 'دسترسی به میکروفن',
     'mic_body': 'برای تماس صوتی به میکروفن نیاز است. با زدن «اجازه می‌دهم» پنجرهٔ سیستم باز می‌شود؛ لطفاً تأیید کنید تا هنگام تماس معطل نشوید.',
     'mic_allow': 'اجازه می‌دهم',
+    'open_settings': 'باز کردن تنظیمات',
+    'updating': 'در حال بروزرسانی نوین هستیم؛ سپاسگزاریم.',
+    'perm_denied_now': 'مجوز داده نشد. برای تماس، میکروفن لازم است؛ دوباره دکمهٔ تماس را بزنید و «اجازه» را انتخاب کنید.',
+    'perm_blocked': 'اندروید دیگر پنجرهٔ مجوز را نشان نمی‌دهد. «باز کردن تنظیمات» را بزنید، سپس دسترسی‌ها ← میکروفن (و برای تماس تصویری دوربین) را روی «اجازه» بگذارید.',
+    'media_error': 'میکروفن یا دوربین شروع نشد: {e}',
+    'server_down': 'کارگران ما در حال کار روی سرور هستند 🛠️\nلطفاً چند دقیقهٔ دیگر دوباره امتحان کنید؛ سپاسگزاریم.',
     'mic_denied': 'بدون دسترسی به میکروفن تماس ممکن نیست. از تنظیمات گوشی (برنامه‌ها ← سایروس توریست ← دسترسی‌ها) میکروفن را فعال کنید.',
     'decline': 'رد',
     'end_call': 'پایان تماس',
@@ -143,6 +149,20 @@ class CT {
     'call_btn': 'تماس',
     'profile_call': 'تماس صوتی',
     'profile_video': 'تماس تصویری',
+  };
+
+  static const Map<String, String> _ar = {
+    'mic_title': 'الوصول إلى الميكروفون',
+    'mic_body': 'تحتاج المكالمات الصوتية إلى الميكروفون. اضغط «السماح» ثم أكّد نافذة النظام.',
+    'mic_allow': 'السماح',
+    'cancel': 'إلغاء',
+    'open_settings': 'فتح الإعدادات',
+    'updating': 'نعمل على تحديث جديد، نشكركم على صبركم.',
+    'perm_denied_now': 'لم يتم منح الإذن. المكالمات تحتاج إلى الميكروفون؛ اضغط زر الاتصال مرة أخرى واختر «السماح».',
+    'perm_blocked': 'لن يعرض أندرويد نافذة الإذن بعد الآن. اضغط «فتح الإعدادات» ثم الأذونات ← الميكروفون (والكاميرا لمكالمات الفيديو) واختر «السماح».',
+    'media_error': 'تعذّر تشغيل الميكروفون أو الكاميرا: {e}',
+    'server_down': 'عمّالنا يعملون على الخادم الآن 🛠️\nيرجى المحاولة بعد دقائق. شكراً لكم.',
+    'video_soon': 'ستكون مكالمات الفيديو جاهزة قريباً. شكراً لكم.',
   };
 
   static const Map<String, String> _en = {
@@ -223,6 +243,12 @@ class CT {
     'mic_title': 'Microphone access',
     'mic_body': 'Voice calls need the microphone. Tap "Allow" and confirm the system prompt so you are not kept waiting during a call.',
     'mic_allow': 'Allow',
+    'open_settings': 'Open settings',
+    'updating': 'We are rolling out a new update. Thank you for your patience.',
+    'perm_denied_now': 'Permission was not granted. Calls need the microphone; tap the call button again and choose "Allow".',
+    'perm_blocked': 'Android will no longer show the permission prompt. Tap "Open settings", then set Permissions > Microphone (and Camera for video calls) to "Allow".',
+    'media_error': 'Could not start the microphone or camera: {e}',
+    'server_down': 'Our workers are busy working on the server 🛠️\nPlease try again in a few minutes. Thank you.',
     'mic_denied': 'Calls cannot work without microphone access. Enable it in phone Settings > Apps > Cyrus Tourist > Permissions.',
     'decline': 'Decline',
     'end_call': 'End call',
