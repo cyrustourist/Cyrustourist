@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'services/safe_prefs.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -1040,6 +1040,22 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
   }
 
   String lastLocationError = '';
+  bool pickManual = false;
+
+  /// وقتی GPS جواب نمی‌دهد: کاربر مکان خودش را روی نقشه می‌زند و برای دفعهٔ بعد هم ذخیره می‌شود
+  Future<void> _setManualLocation(LatLng point) async {
+    setState(() {
+      pickManual = false;
+      userLocation = point;
+      locationWarning = null;
+    });
+    mapController.move(point, 15);
+    try {
+      final pref = await SharedPreferences.getInstance();
+      await pref.setDouble('last_lat', point.latitude);
+      await pref.setDouble('last_lng', point.longitude);
+    } catch (_) {}
+  }
   LatLng? destinationPoint;
 
   /// اولین موقعیت را از جریان موقعیت می‌گیرد؛ اول با سرویس گوگل، بعد با LocationManager اندروید.
@@ -1156,9 +1172,9 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       if (mounted) {
         setState(() {
           locationWarning = _localize(
-            'موقعیت شما هنوز پیدا نشد. به فضای باز بروید (داخل ساختمان سیگنال GPS ضعیف است)، «موقعیت دقیق» را در تنظیمات گوشی روشن کنید و دوباره دکمهٔ موقعیت را بزنید.',
-            'Your location was not found yet. Go outdoors (GPS is weak indoors), turn on Precise Location in phone settings and tap the location button again.',
-            'لم يتم العثور على موقعك بعد. اخرج إلى مكان مفتوح (إشارة GPS ضعيفة داخل المباني)، فعّل «الموقع الدقيق» في الإعدادات ثم اضغط زر الموقع مرة أخرى.',
+            'موقعیت پیدا نشد. GPS را روشن کنید و به فضای باز بروید، یا مکان را دستی روی نقشه انتخاب کنید.',
+            'Location not found. Turn on GPS and go outdoors, or pick your place on the map.',
+            'لم يتم العثور على الموقع. فعّل GPS أو اختر مكانك على الخريطة.',
           );
         });
       }
@@ -1882,6 +1898,10 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
               minZoom: 3,
               maxZoom: 18,
               onTap: (_, point) {
+                if (pickManual) {
+                  _setManualLocation(point);
+                  return;
+                }
                 if (measure.active) measure.add(point);
               },
               onLongPress: (_, point) => showCoordinateSheet(context, point),
@@ -1918,10 +1938,37 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xffffd36a)),
                   ),
-                  child: Text(
-                    locationWarning!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        locationWarning!,
+                        textAlign: TextAlign.center,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton(
+                            onPressed: getLocation,
+                            child: Text(_localize('تلاش دوباره', 'Retry', 'إعادة المحاولة'), style: const TextStyle(fontSize: 12)),
+                          ),
+                          TextButton(
+                            onPressed: () => setState(() {
+                              pickManual = true;
+                              locationWarning = _localize(
+                                'روی نقشه بزنید تا مکان شما ثبت شود.',
+                                'Tap the map to set your place.',
+                                'اضغط على الخريطة لتحديد مكانك.',
+                              );
+                            }),
+                            child: Text(_localize('انتخاب روی نقشه', 'Pick on map', 'اختيار على الخريطة'), style: const TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
