@@ -1,4 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/safe_prefs.dart';
 
 /// ==========================================================
 /// Cyrus Tourist — سیستم زبان مستقل ۱۰ کلید صفحه اصلی
