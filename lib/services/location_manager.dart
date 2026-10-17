@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationManager {
   static Future<bool> checkService() async {
@@ -22,11 +23,24 @@ class LocationManager {
   static Future<LatLng?> getLastKnownLocation() async {
     try {
       final last = await Geolocator.getLastKnownPosition();
-      if (last == null) return null;
-      return LatLng(last.latitude, last.longitude);
-    } catch (_) {
-      return null;
-    }
+      if (last != null) return LatLng(last.latitude, last.longitude);
+    } catch (_) {}
+    // اگر دستگاه آخرین موقعیت را نداشت، آخرین موقعیت ذخیره‌شدهٔ خود اپ (فوری)
+    try {
+      final p = await SharedPreferences.getInstance();
+      final la = p.getDouble('last_lat');
+      final lo = p.getDouble('last_lng');
+      if (la != null && lo != null) return LatLng(la, lo);
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<void> _remember(LatLng point) async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setDouble('last_lat', point.latitude);
+      await p.setDouble('last_lng', point.longitude);
+    } catch (_) {}
   }
 
   /// موقعیت فعلی — سریع:
@@ -69,7 +83,9 @@ class LocationManager {
           timeLimit: const Duration(seconds: 8),
         );
 
-        return LatLng(position.latitude, position.longitude);
+        final fresh = LatLng(position.latitude, position.longitude);
+        await _remember(fresh);
+        return fresh;
       } catch (_) {
         if (last != null) {
           return LatLng(last.latitude, last.longitude);
