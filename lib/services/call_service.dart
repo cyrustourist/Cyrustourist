@@ -62,6 +62,8 @@ class CallService with WidgetsBindingObserver {
   Timer? _watchTimer;
   Timer? _fgWatch;
   bool _checking = false;
+  int _pollFails = 0;
+  int _pollSkip = 0;
   int _watchRefs = 0;
   String? _lastShownCallId;
   String? _lastNotifiedCallId;
@@ -172,7 +174,13 @@ class CallService with WidgetsBindingObserver {
 
   void _startFgWatch() {
     _fgWatch ??= Timer.periodic(const Duration(seconds: 3), (_) {
-      if (_registeredToken != null) unawaited(checkIncoming());
+      if (_registeredToken == null) return;
+      // اگر چند بار پشت‌سرهم ارتباط با سرور جواب نداد، فاصلهٔ پایش بیشتر می‌شود (حداکثر ~۳۰ ثانیه)
+      if (_pollSkip > 0) {
+        _pollSkip--;
+        return;
+      }
+      unawaited(checkIncoming());
     });
   }
 
@@ -453,7 +461,14 @@ class CallService with WidgetsBindingObserver {
     _checking = true;
     try {
       final uid = await BadgeService.userUid();
-      final j = await BadgeService.call('GET', '/api/call/incoming', query: {'user_uid': uid});
+      final j = await BadgeService.call('GET', '/api/call/incoming', query: {'user_uid': uid}, timeout: const Duration(seconds: 5));
+      if (j == null) {
+        _pollFails++;
+        _pollSkip = _pollFails > 9 ? 9 : _pollFails;
+      } else {
+        _pollFails = 0;
+        _pollSkip = 0;
+      }
       final call = IncomingCall.fromJson(j?['call']);
       if (call == null) return;
       if (_lastShownCallId == call.id) return;
