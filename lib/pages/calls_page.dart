@@ -245,19 +245,18 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
     if (mounted) unawaited(_load());
   }
 
-  Future<void> _call(String uid, String name, {bool hasPhoto = true}) async {
+  Future<void> _call(String uid, String name, {bool hasPhoto = true, bool video = false}) async {
     await CallService.instance.startOutgoing(
       toUid: uid,
       name: name,
       isFriend: FriendsService.isFriendCached(uid),
       hasPhoto: hasPhoto,
+      video: video,
     );
     if (mounted) unawaited(_load(silent: true));
   }
 
-  void _videoSoon() => _toast(CT.t('video_soon'));
-
-  Future<void> _pickAndCall() async {
+  Future<void> _pickAndCall({bool video = false}) async {
     if (_friends.isEmpty) {
       _toast(CT.t('friends_empty'));
       _tabs.animateTo(0);
@@ -271,7 +270,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
       builder: (_) => _FriendPickerSheet(friends: _friends),
     );
     if (f != null && mounted) {
-      await _call(f.uid, f.name, hasPhoto: f.hasPhoto);
+      await _call(f.uid, f.name, hasPhoto: f.hasPhoto, video: video);
     }
   }
 
@@ -357,7 +356,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
               children: [
                 Expanded(child: _bigAction(Icons.call_rounded, CT.t('voice_call'), const [Color(0xff2fb36a), Color(0xff1e8f52)], _pickAndCall)),
                 const SizedBox(width: 12),
-                Expanded(child: _bigAction(Icons.videocam_rounded, CT.t('video_call'), const [Color(0xff4a6fd0), Color(0xff3a55a8)], _videoSoon)),
+                Expanded(child: _bigAction(Icons.videocam_rounded, CT.t('video_call'), const [Color(0xff4a6fd0), Color(0xff3a55a8)], () => _pickAndCall(video: true))),
               ],
             ),
           ),
@@ -554,8 +553,8 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
                 ),
                 IconButton(
                   tooltip: CT.t('video_call'),
-                  icon: const Icon(Icons.videocam_rounded, color: Colors.white54),
-                  onPressed: _videoSoon,
+                  icon: const Icon(Icons.videocam_rounded, color: Color(0xff6f95ff)),
+                  onPressed: () => _call(f.uid, f.name, hasPhoto: f.hasPhoto, video: true),
                 ),
                 PopupMenuButton<String>(
                   color: _card,
