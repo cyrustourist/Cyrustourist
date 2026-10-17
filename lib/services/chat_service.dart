@@ -148,9 +148,21 @@ class ChatService {
       }
       final res = await req.close().timeout(const Duration(seconds: 10));
       final text = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 10));
-      final decoded = jsonDecode(text);
-      return decoded is Map<String, dynamic> ? decoded : null;
-    } catch (_) {
+      Object? decoded;
+      try {
+        decoded = jsonDecode(text);
+      } catch (_) {
+        BadgeService.lastError = 'http ${res.statusCode} (پاسخ غیر JSON)';
+        return null;
+      }
+      if (decoded is Map<String, dynamic>) {
+        BadgeService.lastError = '';
+        return decoded;
+      }
+      BadgeService.lastError = 'http ${res.statusCode} (پاسخ نامعتبر)';
+      return null;
+    } catch (e) {
+      BadgeService.lastError = '${e.runtimeType}';
       return null;
     } finally {
       client.close(force: true);
