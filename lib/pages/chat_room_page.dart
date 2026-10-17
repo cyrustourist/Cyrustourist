@@ -719,6 +719,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                   ? Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                         const Text('دریافت اتاق‌ها ناموفق بود.', style: TextStyle(color: Colors.white70)),
+                        if (BadgeService.lastError.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(BadgeService.lastError, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                        ],
                         const SizedBox(height: 10),
                         OutlinedButton(onPressed: _loadRooms, child: const Text('تلاش دوباره', style: TextStyle(color: _gold))),
                       ]),
