@@ -98,37 +98,70 @@ class BadgeService {
 
   static const String _tokenKey = 'cyrus_device_token';
 
+  /// آخرین دلیل خطای شبکه/سرور (برای نمایش در پیام‌های خطا؛ هرگز Token نگه نمی‌دارد).
+  static String lastError = '';
+
+  // اگر SharedPreferences روی گوشی خطا بدهد، توکن و شناسه تا بستن اپ در حافظه می‌مانند
+  // تا چت، پروفایل و تماس از کار نیفتند.
+  static String? _memToken;
+  static String? _memUid;
+
   /// توکن محرمانهٔ این دستگاه. user_uid در چت دیده می‌شود، پس بدون این توکن
   /// هیچ‌کس نمی‌تواند به‌جای کاربر استوری بگذارد یا پروفایل را تغییر دهد.
   static Future<String> deviceToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    var t = prefs.getString(_tokenKey);
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      lastError = 'prefs:${e.runtimeType}';
+    }
+    var t = _memToken ?? prefs?.getString(_tokenKey);
     if (t == null || t.length < 24) {
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       final r = Random.secure();
       t = List.generate(44, (_) => chars[r.nextInt(chars.length)]).join();
-      await prefs.setString(_tokenKey, t);
+      try {
+        await prefs?.setString(_tokenKey, t);
+      } catch (e) {
+        lastError = 'prefs:${e.runtimeType}';
+      }
     }
+    _memToken = t;
     return t;
   }
 
   static Future<String> userUid() async {
-    final prefs = await SharedPreferences.getInstance();
-    var uid = prefs.getString(_uidKey);
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      lastError = 'prefs:${e.runtimeType}';
+    }
+    var uid = _memUid ?? prefs?.getString(_uidKey);
     if (uid == null || uid.length < 8) {
       const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
       final r = Random.secure();
       uid = 'u${List.generate(23, (_) => chars[r.nextInt(chars.length)]).join()}';
-      await prefs.setString(_uidKey, uid);
+      try {
+        await prefs?.setString(_uidKey, uid);
+      } catch (e) {
+        lastError = 'prefs:${e.runtimeType}';
+      }
     }
+    _memUid = uid;
     return uid;
   }
 
   /// وقتی ورود با گوگل حساب قبلی را پیدا کند، شناسهٔ همان حساب جایگزین می‌شود.
   static Future<void> setUserUid(String uid) async {
     if (!RegExp(r'^[A-Za-z0-9_-]{8,64}$').hasMatch(uid)) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_uidKey, uid);
+    _memUid = uid;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_uidKey, uid);
+    } catch (e) {
+      lastError = 'prefs:${e.runtimeType}';
+    }
   }
 
   /// فراخوانی عمومی برای سرویس‌های دیگر (گوگل، پروفایل عمومی).
@@ -164,9 +197,27 @@ class BadgeService {
       }
       final res = await req.close().timeout(const Duration(seconds: 10));
       final text = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 10));
-      final decoded = jsonDecode(text);
-      return decoded is Map<String, dynamic> ? decoded : null;
-    } catch (_) {
+      Object? decoded;
+      try {
+        decoded = jsonDecode(text);
+      } catch (_) {
+        lastError = 'http ${res.statusCode} (پاسخ غیر JSON)';
+        return null;
+      }
+      if (decoded is Map<String, dynamic>) {
+        lastError = '';
+        return decoded;
+      }
+      lastError = 'http ${res.statusCode} (پاسخ نامعتبر)';
+      return null;
+    } on TimeoutException {
+      lastError = 'timeout';
+      return null;
+    } on SocketException catch (e) {
+      lastError = 'شبکه: ${e.message}';
+      return null;
+    } catch (e) {
+      lastError = '${e.runtimeType}';
       return null;
     }
   }
@@ -191,7 +242,7 @@ class BadgeService {
         'video_link': p.videoLink,
         'photo_data': p.photoBase64,
       });
-      if (j == null) return const RegisterResult(ok: false, code: 'net');
+      if (j == null) return RegisterResult(ok: false, code: 'net', message: lastError);
       if (j['success'] == true) return const RegisterResult(ok: true);
       return RegisterResult(ok: false, code: '${j['error'] ?? ''}', message: '${j['message'] ?? ''}');
     } catch (_) {
