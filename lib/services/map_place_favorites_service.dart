@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'safe_prefs.dart';
 
 import '../map_place.dart';
 
