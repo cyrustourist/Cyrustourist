@@ -67,8 +67,11 @@ class MenuLanguage {
 
   /// بارگذاری زبان ذخیره‌شده کلیدهای صفحه اصلی.
   static Future<void> load() async {
-    final pref = await SharedPreferences.getInstance();
-    final saved = pref.getString(_prefsKey);
+    String? saved;
+    try {
+      final pref = await SharedPreferences.getInstance();
+      saved = pref.getString(_prefsKey);
+    } catch (_) {}
 
     if (saved != null && kMenuLanguages.any((l) => l.code == saved)) {
       current = saved;
@@ -85,8 +88,10 @@ class MenuLanguage {
 
     current = normalized;
 
-    final pref = await SharedPreferences.getInstance();
-    await pref.setString(_prefsKey, normalized);
+    try {
+      final pref = await SharedPreferences.getInstance();
+      await pref.setString(_prefsKey, normalized);
+    } catch (_) {}
   }
 }
 
