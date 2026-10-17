@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'safe_prefs.dart';
 
 import '../main.dart' show navigatorKey;
 import '../pages/call_page.dart';
@@ -31,6 +31,21 @@ class CallService with WidgetsBindingObserver {
   CallService._();
 
   static final CallService instance = CallService._();
+
+  /// وضعیت کلید تماس تصویری از سمت سرور (پنل مدیر). false = خاموش؛ دکمه‌ها کم‌رنگ می‌شوند.
+  static final ValueNotifier<bool> videoOn = ValueNotifier<bool>(true);
+
+  /// کلیدهای تماس را از ورکر می‌خواند؛ اگر ورکر جواب نداد وضعیت قبلی عوض نمی‌شود.
+  Future<void> refreshFeatures() async {
+    try {
+      final uid = await BadgeService.userUid();
+      final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid}, timeout: const Duration(seconds: 6));
+      final f = j?['features'];
+      if (f is Map) {
+        videoOn.value = f['video_enabled'] != false;
+      }
+    } catch (_) {}
+  }
 
   // v2: کانال جدید با آهنگ زنگ سیستم (تنظیمات کانال بعد از ساخته شدن قابل تغییر نیست)
   static const String channelId = 'cyrus_calls_v2';
