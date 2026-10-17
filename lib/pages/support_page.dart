@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/language/app_language.dart';
+import 'support_online_chat_page.dart';
 
 String _t(String fa, String en, String ar) {
   switch (LanguageManager.current) {
@@ -418,7 +419,23 @@ class SupportPage extends StatelessWidget {
 
                 const SizedBox(height: 4),
 
-                _futureCard(),
+                _actionCard(
+                  context: context,
+                  icon: Icons.forum_rounded,
+                  title: _t(
+                    'چت آنلاین',
+                    'Online Chat',
+                    'الدردشة المباشرة',
+                  ),
+                  subtitle: _t(
+                    'گفتگوی مستقیم با پشتیبانی · واتساپ، تلگرام و ایتا هم داخل صفحه است',
+                    'Chat directly with support · WhatsApp, Telegram and Eitaa inside',
+                    'دردشة مباشرة مع الدعم · واتساب وتيليجرام وإيتا داخل الصفحة',
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SupportOnlineChatPage()),
+                  ),
+                ),
 
                 const SizedBox(height: 16),
 
@@ -648,75 +665,6 @@ class _HeroSupport extends StatelessWidget {
       ),
     );
   }
-}
-
-Widget _futureCard() {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(17),
-    decoration: BoxDecoration(
-      color: const Color(0xff0b2636).withValues(
-        alpha: 0.75,
-      ),
-      borderRadius: BorderRadius.circular(22),
-      border: Border.all(
-        color: SupportPage.goldColor.withValues(
-          alpha: 0.22,
-        ),
-      ),
-    ),
-    child: Row(
-      children: [
-        const _Icon3D(
-          icon: Icons.forum_rounded,
-          enabled: false,
-        ),
-
-        const SizedBox(width: 14),
-
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _t(
-                  'چت آنلاین',
-                  'Online Chat',
-                  'الدردشة المباشرة',
-                ),
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 5),
-
-              Text(
-                _t(
-                  'این قابلیت در نسخه آینده به پشتیبانی آنلاین متصل می‌شود.',
-                  'This feature will connect to live support in a future version.',
-                  'ستتصل هذه الميزة بالدعم المباشر في نسخة مستقبلية.',
-                ),
-                style: const TextStyle(
-                  color: Colors.white38,
-                  fontSize: 12,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const Icon(
-          Icons.lock_outline_rounded,
-          color: Colors.white24,
-          size: 20,
-        ),
-      ],
-    ),
-  );
 }
 
 class _InfoCard extends StatelessWidget {
