@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/safe_prefs.dart';
 
 import '../core/language/menu_translations.dart';
 import '../services/call_audio.dart';
@@ -50,6 +50,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     unawaited(CallSession.prefetchIce());
+    unawaited(CallService.instance.refreshFeatures());
     unawaited(_boot());
     // اول مجوز «اعلان تمام‌صفحه»، بعد مجوز میکروفن (دو پنجره روی هم نیایند)
     unawaited(_askFullScreenOnce().then((_) async {
@@ -356,7 +357,15 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
               children: [
                 Expanded(child: _bigAction(Icons.call_rounded, CT.t('voice_call'), const [Color(0xff2fb36a), Color(0xff1e8f52)], _pickAndCall)),
                 const SizedBox(width: 12),
-                Expanded(child: _bigAction(Icons.videocam_rounded, CT.t('video_call'), const [Color(0xff4a6fd0), Color(0xff3a55a8)], () => _pickAndCall(video: true))),
+                Expanded(
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: CallService.videoOn,
+                    builder: (_, on, __) => Opacity(
+                      opacity: on ? 1 : 0.45,
+                      child: _bigAction(Icons.videocam_rounded, CT.t('video_call'), const [Color(0xff4a6fd0), Color(0xff3a55a8)], () => _pickAndCall(video: true)),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -553,7 +562,10 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
                 ),
                 IconButton(
                   tooltip: CT.t('video_call'),
-                  icon: const Icon(Icons.videocam_rounded, color: Color(0xff6f95ff)),
+                  icon: ValueListenableBuilder<bool>(
+                    valueListenable: CallService.videoOn,
+                    builder: (_, on, __) => Icon(Icons.videocam_rounded, color: on ? const Color(0xff6f95ff) : Colors.white24),
+                  ),
                   onPressed: () => _call(f.uid, f.name, hasPhoto: f.hasPhoto, video: true),
                 ),
                 PopupMenuButton<String>(
