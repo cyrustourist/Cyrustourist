@@ -307,6 +307,52 @@ class CallService with WidgetsBindingObserver {
     );
   }
 
+  static const String _camGrantedKey = 'call_cam_granted_v1';
+
+  /// قبل از تماس تصویری: مجوز دوربین و میکروفن را با توضیح می‌گیرد. false = کاربر مجوز نداد.
+  Future<bool> ensureCamForCall(BuildContext ctx) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_camGrantedKey) == true) return true;
+      if (!ctx.mounted) return false;
+      final ok = await showDialog<bool>(
+        context: ctx,
+        builder: (c) => AlertDialog(
+          title: Text(CT.t('cam_title')),
+          content: Text(CT.t('cam_body'), style: const TextStyle(height: 1.7)),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(c).pop(false), child: Text(CT.t('cancel'))),
+            TextButton(onPressed: () => Navigator.of(c).pop(true), child: Text(CT.t('mic_allow'))),
+          ],
+        ),
+      );
+      if (ok != true) return false;
+      try {
+        final stream = await rtc.navigator.mediaDevices.getUserMedia({'audio': true, 'video': true});
+        for (final t in stream.getTracks()) {
+          await t.stop();
+        }
+        await stream.dispose();
+        await prefs.setBool(_camGrantedKey, true);
+        await prefs.setBool(_micGrantedKey, true);
+        return true;
+      } catch (_) {
+        if (ctx.mounted) {
+          await showDialog<void>(
+            context: ctx,
+            builder: (c) => AlertDialog(
+              content: Text(CT.t('cam_denied'), style: const TextStyle(height: 1.7)),
+              actions: [TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('OK'))],
+            ),
+          );
+        }
+        return false;
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// قبل از تماس خروجی: اگر مجوز هنوز نیست توضیح بده و بگیر. false = کاربر مجوز نداد (تماس شروع نشود).
   Future<bool> ensureMicForCall(BuildContext ctx) async {
     if (await _micKnownGranted()) return true;
@@ -339,12 +385,13 @@ class CallService with WidgetsBindingObserver {
     required String name,
     bool isFriend = false,
     bool hasPhoto = true,
+    bool video = false,
   }) async {
     if (_pageOpen) return;
     final nav = navigatorKey.currentState;
     if (nav == null) return;
     // اگر تماس صوتی از پنل مدیریت خاموش است، همین‌جا (قبل از باز شدن صفحهٔ تماس و درخواست میکروفن) پیام را نشان بده
-    final off = await _disabledMessage();
+    final off = await _disabledMessage(video: video);
     if (off != null) {
       final ctx = navigatorKey.currentState?.overlay?.context;
       if (ctx != null && ctx.mounted) {
@@ -360,21 +407,26 @@ class CallService with WidgetsBindingObserver {
     }
     final mctx = navigatorKey.currentState?.overlay?.context;
     if (mctx != null && mctx.mounted) {
-      if (!await ensureMicForCall(mctx)) return;
+      if (video ? !await ensureCamForCall(mctx) : !await ensureMicForCall(mctx)) return;
     }
     unawaited(registerToken());
-    final session = CallSession.outgoing(peerUid: toUid, peerName: name, isFriend: isFriend, hasPhoto: hasPhoto);
+    final session = CallSession.outgoing(peerUid: toUid, peerName: name, isFriend: isFriend, hasPhoto: hasPhoto, isVideo: video);
     await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session)));
   }
 
   /// پیام «تماس خاموش است» از ورکر؛ null یعنی تماس صوتی روشن است (یا ورکر در دسترس نبود: اجازه می‌دهیم تماس امتحان شود).
-  Future<String?> _disabledMessage() async {
+  Future<String?> _disabledMessage({bool video = false}) async {
     try {
       final uid = await BadgeService.userUid();
       final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid});
       final f = j?['features'];
       if (f is! Map) return null;
-      if (f['voice_enabled'] == false) {
+      if (video) {
+        if (f['video_enabled'] == false) {
+          final m = '${f['video_message'] ?? ''}'.trim();
+          return m.isNotEmpty ? m : CT.t('video_soon');
+        }
+      } else if (f['voice_enabled'] == false) {
         final m = '${f['message'] ?? ''}'.trim();
         return m.isNotEmpty ? m : 'در حال بروزرسانی نوین هستیم؛ سپاسگزاریم.';
       }
