@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 
 import '../../core/language/menu_translations.dart';
@@ -71,11 +72,31 @@ class _CyrusSettingsScreenState extends State<CyrusSettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    await _style.load();
+    // هر خطا یا گیر کردن در خواندن تنظیمات نباید مانع باز شدن صفحه شود.
+    var pushEnabled = true;
+    var soundEnabled = true;
 
-    final pushEnabled = await NotificationService.instance.isPushEnabled();
-    final soundEnabled =
-        await NotificationService.instance.isAnnouncementSoundEnabled();
+    try {
+      await _style.load().timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Settings style load error: $e');
+    }
+
+    try {
+      pushEnabled = await NotificationService.instance
+          .isPushEnabled()
+          .timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Settings push flag error: $e');
+    }
+
+    try {
+      soundEnabled = await NotificationService.instance
+          .isAnnouncementSoundEnabled()
+          .timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Settings sound flag error: $e');
+    }
 
     if (!mounted) return;
 
