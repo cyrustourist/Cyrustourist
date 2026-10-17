@@ -527,10 +527,13 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
     setState(() => _searchingCities = true);
 
     _debounce = Timer(const Duration(milliseconds: 450), () async {
-      final results = await _nearbyService.searchPlaceOrCity(
-        query,
-        language: languageCode,
-      );
+      List<SearchedLocation> results = const [];
+      try {
+        results = await _nearbyService.searchPlaceOrCity(
+          query,
+          language: languageCode,
+        );
+      } catch (_) {}
 
       if (!mounted) return;
 
@@ -545,10 +548,13 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
     final query = value.trim();
     if (query.length < 2) return;
 
-    final results = await _nearbyService.searchPlaceOrCity(
-      query,
-      language: languageCode,
-    );
+    List<SearchedLocation> results = const [];
+    try {
+      results = await _nearbyService.searchPlaceOrCity(
+        query,
+        language: languageCode,
+      );
+    } catch (_) {}
 
     if (!mounted) return;
 
@@ -557,16 +563,22 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
       return;
     }
 
-    await _openSearchedPlace(results.first);
+    try {
+      await _openSearchedPlace(results.first);
+    } catch (_) {
+      _showSnack(_noResultsMessage());
+    }
   }
 
   Future<void> _openSearchedPlace(SearchedLocation location) async {
     _searchFocusNode.unfocus();
     _searchController.text = location.name;
 
-    setState(() {
-      _citySuggestions = [];
-    });
+    if (mounted) {
+      setState(() {
+        _citySuggestions = [];
+      });
+    }
 
     final place = MapPlace(
       id: '${location.point.latitude},${location.point.longitude}',
@@ -1071,7 +1083,9 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
     required LatLng center,
     required String title,
   }) async {
-    _favoriteIds = await _favoritesService.loadFavoriteIds();
+    try {
+      _favoriteIds = await _favoritesService.loadFavoriteIds();
+    } catch (_) {}
 
     if (!mounted) return;
 
