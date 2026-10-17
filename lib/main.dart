@@ -82,6 +82,9 @@ void main() async {
 
   await CyrusHomeStyle.instance.load();
 
+  // اگر اپ با اعلان تماس باز شده، اسپلش ۳ثانیه‌ای حذف و مستقیم به تماس می‌رویم
+  await CallService.detectLaunch();
+
   runApp(const CyrusTouristApp());
 
   // اعلان‌ها/FCM به اینترنت نیاز دارند (توکن، عضویت در Topic)؛ اگر قبل از runApp
@@ -200,21 +203,51 @@ class _SplashPageState extends State<SplashPage> {
 
     _initLanguages();
 
+    if (CallService.launchedByCall) {
+      _launchFromCall();
+      return;
+    }
+
     Future.delayed(
       const Duration(seconds: 3),
       () {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const HomePage(),
-            ),
-          );
-          // از این لحظه لینک‌های عمومی می‌توانند روی صفحه‌ی اصلی باز شوند
-          DeepLinkService.markReady();
-        }
+        if (mounted) _goHome();
       },
     );
+  }
+
+  /// صفحهٔ اصلی را جایگزین اسپلش می‌کند؛ اگر در این فاصله صفحهٔ تماس جلو آمده، زیر آن قرار می‌گیرد
+  /// (قبلاً pushReplacement خودِ صفحهٔ تماس را برمی‌داشت).
+  void _goHome() {
+    final nav = Navigator.of(context);
+    final home = MaterialPageRoute<void>(builder: (_) => const HomePage());
+    if (ModalRoute.of(context)?.isCurrent ?? true) {
+      nav.pushReplacement(home);
+    } else {
+      Route<dynamic>? top;
+      nav.popUntil((r) {
+        top = r;
+        return true;
+      });
+      if (top == null) {
+        nav.pushReplacement(home);
+      } else {
+        nav.replaceRouteBelow(anchorRoute: top!, newRoute: home);
+      }
+    }
+    // از این لحظه لینک‌های عمومی می‌توانند روی صفحه‌ی اصلی باز شوند
+    DeepLinkService.markReady();
+  }
+
+  /// باز شدن با اعلان تماس: ابتدا صفحهٔ تماس، سپس صفحهٔ اصلی زیر آن.
+  Future<void> _launchFromCall() async {
+    var done = false;
+    unawaited(CallService.instance.openLaunchedCall().whenComplete(() => done = true));
+    final t0 = DateTime.now();
+    while (mounted && !done && !CallService.instance.pageOpen && DateTime.now().difference(t0) < const Duration(seconds: 10)) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (mounted) _goHome();
   }
 
   /// زبان کلیدهای صفحه اصلی (MenuLanguage) منبع اصلی است؛
