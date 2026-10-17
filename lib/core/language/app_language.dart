@@ -32,9 +32,13 @@ class LanguageManager {
   /// اگر زبان ذخیره نشده باشد، زبان دستگاه بررسی می‌شود.
   /// در صورت پشتیبانی نبودن زبان دستگاه، انگلیسی انتخاب می‌شود.
   static Future<void> load() async {
-    final pref = await SharedPreferences.getInstance();
-
-    final saved = pref.getString(_languageKey);
+    String? saved;
+    try {
+      final pref = await SharedPreferences.getInstance();
+      saved = pref.getString(_languageKey);
+    } catch (_) {
+      // خواندن حافظه خطا داد: زبان دستگاه استفاده می‌شود.
+    }
 
     if (saved != null) {
       final savedLanguage = _languageFromCode(saved);
@@ -63,12 +67,14 @@ class LanguageManager {
   ) async {
     current = language;
 
-    final pref = await SharedPreferences.getInstance();
-
-    await pref.setString(
-      _languageKey,
-      languageCode(language),
-    );
+    // اگر ذخیره روی گوشی خطا بدهد، زبان همچنان تا بستن برنامه عوض می‌ماند.
+    try {
+      final pref = await SharedPreferences.getInstance();
+      await pref.setString(
+        _languageKey,
+        languageCode(language),
+      );
+    } catch (_) {}
   }
 
   /// تبدیل AppLanguage به کد استاندارد زبان.
