@@ -1,6 +1,10 @@
 package cyrustourist.ir.app
 
+import android.Manifest
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -33,6 +37,37 @@ class MainActivity : FlutterActivity() {
 
     private var sensorListener: SensorEventListener? = null
     private var callAudio: CallAudio? = null
+
+    // درخواست مجوز میکروفن/دوربین (برای تماس). نتیجه: granted | denied | blocked
+    private var permResult: MethodChannel.Result? = null
+    private var permAsked: List<String> = emptyList()
+    private val permRequestCode = 7411
+
+    private fun permName(key: String): String? = when (key) {
+        "mic" -> Manifest.permission.RECORD_AUDIO
+        "camera" -> Manifest.permission.CAMERA
+        else -> null
+    }
+
+    private fun permGranted(p: String): Boolean =
+        ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED
+
+    private fun permSnapshot(keys: List<String>): Map<String, String> {
+        val out = HashMap<String, String>()
+        for (k in keys) {
+            val p = permName(k) ?: continue
+            out[k] = if (permGranted(p)) "granted" else if (!ActivityCompat.shouldShowRequestPermissionRationale(this, p)) "blocked" else "denied"
+        }
+        return out
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != permRequestCode) return
+        val res = permResult ?: return
+        permResult = null
+        res.success(permSnapshot(permAsked))
+    }
 
     private fun audio(): CallAudio {
         var a = callAudio
@@ -117,6 +152,45 @@ class MainActivity : FlutterActivity() {
                     result.success(opened)
                 }
 
+                else -> result.notImplemented()
+            }
+        }
+
+        // مجوز میکروفن/دوربین: وضعیت، درخواست، و باز کردن تنظیمات برنامه
+        MethodChannel(messenger, "cyrus/perm").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "status" -> {
+                    val keys = call.argument<List<String>>("perms") ?: emptyList()
+                    val out = HashMap<String, String>()
+                    for (k in keys) {
+                        val p = permName(k) ?: continue
+                        out[k] = if (permGranted(p)) "granted" else "denied"
+                    }
+                    result.success(out)
+                }
+                "request" -> {
+                    val keys = call.argument<List<String>>("perms") ?: emptyList()
+                    val missing = keys.mapNotNull { permName(it) }.filter { !permGranted(it) }
+                    if (missing.isEmpty()) {
+                        result.success(permSnapshot(keys))
+                    } else if (permResult != null) {
+                        result.error("BUSY", "permission request in progress", null)
+                    } else {
+                        permResult = result
+                        permAsked = keys
+                        ActivityCompat.requestPermissions(this, missing.toTypedArray(), permRequestCode)
+                    }
+                }
+                "openAppSettings" -> {
+                    try {
+                        val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + packageName))
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(i)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
