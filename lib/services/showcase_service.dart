@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'safe_prefs.dart';
 
 import '../models/agency.dart';
 import '../models/leader.dart';
