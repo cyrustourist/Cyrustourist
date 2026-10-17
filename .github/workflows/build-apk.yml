@@ -25,6 +25,8 @@ jobs:
       #   Cyrustourist32.ir.apk  => ۳۲ بیتی (android-arm)   — گوشی‌های قدیمی / نصب از سایت
       APK64_NAME: Cyrustourist.ir.apk
       APK32_NAME: Cyrustourist32.ir.apk
+      # موقتاً فقط ۶۴ بیتی ساخته می‌شود (سریع‌تر و کم‌حجم‌تر). برای برگرداندن ۳۲ بیتی: "true"
+      BUILD_32: "false"
 
     steps:
       - name: Checkout
@@ -383,7 +385,12 @@ jobs:
           grep '^version:' pubspec.yaml
 
           # فرمت: پلتفرم|نام فایل خروجی|پوشه‌ی نمادهای دیباگ
-          for ITEM in "android-arm64|$APK64_NAME|arm64" "android-arm|$APK32_NAME|arm"; do
+          BUILD_ITEMS=("android-arm64|$APK64_NAME|arm64")
+          if [ "$BUILD_32" = "true" ]; then
+            BUILD_ITEMS+=("android-arm|$APK32_NAME|arm")
+          fi
+
+          for ITEM in "${BUILD_ITEMS[@]}"; do
             PLATFORM="${ITEM%%|*}"
             REST="${ITEM#*|}"
             NAME="${REST%%|*}"
@@ -448,7 +455,10 @@ jobs:
 
           test -n "$APKSIGNER"
 
-          for NAME in "$APK64_NAME" "$APK32_NAME"; do
+          SIGN_NAMES=("$APK64_NAME")
+          if [ "$BUILD_32" = "true" ]; then SIGN_NAMES+=("$APK32_NAME"); fi
+
+          for NAME in "${SIGN_NAMES[@]}"; do
             echo "Verifying $NAME"
             "$APKSIGNER" verify --verbose "$RUNNER_TEMP/apk-out/$NAME"
           done
@@ -469,7 +479,12 @@ jobs:
 
           test -n "$AAPT2"
 
-          for ITEM in "$APK64_NAME|arm64-v8a|armeabi-v7a" "$APK32_NAME|armeabi-v7a|arm64-v8a"; do
+          ABI_ITEMS=("$APK64_NAME|arm64-v8a|armeabi-v7a")
+          if [ "$BUILD_32" = "true" ]; then
+            ABI_ITEMS+=("$APK32_NAME|armeabi-v7a|arm64-v8a")
+          fi
+
+          for ITEM in "${ABI_ITEMS[@]}"; do
             NAME="${ITEM%%|*}"
             REST="${ITEM#*|}"
             WANT="${REST%%|*}"
@@ -515,7 +530,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          for NAME in "$APK64_NAME" "$APK32_NAME"; do
+          PREP_NAMES=("$APK64_NAME")
+          if [ "$BUILD_32" = "true" ]; then PREP_NAMES+=("$APK32_NAME"); fi
+
+          for NAME in "${PREP_NAMES[@]}"; do
             test -s "$RUNNER_TEMP/apk-out/$NAME"
             echo "$NAME size: $(stat -c%s "$RUNNER_TEMP/apk-out/$NAME") bytes"
           done
@@ -548,9 +566,11 @@ jobs:
 
           NOTES="Automated build from commit ${{ github.sha }}"$'\n\n'"$(cat "$RUNNER_TEMP/apk-out/signing-fingerprints.txt")"
 
+          RELEASE_FILES=("$APK")
+          if [ "$BUILD_32" = "true" ]; then RELEASE_FILES+=("$APK32"); fi
+
           gh release create "$TAG" \
-            "$APK" \
-            "$APK32" \
+            "${RELEASE_FILES[@]}" \
             "$RUNNER_TEMP/apk-out/signing-fingerprints.txt" \
             --repo "${{ github.repository }}" \
             --title "Cyrus Tourist $TAG" \
@@ -579,27 +599,32 @@ jobs:
               '
           )"
 
-          APK32_URL="$(
-            echo "$RELEASE_JSON" \
-              | jq -r --arg n "$APK32_NAME" '
-                .assets[]
-                | select(.name == $n)
-                | .browser_download_url
-              '
-          )"
+          if [ "$BUILD_32" = "true" ]; then
+            APK32_URL="$(
+              echo "$RELEASE_JSON" \
+                | jq -r --arg n "$APK32_NAME" '
+                  .assets[]
+                  | select(.name == $n)
+                  | .browser_download_url
+                '
+            )"
 
-          APK32_SIZE="$(
-            echo "$RELEASE_JSON" \
-              | jq -r --arg n "$APK32_NAME" '
-                .assets[]
-                | select(.name == $n)
-                | .size
-              '
-          )"
+            APK32_SIZE="$(
+              echo "$RELEASE_JSON" \
+                | jq -r --arg n "$APK32_NAME" '
+                  .assets[]
+                  | select(.name == $n)
+                  | .size
+                '
+            )"
 
-          test -n "$APK32_URL"
-          test "$APK32_URL" != "null"
-          test "$APK32_SIZE" -gt 0
+            test -n "$APK32_URL"
+            test "$APK32_URL" != "null"
+            test "$APK32_SIZE" -gt 0
+          else
+            APK32_URL=""
+            APK32_SIZE=0
+          fi
 
           APK_STATE="$(
             echo "$RELEASE_JSON" \
@@ -792,6 +817,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          APK32_LINE=""
+          if [ "$BUILD_32" = "true" ]; then
+            APK32_LINE="👉 **[⬇️ دانلود ۳۲ بیتی (برای سایت) — Cyrustourist32.ir.apk](${APK32_URL})** (${APK32_SIZE} bytes)"
+          fi
+
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           # 📱 Cyrus Tourist APK آماده است
 
@@ -812,7 +842,7 @@ jobs:
 
           👉 **[⬇️ دانلود ۶۴ بیتی — Cyrustourist.ir.apk](${APK_URL})** (${APK_SIZE} bytes)
 
-          👉 **[⬇️ دانلود ۳۲ بیتی (برای سایت) — Cyrustourist32.ir.apk](${APK32_URL})** (${APK32_SIZE} bytes)
+          ${APK32_LINE}
 
           ### 📦 صفحه Release
 
