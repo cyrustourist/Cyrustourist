@@ -1038,6 +1038,8 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
     return fa;
   }
 
+  String lastLocationError = '';
+
   Future<void> getLocation() async {
     if (locationLoading) return;
     locationLoading = true;
@@ -1078,13 +1080,55 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      final point = LatLng(position.latitude, position.longitude);
-
+      // سریع: ۱) آخرین موقعیت (دستگاه یا ذخیره‌شدهٔ قبلی) همان لحظه نمایش داده می‌شود
+      //       ۲) موقعیت تازه در ادامه می‌آید و نقشه را اصلاح می‌کند (۳) اگر سرویس گوگل نبود، LocationManager اندروید
       final pref = await SharedPreferences.getInstance();
+      Position? position;
+      try {
+        position = await Geolocator.getLastKnownPosition();
+      } catch (_) {}
+
+      LatLng? quick;
+      if (position != null) {
+        quick = LatLng(position.latitude, position.longitude);
+      } else {
+        final sl = pref.getDouble('last_lat');
+        final sg = pref.getDouble('last_lng');
+        if (sl != null && sg != null) quick = LatLng(sl, sg);
+      }
+      if (quick != null && mounted) {
+        setState(() {
+          userLocation = quick;
+          locationWarning = null;
+        });
+        mapController.move(quick, 15);
+      }
+
+      Position? fresh;
+      try {
+        fresh = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 10),
+        );
+      } catch (_) {
+        try {
+          fresh = await Geolocator.getCurrentPosition(
+            locationSettings: AndroidSettings(
+              accuracy: LocationAccuracy.low,
+              forceLocationManager: true,
+              timeLimit: const Duration(seconds: 12),
+            ),
+          );
+        } catch (e2) {
+          if (quick == null) {
+            lastLocationError = e2.runtimeType.toString();
+            rethrow;
+          }
+        }
+      }
+
+      final point = fresh != null ? LatLng(fresh.latitude, fresh.longitude) : quick!;
+
       await pref.setDouble('last_lat', point.latitude);
       await pref.setDouble('last_lng', point.longitude);
 
@@ -1096,13 +1140,14 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       });
 
       mapController.move(point, 15);
-    } catch (_) {
+    } catch (e) {
+      if (lastLocationError.isEmpty) lastLocationError = e.runtimeType.toString();
       if (mounted) {
         setState(() {
           locationWarning = _localize(
-            'خطا در دریافت موقعیت',
-            'Could not get your location',
-            'تعذر الحصول على الموقع',
+            'خطا در دریافت موقعیت ($lastLocationError). GPS را روشن کنید و چند ثانیه صبر کنید.',
+            'Could not get your location ($lastLocationError). Turn GPS on and wait a few seconds.',
+            'تعذر الحصول على الموقع ($lastLocationError). فعّل GPS وانتظر بضع ثوانٍ.',
           );
         });
       }
