@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// پروفایل کاربر — فعلاً کاملاً روی خود گوشی ذخیره می‌شود (بدون سرور).
@@ -122,12 +124,43 @@ class UserProfileService {
     return loaded;
   }
 
-  static Future<UserProfile> _read() async {
+  // عکس پروفایل (Base64 بزرگ) داخل فایل ذخیره می‌شود نه SharedPreferences؛
+  // نوشتن رشته‌ی بزرگ در SharedPreferences روی بعضی گوشی‌ها خطا می‌داد.
+  static Future<File?> _photoFile() async {
     try {
-      final p = await SharedPreferences.getInstance();
-      final raw = p.getString(_kData);
-      final photo = p.getString(_kPhoto) ?? '';
-      if (raw == null || raw.isEmpty) return UserProfile(photoBase64: photo);
+      final dir = await getApplicationSupportDirectory();
+      return File('${dir.path}/profile_photo_v1.b64');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<String> _readPhoto(SharedPreferences? p) async {
+    try {
+      final f = await _photoFile();
+      if (f != null && await f.exists()) {
+        final t = await f.readAsString();
+        if (t.isNotEmpty) return t;
+      }
+    } catch (_) {}
+    try {
+      return p?.getString(_kPhoto) ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  static Future<UserProfile> _read() async {
+    SharedPreferences? p;
+    try {
+      p = await SharedPreferences.getInstance();
+    } catch (_) {}
+    try {
+      final raw = p?.getString(_kData);
+      final photo = await _readPhoto(p);
+      if (raw == null || raw.isEmpty) {
+        return UserProfile(photoBase64: photo.isNotEmpty ? photo : (cached?.photoBase64 ?? ''));
+      }
       return UserProfile.fromJson(
         Map<String, dynamic>.from(jsonDecode(raw) as Map),
         photo,
@@ -138,24 +171,46 @@ class UserProfileService {
     }
   }
 
-  /// پروفایل همیشه در حافظهٔ اپ نگه داشته می‌شود؛ اگر نوشتن روی گوشی خطا بدهد false برمی‌گردد
-  /// (ولی ثبت روی سرور و چت از کار نمی‌افتد).
+  /// متن پروفایل در SharedPreferences و عکس در فایل جدا ذخیره می‌شود.
+  /// فقط اگر ذخیرهٔ متن (یا عکس) کاملاً شکست بخورد false برمی‌گردد.
   static Future<bool> save(UserProfile profile) async {
     cached = profile;
-    var persisted = true;
+    var textOk = false;
+    var photoOk = true;
+
+    for (var i = 0; i < 2 && !textOk; i++) {
+      try {
+        final p = await SharedPreferences.getInstance();
+        textOk = await p.setString(_kData, jsonEncode(profile.toJson()));
+      } catch (_) {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+    }
+
     try {
-      final p = await SharedPreferences.getInstance();
-      await p.setString(_kData, jsonEncode(profile.toJson()));
+      final f = await _photoFile();
       if (profile.photoBase64.isEmpty) {
-        await p.remove(_kPhoto);
+        if (f != null && await f.exists()) await f.delete();
+        try {
+          final p = await SharedPreferences.getInstance();
+          await p.remove(_kPhoto);
+        } catch (_) {}
+      } else if (f != null) {
+        await f.writeAsString(profile.photoBase64, flush: true);
+        try {
+          final p = await SharedPreferences.getInstance();
+          await p.remove(_kPhoto);
+        } catch (_) {}
       } else {
-        await p.setString(_kPhoto, profile.photoBase64);
+        final p = await SharedPreferences.getInstance();
+        photoOk = await p.setString(_kPhoto, profile.photoBase64);
       }
     } catch (_) {
-      persisted = false;
+      photoOk = false;
     }
+
     changes.value++;
-    return persisted;
+    return textOk && photoOk;
   }
 
   /// حذف کامل اطلاعات پروفایل از روی دستگاه.
@@ -163,6 +218,10 @@ class UserProfileService {
     final p = await SharedPreferences.getInstance();
     await p.remove(_kData);
     await p.remove(_kPhoto);
+    try {
+      final f = await _photoFile();
+      if (f != null && await f.exists()) await f.delete();
+    } catch (_) {}
     cached = const UserProfile();
     changes.value++;
   }
