@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'safe_prefs.dart';
 
 /// پروفایل کاربر — فعلاً کاملاً روی خود گوشی ذخیره می‌شود (بدون سرور).
 /// عکس پروفایل پیش از ذخیره توسط image_picker فشرده می‌شود
