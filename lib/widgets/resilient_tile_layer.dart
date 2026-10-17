@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/safe_prefs.dart';
 
 import '../config/carto_config.dart';
 import '../core/language/menu_translations.dart';
+import '../services/offline_tiles.dart';
 import '../services/tile_cache.dart';
 
 /// آدرس کاشی ماهواره (خالی = گزینه‌های ماهواره در دکمهٔ لایه‌ها نمایش داده نمی‌شود).
@@ -132,6 +133,113 @@ class MapLayerButton extends StatelessWidget {
   }
 }
 
+/// آخرین محدودهٔ دیده‌شدهٔ نقشه (برای دانلود نقشهٔ آفلاین)
+class MapViewport {
+  MapViewport._();
+  static double south = 0, west = 0, north = 0, east = 0, zoom = -1;
+  static bool get has => zoom >= 0;
+}
+
+class _ViewportReporter extends StatelessWidget {
+  const _ViewportReporter();
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+      final cam = MapCamera.maybeOf(context);
+      if (cam != null) {
+        final b = cam.visibleBounds;
+        MapViewport.south = b.south;
+        MapViewport.west = b.west;
+        MapViewport.north = b.north;
+        MapViewport.east = b.east;
+        MapViewport.zoom = cam.zoom;
+      }
+    } catch (_) {}
+    return const SizedBox.shrink();
+  }
+}
+
+void _snack(BuildContext context, String text) {
+  final m = ScaffoldMessenger.maybeOf(context);
+  m?.showSnackBar(SnackBar(content: Text(text)));
+}
+
+/// دانلود نقشهٔ محدودهٔ فعلی برای استفاده بدون اینترنت
+Future<void> offlineDownloadFlow(BuildContext context) async {
+  if (!MapViewport.has || MapViewport.zoom < 9) {
+    _snack(context, _lt('برای دانلود، نقشه را روی شهر یا منطقهٔ موردنظر زوم کنید (حداقل زوم ۹).',
+        'To download, zoom the map to your city or area (zoom 9 or more).', 'للتحميل، قرّب الخريطة إلى مدينتك أو منطقتك.'));
+    return;
+  }
+  if (OfflineTiles.running) {
+    _snack(context, _lt('یک دانلود در حال انجام است.', 'A download is already running.', 'هناك تحميل قيد التنفيذ.'));
+    return;
+  }
+  final z0 = MapViewport.zoom.floor().clamp(9, 16);
+  var z1 = (z0 + 4).clamp(z0, 16);
+  int cnt(int zz) => OfflineTiles.count(MapViewport.south, MapViewport.west, MapViewport.north, MapViewport.east, z0, zz);
+  while (z1 > z0 && cnt(z1) > OfflineTiles.maxTilesPerDownload) {
+    z1--;
+  }
+  final tiles = cnt(z1);
+  if (tiles > OfflineTiles.maxTilesPerDownload) {
+    _snack(context, _lt('محدوده بزرگ است؛ بیشتر زوم کنید.', 'Area is too large; zoom in more.', 'المنطقة كبيرة، قرّب أكثر.'));
+    return;
+  }
+  final mb = (tiles * OfflineTiles.approxTileBytes / (1024 * 1024)).ceil();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: Text(_lt('دانلود نقشهٔ آفلاین', 'Download offline map', 'تحميل خريطة بدون إنترنت')),
+      content: Text(_lt(
+        'نقشهٔ همین محدوده (زوم $z0 تا $z1، حدود $tiles کاشی، نزدیک $mb مگابایت) روی گوشی ذخیره می‌شود تا بدون آنتن هم نمایش داده شود.',
+        'This area (zoom $z0-$z1, about $tiles tiles, ~$mb MB) will be saved on your phone so it works without signal.',
+        'سيتم حفظ هذه المنطقة (تقريباً $mb ميغابايت) على هاتفك لتعمل بدون إشارة.',
+      )),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(c).pop(false), child: Text(_lt('انصراف', 'Cancel', 'إلغاء'))),
+        TextButton(onPressed: () => Navigator.of(c).pop(true), child: Text(_lt('دانلود', 'Download', 'تحميل'))),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+
+  final snapshot = [MapViewport.south, MapViewport.west, MapViewport.north, MapViewport.east];
+  final fut = OfflineTiles.download(south: snapshot[0], west: snapshot[1], north: snapshot[2], east: snapshot[3], z0: z0, z1: z1);
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (c) => ValueListenableBuilder<OfflineProgress?>(
+      valueListenable: OfflineTiles.progress,
+      builder: (_, p, __) {
+        final finished = p == null || p.finished || p.failed;
+        if (finished && Navigator.of(c).canPop()) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (c.mounted && Navigator.of(c).canPop()) Navigator.of(c).pop();
+          });
+        }
+        final frac = (p == null || p.total == 0) ? null : p.done / p.total;
+        return AlertDialog(
+          title: Text(_lt('در حال دانلود نقشه…', 'Downloading map…', 'جارٍ تحميل الخريطة…')),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            LinearProgressIndicator(value: frac),
+            const SizedBox(height: 10),
+            Text(p == null ? '' : '${p.done} / ${p.total}'),
+          ]),
+          actions: [TextButton(onPressed: OfflineTiles.cancel, child: Text(_lt('توقف', 'Stop', 'إيقاف')))],
+        );
+      },
+    ),
+  );
+  final done = await fut;
+  if (context.mounted) {
+    _snack(context, done
+        ? _lt('نقشه ذخیره شد؛ حالا بدون اینترنت هم کار می‌کند.', 'Map saved; it now works offline.', 'تم الحفظ، تعمل الخريطة الآن بدون إنترنت.')
+        : _lt('دانلود کامل نشد (اینترنت قطع یا متوقف شد). هرچه دانلود شده بود ذخیره ماند.', 'Download incomplete. What was downloaded is kept.', 'لم يكتمل التحميل. تم الاحتفاظ بما تم تحميله.'));
+  }
+}
+
 Future<void> showMapLayerSheet(BuildContext context) {
   final items = <List<Object>>[
     [MapLayerKind.standard, Icons.map_rounded, _lt('نقشه استاندارد', 'Standard map', 'خريطة عادية'), _lt('جاده‌ها و نام مکان‌ها، سریع‌ترین', 'Roads and place names, fastest', 'الطرق وأسماء الأماكن')],
@@ -191,6 +299,44 @@ Future<void> showMapLayerSheet(BuildContext context) {
                         ]),
                       ),
                     ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      offlineDownloadFlow(context);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0x1422e0ad),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xff22e0ad)),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.download_for_offline_rounded, color: Color(0xff22e0ad)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(_lt('دانلود نقشهٔ این محدوده (بدون اینترنت)', 'Download this area (offline)', 'تحميل هذه المنطقة (بدون إنترنت)'),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            Text(_lt('برای جاهایی که آنتن نیست', 'For places without signal', 'للأماكن بدون إشارة'),
+                                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                          ]),
+                        ),
+                      ]),
+                    ),
+                  ),
+                  Center(
+                    child: TextButton(
+                      onPressed: () async {
+                        await OfflineTiles.clearAll();
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        if (context.mounted) _snack(context, _lt('نقشه‌های دانلودشده پاک شد.', 'Downloaded maps removed.', 'تم حذف الخرائط.'));
+                      },
+                      child: Text(_lt('حذف نقشه‌های دانلودشده', 'Remove downloaded maps', 'حذف الخرائط المحمّلة'), style: const TextStyle(fontSize: 12)),
+                    ),
+                  ),
                   Text('© OpenStreetMap · OpenTopoMap · CARTO',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 10)),
@@ -275,13 +421,17 @@ class _ResilientTileLayerState extends State<ResilientTileLayer> {
   void initState() {
     super.initState();
     MapLayerPref.ensureLoaded();
+    OfflineTiles.init();
   }
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<MapLayerKind>(
       valueListenable: MapLayerPref.kind,
-      builder: (_, kind, __) => _buildFor(kind),
+      builder: (_, kind, __) => Stack(
+        fit: StackFit.expand,
+        children: [_buildFor(kind), const _ViewportReporter()],
+      ),
     );
   }
 
