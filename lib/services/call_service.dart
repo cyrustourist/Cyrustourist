@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart' show navigatorKey;
 import '../pages/call_page.dart';
 import '../pages/calls_page.dart';
+import 'app_permissions.dart';
 import 'badge_service.dart';
 import 'call_session.dart';
 import 'call_texts.dart';
@@ -266,7 +267,19 @@ class CallService with WidgetsBindingObserver {
   static const String _micAskedKey = 'call_mic_asked_v1';
 
   /// پنجرهٔ سیستم مجوز میکروفن را باز می‌کند. true = مجوز داده شد.
+  /// دلیل آخرین شکست مجوز: '' | denied | blocked | error
+  String _permIssue = '';
+  String _mediaErr = '';
+
+  /// مجوز را با پنجرهٔ بومی اندروید می‌گیرد و سپس میکروفن را واقعاً امتحان می‌کند.
   Future<bool> requestMicNow() async {
+    _permIssue = '';
+    _mediaErr = '';
+    final perm = await AppPermissions.request(['mic']);
+    if (perm != null && perm['mic'] != 'granted') {
+      _permIssue = perm['mic'] == 'blocked' ? 'blocked' : 'denied';
+      return false;
+    }
     try {
       final stream = await rtc.navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
       for (final t in stream.getTracks()) {
@@ -276,12 +289,18 @@ class CallService with WidgetsBindingObserver {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_micGrantedKey, true);
       return true;
-    } catch (_) {
+    } catch (e) {
+      _permIssue = 'error';
+      _mediaErr = '$e'.replaceAll('\n', ' ');
+      if (_mediaErr.length > 120) _mediaErr = _mediaErr.substring(0, 120);
       return false;
     }
   }
 
   Future<bool> _micKnownGranted() async {
+    // وضعیت واقعی مجوز از اندروید خوانده می‌شود (کاربر ممکن است بعداً از تنظیمات گرفته باشد)
+    final real = await AppPermissions.isGranted(['mic']);
+    if (real != null) return real;
     try {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_micGrantedKey) == true;
@@ -305,12 +324,33 @@ class CallService with WidgetsBindingObserver {
     return ok == true;
   }
 
-  Future<void> _micDeniedDialog(BuildContext ctx) async {
+  Future<void> _micDeniedDialog(BuildContext ctx, {bool video = false}) async {
+    final String text;
+    switch (_permIssue) {
+      case 'blocked':
+        text = CT.t('perm_blocked');
+        break;
+      case 'error':
+        text = CT.t('media_error', {'e': _mediaErr});
+        break;
+      default:
+        text = CT.t('perm_denied_now');
+    }
     await showDialog<void>(
       context: ctx,
       builder: (c) => AlertDialog(
-        content: Text(CT.t('mic_denied'), style: const TextStyle(height: 1.7)),
-        actions: [TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('OK'))],
+        content: Text(text, style: const TextStyle(height: 1.7)),
+        actions: [
+          if (_permIssue == 'blocked')
+            TextButton(
+              onPressed: () {
+                Navigator.of(c).pop();
+                AppPermissions.openSettings();
+              },
+              child: Text(CT.t('open_settings')),
+            ),
+          TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('OK')),
+        ],
       ),
     );
   }
@@ -321,7 +361,9 @@ class CallService with WidgetsBindingObserver {
   Future<bool> ensureCamForCall(BuildContext ctx) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool(_camGrantedKey) == true) return true;
+      final real = await AppPermissions.isGranted(['mic', 'camera']);
+      if (real == true) return true;
+      if (real == null && prefs.getBool(_camGrantedKey) == true) return true;
       if (!ctx.mounted) return false;
       final ok = await showDialog<bool>(
         context: ctx,
@@ -335,6 +377,14 @@ class CallService with WidgetsBindingObserver {
         ),
       );
       if (ok != true) return false;
+      _permIssue = '';
+      _mediaErr = '';
+      final perm = await AppPermissions.request(['mic', 'camera']);
+      if (perm != null && (perm['mic'] != 'granted' || perm['camera'] != 'granted')) {
+        _permIssue = (perm['mic'] == 'blocked' || perm['camera'] == 'blocked') ? 'blocked' : 'denied';
+        if (ctx.mounted) await _micDeniedDialog(ctx, video: true);
+        return false;
+      }
       try {
         final stream = await rtc.navigator.mediaDevices.getUserMedia({'audio': true, 'video': true});
         for (final t in stream.getTracks()) {
@@ -344,16 +394,11 @@ class CallService with WidgetsBindingObserver {
         await prefs.setBool(_camGrantedKey, true);
         await prefs.setBool(_micGrantedKey, true);
         return true;
-      } catch (_) {
-        if (ctx.mounted) {
-          await showDialog<void>(
-            context: ctx,
-            builder: (c) => AlertDialog(
-              content: Text(CT.t('cam_denied'), style: const TextStyle(height: 1.7)),
-              actions: [TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('OK'))],
-            ),
-          );
-        }
+      } catch (e) {
+        _permIssue = 'error';
+        _mediaErr = '$e'.replaceAll('\n', ' ');
+        if (_mediaErr.length > 120) _mediaErr = _mediaErr.substring(0, 120);
+        if (ctx.mounted) await _micDeniedDialog(ctx, video: true);
         return false;
       }
     } catch (_) {
@@ -422,23 +467,35 @@ class CallService with WidgetsBindingObserver {
     await nav.push(MaterialPageRoute(builder: (_) => CallPage(session: session)));
   }
 
-  /// پیام «تماس خاموش است» از ورکر؛ null یعنی تماس صوتی روشن است (یا ورکر در دسترس نبود: اجازه می‌دهیم تماس امتحان شود).
+  /// پیام قبل از شروع تماس:
+  ///  - ورکر جواب داد و تماس (صوتی/تصویری) روشن است ← null (تماس شروع می‌شود، هیچ پیامی نشان داده نمی‌شود)
+  ///  - ورکر جواب داد و از پنل خاموش شده ← همان پیامی که ورکر فرستاده
+  ///  - ورکر جواب نداد (قطع/در دسترس نیست) ← متن زیبای «کارگران در حال کارند»
   Future<String?> _disabledMessage({bool video = false}) async {
+    Map<String, dynamic>? j;
     try {
       final uid = await BadgeService.userUid();
-      final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid});
-      final f = j?['features'];
-      if (f is! Map) return null;
-      if (video) {
-        if (f['video_enabled'] == false) {
-          final m = '${f['video_message'] ?? ''}'.trim();
-          return m.isNotEmpty ? m : CT.t('video_soon');
-        }
-      } else if (f['voice_enabled'] == false) {
-        final m = '${f['message'] ?? ''}'.trim();
-        return m.isNotEmpty ? m : 'در حال بروزرسانی نوین هستیم؛ سپاسگزاریم.';
+      j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid}, timeout: const Duration(seconds: 6));
+    } catch (_) {
+      j = null;
+    }
+    if (j == null) return CT.t('server_down');
+    final f = j['features'];
+    if (f is! Map) {
+      // ورکر جواب داد ولی بدون تنظیمات (ورکر قدیمی) ← تماس را امتحان کن
+      return j['success'] == false && '${j['error'] ?? ''}' == 'calls_disabled'
+          ? ('${j['message'] ?? ''}'.trim().isNotEmpty ? '${j['message']}'.trim() : CT.t('server_down'))
+          : null;
+    }
+    if (video) {
+      if (f['video_enabled'] == false) {
+        final m = '${f['video_message'] ?? ''}'.trim();
+        return m.isNotEmpty ? m : CT.t('video_soon');
       }
-    } catch (_) {}
+    } else if (f['voice_enabled'] == false) {
+      final m = '${f['message'] ?? ''}'.trim();
+      return m.isNotEmpty ? m : CT.t('updating');
+    }
     return null;
   }
 
