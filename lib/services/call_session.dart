@@ -611,10 +611,9 @@ class CallSession extends ChangeNotifier {
 
   Future<void> _pollOnce() async {
     if (_closed || callId == null || _pollBusy) return;
-    // فاصلهٔ پایش: تماس‌گیرنده هنگام زنگ هر ۱ ثانیه (پاسخ زودتر دیده شود)، هنگام اتصال هر ۲ ثانیه،
-    // وقتی وصل هستیم هر ۴ ثانیه (کم‌کردن درخواست)
+    // فاصلهٔ پایش (تایمر ۵۰۰ms): زنگ‌خوردن تماس‌گیرنده ۰٫۵ث، اتصال ۰٫۵ث، گیرنده ۱ث، وصل‌شده ۱ث (ریل‌تایم)
     _tick++;
-    final every = phase == CallPhase.connected ? 8 : ((isCaller && phase == CallPhase.ringing) ? 1 : (phase == CallPhase.connecting ? 2 : 4));
+    final every = phase == CallPhase.connected ? 2 : ((isCaller && phase == CallPhase.ringing) ? 1 : (phase == CallPhase.connecting ? 1 : 2));
     if (_tick % every != 0) return;
     _pollBusy = true;
     try {
