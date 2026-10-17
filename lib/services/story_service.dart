@@ -1,4 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'safe_prefs.dart';
 
 import 'badge_service.dart';
 
