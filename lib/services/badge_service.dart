@@ -170,12 +170,14 @@ class BadgeService {
     String path, {
     Map<String, String>? query,
     Map<String, dynamic>? body,
+    Duration timeout = const Duration(seconds: 10),
   }) =>
       _call(
         method,
         path,
         query: {...?query, 'lang': MenuLanguage.current},
         body: body == null ? null : {...body, 'lang': MenuLanguage.current},
+        timeout: timeout,
       );
 
   static Future<Map<String, dynamic>?> _call(
@@ -183,20 +185,23 @@ class BadgeService {
     String path, {
     Map<String, String>? query,
     Map<String, dynamic>? body,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
-    // یک کلاینت مشترک با اتصال زنده (keep-alive): هر درخواست دیگر دست‌دادن TLS تازه نمی‌خواهد.
-    final client = _sharedClient;
+    // هر درخواست کلاینت جداگانه دارد و در پایان (حتی با Timeout) کامل بسته می‌شود؛
+    // با کلاینت مشترک، اتصال‌های معلق پایش تماس (هر ۳ ثانیه) کم‌کم همهٔ ۶ اتصال را پر می‌کردند
+    // و ثبت پروفایل/چت هم Timeout می‌خورد.
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
     try {
       final uri = Uri.parse('$_base$path').replace(queryParameters: query);
-      final req = await client.openUrl(method, uri).timeout(const Duration(seconds: 10));
+      final req = await client.openUrl(method, uri).timeout(timeout);
       req.headers.set(HttpHeaders.acceptHeader, 'application/json');
       req.headers.set('X-Cyrus-Token', await deviceToken());
       if (body != null) {
         req.headers.set(HttpHeaders.contentTypeHeader, 'application/json; charset=utf-8');
         req.add(utf8.encode(jsonEncode(body)));
       }
-      final res = await req.close().timeout(const Duration(seconds: 10));
-      final text = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 10));
+      final res = await req.close().timeout(timeout);
+      final text = await res.transform(utf8.decoder).join().timeout(timeout);
       Object? decoded;
       try {
         decoded = jsonDecode(text);
@@ -219,13 +224,10 @@ class BadgeService {
     } catch (e) {
       lastError = '${e.runtimeType}';
       return null;
+    } finally {
+      client.close(force: true);
     }
   }
-
-  static final HttpClient _sharedClient = HttpClient()
-    ..connectionTimeout = const Duration(seconds: 8)
-    ..idleTimeout = const Duration(seconds: 90)
-    ..maxConnectionsPerHost = 6;
 
   /// ثبت/به‌روزرسانی کاربر در سرور. خطای نام کاربری تکراری در نتیجه برمی‌گردد.
   static Future<RegisterResult> registerUser() async {
