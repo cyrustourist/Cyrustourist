@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/safe_prefs.dart';
 
 /// زبان‌های پشتیبانی‌شده در برنامه سایروس توریست.
 ///
