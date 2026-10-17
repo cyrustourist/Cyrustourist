@@ -133,20 +133,29 @@ class UserProfileService {
         photo,
       );
     } catch (_) {
-      return const UserProfile();
+      // خواندن حافظه خطا داد: آخرین پروفایل داخل حافظهٔ اپ، نه یک پروفایل خالی.
+      return cached ?? const UserProfile();
     }
   }
 
-  static Future<void> save(UserProfile profile) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_kData, jsonEncode(profile.toJson()));
-    if (profile.photoBase64.isEmpty) {
-      await p.remove(_kPhoto);
-    } else {
-      await p.setString(_kPhoto, profile.photoBase64);
-    }
+  /// پروفایل همیشه در حافظهٔ اپ نگه داشته می‌شود؛ اگر نوشتن روی گوشی خطا بدهد false برمی‌گردد
+  /// (ولی ثبت روی سرور و چت از کار نمی‌افتد).
+  static Future<bool> save(UserProfile profile) async {
     cached = profile;
+    var persisted = true;
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString(_kData, jsonEncode(profile.toJson()));
+      if (profile.photoBase64.isEmpty) {
+        await p.remove(_kPhoto);
+      } else {
+        await p.setString(_kPhoto, profile.photoBase64);
+      }
+    } catch (_) {
+      persisted = false;
+    }
     changes.value++;
+    return persisted;
   }
 
   /// حذف کامل اطلاعات پروفایل از روی دستگاه.
