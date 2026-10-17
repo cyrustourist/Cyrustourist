@@ -87,7 +87,49 @@ class CallService with WidgetsBindingObserver {
   DateTime? _autoAnswerAt;
   AppLifecycleState? _lifecycle;
 
-  bool get _inForeground => (_lifecycle ?? WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) == AppLifecycleState.resumed;
+  // اپ با اعلان تماس (تمام‌صفحه/ضربه) باز شده است؛ تا باز شدن صفحهٔ تماس «جلوی صفحه» حساب می‌شود
+  static bool launchedByCall = false;
+  bool _launchMode = false;
+  bool _lastCheckOk = false;
+
+  bool get _inForeground =>
+      _launchMode || (_lifecycle ?? WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) == AppLifecycleState.resumed;
+
+  /// قبل از runApp صدا زده می‌شود: آیا اپ را اعلان تماس باز کرده است؟
+  static Future<void> detectLaunch() async {
+    try {
+      final d = await FlutterLocalNotificationsPlugin().getNotificationAppLaunchDetails().timeout(const Duration(milliseconds: 1200));
+      final r = d?.notificationResponse;
+      if (d == null || !d.didNotificationLaunchApp) return;
+      final payload = r?.payload;
+      final id = _callIdFromPayload(payload);
+      if (id == null || !(payload ?? '').contains('"type":"call"')) return;
+      launchedByCall = true;
+      if (r?.actionId == actionAnswer) instance._markAutoAnswer(payload);
+    } catch (_) {}
+  }
+
+  /// بعد از باز شدن اپ با اعلان تماس: تماس را مستقیم از ورکر می‌گیرد و صفحهٔ تماس را باز می‌کند
+  /// (بدون انتظار برای توکن FCM یا اسپلش؛ چند بار تلاش می‌کند تا شبکه بالا بیاید).
+  Future<void> openLaunchedCall() async {
+    _launchMode = true;
+    try {
+      var waited = 0;
+      for (final at in const [0, 500, 1200, 2200, 3500, 5500, 8000]) {
+        if (at > waited) {
+          await Future<void>.delayed(Duration(milliseconds: at - waited));
+          waited = at;
+        }
+        if (_pageOpen) return;
+        await checkIncoming();
+        // سرور جواب داد ولی تماسی نبود (لغو/از دست رفته) → بیشتر منتظر نمی‌مانیم
+        if (_pageOpen || _lastCheckOk) return;
+      }
+    } finally {
+      _launchMode = false;
+      launchedByCall = false;
+    }
+  }
 
   bool get pageOpen => _pageOpen;
 
@@ -534,6 +576,7 @@ class CallService with WidgetsBindingObserver {
     try {
       final uid = await BadgeService.userUid();
       final j = await BadgeService.call('GET', '/api/call/incoming', query: {'user_uid': uid}, timeout: const Duration(seconds: 5));
+      _lastCheckOk = j != null;
       if (j == null) {
         _pollFails++;
         _pollSkip = _pollFails > 9 ? 9 : _pollFails;
