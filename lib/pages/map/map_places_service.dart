@@ -188,7 +188,7 @@ class MapPlacesService {
       tags: _buildTags(type),
     );
 
-    final data = await _requestOverpassWithRetry(query);
+    final data = await _requestOverpassWithRetry(query).timeout(const Duration(seconds: 25));
     final places = _parseOverpassResults(data, type, language);
 
     if (places.isNotEmpty) {
