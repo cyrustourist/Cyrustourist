@@ -255,6 +255,20 @@ class MovieSlotData {
         : t('فیلم شماره $code', 'Video #$code', 'فيديو رقم $code');
   }
 
+  /// آیا این متن (نام/شهر/دسته) به زبان فعلیِ برنامه ترجمه شده است؟
+  /// در حالت انگلیسی/عربی، اگر ترجمه خالی باشد نباید متن فارسی وسط جمله‌ی
+  /// انگلیسی/عربی بیاید (ترکیب فارسی + انگلیسی).
+  bool _hasLocalized(String? fa, String? en, String? ar) {
+    switch (_lang) {
+      case 'en':
+        return (en ?? '').trim().isNotEmpty;
+      case 'ar':
+        return (ar ?? '').trim().isNotEmpty;
+      default:
+        return (fa ?? '').trim().isNotEmpty;
+    }
+  }
+
   String get displayCity =>
       t(city ?? '', cityEn ?? city ?? '', cityAr ?? city ?? '');
 
@@ -264,16 +278,15 @@ class MovieSlotData {
   /// چکیده‌ی توضیحات — اگر توضیح دستی وارد نشده باشد، از دسته و شهر
   /// یک چکیده‌ی کوتاه خودکار ساخته می‌شود تا کارت/صفحه هرگز خالی نماند.
   String get displayDescription {
-    final localized = t(
-      description ?? '',
-      descriptionEn ?? description ?? '',
-      descriptionAr ?? description ?? '',
-    );
-    if (localized.trim().isNotEmpty) return localized;
+    // فقط توضیحی که واقعاً به زبان فعلی نوشته شده نمایش داده می‌شود.
+    if (_hasLocalized(description, descriptionEn, descriptionAr)) {
+      return t(description ?? '', descriptionEn ?? '', descriptionAr ?? '')
+          .trim();
+    }
 
-    final city = displayCity;
-    final cat = displayCategory;
-    if (city.isEmpty && cat.isEmpty) return '';
+    final city = _hasLocalized(this.city, cityEn, cityAr) ? displayCity : '';
+    final cat =
+        _hasLocalized(category, categoryEn, categoryAr) ? displayCategory : '';
 
     return t(
       'بخشی از مجموعه فیلم‌های گردشگری سایروس توریست'
