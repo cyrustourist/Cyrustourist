@@ -26,6 +26,7 @@ import 'map_place.dart';
 import 'core/language/app_language.dart';
 import 'core/language/menu_translations.dart';
 import 'services/map_places_service.dart';
+import 'services/local_gazetteer.dart';
 import 'pages/category_explorer_page.dart';
 
 
@@ -1039,6 +1040,24 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
   }
 
   String lastLocationError = '';
+  LatLng? destinationPoint;
+
+  /// اولین موقعیت را از جریان موقعیت می‌گیرد؛ اول با سرویس گوگل، بعد با LocationManager اندروید.
+  Future<Position?> _waitForFix() async {
+    for (final force in [false, true]) {
+      try {
+        final stream = Geolocator.getPositionStream(
+          locationSettings: AndroidSettings(
+            accuracy: LocationAccuracy.low,
+            distanceFilter: 0,
+            forceLocationManager: force,
+          ),
+        );
+        return await stream.first.timeout(Duration(seconds: force ? 20 : 30));
+      } catch (_) {}
+    }
+    return null;
+  }
 
   Future<void> getLocation() async {
     if (locationLoading) return;
@@ -1111,19 +1130,11 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
           timeLimit: const Duration(seconds: 10),
         );
       } catch (_) {
-        try {
-          fresh = await Geolocator.getCurrentPosition(
-            locationSettings: AndroidSettings(
-              accuracy: LocationAccuracy.low,
-              forceLocationManager: true,
-              timeLimit: const Duration(seconds: 12),
-            ),
-          );
-        } catch (e2) {
-          if (quick == null) {
-            lastLocationError = e2.runtimeType.toString();
-            rethrow;
-          }
+        // دریافت مستقیم زمان‌بر شد (مثلاً داخل ساختمان): تا ۵۰ ثانیه منتظر اولین موقعیت می‌مانیم
+        fresh = await _waitForFix();
+        if (fresh == null && quick == null) {
+          lastLocationError = 'timeout';
+          throw Exception('no-fix');
         }
       }
 
@@ -1145,9 +1156,9 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       if (mounted) {
         setState(() {
           locationWarning = _localize(
-            'خطا در دریافت موقعیت ($lastLocationError). GPS را روشن کنید و چند ثانیه صبر کنید.',
-            'Could not get your location ($lastLocationError). Turn GPS on and wait a few seconds.',
-            'تعذر الحصول على الموقع ($lastLocationError). فعّل GPS وانتظر بضع ثوانٍ.',
+            'موقعیت شما هنوز پیدا نشد. به فضای باز بروید (داخل ساختمان سیگنال GPS ضعیف است)، «موقعیت دقیق» را در تنظیمات گوشی روشن کنید و دوباره دکمهٔ موقعیت را بزنید.',
+            'Your location was not found yet. Go outdoors (GPS is weak indoors), turn on Precise Location in phone settings and tap the location button again.',
+            'لم يتم العثور على موقعك بعد. اخرج إلى مكان مفتوح (إشارة GPS ضعيفة داخل المباني)، فعّل «الموقع الدقيق» في الإعدادات ثم اضغط زر الموقع مرة أخرى.',
           );
         });
       }
@@ -1173,6 +1184,18 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
             ),
             child: const Icon(Icons.my_location, color: Colors.blue, size: 35),
           ),
+        ),
+      );
+    }
+
+    if (destinationPoint != null) {
+      items.add(
+        Marker(
+          point: destinationPoint!,
+          width: 50,
+          height: 50,
+          alignment: Alignment.topCenter,
+          child: const Icon(Icons.location_on, color: Colors.red, size: 46),
         ),
       );
     }
@@ -1482,6 +1505,18 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       results = [];
     }
 
+    if (results.isEmpty) {
+      results = LocalGazetteer.search(query)
+          .map((p) => MapPlace(
+                id: '${p.lat},${p.lng}',
+                name: p.fa,
+                location: p.point,
+                category: PlaceCategory.other,
+                source: 'offline',
+              ))
+          .toList();
+    }
+
     if (!mounted) return;
 
     final currentText = isOrigin ? originController.text.trim() : destinationController.text.trim();
@@ -1544,7 +1579,11 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       originController.text = place.name;
     } else {
       destinationController.text = place.name;
+      setState(() => destinationPoint = place.location);
     }
+    try {
+      mapController.move(place.location, 14);
+    } catch (_) {}
 
     _removeSuggestionsOverlay();
     FocusScope.of(context).unfocus();
