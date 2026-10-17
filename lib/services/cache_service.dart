@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'safe_prefs.dart';
 
 /// یک رکورد Cache همراه با زمان ذخیره و منبع، طبق «دستور کار فنی Android»:
 /// هر Cache باید data / updatedAt / source داشته باشد.
