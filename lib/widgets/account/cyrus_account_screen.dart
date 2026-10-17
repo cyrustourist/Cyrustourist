@@ -7,7 +7,6 @@ import '../../pages/residence_register_page.dart';
 import '../../pages/calls_page.dart';
 import '../../pages/chat_room_page.dart';
 import '../../services/call_texts.dart';
-import '../../pages/support_chat_page.dart';
 import '../../services/notification_service.dart';
 import '../../services/public_link_service.dart';
 import '../share_sheet.dart';
@@ -117,13 +116,6 @@ class CyrusAccountScreen extends StatelessWidget {
                   context,
                   title: _SupportChatTexts.of(languageCode).section,
                   items: [
-                    _AccountItem(
-                      icon: Icons.support_agent_rounded,
-                      title: _SupportChatTexts.of(languageCode).title,
-                      subtitle: _SupportChatTexts.of(languageCode).subtitle,
-                      iconColor: const Color(0xff65d9ff),
-                      actionId: 'support_chat',
-                    ),
                     _AccountItem(
                       icon: Icons.forum_rounded,
                       title: _SupportChatTexts.of(languageCode).roomTitle,
@@ -471,15 +463,6 @@ class CyrusAccountScreen extends StatelessWidget {
     if (item.actionId == 'chat_room') {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const ChatRoomPage()),
-      );
-      return;
-    }
-
-    if (item.actionId == 'support_chat') {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => SupportChatPage(languageCode: languageCode),
-        ),
       );
       return;
     }
