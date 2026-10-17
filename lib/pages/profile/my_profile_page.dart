@@ -225,7 +225,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
       videoLink: _videoCtrl.text.trim(),
     );
     try {
-      await UserProfileService.save(p);
+      final persisted = await UserProfileService.save(p);
       final rr = await BadgeService.registerUser(); // همگام‌سازی با سرور و چت‌روم
       if (!mounted) return;
       if (rr.isUsernameError) {
@@ -242,9 +242,17 @@ class _MyProfilePageState extends State<MyProfilePage> {
         _saved = p;
         _editing = false;
       });
-      _snack('پروفایل ذخیره شد.');
-    } catch (_) {
-      _snack('ذخیره انجام نشد. دوباره تلاش کنید.');
+      if (!persisted) {
+        _snack('پروفایل ذخیره شد، ولی حافظهٔ گوشی خطا داد؛ بعد از بستن اپ ممکن است پاک شود. (${BadgeService.lastError})');
+      } else if (!rr.ok && rr.code == 'net') {
+        _snack('روی گوشی ذخیره شد، اما ارتباط با سرور برقرار نشد (${rr.message}).');
+      } else if (!rr.ok) {
+        _snack(rr.message.isEmpty ? 'سرور ثبت را نپذیرفت (${rr.code}).' : rr.message);
+      } else {
+        _snack('پروفایل ذخیره شد.');
+      }
+    } catch (e) {
+      _snack('ذخیره انجام نشد (${e.runtimeType}). دوباره تلاش کنید.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
