@@ -1,5 +1,5 @@
 import 'package:latlong2/latlong.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'safe_prefs.dart';
 
 class LocationStorageService {
 
