@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../core/language/menu_translations.dart';
 import '../services/call_service.dart';
@@ -76,7 +77,7 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
 
   String get _title {
     if (s.phase == CallPhase.connected) return _fmt(s.elapsed);
-    if (s.phase == CallPhase.ringing && !s.isCaller) return CT.t('incoming');
+    if (s.phase == CallPhase.ringing && !s.isCaller) return CT.t(s.isVideo ? 'incoming_video' : 'incoming');
     return s.statusText;
   }
 
@@ -127,6 +128,7 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
     final incomingRinging = !s.isCaller && s.phase == CallPhase.ringing;
     final ended = s.phase == CallPhase.ended;
     final showAddPill = !incomingRinging && !ended && !s.isFriend && s.peerUid.isNotEmpty && s.phase == CallPhase.connected;
+    if (s.isVideo && s.phase == CallPhase.connected && s.videoReady) return _videoScreen();
 
     return Directionality(
       textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -191,6 +193,109 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
     );
   }
 
+  /// صفحهٔ تماس تصویری وصل‌شده: تصویر طرف مقابل تمام‌صفحه + پیش‌نمایش کوچک خودم
+  Widget _videoScreen() {
+    return Directionality(
+      textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: s.remoteVideoOn
+                  ? RTCVideoView(s.remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
+                  : Container(
+                      color: const Color(0xff1b2a4a),
+                      alignment: Alignment.center,
+                      child: CallAvatar(
+                        uid: s.peerUid,
+                        name: s.peerName,
+                        radius: 64,
+                        hasPhoto: s.hasPhoto,
+                        background: const Color(0xff4a6fd0),
+                        foreground: Colors.white,
+                      ),
+                    ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xaa000000), Color(0x00000000)],
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 26),
+                    child: Column(
+                      children: [
+                        Text(s.peerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Text(_fmt(s.elapsed), style: const TextStyle(color: Colors.white70, fontSize: 15)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            PositionedDirectional(
+              top: MediaQuery.of(context).padding.top + 78,
+              end: 14,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  width: 104,
+                  height: 148,
+                  child: s.cameraOff
+                      ? Container(
+                          color: Colors.black54,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.videocam_off_rounded, color: Colors.white70, size: 30),
+                        )
+                      : RTCVideoView(
+                          s.localRenderer,
+                          mirror: s.frontCamera,
+                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Color(0xbb000000), Color(0x00000000)],
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 40, bottom: 24),
+                    child: _activeControls(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _avatarWithHalo() {
     return AnimatedBuilder(
       animation: _pulse,
@@ -233,6 +338,8 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
   // دکمه‌های تماس در حال انجام / خروجی: بلندگو، ویدیو، بی‌صدا، پایان
   // ------------------------------------------------------------------
   Widget _activeControls() {
+    final v = s.isVideo;
+    final size = v ? 56.0 : 66.0;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
@@ -243,24 +350,42 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
             icon: Icons.volume_up_rounded,
             label: CT.t('speaker'),
             active: s.speaker,
+            size: size,
             onTap: s.toggleSpeaker,
           ),
-          _round(
-            icon: Icons.videocam_off_rounded,
-            label: CT.t('video'),
-            highlight: true,
-            onTap: () => _toast(CT.t('video_soon')),
-          ),
+          if (v) ...[
+            _round(
+              icon: s.cameraOff ? Icons.videocam_off_rounded : Icons.videocam_rounded,
+              label: CT.t('video'),
+              active: !s.cameraOff,
+              size: size,
+              onTap: s.toggleCamera,
+            ),
+            _round(
+              icon: Icons.cameraswitch_rounded,
+              label: CT.t('flip_cam'),
+              size: size,
+              onTap: s.switchCamera,
+            ),
+          ] else
+            _round(
+              icon: Icons.videocam_off_rounded,
+              label: CT.t('video'),
+              highlight: true,
+              onTap: () => _toast(CT.t('video_soon')),
+            ),
           _round(
             icon: s.muted ? Icons.mic_off_rounded : Icons.mic_rounded,
             label: CT.t('mute'),
             active: s.muted,
+            size: size,
             onTap: s.toggleMute,
           ),
           _round(
             icon: Icons.call_end_rounded,
             label: CT.t('end_call'),
             color: _red,
+            size: size,
             onTap: s.hangUp,
           ),
         ],
@@ -302,7 +427,7 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _round(icon: Icons.call_rounded, label: CT.t('accept'), color: _green, onTap: s.acceptIncoming),
+                  _round(icon: s.isVideo ? Icons.videocam_rounded : Icons.call_rounded, label: CT.t('accept'), color: _green, onTap: s.acceptIncoming),
                   const SizedBox(height: 14),
                   s.isFriend
                       ? _pill(Icons.check_rounded, CT.t('in_friends'), null)
@@ -380,6 +505,7 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
     bool active = false,
     bool highlight = false,
     Color? color,
+    double size = 66,
   }) {
     final Color bg;
     final Color fg;
@@ -402,7 +528,7 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: () => onTap(),
-            child: SizedBox(width: 66, height: 66, child: Icon(icon, color: fg, size: 30)),
+            child: SizedBox(width: size, height: size, child: Icon(icon, color: fg, size: size * 0.45)),
           ),
         ),
         const SizedBox(height: 9),
