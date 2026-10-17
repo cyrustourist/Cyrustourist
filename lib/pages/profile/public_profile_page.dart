@@ -111,7 +111,9 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
             _action(Icons.call_rounded, CT.t('profile_call'), const Color(0xff2fb36a), () {
               CallService.instance.startOutgoing(toUid: widget.uid, name: widget.name, isFriend: _isFriend);
             }),
-            _action(Icons.videocam_rounded, CT.t('profile_video'), _sky, () => _toast(CT.t('video_soon'))),
+            _action(Icons.videocam_rounded, CT.t('profile_video'), _sky, () {
+              CallService.instance.startOutgoing(toUid: widget.uid, name: widget.name, isFriend: _isFriend, video: true);
+            }),
             _isFriend
                 ? _action(Icons.check_circle_rounded, CT.t('in_friends'), _teal, null)
                 : _action(Icons.person_add_alt_1_rounded, CT.t('add_to_friends'), _gold, _addingFriend ? null : _addFriend),
