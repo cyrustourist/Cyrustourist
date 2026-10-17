@@ -12,7 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/safe_prefs.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/language/menu_translations.dart';
