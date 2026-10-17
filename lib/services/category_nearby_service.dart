@@ -2,6 +2,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../map_place.dart';
 import '../pages/map/map_places_service.dart' as remote;
+import 'local_gazetteer.dart';
 
 /// پل بین موتور جستجوی واقعی نقشه (Overpass + Nominatim)
 /// که در lib/pages/map/map_places_service.dart آماده بود
@@ -83,19 +84,24 @@ class CategoryNearbyService {
     String query, {
     String language = 'fa',
   }) async {
-    final results =
-        await remote.MapPlacesService.instance.searchCity(
-      query,
-      language: language,
-    );
+    var online = <SearchedLocation>[];
+    try {
+      final results = await remote.MapPlacesService.instance.searchCity(
+        query,
+        language: language,
+      );
+      online = results
+          .map((item) => SearchedLocation(name: item.name, point: item.point))
+          .toList();
+    } catch (_) {
+      // اینترنت/سرویس جستجو در دسترس نیست؛ پایین‌تر از فهرست آفلاین جواب می‌دهیم.
+    }
 
-    return results
-        .map(
-          (item) => SearchedLocation(
-            name: item.name,
-            point: item.point,
-          ),
-        )
+    if (online.isNotEmpty) return online;
+
+    final useEn = language.toLowerCase() == 'en';
+    return LocalGazetteer.search(query)
+        .map((p) => SearchedLocation(name: useEn ? p.en : p.fa, point: p.point))
         .toList();
   }
 
