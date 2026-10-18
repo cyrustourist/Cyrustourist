@@ -51,7 +51,9 @@ class NotificationService {
   // تنظیمات کانال اعلان اندروید
   // ==========================================================
 
-  static const String _channelId = 'cyrus_default_channel';
+  static const String _channelId = 'cyrus_alerts_v2';
+  // کانال قدیمی (اهمیت آن در گوشی‌ها قابل تغییر نبود؛ حذف می‌شود)
+  static const String _oldChannelId = 'cyrus_default_channel';
   static const String _channelName = 'Cyrus Tourist';
   static const String _channelDescription =
       'اعلان‌ها و پیام‌های سایروس توریست';
@@ -266,7 +268,7 @@ class NotificationService {
       _channelId,
       _channelName,
       description: _channelDescription,
-      importance: Importance.high,
+      importance: Importance.max,
       playSound: true,
       enableVibration: true,
       showBadge: true,
@@ -276,6 +278,9 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
+    try {
+      await androidPlugin?.deleteNotificationChannel(_oldChannelId);
+    } catch (_) {}
     await androidPlugin?.createNotificationChannel(channel);
     await androidPlugin?.requestNotificationsPermission();
 
@@ -398,8 +403,8 @@ class NotificationService {
           _channelId,
           _channelName,
           channelDescription: _channelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
+          importance: Importance.max,
+          priority: Priority.max,
           icon: '@drawable/ic_stat_notify',
           playSound: true,
           enableVibration: true,
@@ -460,8 +465,8 @@ class NotificationService {
           _channelId,
           _channelName,
           channelDescription: _channelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
+          importance: Importance.max,
+          priority: Priority.max,
           icon: '@drawable/ic_stat_notify',
           playSound: true,
           enableVibration: true,
