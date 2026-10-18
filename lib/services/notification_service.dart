@@ -251,6 +251,10 @@ class NotificationService {
       return;
     }
 
+    // عضویت در Topic قبل از هر مرحلهٔ دیگر و مستقل از آن‌ها (اگر مجوز/کانال/نمایش
+    // اعلان خطا بدهد یا گیر کند، عضویت Push از دست نرود) + تلاش مجدد.
+    unawaited(_subscribeTopicWithRetry());
+
     const androidInit = AndroidInitializationSettings('@drawable/ic_stat_notify');
     const initSettings = InitializationSettings(android: androidInit);
 
@@ -329,6 +333,30 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
 
     _initialized = true;
+  }
+
+  Future<void> _subscribeTopicWithRetry() async {
+    const delays = [0, 5, 20, 60, 180];
+
+    for (final seconds in delays) {
+      if (seconds > 0) {
+        await Future<void>.delayed(Duration(seconds: seconds));
+      }
+
+      try {
+        if (!await isPushEnabled()) return;
+
+        await FirebaseMessaging.instance.setAutoInitEnabled(true);
+        await FirebaseMessaging.instance
+            .subscribeToTopic(notificationTopic)
+            .timeout(const Duration(seconds: 20));
+
+        debugPrint('Subscribed to FCM topic: $notificationTopic');
+        return;
+      } catch (e) {
+        debugPrint('FCM topic subscribe retry error: $e');
+      }
+    }
   }
 
   /// دریافت دستی توکن FCM (جهت استفاده در پنل تنظیمات یا دیباگ اختیاری)
