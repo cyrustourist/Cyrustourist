@@ -130,39 +130,6 @@ class CyrusAccountScreen extends StatelessWidget {
 
                 _buildSection(
                   context,
-                  title: texts.registrationSection,
-                  items: [
-                    _AccountItem(
-                      icon: Icons.hotel_rounded,
-                      title: texts.accommodationRegistration,
-                      subtitle:
-                          texts.accommodationRegistrationSubtitle,
-                      iconColor: const Color(0xffffb84d),
-                      actionId: 'registration',
-                    ),
-                    _AccountItem(
-                      icon: Icons.local_hospital_rounded,
-                      title: texts.healthTourismRegistration,
-                      subtitle:
-                          texts.healthTourismRegistrationSubtitle,
-                      iconColor: const Color(0xff66e6a5),
-                      actionId: 'registration',
-                    ),
-                    _AccountItem(
-                      icon: Icons.cottage_rounded,
-                      title: texts.cabinRegistration,
-                      subtitle:
-                          texts.cabinRegistrationSubtitle,
-                      iconColor: const Color(0xffffd36a),
-                      actionId: 'registration',
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                _buildSection(
-                  context,
                   title: texts.securitySection,
                   items: [
                     _AccountItem(
