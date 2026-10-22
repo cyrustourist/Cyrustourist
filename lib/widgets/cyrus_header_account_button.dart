@@ -15,6 +15,10 @@ import '../services/user_profile_service.dart';
 /// زبان‌های پشتیبانی‌شده:
 /// fa, en, ar, tr, ru, fr, de, es, zh, it
 class CyrusHeaderAccountButton extends StatelessWidget {
+  /// نمایش گزینه‌های ثبت‌نام در منوی آیکون آدمک.
+  /// برای نسخه‌ی مارکت false است؛ برای فعال‌سازی دوباره true کنید.
+  static const bool showRegistrationMenu = false;
+
   const CyrusHeaderAccountButton({
     super.key,
     this.currentLanguage = 'fa',
@@ -220,6 +224,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
             ),
           ),
 
+          if (showRegistrationMenu) ...[
           const PopupMenuDivider(),
 
           PopupMenuItem<String>(
@@ -343,6 +348,7 @@ class CyrusHeaderAccountButton extends StatelessWidget {
               ),
             ),
           ),
+          ],
         ],
         child: _HeaderAccountButton(
           key: ValueKey(refreshToken),
