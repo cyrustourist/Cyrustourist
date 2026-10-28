@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../main.dart' show navigatorKey;
 import '../models/showcase_item.dart';
 import '../models/tour.dart';
+import '../pages/groups/group_invite.dart';
 import '../pages/showcase/showcase_navigator.dart';
 import '../pages/tours/tour_detail_page.dart';
 import 'public_link_service.dart';
@@ -118,6 +119,11 @@ class DeepLinkService {
     if (p == null) return;
 
     try {
+      if (p.type == 'group') {
+        // لینک دعوت گروه: cyrustourist.ir/group/<کد>
+        await GroupInvite.openInvite(p.id);
+        return;
+      }
       if (p.type == PublicLinkService.tour) {
         final id = int.tryParse(p.id);
         final result = await TourRepository.load();
