@@ -6,6 +6,9 @@ import '../../services/user_profile_service.dart';
 import '../../pages/residence_register_page.dart';
 import '../../pages/calls_page.dart';
 import '../../pages/chat_room_page.dart';
+import '../../pages/groups/dm_inbox_page.dart';
+import '../../pages/groups/groups_hub_page.dart';
+import '../../services/group_texts.dart';
 import '../../services/call_texts.dart';
 import '../../services/notification_service.dart';
 import '../../services/public_link_service.dart';
@@ -93,6 +96,13 @@ class CyrusAccountScreen extends StatelessWidget {
                       actionId: 'profile',
                     ),
                     _AccountItem(
+                      icon: Icons.chat_bubble_rounded,
+                      title: GT.t('menu_messages'),
+                      subtitle: GT.t('menu_messages_sub'),
+                      iconColor: const Color(0xffff5fb0),
+                      actionId: 'messages',
+                    ),
+                    _AccountItem(
                       icon: Icons.notifications_active_rounded,
                       title: texts.announcements,
                       subtitle: texts.announcementsSubtitle,
@@ -122,6 +132,13 @@ class CyrusAccountScreen extends StatelessWidget {
                       subtitle: _SupportChatTexts.of(languageCode).roomSubtitle,
                       iconColor: const Color(0xffff5fb0),
                       actionId: 'chat_room',
+                    ),
+                    _AccountItem(
+                      icon: Icons.groups_rounded,
+                      title: GT.t('menu_groups'),
+                      subtitle: GT.t('menu_groups_sub'),
+                      iconColor: const Color(0xffffd36a),
+                      actionId: 'groups',
                     ),
                   ],
                 ),
@@ -155,20 +172,6 @@ class CyrusAccountScreen extends StatelessWidget {
                   context,
                   title: texts.futureSection,
                   items: [
-                    _AccountItem(
-                      icon: Icons.groups_rounded,
-                      title: texts.createTravelGroup,
-                      subtitle: texts.futureSubtitle,
-                      iconColor: const Color(0xffffd36a),
-                      futureFeature: true,
-                    ),
-                    _AccountItem(
-                      icon: Icons.public_rounded,
-                      title: texts.joinTravelGroups,
-                      subtitle: texts.futureSubtitle,
-                      iconColor: const Color(0xff8fd8a8),
-                      futureFeature: true,
-                    ),
                     _AccountItem(
                       icon: Icons.handshake_rounded,
                       title: texts.travelCompanion,
@@ -430,6 +433,20 @@ class CyrusAccountScreen extends StatelessWidget {
     if (item.actionId == 'chat_room') {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const ChatRoomPage()),
+      );
+      return;
+    }
+
+    if (item.actionId == 'groups') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const GroupsHubPage()),
+      );
+      return;
+    }
+
+    if (item.actionId == 'messages') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const DmInboxPage()),
       );
       return;
     }
