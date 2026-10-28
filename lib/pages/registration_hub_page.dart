@@ -888,10 +888,13 @@ enum _Step { hub, terms, support }
 /// صفحهٔ ثبت‌نام داخل برنامه — همان ظاهر و روال «ثبت‌نام در سایروس توریست» سایت:
 /// کادر کرم‌رنگ با دکمه‌های دسته ← پنجرهٔ سفید (مزایا و قوانین) ← گزینه‌های ارسال و هماهنگی مستقیم با پشتیبانی.
 class RegistrationHubPage extends StatefulWidget {
-  const RegistrationHubPage({super.key, this.initialCategory});
+  const RegistrationHubPage({super.key, this.initialCategory, this.initialType});
 
   /// اگر مقدار بدهید، مستقیم به مرحلهٔ مزایا و قوانین همان دسته می‌رود.
   final String? initialCategory;
+
+  /// نوع اقامتگاه از پیش‌انتخاب‌شده در فرم (مثلاً hotel یا cottage).
+  final String? initialType;
 
   @override
   State<RegistrationHubPage> createState() => _RegistrationHubPageState();
@@ -959,7 +962,7 @@ class _RegistrationHubPageState extends State<RegistrationHubPage> {
     const kinds = {'residence': 'stay', 'health': 'health', 'agency': 'agency', 'tourleader': 'leader'};
     final kind = kinds[_category];
     if (kind != null) {
-      final route = MaterialPageRoute<void>(builder: (_) => StayRegistrationPage(kind: kind));
+      final route = MaterialPageRoute<void>(builder: (_) => StayRegistrationPage(kind: kind, initialType: kind == 'stay' ? widget.initialType : null));
       if (widget.initialCategory != null) {
         Navigator.of(context).pushReplacement(route);
       } else {
