@@ -15,9 +15,9 @@ import '../services/user_profile_service.dart';
 /// زبان‌های پشتیبانی‌شده:
 /// fa, en, ar, tr, ru, fr, de, es, zh, it
 class CyrusHeaderAccountButton extends StatelessWidget {
-  /// نمایش گزینه‌های ثبت‌نام در منوی آیکون آدمک.
-  /// برای نسخه‌ی مارکت false است؛ برای فعال‌سازی دوباره true کنید.
-  static const bool showRegistrationMenu = false;
+  /// نمایش گزینه‌های ثبت‌نام در منوی آیکون آدمک (فعال).
+  /// برای خاموش‌کردن موقت (مثلاً نسخهٔ مارکت) false کنید.
+  static const bool showRegistrationMenu = true;
 
   const CyrusHeaderAccountButton({
     super.key,
@@ -106,9 +106,9 @@ class CyrusHeaderAccountButton extends StatelessWidget {
               _openAccountOrProfile(context);
               break;
 
-            // هر چهار مسیر ثبت‌نام فعلاً به یک فایل ثبت‌نام
-            // آماده و موجود وصل می‌شوند: residence_register_page.dart
-            // (همان کلیدی که بالای «نمایش فیلم‌ها»، کلید ۴، قرار دارد).
+            // هر گزینه به پنل ثبت‌نام خودش می‌رود (از مسیر مزایا و قوانین):
+            // اقامتگاه / هتل / کلبه ← فرم اقامتگاه (نوع هتل و کلبه از قبل انتخاب می‌شود)،
+            // سلامت ← فرم گردشگری سلامت، لیدر و آژانس ← صفحهٔ معرفی ثبت‌نام خودشان.
             case 'accommodation':
               if (onAccommodationRegistration != null) {
                 onAccommodationRegistration!();
