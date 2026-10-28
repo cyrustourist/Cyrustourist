@@ -77,6 +77,7 @@
                 <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/accommodation/" />
                 <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/attraction/" />
                 <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/health/" />
+                <data android:scheme="https" android:host="cyrustourist.ir" android:pathPrefix="/group/" />
             </intent-filter>
 
             <!-- مسیردهی لینک‌ها را پکیج app_links انجام می‌دهد، نه Navigator پیش‌فرض -->
