@@ -14,6 +14,8 @@ import '../models/cyrus_announcement.dart';
 import '../pages/announcements_page.dart';
 import 'cache_service.dart';
 import 'call_service.dart';
+import 'group_service.dart';
+import '../pages/groups/group_invite.dart';
 
 /// سرویس مرکزی اعلان‌های سایروس توریست.
 class NotificationService {
@@ -409,6 +411,12 @@ class NotificationService {
       return;
     }
 
+    // گروه‌ها و چت شخصی: بیدارباش data-only؛ صفحهٔ باز همان لحظه بروز می‌شود
+    if (GroupPush.isGroupData(message.data)) {
+      GroupPush.handleForeground(Map<String, dynamic>.from(message.data), notify: await isPushEnabled());
+      return;
+    }
+
     if (!await isPushEnabled()) {
       return;
     }
@@ -456,6 +464,11 @@ class NotificationService {
 
       if (data['type'] == 'call' || data['type'] == 'call_msg') {
         unawaited(CallService.instance.handlePush(data));
+        return;
+      }
+
+      if (data['type'] == 'dm_msg' || data['type'] == 'group_msg') {
+        unawaited(GroupInvite.openById(int.tryParse('${data['group_id']}') ?? 0));
         return;
       }
 
