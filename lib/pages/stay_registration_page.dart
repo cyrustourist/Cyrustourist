@@ -711,9 +711,12 @@ class _CaptchaDialogState extends State<_CaptchaDialog> {
 ///
 /// kind: stay | health | agency | leader — هر نوع به جدول و پنل خودش وصل می‌شود.
 class StayRegistrationPage extends StatefulWidget {
-  const StayRegistrationPage({super.key, this.kind = 'stay'});
+  const StayRegistrationPage({super.key, this.kind = 'stay', this.initialType});
 
   final String kind;
+
+  /// نوع اقامتگاه از پیش‌انتخاب‌شده (hotel، cottage، ...)؛ فقط برای kind == 'stay'.
+  final String? initialType;
 
   @override
   State<StayRegistrationPage> createState() => _StayRegistrationPageState();
@@ -781,6 +784,10 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
   @override
   void initState() {
     super.initState();
+    final it = widget.initialType;
+    if (it != null && widget.kind == 'stay' && _kTypes.any((r) => r[0] == it)) {
+      _type = it;
+    }
     _loadMine();
     _loadAccount();
   }
