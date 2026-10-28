@@ -19,8 +19,21 @@ class ResidenceRegisterPage extends StatelessWidget {
   String get _category =>
       type == ResidenceRegisterType.health ? 'health' : 'residence';
 
+  /// نوع اقامتگاه که در فرم از قبل انتخاب می‌شود (اقامتگاه عمومی: بدون انتخاب).
+  String? get _initialType {
+    switch (type) {
+      case ResidenceRegisterType.hotel:
+        return 'hotel';
+      case ResidenceRegisterType.cottage:
+        return 'cottage';
+      case ResidenceRegisterType.accommodation:
+      case ResidenceRegisterType.health:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return RegistrationHubPage(initialCategory: _category);
+    return RegistrationHubPage(initialCategory: _category, initialType: _initialType);
   }
 }
