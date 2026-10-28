@@ -15,6 +15,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'services/notification_service.dart';
 import 'services/call_service.dart';
+import 'services/group_service.dart';
 import 'services/connection_status_service.dart';
 import 'services/pending_queue_service.dart';
 import 'core/network/api_service.dart';
@@ -67,6 +68,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final type = message.data['type'];
   if (type == 'call' || type == 'call_msg') {
     await CallService.handleBackgroundData(Map<String, dynamic>.from(message.data));
+  } else if (type == 'dm_msg' || type == 'group_msg') {
+    // پیام شخصی: اعلان کوتاه (بدون متن پیام)؛ بیدارباش گروه فقط وقتی صفحه باز است مصرف می‌شود
+    await GroupPush.handleBackground(Map<String, dynamic>.from(message.data));
   }
 }
 
@@ -95,6 +99,9 @@ void main() async {
       debugPrint('Notification init failed (offline?): $e');
     }),
   );
+
+  // اشتراک topic گروه‌های من (هر اجرا یک‌بار، سبک)
+  unawaited(GroupPush.syncTopics());
 
   // تماس صوتی: ثبت توکن FCM و کانال اعلان تماس (بعد از بالا آمدن برنامه)
   unawaited(
