@@ -12,6 +12,8 @@ import '../../services/call_service.dart';
 import '../../services/call_session.dart';
 import '../../services/call_texts.dart';
 import '../../services/friends_service.dart';
+import '../../services/group_texts.dart';
+import '../groups/group_ui.dart' show openDm;
 import '../../services/public_profile_service.dart';
 import '../../widgets/linkified_text.dart';
 
@@ -101,7 +103,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
         ],
       );
 
-  /// تماس صوتی، تماس تصویری (به‌زودی) و افزودن به دوستان
+  /// تماس صوتی، تماس تصویری، افزودن به دوستان و پیام شخصی
   Widget _actions() => Padding(
         padding: const EdgeInsets.only(top: 16),
         child: Row(
@@ -117,6 +119,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
             _isFriend
                 ? _action(Icons.check_circle_rounded, CT.t('in_friends'), _teal, null)
                 : _action(Icons.person_add_alt_1_rounded, CT.t('add_to_friends'), _gold, _addingFriend ? null : _addFriend),
+            _action(Icons.chat_bubble_rounded, GT.t('dm_btn'), const Color(0xffff5fb0), () => openDm(context, widget.uid)),
           ],
         ),
       );
