@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../services/badge_service.dart';
 import '../services/chat_service.dart';
+import '../services/group_service.dart';
+import '../services/group_texts.dart';
+import 'groups/group_ui.dart' show openDm;
 import '../services/call_service.dart';
 import '../services/user_profile_service.dart';
 import '../core/language/menu_translations.dart';
@@ -40,6 +43,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   int _lastId = 0;
   bool _sending = false;
   bool _hasName = true;
+  String _phoneMode = 'verified';
 
   List<CompanionPost> _posts = const [];
 
@@ -69,6 +73,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     CallService.instance.startWatch();
     _init();
+    GroupService.phoneMode().then((m) {
+      if (mounted) setState(() => _phoneMode = m);
+    });
   }
 
   @override
@@ -280,6 +287,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                 ),
               ),
               const Divider(color: _line, height: 16),
+              if (m.uid.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.chat_bubble_rounded, color: Color(0xffff5fb0)),
+                  title: Text(GT.t('send_dm'), style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(ctx).pop('dm'),
+                ),
               ListTile(
                 leading: const Icon(Icons.flag_rounded, color: Color(0xffff8f8f)),
                 title: const Text('گزارش این پیام', style: TextStyle(color: Colors.white)),
@@ -305,6 +318,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     }
     if (action == 'video') {
       _toast('تماس تصویری در بروزرسانی بعدی فعال می‌شود.');
+      return;
+    }
+    if (action == 'dm') {
+      await openDm(context, m.uid);
       return;
     }
     if (action == 'report') {
@@ -769,7 +786,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                         _statusBar(),
                         Padding(
                           padding: EdgeInsets.only(bottom: 2),
-                          child: Text(NT.t('chat_rules'),
+                          child: Text(_phoneMode == 'off' ? NT.t('chat_rules') : GT.t(_phoneMode == 'all' ? 'rules_all' : 'rules_verified'),
                               textAlign: TextAlign.center, style: TextStyle(color: Color(0xff8fa5b2), fontSize: 11)),
                         ),
                         if (_companion) _postsSection(),
