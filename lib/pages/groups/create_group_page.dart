@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../services/group_service.dart';
 import '../../services/group_texts.dart';
+import 'group_photo.dart';
 import 'group_ui.dart';
 
 final RegExp _userRe = RegExp(r'^[A-Za-z][A-Za-z0-9_]{4,31}$');
@@ -24,6 +27,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   bool _public = true;
   bool _approval = false;
   bool _busy = false;
+  String? _photo; // base64 فشرده
   late int _retention;
 
   List<int> get _options => widget.limits.options.isNotEmpty ? widget.limits.options : const [24];
@@ -41,6 +45,48 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     _desc.dispose();
     _user.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    final b64 = await pickGroupPhoto();
+    if (!mounted) return;
+    if (b64 == null) {
+      gToast(context, GT.t('photo_bad'));
+      return;
+    }
+    setState(() => _photo = b64);
+  }
+
+  Widget _photoPicker() {
+    final photo = _photo;
+    return Column(children: [
+      InkWell(
+        customBorder: const CircleBorder(),
+        onTap: _busy ? null : _pickPhoto,
+        child: Stack(alignment: Alignment.bottomRight, children: [
+          Container(
+            width: 92,
+            height: 92,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: gPanel, border: Border.all(color: gGold, width: 1.4)),
+            child: ClipOval(
+              child: photo != null
+                  ? Image.memory(base64Decode(photo), width: 92, height: 92, fit: BoxFit.cover)
+                  : const Icon(Icons.groups_rounded, color: gGold, size: 44),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: const BoxDecoration(color: gGold, shape: BoxShape.circle),
+            child: const Icon(Icons.camera_alt_rounded, size: 16, color: gBg),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 6),
+      TextButton(
+        onPressed: _busy ? null : (photo == null ? _pickPhoto : () => setState(() => _photo = null)),
+        child: Text(GT.t(photo == null ? 'photo_add' : 'photo_remove'), style: const TextStyle(color: gGold)),
+      ),
+    ]);
   }
 
   Future<void> _create() async {
@@ -70,8 +116,20 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
     );
     if (!mounted) return;
     setState(() => _busy = false);
-    final g = r.group;
+    var g = r.group;
     if (r.ok && g != null) {
+      final photo = _photo;
+      if (photo != null) {
+        // عکس بعد از ساخت گروه آپلود می‌شود؛ شکست آن مانع ساخت گروه نیست
+        final pr = await GroupService.setPhoto(g.id, photo);
+        final v = int.tryParse('${pr.raw?['photo_v']}') ?? 0;
+        if (pr.ok && v > 0) {
+          g = g.withPhoto(v);
+        } else if (mounted) {
+          gToast(context, GT.t('photo_fail'));
+        }
+      }
+      if (!mounted) return;
       gToast(context, GT.t('created_ok'));
       Navigator.of(context).pop(g);
       return;
@@ -137,6 +195,8 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
           title: Text(GT.t('create_group'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
         ),
         body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 28), children: [
+          Center(child: _photoPicker()),
+          const SizedBox(height: 8),
           TextField(controller: _name, maxLength: 60, style: const TextStyle(color: Colors.white), decoration: _dec(GT.t('form_name'))),
           const SizedBox(height: 4),
           TextField(controller: _desc, maxLength: 200, maxLines: 2, style: const TextStyle(color: Colors.white), decoration: _dec(GT.t('form_desc'))),
