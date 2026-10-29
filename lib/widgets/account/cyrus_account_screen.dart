@@ -96,13 +96,6 @@ class CyrusAccountScreen extends StatelessWidget {
                       actionId: 'profile',
                     ),
                     _AccountItem(
-                      icon: Icons.chat_bubble_rounded,
-                      title: GT.t('menu_messages'),
-                      subtitle: GT.t('menu_messages_sub'),
-                      iconColor: const Color(0xffff5fb0),
-                      actionId: 'messages',
-                    ),
-                    _AccountItem(
                       icon: Icons.notifications_active_rounded,
                       title: texts.announcements,
                       subtitle: texts.announcementsSubtitle,
@@ -126,6 +119,13 @@ class CyrusAccountScreen extends StatelessWidget {
                   context,
                   title: _SupportChatTexts.of(languageCode).section,
                   items: [
+                    _AccountItem(
+                      icon: Icons.chat_bubble_rounded,
+                      title: GT.t('menu_messages'),
+                      subtitle: GT.t('menu_messages_sub'),
+                      iconColor: const Color(0xffff5fb0),
+                      actionId: 'messages',
+                    ),
                     _AccountItem(
                       icon: Icons.forum_rounded,
                       title: _SupportChatTexts.of(languageCode).roomTitle,
@@ -1728,7 +1728,7 @@ class _SupportChatTexts {
     switch (lang) {
       case 'fa':
         return const _SupportChatTexts(
-          section: 'ارتباط با ما',
+          section: 'پیام‌رسان',
           title: 'چت با پشتیبانی',
           subtitle: 'واتساپ، تلگرام و ایتا · با پیام آماده',
           roomTitle: 'چت‌روم همگانی و همسفر',
@@ -1736,7 +1736,7 @@ class _SupportChatTexts {
         );
       case 'en':
         return const _SupportChatTexts(
-          section: 'Contact us',
+          section: 'Messenger',
           title: 'Chat with support',
           subtitle: 'WhatsApp, Telegram, Eitaa · with a ready message',
           roomTitle: 'Public chat room',
@@ -1744,7 +1744,7 @@ class _SupportChatTexts {
         );
       case 'ar':
         return const _SupportChatTexts(
-          section: 'تواصل معنا',
+          section: 'المراسلة',
           title: 'الدردشة مع الدعم',
           subtitle: 'واتساب وتيليجرام وإيتا · برسالة جاهزة',
           roomTitle: 'غرفة الدردشة العامة',
@@ -1752,7 +1752,7 @@ class _SupportChatTexts {
         );
       case 'de':
         return const _SupportChatTexts(
-          section: 'Kontakt',
+          section: 'Messenger',
           title: 'Chat mit dem Support',
           subtitle: 'WhatsApp, Telegram, Eitaa · mit fertiger Nachricht',
           roomTitle: 'Öffentlicher Chatraum',
@@ -1760,7 +1760,7 @@ class _SupportChatTexts {
         );
       case 'es':
         return const _SupportChatTexts(
-          section: 'Contáctenos',
+          section: 'Mensajería',
           title: 'Chatea con soporte',
           subtitle: 'WhatsApp, Telegram, Eitaa · con mensaje listo',
           roomTitle: 'Sala de chat pública',
@@ -1768,7 +1768,7 @@ class _SupportChatTexts {
         );
       case 'fr':
         return const _SupportChatTexts(
-          section: 'Nous contacter',
+          section: 'Messagerie',
           title: 'Discuter avec le support',
           subtitle: 'WhatsApp, Telegram, Eitaa · avec message prêt',
           roomTitle: 'Salon de discussion public',
@@ -1776,7 +1776,7 @@ class _SupportChatTexts {
         );
       case 'it':
         return const _SupportChatTexts(
-          section: 'Contattaci',
+          section: 'Messaggistica',
           title: 'Chatta con il supporto',
           subtitle: 'WhatsApp, Telegram, Eitaa · con messaggio pronto',
           roomTitle: 'Chat room pubblica',
@@ -1784,7 +1784,7 @@ class _SupportChatTexts {
         );
       case 'ru':
         return const _SupportChatTexts(
-          section: 'Связаться с нами',
+          section: 'Мессенджер',
           title: 'Чат с поддержкой',
           subtitle: 'WhatsApp, Telegram, Eitaa · с готовым сообщением',
           roomTitle: 'Общий чат',
@@ -1792,7 +1792,7 @@ class _SupportChatTexts {
         );
       case 'tr':
         return const _SupportChatTexts(
-          section: 'Bize ulaşın',
+          section: 'Mesajlaşma',
           title: 'Destekle sohbet',
           subtitle: 'WhatsApp, Telegram, Eitaa · hazır mesajla',
           roomTitle: 'Herkese açık sohbet odası',
@@ -1800,7 +1800,7 @@ class _SupportChatTexts {
         );
       case 'zh':
         return const _SupportChatTexts(
-          section: '联系我们',
+          section: '即时通讯',
           title: '联系客服',
           subtitle: 'WhatsApp、Telegram、Eitaa · 附预设消息',
           roomTitle: '公共聊天室',
