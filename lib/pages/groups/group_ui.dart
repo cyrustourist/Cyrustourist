@@ -42,30 +42,50 @@ String gTime(DateTime? t) {
   return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }
 
-/// دایرهٔ حرف اول نام (گروه یا کاربر).
+/// دایرهٔ عکس گروه؛ اگر عکس نبود، حرف اول نام (گروه یا کاربر).
 class GroupAvatar extends StatelessWidget {
-  const GroupAvatar({super.key, required this.name, this.isGroup = false, this.size = 46});
+  const GroupAvatar({super.key, required this.name, this.isGroup = false, this.size = 46, this.group});
 
   final String name;
   final bool isGroup;
   final double size;
+  final GroupInfo? group;
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _letter() {
     final t = name.trim();
     final letter = t.isEmpty ? '?' : String.fromCharCode(t.runes.first).toUpperCase();
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: gGold.withValues(alpha: 0.14),
-        border: Border.all(color: gGold.withValues(alpha: 0.6), width: 1.2),
-      ),
+      color: gGold.withValues(alpha: 0.14),
       child: isGroup && t.isEmpty
           ? Icon(Icons.groups_rounded, color: gGold, size: size * 0.5)
           : Text(letter, style: TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: size * 0.42)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final g = group;
+    final hasPhoto = g != null && !g.isDm && g.photoV > 0;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: gGold.withValues(alpha: 0.6), width: 1.2)),
+      child: ClipOval(
+        child: hasPhoto
+            ? Image.network(
+                GroupService.photoUrl(g),
+                headers: GroupService.imageHeaders,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _letter(),
+                loadingBuilder: (context, child, progress) => progress == null ? child : _letter(),
+              )
+            : _letter(),
+      ),
     );
   }
 }
@@ -91,7 +111,7 @@ class GroupTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: GroupAvatar(name: g.title, isGroup: !g.isDm),
+        leading: GroupAvatar(name: g.title, isGroup: !g.isDm, group: g),
         title: Row(children: [
           Flexible(child: Text(g.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
           if (!g.isDm && !g.isPublic) const Padding(padding: EdgeInsetsDirectional.only(start: 6), child: Icon(Icons.lock_rounded, size: 14, color: gMuted)),
@@ -129,6 +149,15 @@ void askGroupProfile(BuildContext context) {
       ],
     ),
   );
+}
+
+/// صفحهٔ پروفایل کامل کاربر (پیام، تماس، ویدیو، بی‌صدا، افزودن به دوستان) — مثل تلگرام.
+Future<void> openUserProfile(BuildContext context, String uid, String name) async {
+  if (uid.isEmpty) return;
+  final me = await BadgeService.userUid();
+  if (!context.mounted) return;
+  if (me == uid) return;
+  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicProfilePage(uid: uid, name: name)));
 }
 
 /// بازکردن (یا ساخت) گفتگوی شخصی با یک کاربر و رفتن به صفحهٔ چت.
