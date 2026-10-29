@@ -38,7 +38,7 @@ class GroupInvite {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text(GT.t('invite_title'), style: const TextStyle(color: gMuted, fontSize: 12.5)),
               const SizedBox(height: 10),
-              GroupAvatar(name: g.name, isGroup: true, size: 64),
+              GroupAvatar(name: g.name, isGroup: true, size: 64, group: g),
               const SizedBox(height: 8),
               Text(g.name, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
               const SizedBox(height: 4),
