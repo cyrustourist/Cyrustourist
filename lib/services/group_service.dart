@@ -34,6 +34,7 @@ class GroupInfo {
     this.peerName = '',
     this.ttlOptions = const [],
     this.retentionLocked = false,
+    this.photoV = 0,
   });
 
   final int id;
@@ -52,6 +53,29 @@ class GroupInfo {
   final String peerName;
   final List<int> ttlOptions;
   final bool retentionLocked;
+
+  /// نسخهٔ عکس گروه (۰ = بدون عکس)؛ در آدرس عکس برای تازه‌شدن کش استفاده می‌شود.
+  final int photoV;
+
+  GroupInfo withPhoto(int v) => GroupInfo(
+        id: id,
+        name: name,
+        description: description,
+        kind: kind,
+        username: username,
+        memberCount: memberCount,
+        retentionHours: retentionHours,
+        joinApproval: joinApproval,
+        role: role,
+        status: status,
+        inviteCode: inviteCode,
+        lastId: lastId,
+        peerUid: peerUid,
+        peerName: peerName,
+        ttlOptions: ttlOptions,
+        retentionLocked: retentionLocked,
+        photoV: v,
+      );
 
   bool get isDm => kind == 'dm';
   bool get isPublic => kind == 'public';
@@ -82,6 +106,7 @@ class GroupInfo {
       peerName: '${j['peer_name'] ?? ''}',
       ttlOptions: ((j['ttl_options'] as List?) ?? const []).map(_i).where((x) => x > 0).toList(),
       retentionLocked: j['retention_locked'] == true,
+      photoV: _i(j['photo_v']),
     );
   }
 }
@@ -211,6 +236,15 @@ class GroupService {
 
   static const String _base = ApiConfig.panelBaseUrl;
 
+  // شناسه و توکن آخرین فراخوانی؛ برای بارگذاری عکس گروه خصوصی با Image.network (هدر توکن)
+  static String _cachedUid = '';
+  static String _cachedToken = '';
+
+  static Map<String, String> get imageHeaders => _cachedToken.isEmpty ? const <String, String>{} : {'X-Cyrus-Token': _cachedToken};
+
+  /// آدرس عکس گروه (با نسخه برای کش).
+  static String photoUrl(GroupInfo g) => '$_base/api/groups/photo?group_id=${g.id}&v=${g.photoV}&user_uid=$_cachedUid';
+
   // زبان‌هایی که ورکر پیام‌شان را دارد؛ بقیه انگلیسی
   static String _lang() {
     const ok = ['fa', 'en', 'ar', 'tr', 'ru'];
@@ -225,6 +259,7 @@ class GroupService {
     Map<String, dynamic>? body,
   }) async {
     final uid = await BadgeService.userUid();
+    _cachedUid = uid;
     final q = <String, String>{'lang': _lang()};
     if (method == 'GET') q['user_uid'] = uid;
     if (query != null) q.addAll(query);
@@ -233,7 +268,9 @@ class GroupService {
       final uri = Uri.parse('$_base$path').replace(queryParameters: q);
       final req = await client.openUrl(method, uri).timeout(const Duration(seconds: 10));
       req.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      req.headers.set('X-Cyrus-Token', await BadgeService.deviceToken());
+      final token = await BadgeService.deviceToken();
+      _cachedToken = token;
+      req.headers.set('X-Cyrus-Token', token);
       if (body != null) {
         final b = <String, dynamic>{'user_uid': uid, 'lang': _lang()};
         b.addAll(body);
@@ -382,6 +419,15 @@ class GroupService {
     return '${j['invite_code']}';
   }
 
+  /// عکس گروه (base64 فشرده‌شده). نسخهٔ تازهٔ عکس در raw['photo_v'] برمی‌گردد.
+  static Future<GroupResult> setPhoto(int id, String base64Jpeg) async {
+    return _result(await _call('POST', '/api/groups/photo/set', body: {'group_id': id, 'data': base64Jpeg}));
+  }
+
+  static Future<GroupResult> removePhoto(int id) async {
+    return _result(await _call('POST', '/api/groups/photo/remove', body: {'group_id': id}));
+  }
+
   // ---------- اعضا ----------
   static Future<GroupMembers> members(int id) async {
     final j = await _call('GET', '/api/groups/members', query: {'group_id': '$id'});
@@ -479,6 +525,32 @@ class GroupPush {
 
   static DateTime? _lastSync;
   static const String _topicsKey = 'grp_topics';
+  static const String _mutedKey = 'dm_muted';
+
+  // ---------- بی‌صدا کردن اعلان پیام‌های شخصی یک کاربر (محلی روی همین گوشی) ----------
+  static Future<Set<String>> _mutedSet() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      return (p.getStringList(_mutedKey) ?? const <String>[]).toSet();
+    } catch (_) {
+      return <String>{};
+    }
+  }
+
+  static Future<bool> isMuted(String uid) async => (await _mutedSet()).contains(uid);
+
+  static Future<void> setMuted(String uid, bool muted) async {
+    try {
+      final set = await _mutedSet();
+      if (muted) {
+        set.add(uid);
+      } else {
+        set.remove(uid);
+      }
+      final p = await SharedPreferences.getInstance();
+      await p.setStringList(_mutedKey, set.toList());
+    } catch (_) {}
+  }
   static const String _dmChannelId = 'cyrus_dm_v1';
   static const String _dmChannelName = 'پیام‌های شخصی';
   static const String _dmChannelDesc = 'اعلان پیام‌های شخصی';
@@ -515,6 +587,8 @@ class GroupPush {
         description: _dmChannelDesc,
         importance: Importance.high,
       ));
+      final senderUid = '${data['sender_uid'] ?? ''}';
+      if (senderUid.isNotEmpty && await isMuted(senderUid)) return;
       final gid = _i(data['group_id']);
       await plugin.show(
         700000 + (gid % 100000),
