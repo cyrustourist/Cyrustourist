@@ -12,6 +12,7 @@ import '../services/call_texts.dart';
 import '../services/friends_service.dart';
 import '../widgets/call_widgets.dart';
 import 'add_friend_page.dart';
+import 'profile/public_profile_page.dart';
 import 'profile/my_profile_page.dart';
 
 const Color _bg = Color(0xff071722);
@@ -244,6 +245,11 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
   Future<void> _openProfile() async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyProfilePage()));
     if (mounted) unawaited(_load());
+  }
+
+  Future<void> _openUser(String uid, String name) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicProfilePage(uid: uid, name: name)));
+    if (mounted) unawaited(_load(silent: true));
   }
 
   Future<void> _call(String uid, String name, {bool hasPhoto = true, bool video = false}) async {
@@ -543,7 +549,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
         itemBuilder: (context, i) {
           final f = _friends[i];
           return ListTile(
-            onTap: () => _call(f.uid, f.name, hasPhoto: f.hasPhoto),
+            onTap: () => _openUser(f.uid, f.name),
             leading: CallAvatar(uid: f.uid, name: f.name, radius: 23, hasPhoto: f.hasPhoto),
             title: Row(children: [
               Flexible(child: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
@@ -629,7 +635,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
               ? (c.outgoing ? Icons.call_made_rounded : Icons.call_received_rounded)
               : (c.outgoing ? Icons.call_made_rounded : Icons.call_missed_rounded);
           final tile = ListTile(
-            onTap: () => _call(c.peerUid, c.peerName, hasPhoto: c.hasPhoto),
+            onTap: () => _openUser(c.peerUid, c.peerName),
             leading: CallAvatar(uid: c.peerUid, name: c.peerName, radius: 23, hasPhoto: c.hasPhoto),
             title: Text(c.peerName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: bad ? _red : Colors.white, fontWeight: FontWeight.w700)),
             subtitle: Padding(
@@ -689,6 +695,7 @@ class _CallsPageState extends State<CallsPage> with SingleTickerProviderStateMix
       itemBuilder: (context, i) {
         final b = _blocked[i];
         return ListTile(
+          onTap: () => _openUser(b.uid, b.name),
           leading: CallAvatar(uid: b.uid, name: b.name, radius: 23, hasPhoto: b.hasPhoto),
           title: Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           subtitle: Text(CT.remaining(b.untilMs), style: const TextStyle(color: Colors.white54, fontSize: 12.5)),
