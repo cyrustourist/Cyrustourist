@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../services/group_service.dart';
 import '../../services/group_texts.dart';
 import '../../widgets/share_sheet.dart';
+import 'group_photo.dart';
 import 'group_ui.dart';
 
 /// اطلاعات گروه، لینک دعوت، اعضا و مدیریت (مالک/مدیر). با pop مقدار 'left' یا 'deleted' برمی‌گرداند.
@@ -21,6 +22,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   GroupMembers _m = const GroupMembers(ok: false);
   bool _loading = true;
   bool _saving = false;
+  bool _photoBusy = false;
 
   late final TextEditingController _name;
   late final TextEditingController _desc;
@@ -66,6 +68,67 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       _m = mem;
       _loading = false;
     });
+  }
+
+  Future<void> _changePhoto() async {
+    if (_photoBusy) return;
+    final b64 = await pickGroupPhoto();
+    if (!mounted) return;
+    if (b64 == null) {
+      gToast(context, GT.t('photo_bad'));
+      return;
+    }
+    setState(() => _photoBusy = true);
+    final r = await GroupService.setPhoto(_g.id, b64);
+    if (!mounted) return;
+    final v = int.tryParse('${r.raw?['photo_v']}') ?? 0;
+    setState(() {
+      _photoBusy = false;
+      if (r.ok && v > 0) _g = _g.withPhoto(v);
+    });
+    gToast(context, r.ok ? GT.t('saved') : r.text);
+  }
+
+  Future<void> _removePhoto() async {
+    if (_photoBusy) return;
+    setState(() => _photoBusy = true);
+    final r = await GroupService.removePhoto(_g.id);
+    if (!mounted) return;
+    setState(() {
+      _photoBusy = false;
+      if (r.ok) _g = _g.withPhoto(0);
+    });
+    gToast(context, r.ok ? GT.t('saved') : r.text);
+  }
+
+  Future<void> _photoMenu() async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: gPanel,
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded, color: gGold),
+              title: Text(GT.t('photo_change'), style: const TextStyle(color: Colors.white)),
+              onTap: () => Navigator.of(ctx).pop('change'),
+            ),
+            if (_g.photoV > 0)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Color(0xffff8f8f)),
+                title: Text(GT.t('photo_remove'), style: const TextStyle(color: Colors.white)),
+                onTap: () => Navigator.of(ctx).pop('remove'),
+              ),
+          ]),
+        ),
+      ),
+    );
+    if (action == 'change') {
+      await _changePhoto();
+    } else if (action == 'remove') {
+      await _removePhoto();
+    }
   }
 
   Future<bool> _confirm(String text) async {
@@ -295,7 +358,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     final roleLabel = m.role == 'owner' ? GT.t('role_owner') : (m.role == 'admin' ? GT.t('role_admin') : '');
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      onTap: () => showUserSheet(context, uid: m.uid, name: m.name, badge: m.badge),
+      onTap: () => openUserProfile(context, m.uid, m.name),
       leading: GroupAvatar(name: m.name, size: 38),
       title: Row(children: [
         Flexible(child: Text(m.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white))),
@@ -337,7 +400,21 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
             ? const Center(child: CircularProgressIndicator(color: gGold))
             : ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 28), children: [
                 Column(children: [
-                  GroupAvatar(name: _g.name, isGroup: true, size: 72),
+                  InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _g.isStaff ? _photoMenu : null,
+                    child: Stack(alignment: Alignment.bottomRight, children: [
+                      GroupAvatar(name: _g.name, isGroup: true, size: 84, group: _g),
+                      if (_photoBusy)
+                        const Positioned.fill(child: Padding(padding: EdgeInsets.all(26), child: CircularProgressIndicator(strokeWidth: 2, color: gGold)))
+                      else if (_g.isStaff)
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(color: gGold, shape: BoxShape.circle),
+                          child: const Icon(Icons.camera_alt_rounded, size: 15, color: gBg),
+                        ),
+                    ]),
+                  ),
                   const SizedBox(height: 10),
                   Text(_g.name, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 19)),
                   if (_g.username != null && _g.username!.isNotEmpty)
