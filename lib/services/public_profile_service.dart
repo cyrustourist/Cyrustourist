@@ -12,6 +12,7 @@ class PublicProfile {
     this.bio = '',
     this.videoLink = '',
     this.photoData = '',
+    this.lastSeen = '',
   });
 
   final String uid;
@@ -24,6 +25,9 @@ class PublicProfile {
   final String bio;
   final String videoLink;
   final String photoData;
+
+  /// آخرین بازدید تقریبی: recently | week | month | long (خالی = نامشخص)
+  final String lastSeen;
 }
 
 class PublicProfileService {
@@ -45,6 +49,7 @@ class PublicProfileService {
       bio: '${j['bio'] ?? ''}',
       videoLink: '${j['video_link'] ?? ''}',
       photoData: '${j['photo_data'] ?? ''}',
+      lastSeen: '${j['last_seen'] ?? ''}',
     );
   }
 }
