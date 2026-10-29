@@ -155,7 +155,14 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
     }
     final res = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => GroupInfoPage(group: _g)));
     if (!mounted) return;
-    if (res == 'left' || res == 'deleted') Navigator.of(context).pop();
+    if (res == 'left' || res == 'deleted') {
+      Navigator.of(context).pop();
+      return;
+    }
+    // نام/عکس ممکن است در صفحهٔ اطلاعات عوض شده باشد
+    final fresh = await GroupService.info(id: _g.id);
+    final ng = fresh.group;
+    if (mounted && fresh.ok && ng != null) setState(() => _g = ng);
   }
 
   Future<void> _messageMenu(GroupMessage m) async {
@@ -196,7 +203,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
     );
     if (!mounted || action == null) return;
     if (action == 'user') {
-      await showUserSheet(context, uid: m.uid, name: m.name, badge: m.badge, allowMessage: !_g.isDm);
+      await openUserProfile(context, m.uid, m.name);
     } else if (action == 'report') {
       final ok = await GroupService.report(_g.id, m.id);
       if (mounted) gToast(context, ok ? GT.t('report_done') : GT.t('report_fail'));
@@ -235,7 +242,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
             if (!mine && !_g.isDm)
               Row(mainAxisSize: MainAxisSize.min, children: [
                 InkWell(
-                  onTap: () => showUserSheet(context, uid: m.uid, name: m.name, badge: m.badge),
+                  onTap: () => openUserProfile(context, m.uid, m.name),
                   child: Text(m.name, style: const TextStyle(color: gGold, fontSize: 11.5, fontWeight: FontWeight.w800, decoration: TextDecoration.underline)),
                 ),
                 gTick(m.badge),
@@ -270,7 +277,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
           title: InkWell(
             onTap: _openInfo,
             child: Row(children: [
-              GroupAvatar(name: _g.title, isGroup: !_g.isDm, size: 36),
+              GroupAvatar(name: _g.title, isGroup: !_g.isDm, size: 36, group: _g),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
