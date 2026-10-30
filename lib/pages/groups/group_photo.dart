@@ -3,22 +3,51 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
-/// انتخاب عکس گروه از گالری و فشرده‌سازی:
-/// مربع (برش از وسط)، حداکثر ۳۲۰×۳۲۰، JPEG با کیفیت پله‌ای تا حجم حدود ۵۰ کیلوبایت.
-/// خروجی base64 (بدون پیشوند data:)؛ null یعنی انتخاب لغو شد یا عکس قابل استفاده نبود.
-Future<String?> pickGroupPhoto() async {
-  final x = await ImagePicker().pickImage(
-    source: ImageSource.gallery,
-    maxWidth: 1024,
-    maxHeight: 1024,
-    imageQuality: 90,
+import '../../services/group_texts.dart';
+import '../profile/photo_cropper.dart';
+import 'group_ui.dart';
+
+/// انتخاب عکس گروه: گالری یا دوربین ← ویرایشگر پیشرفته (برش دایره‌ای، چرخش، آینه، زوم،
+/// فیلتر، روشنایی/کنتراست/اشباع) ← فشرده‌سازی نهایی (مربع ۳۲۰، JPEG، حداکثر حدود ۵۰ کیلوبایت).
+/// خروجی base64 (بدون پیشوند data:)؛ null یعنی کاربر لغو کرد یا عکس قابل استفاده نبود.
+Future<String?> pickGroupPhoto(BuildContext context) async {
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    backgroundColor: gPanel,
+    builder: (ctx) => Directionality(
+      textDirection: gDir,
+      child: SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_rounded, color: gGold),
+            title: Text(GT.t('photo_gallery'), style: const TextStyle(color: Colors.white)),
+            onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_camera_rounded, color: gGold),
+            title: Text(GT.t('photo_camera'), style: const TextStyle(color: Colors.white)),
+            onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+          ),
+        ]),
+      ),
+    ),
   );
-  if (x == null) return null;
-  final raw = await x.readAsBytes();
-  return compute(_compressSquare, raw);
+  if (source == null || !context.mounted) return null;
+  try {
+    final x = await ImagePicker().pickImage(source: source, maxWidth: 1280, maxHeight: 1280, imageQuality: 88);
+    if (x == null || !context.mounted) return null;
+    final raw = await x.readAsBytes();
+    if (!context.mounted) return null;
+    final edited = await cropProfilePhoto(context, raw, title: GT.t('photo_edit_title'));
+    if (edited == null) return null;
+    return compute(_compressSquare, edited);
+  } catch (_) {
+    return null;
+  }
 }
 
 String? _compressSquare(Uint8List raw) {
