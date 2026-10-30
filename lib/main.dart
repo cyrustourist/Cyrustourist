@@ -68,7 +68,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final type = message.data['type'];
   if (type == 'call' || type == 'call_msg') {
     await CallService.handleBackgroundData(Map<String, dynamic>.from(message.data));
-  } else if (type == 'dm_msg' || type == 'group_msg') {
+  } else if (type == 'dm_msg' || type == 'group_msg' || type == 'group_added') {
     // پیام شخصی: اعلان کوتاه (بدون متن پیام)؛ بیدارباش گروه فقط وقتی صفحه باز است مصرف می‌شود
     await GroupPush.handleBackground(Map<String, dynamic>.from(message.data));
   }
