@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../services/friends_service.dart';
 import '../../services/group_service.dart';
 import '../../services/group_texts.dart';
 import '../../widgets/share_sheet.dart';
+import 'group_friend_picker.dart';
 import 'group_photo.dart';
 import 'group_ui.dart';
 
@@ -28,6 +30,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   late final TextEditingController _desc;
   late final TextEditingController _user;
   bool _approval = false;
+  int _slow = 0;
+  bool _onlyAdmins = false;
   bool _public = true;
   int _retention = 24;
 
@@ -39,6 +43,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     _desc = TextEditingController(text: _g.description);
     _user = TextEditingController(text: _g.username ?? '');
     _approval = _g.joinApproval;
+    _slow = _g.slowSecs;
+    _onlyAdmins = _g.onlyAdmins;
     _public = _g.isPublic;
     _retention = _g.retentionHours;
     _load();
@@ -62,6 +68,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       if (info.ok && ng != null) {
         _g = ng;
         _approval = ng.joinApproval;
+        _slow = ng.slowSecs;
+        _onlyAdmins = ng.onlyAdmins;
         _public = ng.isPublic;
         _retention = ng.retentionHours;
       }
@@ -72,7 +80,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
 
   Future<void> _changePhoto() async {
     if (_photoBusy) return;
-    final b64 = await pickGroupPhoto();
+    final b64 = await pickGroupPhoto(context);
     if (!mounted) return;
     if (b64 == null) {
       gToast(context, GT.t('photo_bad'));
@@ -161,6 +169,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       name: _name.text.trim(),
       description: _desc.text.trim(),
       joinApproval: _approval,
+      slowSecs: _slow,
+      onlyAdmins: _onlyAdmins,
       kind: _g.isOwner ? (_public ? 'public' : 'private') : null,
       username: _g.isOwner && _public ? _user.text.trim() : null,
       retentionHours: _g.isOwner && !_g.retentionLocked ? _retention : null,
@@ -170,6 +180,45 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     gToast(context, r.ok ? GT.t('saved') : r.text);
     if (r.ok) _load();
   }
+
+  Future<void> _addMembers() async {
+    final exclude = <String>{..._m.members.map((x) => x.uid), ..._m.pending.map((x) => x.uid)};
+    final picked = await Navigator.of(context).push<List<FriendItem>>(
+      MaterialPageRoute(builder: (_) => GroupFriendPicker(excludeUids: exclude)),
+    );
+    if (!mounted || picked == null || picked.isEmpty) return;
+    final r = await GroupService.addMembers(_g.id, picked.map((f) => f.uid).toList());
+    if (!mounted) return;
+    if (!r.ok) {
+      gToast(context, r.text);
+      return;
+    }
+    final added = int.tryParse('${r.raw?['added']}') ?? 0;
+    final skipped = int.tryParse('${r.raw?['skipped']}') ?? 0;
+    if (added == 0) {
+      gToast(context, GT.t('members_none'));
+    } else {
+      final base = GT.t('members_added', {'n': '$added'});
+      gToast(context, skipped > 0 ? '$base\n${GT.t('members_skipped')}' : base);
+    }
+    _load();
+  }
+
+  String _slowLabel(int s) {
+    if (s <= 0) return GT.t('slow_off');
+    if (s < 60) return GT.t('slow_n_sec', {'n': '$s'});
+    return GT.t('slow_n_min', {'n': '${s ~/ 60}'});
+  }
+
+  Widget _addMembersButton() => Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child: FilledButton.icon(
+          style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, minimumSize: const Size.fromHeight(48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+          onPressed: _addMembers,
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          label: Text(GT.t('add_members'), style: const TextStyle(fontWeight: FontWeight.w900)),
+        ),
+      );
 
   Future<void> _resetInvite() async {
     if (!await _confirm(GT.t('reset_link_confirm'))) return;
@@ -308,6 +357,26 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         onChanged: (v) => setState(() => _approval = v),
         title: Text(GT.t('form_approval'), style: const TextStyle(color: Colors.white, fontSize: 14)),
       ),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        activeColor: gGold,
+        value: _onlyAdmins,
+        onChanged: (v) => setState(() => _onlyAdmins = v),
+        title: Text(GT.t('admins_only'), style: const TextStyle(color: Colors.white, fontSize: 14)),
+      ),
+      Row(children: [
+        Expanded(child: Text(GT.t('slow_mode'), style: const TextStyle(color: Colors.white, fontSize: 14))),
+        DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            value: const [0, 10, 30, 60, 300, 900].contains(_slow) ? _slow : 0,
+            dropdownColor: gPanel,
+            iconEnabledColor: gGold,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+            items: [for (final o in const [0, 10, 30, 60, 300, 900]) DropdownMenuItem<int>(value: o, child: Text(_slowLabel(o)))],
+            onChanged: (v) => setState(() => _slow = v ?? 0),
+          ),
+        ),
+      ]),
       if (owner)
         Row(children: [
           Expanded(child: Text(GT.t('form_retention'), style: const TextStyle(color: Colors.white, fontSize: 14))),
@@ -431,6 +500,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                   const SizedBox(height: 4),
                   Text(GT.t('retention_banner', {'h': GT.hours(_g.retentionHours)}), style: const TextStyle(color: gMuted, fontSize: 12)),
                 ]),
+                if (_g.isStaff) _addMembersButton(),
                 if (_g.isStaff) _inviteSection(),
                 if (_g.isStaff) _editSection(),
                 if (_g.isStaff) _pendingSection(),
