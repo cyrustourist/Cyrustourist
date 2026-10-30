@@ -135,17 +135,18 @@ List<double> _adjust(double bright, double contrast, double sat) {
 
 /// ویرایشگر عکس پروفایل: برش دایره‌ای، چرخش، آینه، زوم، فیلتر و تنظیم روشنایی/کنتراست/اشباع.
 /// خروجی JPEG ۴۰۰×۴۰۰ (کم‌حجم)؛ اگر کاربر انصراف دهد null برمی‌گردد.
-Future<Uint8List?> cropProfilePhoto(BuildContext context, Uint8List bytes) {
+Future<Uint8List?> cropProfilePhoto(BuildContext context, Uint8List bytes, {String? title}) {
   return showDialog<Uint8List>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => _PhotoCropDialog(bytes: bytes),
+    builder: (_) => _PhotoCropDialog(bytes: bytes, title: title),
   );
 }
 
 class _PhotoCropDialog extends StatefulWidget {
-  const _PhotoCropDialog({required this.bytes});
+  const _PhotoCropDialog({required this.bytes, this.title});
   final Uint8List bytes;
+  final String? title;
 
   @override
   State<_PhotoCropDialog> createState() => _PhotoCropDialogState();
@@ -309,7 +310,7 @@ class _PhotoCropDialogState extends State<_PhotoCropDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_t('title'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 16)),
+              Text(widget.title ?? _t('title'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 16)),
               const SizedBox(height: 4),
               Text(_t('hint'), style: const TextStyle(color: Colors.white60, fontSize: 12)),
               const SizedBox(height: 12),
