@@ -35,6 +35,9 @@ class GroupInfo {
     this.ttlOptions = const [],
     this.retentionLocked = false,
     this.photoV = 0,
+    this.slowSecs = 0,
+    this.onlyAdmins = false,
+    this.pinnedId = 0,
   });
 
   final int id;
@@ -57,13 +60,18 @@ class GroupInfo {
   /// نسخهٔ عکس گروه (۰ = بدون عکس)؛ در آدرس عکس برای تازه‌شدن کش استفاده می‌شود.
   final int photoV;
 
-  GroupInfo withPhoto(int v) => GroupInfo(
+  /// حالت آهسته (ثانیه بین دو پیام هر عضو؛ ۰ = خاموش) و «فقط مدیران پیام بدهند».
+  final int slowSecs;
+  final bool onlyAdmins;
+  final int pinnedId;
+
+  GroupInfo copyWith({int? photoV, int? memberCount, int? slowSecs, bool? onlyAdmins}) => GroupInfo(
         id: id,
         name: name,
         description: description,
         kind: kind,
         username: username,
-        memberCount: memberCount,
+        memberCount: memberCount ?? this.memberCount,
         retentionHours: retentionHours,
         joinApproval: joinApproval,
         role: role,
@@ -74,8 +82,13 @@ class GroupInfo {
         peerName: peerName,
         ttlOptions: ttlOptions,
         retentionLocked: retentionLocked,
-        photoV: v,
+        photoV: photoV ?? this.photoV,
+        slowSecs: slowSecs ?? this.slowSecs,
+        onlyAdmins: onlyAdmins ?? this.onlyAdmins,
+        pinnedId: pinnedId,
       );
+
+  GroupInfo withPhoto(int v) => copyWith(photoV: v);
 
   bool get isDm => kind == 'dm';
   bool get isPublic => kind == 'public';
@@ -107,6 +120,9 @@ class GroupInfo {
       ttlOptions: ((j['ttl_options'] as List?) ?? const []).map(_i).where((x) => x > 0).toList(),
       retentionLocked: j['retention_locked'] == true,
       photoV: _i(j['photo_v']),
+      slowSecs: _i(j['slow_secs']),
+      onlyAdmins: j['only_admins'] == true,
+      pinnedId: _i(j['pinned_id']),
     );
   }
 }
@@ -120,6 +136,11 @@ class GroupMessage {
     required this.at,
     required this.mine,
     this.badge,
+    this.replyId = 0,
+    this.replyName = '',
+    this.replyText = '',
+    this.reactions = const {},
+    this.myReaction = '',
   });
 
   final int id;
@@ -129,16 +150,85 @@ class GroupMessage {
   final DateTime? at;
   final bool mine;
   final String? badge; // blue | gold
+  final int replyId;
+  final String replyName;
+  final String replyText;
+  final Map<String, int> reactions; // emoji -> تعداد
+  final String myReaction;
 
-  factory GroupMessage.fromJson(Map<String, dynamic> j) => GroupMessage(
-        id: _i(j['id']),
-        uid: '${j['uid'] ?? ''}',
-        name: '${j['name'] ?? ''}',
-        text: '${j['text'] ?? ''}',
-        at: DateTime.tryParse('${j['at']}'.replaceFirst(' ', 'T') + 'Z')?.toLocal(),
-        mine: j['mine'] == true,
-        badge: j['badge'] == null ? null : '${j['badge']}',
+  GroupMessage copyWith({Map<String, int>? reactions, String? myReaction}) => GroupMessage(
+        id: id,
+        uid: uid,
+        name: name,
+        text: text,
+        at: at,
+        mine: mine,
+        badge: badge,
+        replyId: replyId,
+        replyName: replyName,
+        replyText: replyText,
+        reactions: reactions ?? this.reactions,
+        myReaction: myReaction ?? this.myReaction,
       );
+
+  factory GroupMessage.fromJson(Map<String, dynamic> j) {
+    final r = j['reply'];
+    return GroupMessage(
+      id: _i(j['id']),
+      uid: '${j['uid'] ?? ''}',
+      name: '${j['name'] ?? ''}',
+      text: '${j['text'] ?? ''}',
+      at: DateTime.tryParse('${j['at']}'.replaceFirst(' ', 'T') + 'Z')?.toLocal(),
+      mine: j['mine'] == true,
+      badge: j['badge'] == null ? null : '${j['badge']}',
+      replyId: r is Map ? _i(r['id']) : 0,
+      replyName: r is Map ? '${r['name'] ?? ''}' : '',
+      replyText: r is Map ? '${r['text'] ?? ''}' : '',
+    );
+  }
+}
+
+/// پیام سنجاق‌شده.
+class GroupPinned {
+  const GroupPinned({required this.id, required this.name, required this.text});
+  final int id;
+  final String name;
+  final String text;
+}
+
+/// وضعیت زندهٔ گروه (فقط وقتی نسخه عوض شده از سرور می‌آید): واکنش‌ها، سنجاق و پیام‌های حذف‌شده.
+class GroupState {
+  const GroupState({required this.sv, this.minId = 0, this.hiddenIds = const {}, this.reactions = const {}, this.mine = const {}, this.pinned});
+  final int sv;
+
+  /// کوچک‌ترین شناسهٔ پنجرهٔ ۶۰ پیام آخر؛ فقط پیام‌های داخل این پنجره بروز می‌شوند.
+  final int minId;
+  final Set<int> hiddenIds;
+  final Map<int, Map<String, int>> reactions;
+  final Map<int, String> mine;
+  final GroupPinned? pinned;
+
+  factory GroupState.fromJson(Map<String, dynamic> j) {
+    final rx = <int, Map<String, int>>{};
+    final rawRx = j['reactions'];
+    if (rawRx is Map) {
+      rawRx.forEach((k, v) {
+        if (v is Map) rx[_i(k)] = v.map((e, n) => MapEntry('$e', _i(n)));
+      });
+    }
+    final mine = <int, String>{};
+    final rawMine = j['mine'];
+    if (rawMine is Map) rawMine.forEach((k, v) => mine[_i(k)] = '$v');
+    final p = j['pinned'];
+    return GroupState(
+      sv: _i(j['sv']),
+      minId: _i(j['min_id']),
+      hiddenIds: ((j['hidden_ids'] as List?) ?? const []).map(_i).toSet(),
+      reactions: rx,
+      mine: mine,
+      pinned: p is Map ? GroupPinned(id: _i(p['id']), name: '${p['name'] ?? ''}', text: '${p['text'] ?? ''}') : null,
+    );
+  }
 }
 
 class GroupMember {
@@ -212,11 +302,17 @@ class GroupFetch {
     this.retentionHours = 24,
     this.memberCount = 0,
     this.role = 'member',
+    this.slowSecs = 0,
+    this.onlyAdmins = false,
+    this.state,
   });
   final bool ok;
   final String error;
   final String message;
   final List<GroupMessage> messages;
+  final int slowSecs;
+  final bool onlyAdmins;
+  final GroupState? state;
   final int retentionHours;
   final int memberCount;
   final String role;
@@ -399,6 +495,8 @@ class GroupService {
     String? username,
     int? retentionHours,
     bool? joinApproval,
+    int? slowSecs,
+    bool? onlyAdmins,
   }) async {
     final j = await _call('POST', '/api/groups/update', body: {
       'group_id': id,
@@ -408,6 +506,8 @@ class GroupService {
       if (username != null) 'username': username,
       if (retentionHours != null) 'retention_hours': retentionHours,
       if (joinApproval != null) 'join_approval': joinApproval,
+      if (slowSecs != null) 'slow_secs': slowSecs,
+      if (onlyAdmins != null) 'only_admins': onlyAdmins,
     });
     return _result(j);
   }
@@ -443,8 +543,8 @@ class GroupService {
   }
 
   // ---------- پیام‌ها ----------
-  static Future<GroupFetch> messages(int id, {int afterId = 0}) async {
-    final j = await _call('GET', '/api/groups/messages', query: {'group_id': '$id', 'after_id': '$afterId'});
+  static Future<GroupFetch> messages(int id, {int afterId = 0, int? sv}) async {
+    final j = await _call('GET', '/api/groups/messages', query: {'group_id': '$id', 'after_id': '$afterId', if (sv != null) 'sv': '$sv'});
     if (j == null) return GroupFetch(ok: false, error: 'net', message: GT.t('net'));
     if (j['success'] != true) return GroupFetch(ok: false, error: '${j['error'] ?? ''}', message: '${j['message'] ?? ''}');
     return GroupFetch(
@@ -452,12 +552,30 @@ class GroupService {
       retentionHours: _i(j['retention_hours']) == 0 ? 24 : _i(j['retention_hours']),
       memberCount: _i(j['member_count']),
       role: '${j['role'] ?? 'member'}',
+      slowSecs: _i(j['slow_secs']),
+      onlyAdmins: j['only_admins'] == true,
       messages: ((j['messages'] as List?) ?? const []).whereType<Map<String, dynamic>>().map(GroupMessage.fromJson).toList(),
+      state: j['state'] is Map<String, dynamic> ? GroupState.fromJson(j['state'] as Map<String, dynamic>) : null,
     );
   }
 
-  static Future<GroupResult> send(int id, String text) async {
-    return _result(await _call('POST', '/api/groups/send', body: {'group_id': id, 'body': text}));
+  static Future<GroupResult> send(int id, String text, {int replyTo = 0}) async {
+    return _result(await _call('POST', '/api/groups/send', body: {'group_id': id, 'body': text, if (replyTo > 0) 'reply_to': replyTo}));
+  }
+
+  /// واکنش ایموجی به پیام (دوباره زدن همان ایموجی = برداشتن). raw['my'] = واکنش فعلی من.
+  static Future<GroupResult> react(int groupId, int messageId, String emoji) async {
+    return _result(await _call('POST', '/api/groups/react', body: {'group_id': groupId, 'message_id': messageId, 'emoji': emoji}));
+  }
+
+  /// سنجاق پیام (messageId = 0 یعنی برداشتن سنجاق).
+  static Future<GroupResult> pin(int groupId, int messageId) async {
+    return _result(await _call('POST', '/api/groups/pin', body: {'group_id': groupId, 'message_id': messageId}));
+  }
+
+  /// افزودن دوستان به گروه (مالک/مدیر). raw: added، skipped، member_count.
+  static Future<GroupResult> addMembers(int groupId, List<String> uids) async {
+    return _result(await _call('POST', '/api/groups/members/add', body: {'group_id': groupId, 'target_uids': uids}));
   }
 
   static Future<bool> report(int groupId, int messageId, {String reason = ''}) async {
@@ -554,16 +672,24 @@ class GroupPush {
   static const String _dmChannelId = 'cyrus_dm_v1';
   static const String _dmChannelName = 'پیام‌های شخصی';
   static const String _dmChannelDesc = 'اعلان پیام‌های شخصی';
+  static const String _groupChannelId = 'cyrus_group_v1';
+  static const String _groupChannelName = 'گروه‌ها';
+  static const String _groupChannelDesc = 'اعلان افزوده‌شدن به گروه';
 
   static bool isGroupData(Map<String, dynamic> d) {
     final t = d['type'];
-    return t == 'group_msg' || t == 'dm_msg';
+    return t == 'group_msg' || t == 'dm_msg' || t == 'group_added';
   }
 
   /// اپ باز است (onMessage).
   static void handleForeground(Map<String, dynamic> data, {bool notify = true}) {
     _wake.add(data.map((k, v) => MapEntry(k, '$v')));
     final gid = _i(data['group_id']);
+    if (data['type'] == 'group_added') {
+      unawaited(syncTopics(force: true));
+      if (notify) unawaited(_showAdded(data, initialize: false));
+      return;
+    }
     if (notify && data['type'] == 'dm_msg' && gid != activeGroupId) {
       unawaited(_showDm(data, initialize: false));
     }
@@ -572,6 +698,42 @@ class GroupPush {
   /// اپ در پس‌زمینه/بسته است (isolate پس‌زمینه).
   static Future<void> handleBackground(Map<String, dynamic> data) async {
     if (data['type'] == 'dm_msg') await _showDm(data, initialize: true);
+    if (data['type'] == 'group_added') await _showAdded(data, initialize: true);
+  }
+
+  static Future<void> _showAdded(Map<String, dynamic> data, {required bool initialize}) async {
+    try {
+      final plugin = FlutterLocalNotificationsPlugin();
+      if (initialize) {
+        await plugin.initialize(const InitializationSettings(android: AndroidInitializationSettings('@drawable/ic_stat_notify')));
+      }
+      final android = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await android?.createNotificationChannel(const AndroidNotificationChannel(
+        _groupChannelId,
+        _groupChannelName,
+        description: _groupChannelDesc,
+        importance: Importance.high,
+      ));
+      final gid = _i(data['group_id']);
+      await plugin.show(
+        800000 + (gid % 100000),
+        GT.t('added_notif_title'),
+        GT.t('added_notif_body', {'name': '${data['sender_name'] ?? ''}', 'group': '${data['group_name'] ?? ''}'}),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _groupChannelId,
+            _groupChannelName,
+            channelDescription: _groupChannelDesc,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@drawable/ic_stat_notify',
+          ),
+        ),
+        payload: jsonEncode(data),
+      );
+    } catch (e) {
+      debugPrint('group added notification error: $e');
+    }
   }
 
   static Future<void> _showDm(Map<String, dynamic> data, {required bool initialize}) async {
