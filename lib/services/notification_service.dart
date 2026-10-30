@@ -467,7 +467,7 @@ class NotificationService {
         return;
       }
 
-      if (data['type'] == 'dm_msg' || data['type'] == 'group_msg') {
+      if (data['type'] == 'dm_msg' || data['type'] == 'group_msg' || data['type'] == 'group_added') {
         unawaited(GroupInvite.openById(int.tryParse('${data['group_id']}') ?? 0));
         return;
       }
