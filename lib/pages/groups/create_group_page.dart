@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../services/friends_service.dart';
 import '../../services/group_service.dart';
 import '../../services/group_texts.dart';
+import 'group_friend_picker.dart';
 import 'group_photo.dart';
 import 'group_ui.dart';
 
@@ -28,6 +30,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   bool _approval = false;
   bool _busy = false;
   String? _photo; // base64 فشرده
+  List<FriendItem> _friends = const [];
   late int _retention;
 
   List<int> get _options => widget.limits.options.isNotEmpty ? widget.limits.options : const [24];
@@ -48,7 +51,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   }
 
   Future<void> _pickPhoto() async {
-    final b64 = await pickGroupPhoto();
+    final b64 = await pickGroupPhoto(context);
     if (!mounted) return;
     if (b64 == null) {
       gToast(context, GT.t('photo_bad'));
@@ -88,6 +91,45 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
       ),
     ]);
   }
+
+  Future<void> _pickFriends() async {
+    final picked = await Navigator.of(context).push<List<FriendItem>>(
+      MaterialPageRoute(builder: (_) => GroupFriendPicker(initial: _friends)),
+    );
+    if (!mounted || picked == null) return;
+    setState(() => _friends = picked);
+  }
+
+  Widget _friendsSection() => Container(
+        margin: const EdgeInsets.only(top: 6, bottom: 6),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: gPanel, borderRadius: BorderRadius.circular(16), border: Border.all(color: gLine)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          InkWell(
+            onTap: _busy ? null : _pickFriends,
+            child: Row(children: [
+              const Icon(Icons.group_add_rounded, color: gGold),
+              const SizedBox(width: 10),
+              Expanded(child: Text(GT.t('add_friends_opt'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+              if (_friends.isNotEmpty) Text('${_friends.length}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+              const Icon(Icons.chevron_right_rounded, color: gMuted),
+            ]),
+          ),
+          if (_friends.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              for (final f in _friends)
+                Chip(
+                  backgroundColor: gBg,
+                  side: const BorderSide(color: gLine),
+                  label: Text(f.name, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                  deleteIconColor: gMuted,
+                  onDeleted: _busy ? null : () => setState(() => _friends = _friends.where((x) => x.uid != f.uid).toList()),
+                ),
+            ]),
+          ],
+        ]),
+      );
 
   Future<void> _create() async {
     if (_busy) return;
@@ -129,8 +171,18 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
           gToast(context, GT.t('photo_fail'));
         }
       }
+      var note = GT.t('created_ok');
+      if (_friends.isNotEmpty) {
+        final ar = await GroupService.addMembers(g.id, _friends.map((f) => f.uid).toList());
+        final added = int.tryParse('${ar.raw?['added']}') ?? 0;
+        final total = int.tryParse('${ar.raw?['member_count']}') ?? 0;
+        if (ar.ok && added > 0) {
+          note = GT.t('members_added', {'n': '$added'});
+          if (total > 0) g = g.copyWith(memberCount: total);
+        }
+      }
       if (!mounted) return;
-      gToast(context, GT.t('created_ok'));
+      gToast(context, note);
       Navigator.of(context).pop(g);
       return;
     }
@@ -223,6 +275,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
             onChanged: (v) => setState(() => _approval = v),
             title: Text(GT.t('form_approval'), style: const TextStyle(color: Colors.white, fontSize: 14)),
           ),
+          _friendsSection(),
           Row(children: [
             Expanded(child: Text(GT.t('form_retention'), style: const TextStyle(color: Colors.white, fontSize: 14))),
             DropdownButtonHideUnderline(
