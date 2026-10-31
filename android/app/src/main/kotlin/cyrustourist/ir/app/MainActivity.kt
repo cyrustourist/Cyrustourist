@@ -13,6 +13,11 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.os.Build
+import android.os.Environment
+import android.content.ContentValues
+import android.provider.MediaStore
+import android.media.MediaScannerConnection
+import java.io.File
 import android.os.Bundle
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -99,6 +104,33 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /** ذخیرهٔ JPEG در گالری (Pictures/Cyrustourist) بدون پکیج جانبی. */
+    private fun saveJpegToGallery(bytes: ByteArray): Boolean {
+        val name = "cyrus_" + System.currentTimeMillis() + ".jpg"
+        if (Build.VERSION.SDK_INT >= 29) {
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Cyrustourist")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+            val resolver = applicationContext.contentResolver
+            val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return false
+            resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: return false
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            return true
+        }
+        @Suppress("DEPRECATION")
+        val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Cyrustourist")
+        if (!dir.exists() && !dir.mkdirs()) return false
+        val f = File(dir, name)
+        f.outputStream().use { it.write(bytes) }
+        MediaScannerConnection.scanFile(applicationContext, arrayOf(f.absolutePath), arrayOf("image/jpeg"), null)
+        return true
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -120,6 +152,18 @@ class MainActivity : FlutterActivity() {
                             } catch (e: Throwable) {
                                 runOnUiThread { result.error("COMPRESS_ERROR", e.message, null) }
                             }
+                        }.start()
+                    }
+                }
+
+                "saveToGallery" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    if (bytes == null || bytes.isEmpty()) {
+                        result.error("NO_DATA", "No image bytes", null)
+                    } else {
+                        Thread {
+                            val ok = try { saveJpegToGallery(bytes) } catch (e: Throwable) { false }
+                            runOnUiThread { result.success(ok) }
                         }.start()
                     }
                 }
