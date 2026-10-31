@@ -44,6 +44,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
   bool _sending = false;
   bool _hasName = true;
   String _phoneMode = 'verified';
+  String _linksMode = 'own';
 
   List<CompanionPost> _posts = const [];
 
@@ -75,6 +76,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
     _init();
     GroupService.phoneMode().then((m) {
       if (mounted) setState(() => _phoneMode = m);
+    });
+    GroupService.linksMode().then((m) {
+      if (mounted) setState(() => _linksMode = m);
     });
   }
 
@@ -678,7 +682,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> with WidgetsBindingObserver
                   ),
                   _tick(m.badge),
                 ]),
-              LinkifiedText(text: m.text, style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.8)),
+              LinkifiedText(text: m.text, allowExternal: _linksMode == 'all', style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.8)),
               Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(_time(m.at), style: const TextStyle(color: Color(0xff8fa5b2), fontSize: 10.5)),
                 if (!mine) ...[
