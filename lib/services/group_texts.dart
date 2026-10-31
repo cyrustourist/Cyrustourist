@@ -175,6 +175,18 @@ class GT {
     'photo_gallery': 'گالری',
     'photo_camera': 'دوربین',
     'photo_edit_title': 'ویرایش عکس گروه',
+    'attach_photo': 'ارسال عکس',
+    'photo_caption': 'توضیح عکس (اختیاری)',
+    'photo_send': 'ارسال',
+    'photo_preparing': 'در حال آماده‌سازی عکس…',
+    'photo_failed': 'عکس ارسال نشد.',
+    'photo_msg': '📷 عکس',
+    'perm_media': 'اجازهٔ ارسال عکس برای اعضا',
+    'perm_links': 'اجازهٔ ارسال لینک برای اعضا',
+    'perm_hint': 'مدیران همیشه می‌توانند. اگر مدیر سیستم این قابلیت را خاموش کرده باشد، این گزینه اثری ندارد.',
+    'ext_link_title': 'باز کردن لینک بیرونی',
+    'ext_link_body': 'این لینک بیرون از سایروس توریست باز می‌شود. فقط به لینک‌هایی که مطمئن هستید وارد شوید.',
+    'ext_link_open': 'باز کردن',
   };
 
   static const Map<String, String> _en = {
@@ -327,6 +339,18 @@ class GT {
     'photo_gallery': 'Gallery',
     'photo_camera': 'Camera',
     'photo_edit_title': 'Edit group photo',
+    'attach_photo': 'Send photo',
+    'photo_caption': 'Caption (optional)',
+    'photo_send': 'Send',
+    'photo_preparing': 'Preparing photo…',
+    'photo_failed': 'The photo could not be sent.',
+    'photo_msg': '📷 Photo',
+    'perm_media': 'Members can send photos',
+    'perm_links': 'Members can send links',
+    'perm_hint': 'Admins always can. If the system administrators turned this feature off, this option has no effect.',
+    'ext_link_title': 'Open external link',
+    'ext_link_body': 'This link opens outside Cyrus Tourist. Only continue if you trust it.',
+    'ext_link_open': 'Open',
   };
 
   static const Map<String, String> _ar = {
@@ -479,5 +503,17 @@ class GT {
     'photo_gallery': 'المعرض',
     'photo_camera': 'الكاميرا',
     'photo_edit_title': 'تعديل صورة المجموعة',
+    'attach_photo': 'إرسال صورة',
+    'photo_caption': 'وصف الصورة (اختياري)',
+    'photo_send': 'إرسال',
+    'photo_preparing': 'جارٍ تجهيز الصورة…',
+    'photo_failed': 'تعذّر إرسال الصورة.',
+    'photo_msg': '📷 صورة',
+    'perm_media': 'يمكن للأعضاء إرسال الصور',
+    'perm_links': 'يمكن للأعضاء إرسال الروابط',
+    'perm_hint': 'المشرفون يستطيعون دائمًا. إذا أوقف مسؤول النظام هذه الميزة فلا تأثير لهذا الخيار.',
+    'ext_link_title': 'فتح رابط خارجي',
+    'ext_link_body': 'سيُفتح هذا الرابط خارج سايروس توريست. تابع فقط إذا كنت تثق به.',
+    'ext_link_open': 'فتح',
   };
 }
