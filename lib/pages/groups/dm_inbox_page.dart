@@ -139,7 +139,6 @@ class _DmInboxPageState extends State<DmInboxPage> with SingleTickerProviderStat
         ),
       ),
     );
-    ctrl.dispose();
     if (!mounted || value == null) return;
     if (value.isEmpty) {
       gToast(context, CT.t('add_empty'));
