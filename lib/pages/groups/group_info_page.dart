@@ -32,6 +32,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
   bool _approval = false;
   int _slow = 0;
   bool _onlyAdmins = false;
+  bool _permMedia = true;
+  bool _permLinks = true;
   bool _public = true;
   int _retention = 24;
 
@@ -45,6 +47,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
     _approval = _g.joinApproval;
     _slow = _g.slowSecs;
     _onlyAdmins = _g.onlyAdmins;
+    _permMedia = _g.permMedia;
+    _permLinks = _g.permLinks;
     _public = _g.isPublic;
     _retention = _g.retentionHours;
     _load();
@@ -70,6 +74,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         _approval = ng.joinApproval;
         _slow = ng.slowSecs;
         _onlyAdmins = ng.onlyAdmins;
+        _permMedia = ng.permMedia;
+        _permLinks = ng.permLinks;
         _public = ng.isPublic;
         _retention = ng.retentionHours;
       }
@@ -171,6 +177,8 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
       joinApproval: _approval,
       slowSecs: _slow,
       onlyAdmins: _onlyAdmins,
+      permMedia: _permMedia,
+      permLinks: _permLinks,
       kind: _g.isOwner ? (_public ? 'public' : 'private') : null,
       username: _g.isOwner && _public ? _user.text.trim() : null,
       retentionHours: _g.isOwner && !_g.retentionLocked ? _retention : null,
@@ -356,6 +364,21 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
         value: _approval,
         onChanged: (v) => setState(() => _approval = v),
         title: Text(GT.t('form_approval'), style: const TextStyle(color: Colors.white, fontSize: 14)),
+      ),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        activeColor: gGold,
+        value: _permMedia,
+        onChanged: (v) => setState(() => _permMedia = v),
+        title: Text(GT.t('perm_media'), style: const TextStyle(color: Colors.white, fontSize: 14)),
+      ),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        activeColor: gGold,
+        value: _permLinks,
+        onChanged: (v) => setState(() => _permLinks = v),
+        title: Text(GT.t('perm_links'), style: const TextStyle(color: Colors.white, fontSize: 14)),
+        subtitle: Text(GT.t('perm_hint'), style: const TextStyle(color: gMuted, fontSize: 11)),
       ),
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
