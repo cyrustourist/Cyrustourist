@@ -206,6 +206,10 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
 
   Future<void> _sendPhoto() async {
     if (_sending || _photoSending || _slowLeft > 0) return;
+    if (!_mediaOk) {
+      gToast(context, GT.t('photo_off'));
+      return;
+    }
     final pick = await pickChatPhoto(context);
     if (pick == null || !mounted) return;
     setState(() => _photoSending = true);
@@ -599,10 +603,13 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
       Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Row(children: [
-          if (_mediaOk)
-            _photoSending
-                ? const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: gGold)))
-                : IconButton(tooltip: GT.t('attach_photo'), onPressed: _slowLeft > 0 ? null : _sendPhoto, icon: const Icon(Icons.photo_camera_rounded, color: gGold)),
+          _photoSending
+              ? const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: gGold)))
+              : IconButton(
+                  tooltip: GT.t('attach_photo'),
+                  onPressed: _slowLeft > 0 ? null : _sendPhoto,
+                  icon: Icon(Icons.photo_camera_rounded, color: _mediaOk ? gGold : gMuted),
+                ),
           Expanded(
             child: TextField(
               controller: _input,
