@@ -40,6 +40,7 @@ class GroupInfo {
     this.pinnedId = 0,
     this.permMedia = true,
     this.permLinks = true,
+    this.muted = false,
   });
 
   final int id;
@@ -71,7 +72,10 @@ class GroupInfo {
   final bool permMedia;
   final bool permLinks;
 
-  GroupInfo copyWith({int? photoV, int? memberCount, int? slowSecs, bool? onlyAdmins, bool? permMedia, bool? permLinks}) => GroupInfo(
+  /// سکوت (بی‌صدا) برای خود کاربر.
+  final bool muted;
+
+  GroupInfo copyWith({int? photoV, int? memberCount, int? slowSecs, bool? onlyAdmins, bool? permMedia, bool? permLinks, bool? muted}) => GroupInfo(
         id: id,
         name: name,
         description: description,
@@ -94,6 +98,7 @@ class GroupInfo {
         pinnedId: pinnedId,
         permMedia: permMedia ?? this.permMedia,
         permLinks: permLinks ?? this.permLinks,
+        muted: muted ?? this.muted,
       );
 
   GroupInfo withPhoto(int v) => copyWith(photoV: v);
@@ -133,6 +138,7 @@ class GroupInfo {
       pinnedId: _i(j['pinned_id']),
       permMedia: j['perm_media'] != false,
       permLinks: j['perm_links'] != false,
+      muted: j['muted'] == true,
     );
   }
 }
@@ -153,6 +159,7 @@ class GroupMessage {
     this.myReaction = '',
     this.kind = 'text',
     this.mediaId = 0,
+    this.edited = false,
   });
 
   final int id;
@@ -169,14 +176,15 @@ class GroupMessage {
   final String myReaction;
   final String kind; // text | image
   final int mediaId;
+  final bool edited;
 
   bool get isImage => kind == 'image' && mediaId > 0;
 
-  GroupMessage copyWith({Map<String, int>? reactions, String? myReaction}) => GroupMessage(
+  GroupMessage copyWith({Map<String, int>? reactions, String? myReaction, String? text, bool? edited}) => GroupMessage(
         id: id,
         uid: uid,
         name: name,
-        text: text,
+        text: text ?? this.text,
         at: at,
         mine: mine,
         badge: badge,
@@ -187,6 +195,7 @@ class GroupMessage {
         myReaction: myReaction ?? this.myReaction,
         kind: kind,
         mediaId: mediaId,
+        edited: edited ?? this.edited,
       );
 
   factory GroupMessage.fromJson(Map<String, dynamic> j) {
@@ -204,6 +213,7 @@ class GroupMessage {
       replyText: r is Map ? '${r['text'] ?? ''}' : '',
       kind: '${j['kind'] ?? 'text'}',
       mediaId: _i(j['media_id']),
+      edited: j['edited'] == true,
     );
   }
 }
@@ -218,8 +228,11 @@ class GroupPinned {
 
 /// وضعیت زندهٔ گروه (فقط وقتی نسخه عوض شده از سرور می‌آید): واکنش‌ها، سنجاق و پیام‌های حذف‌شده.
 class GroupState {
-  const GroupState({required this.sv, this.minId = 0, this.hiddenIds = const {}, this.reactions = const {}, this.mine = const {}, this.pinned});
+  const GroupState({required this.sv, this.minId = 0, this.hiddenIds = const {}, this.reactions = const {}, this.mine = const {}, this.pinned, this.edits = const {}});
   final int sv;
+
+  /// متن تازهٔ پیام‌های ویرایش‌شده (شناسه ← متن).
+  final Map<int, String> edits;
 
   /// کوچک‌ترین شناسهٔ پنجرهٔ ۶۰ پیام آخر؛ فقط پیام‌های داخل این پنجره بروز می‌شوند.
   final int minId;
@@ -239,6 +252,9 @@ class GroupState {
     final mine = <int, String>{};
     final rawMine = j['mine'];
     if (rawMine is Map) rawMine.forEach((k, v) => mine[_i(k)] = '$v');
+    final ed = <int, String>{};
+    final rawEd = j['edits'];
+    if (rawEd is Map) rawEd.forEach((k, v) => ed[_i(k)] = '$v');
     final p = j['pinned'];
     return GroupState(
       sv: _i(j['sv']),
@@ -246,6 +262,7 @@ class GroupState {
       hiddenIds: ((j['hidden_ids'] as List?) ?? const []).map(_i).toSet(),
       reactions: rx,
       mine: mine,
+      edits: ed,
       pinned: p is Map ? GroupPinned(id: _i(p['id']), name: '${p['name'] ?? ''}', text: '${p['text'] ?? ''}') : null,
     );
   }
@@ -326,6 +343,7 @@ class GroupFetch {
     this.onlyAdmins = false,
     this.mediaOk = false,
     this.mediaWhy = '',
+    this.muted = false,
     this.linksMode = 'own',
     this.state,
   });
@@ -335,6 +353,7 @@ class GroupFetch {
   final List<GroupMessage> messages;
   final int slowSecs;
   final bool onlyAdmins;
+  final bool muted;
   final String mediaWhy; // دلیل غیرفعال‌بودن عکس (mode_off | group_off | need_tick | need_verified)
   final bool mediaOk; // آیا همین کاربر الان می‌تواند عکس بفرستد (کلید پنل + مجوز گروه)
   final String linksMode; // off | own | all (مؤثر برای همین گفتگو)
@@ -587,6 +606,7 @@ class GroupService {
       onlyAdmins: j['only_admins'] == true,
       mediaOk: j['media_ok'] == true,
       mediaWhy: '${j['media_why'] ?? ''}',
+      muted: j['muted'] == true,
       linksMode: '${j['links_mode'] ?? 'own'}',
       messages: ((j['messages'] as List?) ?? const []).whereType<Map<String, dynamic>>().map(GroupMessage.fromJson).toList(),
       state: j['state'] is Map<String, dynamic> ? GroupState.fromJson(j['state'] as Map<String, dynamic>) : null,
@@ -595,6 +615,16 @@ class GroupService {
 
   static Future<GroupResult> send(int id, String text, {int replyTo = 0, String? media}) async {
     return _result(await _call('POST', '/api/groups/send', body: {'group_id': id, 'body': text, if (replyTo > 0) 'reply_to': replyTo, if (media != null) 'media': media}, timeout: media != null ? const Duration(seconds: 40) : const Duration(seconds: 10)));
+  }
+
+  /// ویرایش متن (یا توضیح عکس) پیام خودم.
+  static Future<GroupResult> editMessage(int groupId, int messageId, String text) async {
+    return _result(await _call('POST', '/api/groups/messages/edit', body: {'group_id': groupId, 'message_id': messageId, 'body': text}));
+  }
+
+  /// سکوت/رفع سکوت گروه یا گفتگوی شخصی (فقط برای خودم).
+  static Future<GroupResult> setMute(int groupId, bool muted) async {
+    return _result(await _call('POST', '/api/groups/mute', body: {'group_id': groupId, 'muted': muted}));
   }
 
   /// آدرس عکس یک پیام (فقط اعضا؛ با هدر توکن).
