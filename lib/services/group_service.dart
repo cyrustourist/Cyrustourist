@@ -38,6 +38,8 @@ class GroupInfo {
     this.slowSecs = 0,
     this.onlyAdmins = false,
     this.pinnedId = 0,
+    this.permMedia = true,
+    this.permLinks = true,
   });
 
   final int id;
@@ -65,7 +67,11 @@ class GroupInfo {
   final bool onlyAdmins;
   final int pinnedId;
 
-  GroupInfo copyWith({int? photoV, int? memberCount, int? slowSecs, bool? onlyAdmins}) => GroupInfo(
+  /// مجوزهای همین گروه (مالک/مدیر): ارسال عکس و لینک. کلید پنل همیشه بالاتر است.
+  final bool permMedia;
+  final bool permLinks;
+
+  GroupInfo copyWith({int? photoV, int? memberCount, int? slowSecs, bool? onlyAdmins, bool? permMedia, bool? permLinks}) => GroupInfo(
         id: id,
         name: name,
         description: description,
@@ -86,6 +92,8 @@ class GroupInfo {
         slowSecs: slowSecs ?? this.slowSecs,
         onlyAdmins: onlyAdmins ?? this.onlyAdmins,
         pinnedId: pinnedId,
+        permMedia: permMedia ?? this.permMedia,
+        permLinks: permLinks ?? this.permLinks,
       );
 
   GroupInfo withPhoto(int v) => copyWith(photoV: v);
@@ -123,6 +131,8 @@ class GroupInfo {
       slowSecs: _i(j['slow_secs']),
       onlyAdmins: j['only_admins'] == true,
       pinnedId: _i(j['pinned_id']),
+      permMedia: j['perm_media'] != false,
+      permLinks: j['perm_links'] != false,
     );
   }
 }
@@ -141,6 +151,8 @@ class GroupMessage {
     this.replyText = '',
     this.reactions = const {},
     this.myReaction = '',
+    this.kind = 'text',
+    this.mediaId = 0,
   });
 
   final int id;
@@ -155,6 +167,10 @@ class GroupMessage {
   final String replyText;
   final Map<String, int> reactions; // emoji -> تعداد
   final String myReaction;
+  final String kind; // text | image
+  final int mediaId;
+
+  bool get isImage => kind == 'image' && mediaId > 0;
 
   GroupMessage copyWith({Map<String, int>? reactions, String? myReaction}) => GroupMessage(
         id: id,
@@ -169,6 +185,8 @@ class GroupMessage {
         replyText: replyText,
         reactions: reactions ?? this.reactions,
         myReaction: myReaction ?? this.myReaction,
+        kind: kind,
+        mediaId: mediaId,
       );
 
   factory GroupMessage.fromJson(Map<String, dynamic> j) {
@@ -184,6 +202,8 @@ class GroupMessage {
       replyId: r is Map ? _i(r['id']) : 0,
       replyName: r is Map ? '${r['name'] ?? ''}' : '',
       replyText: r is Map ? '${r['text'] ?? ''}' : '',
+      kind: '${j['kind'] ?? 'text'}',
+      mediaId: _i(j['media_id']),
     );
   }
 }
@@ -304,6 +324,8 @@ class GroupFetch {
     this.role = 'member',
     this.slowSecs = 0,
     this.onlyAdmins = false,
+    this.mediaOk = false,
+    this.linksMode = 'own',
     this.state,
   });
   final bool ok;
@@ -312,6 +334,8 @@ class GroupFetch {
   final List<GroupMessage> messages;
   final int slowSecs;
   final bool onlyAdmins;
+  final bool mediaOk; // آیا همین کاربر الان می‌تواند عکس بفرستد (کلید پنل + مجوز گروه)
+  final String linksMode; // off | own | all (مؤثر برای همین گفتگو)
   final GroupState? state;
   final int retentionHours;
   final int memberCount;
@@ -497,6 +521,8 @@ class GroupService {
     bool? joinApproval,
     int? slowSecs,
     bool? onlyAdmins,
+    bool? permMedia,
+    bool? permLinks,
   }) async {
     final j = await _call('POST', '/api/groups/update', body: {
       'group_id': id,
@@ -508,6 +534,8 @@ class GroupService {
       if (joinApproval != null) 'join_approval': joinApproval,
       if (slowSecs != null) 'slow_secs': slowSecs,
       if (onlyAdmins != null) 'only_admins': onlyAdmins,
+      if (permMedia != null) 'perm_media': permMedia,
+      if (permLinks != null) 'perm_links': permLinks,
     });
     return _result(j);
   }
@@ -544,7 +572,7 @@ class GroupService {
 
   // ---------- پیام‌ها ----------
   static Future<GroupFetch> messages(int id, {int afterId = 0, int? sv}) async {
-    final j = await _call('GET', '/api/groups/messages', query: {'group_id': '$id', 'after_id': '$afterId', if (sv != null) 'sv': '$sv'});
+    final j = await _call('GET', '/api/groups/messages', query: {'group_id': '$id', 'after_id': '$afterId', 'caps': 'media', if (sv != null) 'sv': '$sv'});
     if (j == null) return GroupFetch(ok: false, error: 'net', message: GT.t('net'));
     if (j['success'] != true) return GroupFetch(ok: false, error: '${j['error'] ?? ''}', message: '${j['message'] ?? ''}');
     return GroupFetch(
@@ -554,14 +582,19 @@ class GroupService {
       role: '${j['role'] ?? 'member'}',
       slowSecs: _i(j['slow_secs']),
       onlyAdmins: j['only_admins'] == true,
+      mediaOk: j['media_ok'] == true,
+      linksMode: '${j['links_mode'] ?? 'own'}',
       messages: ((j['messages'] as List?) ?? const []).whereType<Map<String, dynamic>>().map(GroupMessage.fromJson).toList(),
       state: j['state'] is Map<String, dynamic> ? GroupState.fromJson(j['state'] as Map<String, dynamic>) : null,
     );
   }
 
-  static Future<GroupResult> send(int id, String text, {int replyTo = 0}) async {
-    return _result(await _call('POST', '/api/groups/send', body: {'group_id': id, 'body': text, if (replyTo > 0) 'reply_to': replyTo}));
+  static Future<GroupResult> send(int id, String text, {int replyTo = 0, String? media}) async {
+    return _result(await _call('POST', '/api/groups/send', body: {'group_id': id, 'body': text, if (replyTo > 0) 'reply_to': replyTo, if (media != null) 'media': media}));
   }
+
+  /// آدرس عکس یک پیام (فقط اعضا؛ با هدر توکن).
+  static String mediaUrl(int groupId, int mediaId) => '$_base/api/groups/media?group_id=$groupId&media_id=$mediaId&user_uid=$_cachedUid';
 
   /// واکنش ایموجی به پیام (دوباره زدن همان ایموجی = برداشتن). raw['my'] = واکنش فعلی من.
   static Future<GroupResult> react(int groupId, int messageId, String emoji) async {
@@ -611,20 +644,32 @@ class GroupService {
     } catch (_) {}
   }
 
-  // ---------- حالت شمارهٔ تلفن در چت‌ها (off | verified | all) ----------
+  // ---------- کلیدهای سرور برای چت‌ها: شمارهٔ تلفن (off | verified | all) و لینک (off | own | all) ----------
   static String _phoneMode = 'verified';
-  static DateTime? _phoneAt;
+  static String _linksMode = 'own';
+  static DateTime? _flagsAt;
 
-  static Future<String> phoneMode() async {
-    final at = _phoneAt;
-    if (at != null && DateTime.now().difference(at) < const Duration(minutes: 10)) return _phoneMode;
+  static Future<void> _loadFlags() async {
+    final at = _flagsAt;
+    if (at != null && DateTime.now().difference(at) < const Duration(minutes: 10)) return;
     final j = await _call('GET', '/api/app/flags');
     if (j != null && j['success'] == true) {
       final m = '${j['chat_phone_mode'] ?? 'verified'}';
       if (m == 'off' || m == 'verified' || m == 'all') _phoneMode = m;
-      _phoneAt = DateTime.now();
+      final l = '${j['chat_links_mode'] ?? 'own'}';
+      if (l == 'off' || l == 'own' || l == 'all') _linksMode = l;
+      _flagsAt = DateTime.now();
     }
+  }
+
+  static Future<String> phoneMode() async {
+    await _loadFlags();
     return _phoneMode;
+  }
+
+  static Future<String> linksMode() async {
+    await _loadFlags();
+    return _linksMode;
   }
 }
 
