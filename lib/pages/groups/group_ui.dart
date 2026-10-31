@@ -115,13 +115,14 @@ class GroupTile extends StatelessWidget {
         title: Row(children: [
           Flexible(child: Text(g.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
           if (!g.isDm && !g.isPublic) const Padding(padding: EdgeInsetsDirectional.only(start: 6), child: Icon(Icons.lock_rounded, size: 14, color: gMuted)),
+          if (g.muted) const Padding(padding: EdgeInsetsDirectional.only(start: 6), child: Icon(Icons.notifications_off_rounded, size: 14, color: gMuted)),
         ]),
         subtitle: sub.isEmpty
             ? null
             : Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: gMuted, fontSize: 12)),
         trailing: trailing ??
             (unread
-                ? Container(width: 11, height: 11, decoration: const BoxDecoration(color: gGold, shape: BoxShape.circle))
+                ? Container(width: 11, height: 11, decoration: BoxDecoration(color: g.muted ? gMuted : gGold, shape: BoxShape.circle))
                 : null),
       ),
     );
