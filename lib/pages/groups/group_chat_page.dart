@@ -10,7 +10,9 @@ import '../../services/group_service.dart';
 import '../../services/group_texts.dart';
 import '../../widgets/linkified_text.dart';
 import '../profile/public_profile_page.dart';
+import 'chat_media_save.dart';
 import 'chat_photo.dart';
+import 'chat_stickers.dart';
 import 'group_info_page.dart';
 import 'group_ui.dart';
 
@@ -53,6 +55,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
   int _slowLeft = 0;
   bool _mediaOk = false;
   String _mediaWhy = '';
+  bool _muted = false;
   bool _photoSending = false;
   String _linksMode = 'own';
 
@@ -131,7 +134,13 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
     for (var i = 0; i < _messages.length; i++) {
       final m = _messages[i];
       if (m.id < st.minId) continue; // خارج از پنجرهٔ سرور؛ دست نزن
-      _messages[i] = m.copyWith(reactions: st.reactions[m.id] ?? const <String, int>{}, myReaction: st.mine[m.id] ?? '');
+      final newText = st.edits[m.id];
+      _messages[i] = m.copyWith(
+        reactions: st.reactions[m.id] ?? const <String, int>{},
+        myReaction: st.mine[m.id] ?? '',
+        text: newText,
+        edited: newText != null ? true : null,
+      );
     }
     if (_replyTo != null && st.hiddenIds.contains(_replyTo!.id)) _replyTo = null;
   }
@@ -159,6 +168,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
         _onlyAdmins = f.onlyAdmins;
         _mediaOk = f.mediaOk;
         _mediaWhy = f.mediaWhy;
+        _muted = f.muted;
         _linksMode = f.linksMode;
         if (f.messages.isNotEmpty) {
           _messages.addAll(f.messages);
@@ -181,15 +191,22 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
     });
   }
 
-  Future<void> _send() async {
-    final text = _input.text.trim();
+  Future<void> _sendSticker() async {
+    if (_sending || _slowLeft > 0) return;
+    final s = await showStickerPicker(context);
+    if (s == null || !mounted) return;
+    await _send(sticker: s);
+  }
+
+  Future<void> _send({String? sticker}) async {
+    final text = sticker ?? _input.text.trim();
     if (text.isEmpty || _sending || _slowLeft > 0) return;
     setState(() => _sending = true);
     final r = await GroupService.send(_g.id, text, replyTo: _replyTo?.id ?? 0);
     if (!mounted) return;
     setState(() => _sending = false);
     if (r.ok) {
-      _input.clear();
+      if (sticker == null) _input.clear();
       setState(() => _replyTo = null);
       if (!_isStaff && !_g.isDm && _slowSecs > 0) _startSlow(_slowSecs);
       await _poll();
@@ -233,20 +250,102 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
     gToast(context, r.text.isEmpty ? GT.t('photo_failed') : r.text);
   }
 
+  Future<void> _saveImage(String url) async {
+    final ok = await saveChatImageToGallery(url, GroupService.imageHeaders);
+    if (mounted) gToast(context, ok ? GT.t('photo_saved') : GT.t('photo_save_failed'));
+  }
+
   void _viewImage(String url) {
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.black,
         insetPadding: EdgeInsets.zero,
-        child: GestureDetector(
-          onTap: () => Navigator.of(ctx).pop(),
-          child: InteractiveViewer(
-            child: Center(child: Image.network(url, headers: GroupService.imageHeaders, fit: BoxFit.contain)),
+        child: Stack(children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.of(ctx).pop(),
+              child: InteractiveViewer(
+                child: Center(child: Image.network(url, headers: GroupService.imageHeaders, fit: BoxFit.contain)),
+              ),
+            ),
           ),
+          Positioned(
+            top: 8,
+            left: 8,
+            right: 8,
+            child: SafeArea(
+              child: Row(children: [
+                IconButton(tooltip: GT.t('cancel'), onPressed: () => Navigator.of(ctx).pop(), icon: const Icon(Icons.close_rounded, color: Colors.white)),
+                const Spacer(),
+                IconButton(tooltip: GT.t('save_photo'), onPressed: () => _saveImage(url), icon: const Icon(Icons.download_rounded, color: gGold)),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  // ---------- ویرایش پیام خودم ----------
+  Future<void> _editMessage(GroupMessage m) async {
+    final c = TextEditingController(text: m.text);
+    final text = await showDialog<String>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: AlertDialog(
+          backgroundColor: gPanel,
+          title: Text(GT.t('edit_title'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+          content: TextField(
+            controller: c,
+            autofocus: true,
+            maxLength: m.isImage ? 300 : 1000,
+            minLines: 1,
+            maxLines: 5,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              counterText: '',
+              filled: true,
+              fillColor: gBg,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: gLine)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: gLine)),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(GT.t('cancel'), style: const TextStyle(color: Colors.white70))),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg),
+              onPressed: () => Navigator.of(ctx).pop(c.text.trim()),
+              child: Text(GT.t('edit_save'), style: const TextStyle(fontWeight: FontWeight.w900)),
+            ),
+          ],
         ),
       ),
     );
+    if (text == null || !mounted || text == m.text) return;
+    if (text.isEmpty && !m.isImage) return;
+    final r = await GroupService.editMessage(_g.id, m.id, text);
+    if (!mounted) return;
+    if (r.ok) {
+      final idx = _messages.indexWhere((x) => x.id == m.id);
+      if (idx >= 0) setState(() => _messages[idx] = _messages[idx].copyWith(text: text, edited: true));
+    } else {
+      gToast(context, r.text);
+    }
+  }
+
+  Future<void> _toggleMute() async {
+    final next = !_muted;
+    setState(() => _muted = next);
+    final r = await GroupService.setMute(_g.id, next);
+    if (!mounted) return;
+    if (!r.ok) {
+      setState(() => _muted = !next);
+      gToast(context, r.text);
+      return;
+    }
+    gToast(context, GT.t(next ? 'mute_done' : 'unmute_done'));
   }
 
   Widget _imageView(GroupMessage m) {
@@ -385,6 +484,18 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
                 title: Text(GT.t('reply'), style: const TextStyle(color: Colors.white)),
                 onTap: () => Navigator.of(ctx).pop('reply'),
               ),
+              if (m.mine && (m.text.isNotEmpty || m.isImage))
+                ListTile(
+                  leading: const Icon(Icons.edit_rounded, color: gGold),
+                  title: Text(GT.t('edit_msg'), style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(ctx).pop('edit'),
+                ),
+              if (m.isImage)
+                ListTile(
+                  leading: const Icon(Icons.download_rounded, color: gGold),
+                  title: Text(GT.t('save_photo'), style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(ctx).pop('save'),
+                ),
               if (m.text.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.copy_rounded, color: gGold),
@@ -433,6 +544,10 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
     } else if (action == 'copy') {
       await Clipboard.setData(ClipboardData(text: m.text));
       if (mounted) gToast(context, GT.t('copied'));
+    } else if (action == 'edit') {
+      await _editMessage(m);
+    } else if (action == 'save') {
+      await _saveImage(GroupService.mediaUrl(_g.id, m.mediaId));
     } else if (action == 'pin') {
       await _pin(m);
     } else if (action == 'unpin') {
@@ -498,6 +613,8 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
 
   Widget _bubble(GroupMessage m) {
     final mine = m.mine;
+    final sticker = !m.isImage && m.replyId == 0 && isStickerText(m.text);
+    final fresh = m.at != null && DateTime.now().difference(m.at!).inSeconds < 15;
     return Align(
       alignment: mine ? AlignmentDirectional.centerStart : AlignmentDirectional.centerEnd,
       child: GestureDetector(
@@ -508,9 +625,9 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
           margin: const EdgeInsets.symmetric(vertical: 3),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: mine ? const Color(0xff143a4a) : gPanel,
+            color: sticker ? Colors.transparent : (mine ? const Color(0xff143a4a) : gPanel),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: gLine),
+            border: sticker ? null : Border.all(color: gLine),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (!mine && !_g.isDm)
@@ -523,13 +640,24 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
               ]),
             if (m.replyId > 0) _replyQuote(m),
             if (m.isImage) _imageView(m),
-            if (m.text.isNotEmpty)
+            if (sticker)
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: fresh ? 0.4 : 1.0, end: 1.0),
+                duration: const Duration(milliseconds: 520),
+                curve: Curves.elasticOut,
+                builder: (_, v, child) => Transform.scale(scale: v, child: child),
+                child: Text(m.text, style: const TextStyle(fontSize: 56, height: 1.25)),
+              )
+            else if (m.text.isNotEmpty)
               Padding(
                 padding: EdgeInsets.only(top: m.isImage ? 6 : 0),
                 child: LinkifiedText(text: m.text, allowExternal: _linksMode == 'all', style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.8)),
               ),
             if (m.reactions.isNotEmpty) _reactionRow(m),
-            Text(gTime(m.at), style: const TextStyle(color: gMuted, fontSize: 10.5)),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              if (m.edited) Padding(padding: const EdgeInsetsDirectional.only(end: 6), child: Text(GT.t('edited_label'), style: const TextStyle(color: gMuted, fontSize: 10.5, fontStyle: FontStyle.italic))),
+              Text(gTime(m.at), style: const TextStyle(color: gMuted, fontSize: 10.5)),
+            ]),
           ]),
         ),
       ),
@@ -625,6 +753,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
                 hintText: GT.t('type_msg'),
                 hintStyle: const TextStyle(color: gMuted),
                 counterText: '',
+                suffixIcon: IconButton(tooltip: GT.t('stickers'), onPressed: _slowLeft > 0 ? null : _sendSticker, icon: const Icon(Icons.emoji_emotions_outlined, color: gGold)),
                 filled: true,
                 fillColor: gPanel,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -682,6 +811,11 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
             ]),
           ),
           actions: [
+            IconButton(
+              tooltip: GT.t(_muted ? 'unmute' : 'mute'),
+              onPressed: _toggleMute,
+              icon: Icon(_muted ? Icons.notifications_off_rounded : Icons.notifications_none_rounded, color: _muted ? gMuted : gGold),
+            ),
             if (!_g.isDm) IconButton(onPressed: _openInfo, icon: const Icon(Icons.info_outline_rounded, color: gGold)),
             if (_g.isDm && _g.peerUid != null)
               IconButton(
