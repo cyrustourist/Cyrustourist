@@ -377,6 +377,7 @@ class GroupService {
     String path, {
     Map<String, String>? query,
     Map<String, dynamic>? body,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final uid = await BadgeService.userUid();
     _cachedUid = uid;
@@ -386,7 +387,7 @@ class GroupService {
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
     try {
       final uri = Uri.parse('$_base$path').replace(queryParameters: q);
-      final req = await client.openUrl(method, uri).timeout(const Duration(seconds: 10));
+      final req = await client.openUrl(method, uri).timeout(timeout);
       req.headers.set(HttpHeaders.acceptHeader, 'application/json');
       final token = await BadgeService.deviceToken();
       _cachedToken = token;
@@ -397,8 +398,8 @@ class GroupService {
         req.headers.set(HttpHeaders.contentTypeHeader, 'application/json; charset=utf-8');
         req.add(utf8.encode(jsonEncode(b)));
       }
-      final res = await req.close().timeout(const Duration(seconds: 10));
-      final text = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 10));
+      final res = await req.close().timeout(timeout);
+      final text = await res.transform(utf8.decoder).join().timeout(timeout);
       final decoded = jsonDecode(text);
       if (decoded is Map<String, dynamic>) return decoded;
       return null;
@@ -549,7 +550,7 @@ class GroupService {
 
   /// عکس گروه (base64 فشرده‌شده). نسخهٔ تازهٔ عکس در raw['photo_v'] برمی‌گردد.
   static Future<GroupResult> setPhoto(int id, String base64Jpeg) async {
-    return _result(await _call('POST', '/api/groups/photo/set', body: {'group_id': id, 'data': base64Jpeg}));
+    return _result(await _call('POST', '/api/groups/photo/set', body: {'group_id': id, 'data': base64Jpeg}, timeout: const Duration(seconds: 40)));
   }
 
   static Future<GroupResult> removePhoto(int id) async {
@@ -590,7 +591,7 @@ class GroupService {
   }
 
   static Future<GroupResult> send(int id, String text, {int replyTo = 0, String? media}) async {
-    return _result(await _call('POST', '/api/groups/send', body: {'group_id': id, 'body': text, if (replyTo > 0) 'reply_to': replyTo, if (media != null) 'media': media}));
+    return _result(await _call('POST', '/api/groups/send', body: {'group_id': id, 'body': text, if (replyTo > 0) 'reply_to': replyTo, if (media != null) 'media': media}, timeout: media != null ? const Duration(seconds: 40) : const Duration(seconds: 10)));
   }
 
   /// آدرس عکس یک پیام (فقط اعضا؛ با هدر توکن).
