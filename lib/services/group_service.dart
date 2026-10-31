@@ -325,6 +325,7 @@ class GroupFetch {
     this.slowSecs = 0,
     this.onlyAdmins = false,
     this.mediaOk = false,
+    this.mediaWhy = '',
     this.linksMode = 'own',
     this.state,
   });
@@ -334,6 +335,7 @@ class GroupFetch {
   final List<GroupMessage> messages;
   final int slowSecs;
   final bool onlyAdmins;
+  final String mediaWhy; // دلیل غیرفعال‌بودن عکس (mode_off | group_off | need_tick | need_verified)
   final bool mediaOk; // آیا همین کاربر الان می‌تواند عکس بفرستد (کلید پنل + مجوز گروه)
   final String linksMode; // off | own | all (مؤثر برای همین گفتگو)
   final GroupState? state;
@@ -584,6 +586,7 @@ class GroupService {
       slowSecs: _i(j['slow_secs']),
       onlyAdmins: j['only_admins'] == true,
       mediaOk: j['media_ok'] == true,
+      mediaWhy: '${j['media_why'] ?? ''}',
       linksMode: '${j['links_mode'] ?? 'own'}',
       messages: ((j['messages'] as List?) ?? const []).whereType<Map<String, dynamic>>().map(GroupMessage.fromJson).toList(),
       state: j['state'] is Map<String, dynamic> ? GroupState.fromJson(j['state'] as Map<String, dynamic>) : null,
