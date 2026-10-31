@@ -10,6 +10,7 @@ import '../../services/group_service.dart';
 import '../../services/group_texts.dart';
 import '../../widgets/linkified_text.dart';
 import '../profile/public_profile_page.dart';
+import 'chat_photo.dart';
 import 'group_info_page.dart';
 import 'group_ui.dart';
 
@@ -50,6 +51,9 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
   int _slowSecs = 0;
   bool _onlyAdmins = false;
   int _slowLeft = 0;
+  bool _mediaOk = false;
+  bool _photoSending = false;
+  String _linksMode = 'own';
 
   bool get _isStaff => !_g.isDm && (_role == 'owner' || _role == 'admin');
 
@@ -152,6 +156,8 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
         _role = f.role;
         _slowSecs = f.slowSecs;
         _onlyAdmins = f.onlyAdmins;
+        _mediaOk = f.mediaOk;
+        _linksMode = f.linksMode;
         if (f.messages.isNotEmpty) {
           _messages.addAll(f.messages);
           _lastId = f.messages.last.id;
@@ -196,6 +202,66 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
       return;
     }
     gToast(context, r.text);
+  }
+
+  Future<void> _sendPhoto() async {
+    if (_sending || _photoSending || _slowLeft > 0) return;
+    final pick = await pickChatPhoto(context);
+    if (pick == null || !mounted) return;
+    setState(() => _photoSending = true);
+    final r = await GroupService.send(_g.id, pick.caption, replyTo: _replyTo?.id ?? 0, media: pick.base64);
+    if (!mounted) return;
+    setState(() => _photoSending = false);
+    if (r.ok) {
+      setState(() => _replyTo = null);
+      if (!_isStaff && !_g.isDm && _slowSecs > 0) _startSlow(_slowSecs);
+      await _poll();
+      _jumpToEnd();
+      return;
+    }
+    if (r.error == 'g_slowmode') _startSlow(int.tryParse('${r.raw?['wait']}') ?? _slowSecs);
+    if (r.error == 'no_name' || r.error == 'not_registered') {
+      askGroupProfile(context);
+      return;
+    }
+    gToast(context, r.text.isEmpty ? GT.t('photo_failed') : r.text);
+  }
+
+  void _viewImage(String url) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: GestureDetector(
+          onTap: () => Navigator.of(ctx).pop(),
+          child: InteractiveViewer(
+            child: Center(child: Image.network(url, headers: GroupService.imageHeaders, fit: BoxFit.contain)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _imageView(GroupMessage m) {
+    final url = GroupService.mediaUrl(_g.id, m.mediaId);
+    final w = MediaQuery.of(context).size.width * 0.62;
+    final h = w * 0.75;
+    return GestureDetector(
+      onTap: () => _viewImage(url),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          url,
+          headers: GroupService.imageHeaders,
+          width: w,
+          height: h,
+          fit: BoxFit.cover,
+          loadingBuilder: (c, child, p) => p == null ? child : SizedBox(width: w, height: h, child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: gGold))),
+          errorBuilder: (_, __, ___) => SizedBox(width: w, height: 80, child: const Center(child: Icon(Icons.broken_image_rounded, color: gMuted))),
+        ),
+      ),
+    );
   }
 
   Future<void> _openInfo() async {
@@ -313,11 +379,12 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
                 title: Text(GT.t('reply'), style: const TextStyle(color: Colors.white)),
                 onTap: () => Navigator.of(ctx).pop('reply'),
               ),
-              ListTile(
-                leading: const Icon(Icons.copy_rounded, color: gGold),
-                title: Text(GT.t('copy_text'), style: const TextStyle(color: Colors.white)),
-                onTap: () => Navigator.of(ctx).pop('copy'),
-              ),
+              if (m.text.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.copy_rounded, color: gGold),
+                  title: Text(GT.t('copy_text'), style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(ctx).pop('copy'),
+                ),
               if (_isStaff)
                 ListTile(
                   leading: const Icon(Icons.push_pin_rounded, color: gGold),
@@ -449,7 +516,12 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
                 gTick(m.badge),
               ]),
             if (m.replyId > 0) _replyQuote(m),
-            LinkifiedText(text: m.text, style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.8)),
+            if (m.isImage) _imageView(m),
+            if (m.text.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(top: m.isImage ? 6 : 0),
+                child: LinkifiedText(text: m.text, allowExternal: _linksMode == 'all', style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.8)),
+              ),
             if (m.reactions.isNotEmpty) _reactionRow(m),
             Text(gTime(m.at), style: const TextStyle(color: gMuted, fontSize: 10.5)),
           ]),
@@ -496,7 +568,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(GT.t('replying_to', {'name': r.mine ? GT.t('you') : r.name}), style: const TextStyle(color: gGold, fontSize: 11.5, fontWeight: FontWeight.w800)),
-            Text(r.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+            Text(r.text.isEmpty && r.isImage ? GT.t('photo_msg') : r.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
           ]),
         ),
         IconButton(visualDensity: VisualDensity.compact, onPressed: () => setState(() => _replyTo = null), icon: const Icon(Icons.close_rounded, color: gMuted, size: 18)),
@@ -527,6 +599,10 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
       Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Row(children: [
+          if (_mediaOk)
+            _photoSending
+                ? const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: gGold)))
+                : IconButton(tooltip: GT.t('attach_photo'), onPressed: _slowLeft > 0 ? null : _sendPhoto, icon: const Icon(Icons.photo_camera_rounded, color: gGold)),
           Expanded(
             child: TextField(
               controller: _input,
