@@ -52,6 +52,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
   bool _onlyAdmins = false;
   int _slowLeft = 0;
   bool _mediaOk = false;
+  String _mediaWhy = '';
   bool _photoSending = false;
   String _linksMode = 'own';
 
@@ -157,6 +158,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
         _slowSecs = f.slowSecs;
         _onlyAdmins = f.onlyAdmins;
         _mediaOk = f.mediaOk;
+        _mediaWhy = f.mediaWhy;
         _linksMode = f.linksMode;
         if (f.messages.isNotEmpty) {
           _messages.addAll(f.messages);
@@ -207,7 +209,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
   Future<void> _sendPhoto() async {
     if (_sending || _photoSending || _slowLeft > 0) return;
     if (!_mediaOk) {
-      gToast(context, GT.t('photo_off'));
+      gToast(context, GT.t(const {'mode_off': 'photo_off_mode', 'group_off': 'photo_off_group', 'need_tick': 'photo_off_tick', 'need_verified': 'photo_off_verified'}[_mediaWhy] ?? 'photo_off'));
       return;
     }
     final pick = await pickChatPhoto(context);
