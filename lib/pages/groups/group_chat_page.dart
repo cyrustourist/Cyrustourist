@@ -256,6 +256,17 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
   }
 
   void _viewImage(String url) {
+    // 0 = آماده، 1 = در حال ذخیره، 2 = ذخیره شد، 3 = ناموفق (پیام باید داخل خود دیالوگ دیده شود؛ SnackBar زیر آن پنهان می‌ماند)
+    final status = ValueNotifier<int>(0);
+    Future<void> save() async {
+      if (status.value == 1) return;
+      status.value = 1;
+      final ok = await saveChatImageToGallery(url, GroupService.imageHeaders);
+      status.value = ok ? 2 : 3;
+      await Future<void>.delayed(const Duration(milliseconds: 1800));
+      status.value = 0;
+    }
+
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
@@ -278,8 +289,35 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
               child: Row(children: [
                 IconButton(tooltip: GT.t('cancel'), onPressed: () => Navigator.of(ctx).pop(), icon: const Icon(Icons.close_rounded, color: Colors.white)),
                 const Spacer(),
-                IconButton(tooltip: GT.t('save_photo'), onPressed: () => _saveImage(url), icon: const Icon(Icons.download_rounded, color: gGold)),
+                ValueListenableBuilder<int>(
+                  valueListenable: status,
+                  builder: (_, v, __) => v == 1
+                      ? const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: gGold)))
+                      : IconButton(tooltip: GT.t('save_photo'), onPressed: save, icon: const Icon(Icons.download_rounded, color: gGold)),
+                ),
               ]),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ValueListenableBuilder<int>(
+                valueListenable: status,
+                builder: (_, v, __) => AnimatedOpacity(
+                  opacity: (v == 2 || v == 3) ? 1 : 0,
+                  duration: const Duration(milliseconds: 220),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                      decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(18)),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(v == 3 ? Icons.error_rounded : Icons.check_circle_rounded, color: v == 3 ? const Color(0xffff8f8f) : const Color(0xff39d98a), size: 56),
+                        const SizedBox(height: 8),
+                        Text(GT.t(v == 3 ? 'photo_save_failed' : 'photo_saved'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ]),
