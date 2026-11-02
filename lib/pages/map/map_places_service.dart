@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show compute;
 import 'package:latlong2/latlong.dart';
 
 import '../../services/json_disk_cache.dart';
+import '../../services/local_poi_service.dart';
 
 /// نوع اطلاعاتی که از نقشه درخواست می‌شود.
 enum MapPlaceType {
@@ -124,6 +125,22 @@ class MapPlacesService {
     if (cached != null &&
         DateTime.now().difference(cached.time) < _cacheTtl) {
       return cached.places;
+    }
+
+    // ۰) پایگاه آفلاین داخل اپ (فوری، بدون اینترنت و بدون سرور)؛ فقط اگر نتیجه‌ای داشته باشد.
+    try {
+      final local = await LocalPoiService.instance.search(
+        center: center,
+        radiusMeters: radiusMeters,
+        type: type,
+        tags: _buildTags(type),
+      );
+      if (local != null && local.isNotEmpty) {
+        _putNearbyCache(cacheKey, local, DateTime.now());
+        return local;
+      }
+    } catch (_) {
+      // خطای پایگاه آفلاین مانع ادامه نمی‌شود
     }
 
     // ۱) کش دیسکی (فوری، بدون اینترنت): تا ۲۴ ساعت مستقیم استفاده می‌شود؛
