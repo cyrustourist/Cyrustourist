@@ -1,3 +1,4 @@
+import '../../config/api_config.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -263,7 +264,21 @@ class MapPlacesService {
   }
 
   Future<String> _fetchCityBody(String cleanCity, String language, int limit, String cityKey) async {
-    final uri = Uri.https(
+    // اول سرور خودمان (کش‌دار؛ Nominatim از داخل ایران اغلب کند است)، بعد مستقیم.
+    try {
+      return await _fetchCityBodyFrom(
+        Uri.parse('${ApiConfig.panelBaseUrl}/api/nominatim').replace(queryParameters: {
+          'q': cleanCity,
+          'limit': '$limit',
+          'accept-language': _languageCode(language),
+        }),
+        cityKey,
+        const Duration(seconds: 8),
+      );
+    } catch (_) {
+      // ادامه با Nominatim مستقیم
+    }
+    final direct = Uri.https(
       _nominatimHost,
       '/search',
       {
@@ -275,6 +290,10 @@ class MapPlacesService {
       },
     );
 
+    return _fetchCityBodyFrom(direct, cityKey, const Duration(seconds: 10));
+  }
+
+  Future<String> _fetchCityBodyFrom(Uri uri, String cityKey, Duration limit) async {
     final client = HttpClient();
 
     try {
@@ -284,7 +303,7 @@ class MapPlacesService {
 
       final request = await client
           .getUrl(uri)
-          .timeout(const Duration(seconds: 10));
+          .timeout(limit);
 
       request.headers.set(
         HttpHeaders.acceptHeader,
@@ -293,7 +312,7 @@ class MapPlacesService {
 
       final response = await request
           .close()
-          .timeout(const Duration(seconds: 10));
+          .timeout(limit);
 
       if (response.statusCode != HttpStatus.ok) {
         throw Exception(
@@ -304,7 +323,7 @@ class MapPlacesService {
       final body = await response
           .transform(utf8.decoder)
           .join()
-          .timeout(const Duration(seconds: 10));
+          .timeout(limit);
 
       final decoded = jsonDecode(body);
       if (decoded is List) {
@@ -563,7 +582,9 @@ out center tags qt 200;
   Future<dynamic> _requestOverpass(
     String query,
   ) async {
-    const endpoints = <String>[
+    final endpoints = <String>[
+      // اول سرور خودمان (کش‌دار و سریع از داخل ایران)؛ بقیه پشتیبان هستند.
+      '${ApiConfig.panelBaseUrl}/api/overpass',
       'https://overpass-api.de/api/interpreter',
       'https://overpass.kumi.systems/api/interpreter',
       'https://overpass.private.coffee/api/interpreter',
