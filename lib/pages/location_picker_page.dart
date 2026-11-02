@@ -7,6 +7,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../config/api_config.dart';
 import '../core/language/menu_translations.dart';
 import '../widgets/resilient_tile_layer.dart';
 
@@ -188,6 +189,17 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     }
   }
 
+  /// اول سرور خودمان (کش‌دار و پایدارتر از داخل ایران)، اگر جواب نداد Nominatim مستقیم.
+  Future<dynamic> _getVia(String proxyPath, String directPath, Map<String, String> q) async {
+    final viaProxy = await _get(Uri.parse('${ApiConfig.panelBaseUrl}$proxyPath').replace(queryParameters: q));
+    if (viaProxy != null) return viaProxy;
+    return _get(Uri.https('nominatim.openstreetmap.org', directPath, {
+      ...q,
+      'format': 'jsonv2',
+      if (directPath == '/search') 'addressdetails': '1',
+    }));
+  }
+
   String _lang() => MenuLanguage.current == 'ar' ? 'ar' : (MenuLanguage.current == 'en' ? 'en' : 'fa');
 
   void _onQuery(String v) {
@@ -207,14 +219,12 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
 
   Future<void> _search(String q) async {
     final seq = ++_searchSeq;
-    final j = await _get(Uri.https('nominatim.openstreetmap.org', '/search', {
+    final j = await _getVia('/api/nominatim', '/search', {
       'q': q,
-      'format': 'jsonv2',
       'limit': '8',
-      'addressdetails': '1',
       'countrycodes': 'ir',
       'accept-language': _lang(),
-    }));
+    });
     if (!mounted || seq != _searchSeq) return;
     final hits = <_Hit>[];
     if (j is List) {
@@ -257,14 +267,13 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     if (_zoom < 14) return;
     final seq = ++_revSeq;
     final p = _center;
-    final j = await _get(Uri.https('nominatim.openstreetmap.org', '/reverse', {
+    final j = await _getVia('/api/nominatim/reverse', '/reverse', {
       'lat': p.latitude.toStringAsFixed(6),
       'lon': p.longitude.toStringAsFixed(6),
-      'format': 'jsonv2',
       'zoom': '18',
       'addressdetails': '1',
       'accept-language': _lang(),
-    }));
+    });
     if (!mounted || seq != _revSeq || j is! Map) return;
     final a = j['address'] is Map ? Map<String, dynamic>.from(j['address'] as Map) : <String, dynamic>{};
     String g(List<String> ks) {
