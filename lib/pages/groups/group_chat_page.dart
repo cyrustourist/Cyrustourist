@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/call_service.dart';
 import '../../services/call_texts.dart';
@@ -56,6 +57,9 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
   bool _mediaOk = false;
   String _mediaWhy = '';
   bool _muted = false;
+  bool _seenOn = true; // ارسال و نمایش «دیده‌شد» (قابل خاموش‌کردن)
+  int _peerSeen = 0;
+  int _sentSeen = 0;
   bool _photoSending = false;
   String _linksMode = 'own';
 
@@ -78,6 +82,9 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
     });
     _poll();
     _startTimer();
+    SharedPreferences.getInstance().then((p) {
+      if (mounted) setState(() => _seenOn = p.getBool('chat_seen_enabled') ?? true);
+    }).catchError((_) {});
     GroupService.phoneMode().then((m) {
       if (mounted) setState(() => _phoneMode = m);
     });
@@ -169,6 +176,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
         _mediaOk = f.mediaOk;
         _mediaWhy = f.mediaWhy;
         _muted = f.muted;
+        if (_g.isDm) _peerSeen = f.peerSeenId;
         _linksMode = f.linksMode;
         if (f.messages.isNotEmpty) {
           _messages.addAll(f.messages);
@@ -179,6 +187,10 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
         if (st != null) _applyState(st);
       });
       if (_lastId > 0) GroupService.markSeen(_g.id, _lastId);
+      if (_g.isDm && _seenOn && _lastId > _sentSeen) {
+        _sentSeen = _lastId;
+        unawaited(GroupService.sendSeen(_g.id, _lastId));
+      }
       if (atBottom && f.messages.isNotEmpty) _jumpToEnd();
     } finally {
       _fetching = false;
@@ -695,6 +707,11 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
             Row(mainAxisSize: MainAxisSize.min, children: [
               if (m.edited) Padding(padding: const EdgeInsetsDirectional.only(end: 6), child: Text(GT.t('edited_label'), style: const TextStyle(color: gMuted, fontSize: 10.5, fontStyle: FontStyle.italic))),
               Text(gTime(m.at), style: const TextStyle(color: gMuted, fontSize: 10.5)),
+              if (m.mine && _g.isDm && _seenOn)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 4),
+                  child: Icon(m.id <= _peerSeen ? Icons.done_all_rounded : Icons.done_rounded, size: 15, color: m.id <= _peerSeen ? gSky : gMuted),
+                ),
             ]),
           ]),
         ),
@@ -854,6 +871,32 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
               onPressed: _toggleMute,
               icon: Icon(_muted ? Icons.notifications_off_rounded : Icons.notifications_none_rounded, color: _muted ? gMuted : gGold),
             ),
+            if (_g.isDm)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded, color: gGold),
+                color: gPanel,
+                onSelected: (v) async {
+                  if (v != 'seen') return;
+                  final next = !_seenOn;
+                  setState(() => _seenOn = next);
+                  try {
+                    final p = await SharedPreferences.getInstance();
+                    await p.setBool('chat_seen_enabled', next);
+                  } catch (_) {}
+                  if (next) _sentSeen = 0;
+                  if (mounted) gToast(context, GT.t(next ? 'seen_on' : 'seen_off'));
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem<String>(
+                    value: 'seen',
+                    child: Row(children: [
+                      Icon(_seenOn ? Icons.done_all_rounded : Icons.done_rounded, color: gGold, size: 20),
+                      const SizedBox(width: 10),
+                      Text(GT.t('seen_toggle'), style: const TextStyle(color: Colors.white)),
+                    ]),
+                  ),
+                ],
+              ),
             if (!_g.isDm) IconButton(onPressed: _openInfo, icon: const Icon(Icons.info_outline_rounded, color: gGold)),
             if (_g.isDm && _g.peerUid != null)
               IconButton(
