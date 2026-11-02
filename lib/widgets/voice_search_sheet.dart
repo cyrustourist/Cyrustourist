@@ -64,6 +64,8 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
   String _words = '';
   double _level = 0;
   bool _closed = false;
+  bool _offlineTried = false;
+  Timer? _lateTimer;
 
   String get _lang {
     final c = widget.languageCode.toLowerCase().trim();
@@ -86,6 +88,7 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
 
   @override
   void dispose() {
+    _lateTimer?.cancel();
     _pulse.dispose();
     _speech.cancel();
     super.dispose();
@@ -120,20 +123,30 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
 
   Future<void> _start() async {
     if (_closed) return;
+    _lateTimer?.cancel();
+    _offlineTried = false;
     setState(() {
       _state = _VoiceState.starting;
       _words = '';
       _errorKey = '';
     });
 
+    // بعضی گوشی‌ها بار اول initialize را false می‌دهند یا دیر جواب می‌دهند؛ یک بار دیگر امتحان می‌کنیم.
     bool ok = false;
-    try {
-      ok = await _speech.initialize(
-        onError: _onError,
-        onStatus: _onStatus,
-      );
-    } catch (_) {
-      ok = false;
+    for (var attempt = 0; attempt < 2 && !ok; attempt++) {
+      try {
+        ok = await _speech
+            .initialize(
+              onError: _onError,
+              onStatus: _onStatus,
+              options: [SpeechToText.androidNoBluetooth],
+            )
+            .timeout(const Duration(seconds: 8));
+      } catch (_) {
+        ok = false;
+      }
+      if (!ok && attempt == 0) await Future<void>.delayed(const Duration(milliseconds: 700));
+      if (!mounted || _closed) return;
     }
 
     if (!mounted || _closed) return;
@@ -153,8 +166,15 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
       return;
     }
 
+    _localeId = localeId;
     setState(() => _state = _VoiceState.listening);
+    await _listen(localeId, onDevice: false);
+  }
 
+  String _localeId = '';
+
+  Future<void> _listen(String localeId, {required bool onDevice}) async {
+    if (!mounted || _closed) return;
     try {
       await _speech.listen(
         onResult: _onResult,
@@ -169,6 +189,7 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
         listenOptions: SpeechListenOptions(
           partialResults: true,
           cancelOnError: true,
+          onDevice: onDevice,
           listenMode: ListenMode.search,
         ),
       );
@@ -179,6 +200,7 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
 
   void _onResult(SpeechRecognitionResult result) {
     if (!mounted || _closed) return;
+    _lateTimer?.cancel();
     setState(() => _words = result.recognizedWords);
     if (result.finalResult) {
       _finish(result.recognizedWords);
@@ -194,7 +216,17 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
         if (text.isNotEmpty) {
           _finish(text);
         } else {
-          _fail('noMatch');
+          // موتور گفتار گاهی «تمام شد» را چند لحظه قبل از نتیجه اعلام می‌کند؛ کمی صبر می‌کنیم.
+          _lateTimer?.cancel();
+          _lateTimer = Timer(const Duration(milliseconds: 1600), () {
+            if (!mounted || _closed || _state != _VoiceState.listening) return;
+            final t = _words.trim();
+            if (t.isNotEmpty) {
+              _finish(t);
+            } else {
+              _fail('noMatch');
+            }
+          });
         }
       }
     }
@@ -215,6 +247,15 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
     } else if (msg == 'error_language_not_supported' ||
         msg == 'error_language_unavailable') {
       _fail('noLang');
+    } else if (msg.contains('network') || msg.contains('server')) {
+      // سرویس آنلاین گوگل در دسترس نیست (در ایران رایج است): یک بار با تشخیص آفلاین روی خود گوشی امتحان می‌کنیم.
+      if (!_offlineTried && _localeId.isNotEmpty) {
+        _offlineTried = true;
+        _speech.cancel();
+        Future<void>.delayed(const Duration(milliseconds: 300), () => _listen(_localeId, onDevice: true));
+      } else {
+        _fail('network');
+      }
     } else {
       _fail('unavailable');
     }
@@ -419,7 +460,7 @@ class _VoiceSearchSheetState extends State<_VoiceSearchSheet>
         _state == _VoiceState.listening && _words.trim().isNotEmpty;
 
     final needSettings =
-        hasError && (_errorKey == 'noLang' || _errorKey == 'unavailable');
+        hasError && (_errorKey == 'noLang' || _errorKey == 'unavailable' || _errorKey == 'network');
     if (needSettings) {
       return Column(
         children: [
@@ -495,6 +536,7 @@ const Map<String, Map<String, String>> _kVoiceTexts = {
     'permission': 'برای جستجوی صوتی باید دسترسی میکروفون را در تنظیمات گوشی مجاز کنید.',
     'unavailable': 'تشخیص گفتار روی این دستگاه در دسترس نیست یا اینترنت قطع است.',
     'noLang': 'زبان فارسی برای تشخیص گفتار روی این دستگاه نصب نیست. آن را از تنظیمات گوشی (زبان و ورودی ← تایپ صوتی گوگل) دانلود کنید.',
+    'network': 'سرویس تشخیص گفتار گوگل در دسترس نیست. برای کار بدون اینترنت، زبان فارسی را از تنظیمات (تایپ صوتی گوگل ← زبان‌ها ← دانلود فارسی) دانلود کنید.',
     'retry': 'تلاش دوباره',
     'cancel': 'بستن',
     'search': 'جستجو',
@@ -509,6 +551,7 @@ const Map<String, Map<String, String>> _kVoiceTexts = {
     'permission': 'Allow microphone access in your phone settings to use voice search.',
     'unavailable': 'Speech recognition is unavailable on this device, or you are offline.',
     'noLang': 'This language is not installed for speech recognition on your device. Download it in your phone settings (Language & input → Google voice typing).',
+    'network': 'Google speech service is unreachable. To work offline, download the language pack (Google voice typing > Languages > download).',
     'retry': 'Try again',
     'cancel': 'Close',
     'search': 'Search',
@@ -523,6 +566,7 @@ const Map<String, Map<String, String>> _kVoiceTexts = {
     'permission': 'اسمح بالوصول إلى الميكروفون من إعدادات الهاتف لاستخدام البحث الصوتي.',
     'unavailable': 'التعرف على الكلام غير متاح على هذا الجهاز أو لا يوجد اتصال بالإنترنت.',
     'noLang': 'هذه اللغة غير مثبتة للتعرف على الكلام على جهازك. نزّلها من إعدادات الهاتف (اللغة والإدخال ← الكتابة الصوتية من Google).',
+    'network': 'خدمة التعرف على الكلام من جوجل غير متاحة. للعمل بدون إنترنت، نزّل حزمة اللغة من إعدادات الإدخال الصوتي.',
     'retry': 'حاول مرة أخرى',
     'cancel': 'إغلاق',
     'search': 'بحث',
