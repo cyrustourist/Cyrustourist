@@ -18,6 +18,7 @@ import '../models/price_pack.dart';
 import '../widgets/price_pack_editor.dart';
 import '../widgets/registration_steps_card.dart';
 import '../widgets/brand_icons.dart';
+import 'membership_fee_page.dart';
 import 'price_pack_edit_page.dart';
 import 'location_picker_page.dart';
 import 'profile/photo_cropper.dart';
@@ -1979,6 +1980,21 @@ class _StayRegistrationPageState extends State<StayRegistrationPage> {
             ),
         ]),
         if (note.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(note, style: const TextStyle(color: _soft, fontSize: 12.5, height: 1.8))),
+        if (!approved && !inactive)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => MembershipFeePage(trackingCode: '${m['tracking_code'] ?? ''}', supportPhone: support),
+                )),
+                icon: const Icon(Icons.sell_rounded, size: 18),
+                label: Text(_tl('بررسی قیمت حق عضویت', 'Check membership fee', 'الاستعلام عن رسوم العضوية'), style: const TextStyle(fontWeight: FontWeight.w900)),
+                style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+            ),
+          ),
         if (low)
           Padding(
             padding: const EdgeInsets.only(top: 8),
