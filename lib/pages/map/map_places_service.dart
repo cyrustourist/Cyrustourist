@@ -1,4 +1,3 @@
-import '../../config/api_config.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -281,20 +280,7 @@ class MapPlacesService {
   }
 
   Future<String> _fetchCityBody(String cleanCity, String language, int limit, String cityKey) async {
-    // اول سرور خودمان (کش‌دار؛ Nominatim از داخل ایران اغلب کند است)، بعد مستقیم.
-    try {
-      return await _fetchCityBodyFrom(
-        Uri.parse('${ApiConfig.panelBaseUrl}/api/nominatim').replace(queryParameters: {
-          'q': cleanCity,
-          'limit': '$limit',
-          'accept-language': _languageCode(language),
-        }),
-        cityKey,
-        const Duration(seconds: 8),
-      );
-    } catch (_) {
-      // ادامه با Nominatim مستقیم
-    }
+    // مستقیم از Nominatim (بدون worker).
     final direct = Uri.https(
       _nominatimHost,
       '/search',
@@ -600,8 +586,6 @@ out center tags qt 200;
     String query,
   ) async {
     final endpoints = <String>[
-      // اول سرور خودمان (کش‌دار و سریع از داخل ایران)؛ بقیه پشتیبان هستند.
-      '${ApiConfig.panelBaseUrl}/api/overpass',
       'https://overpass-api.de/api/interpreter',
       'https://overpass.kumi.systems/api/interpreter',
       'https://overpass.private.coffee/api/interpreter',
