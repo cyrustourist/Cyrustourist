@@ -344,6 +344,7 @@ class GroupFetch {
     this.mediaOk = false,
     this.mediaWhy = '',
     this.muted = false,
+    this.peerSeenId = 0,
     this.linksMode = 'own',
     this.state,
   });
@@ -354,6 +355,7 @@ class GroupFetch {
   final int slowSecs;
   final bool onlyAdmins;
   final bool muted;
+  final int peerSeenId; // آخرین پیامی که طرف مقابل (گفتگوی شخصی) دیده؛ ۰ = نامشخص
   final String mediaWhy; // دلیل غیرفعال‌بودن عکس (mode_off | group_off | need_tick | need_verified)
   final bool mediaOk; // آیا همین کاربر الان می‌تواند عکس بفرستد (کلید پنل + مجوز گروه)
   final String linksMode; // off | own | all (مؤثر برای همین گفتگو)
@@ -607,6 +609,7 @@ class GroupService {
       mediaOk: j['media_ok'] == true,
       mediaWhy: '${j['media_why'] ?? ''}',
       muted: j['muted'] == true,
+      peerSeenId: _i(j['peer_seen_id']),
       linksMode: '${j['links_mode'] ?? 'own'}',
       messages: ((j['messages'] as List?) ?? const []).whereType<Map<String, dynamic>>().map(GroupMessage.fromJson).toList(),
       state: j['state'] is Map<String, dynamic> ? GroupState.fromJson(j['state'] as Map<String, dynamic>) : null,
@@ -615,6 +618,12 @@ class GroupService {
 
   static Future<GroupResult> send(int id, String text, {int replyTo = 0, String? media}) async {
     return _result(await _call('POST', '/api/groups/send', body: {'group_id': id, 'body': text, if (replyTo > 0) 'reply_to': replyTo, if (media != null) 'media': media}, timeout: media != null ? const Duration(seconds: 40) : const Duration(seconds: 10)));
+  }
+
+  /// اعلام «دیده‌شد» به طرف مقابل (فقط گفتگوی شخصی).
+  static Future<void> sendSeen(int groupId, int lastId) async {
+    if (lastId <= 0) return;
+    await _call('POST', '/api/groups/seen', body: {'group_id': groupId, 'last_id': lastId});
   }
 
   /// ویرایش متن (یا توضیح عکس) پیام خودم.
