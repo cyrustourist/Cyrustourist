@@ -1,8 +1,17 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../config/api_config.dart';
 import '../core/language/menu_translations.dart';
 import '../pages/profile/my_profile_page.dart';
 import '../services/account_service.dart';
+
+/// شمارهٔ پشتیبانی برای بررسی قیمت ثبت‌نام یک‌ساله.
+const String _kSupportPhone = '09153448818';
 
 const Map<String, Map<String, String>> _tx = {
   'fa': {
@@ -10,6 +19,15 @@ const Map<String, Map<String, String>> _tx = {
     's1': 'ساخت شناسه کاربری و تأیید جی‌میل یا پیامک',
     's1done': 'حساب شما تأیید شده است — این مرحله انجام شد',
     's2': 'پر کردن فرم ثبت‌نام',
+    'sFee': 'پرداخت یک‌ساله (حق عضویت + ثبت‌نام)',
+    'feeAmount': 'مبلغ',
+    'feeCard': 'شمارهٔ کارت',
+    'feeHolder': 'به نام',
+    'feeCopy': 'کپی شمارهٔ کارت',
+    'feeCopied': 'شمارهٔ کارت کپی شد.',
+    'feeAsk': 'برای بررسی قیمت و پرداخت یک‌ساله، با پشتیبانی تماس بگیرید.',
+    'feeCall': 'تماس با پشتیبانی برای بررسی قیمت',
+    'feeHint': 'پس از واریز کارت‌به‌کارت، رسید را برای پشتیبانی ارسال کنید.',
     's3': 'بررسی و تأیید پشتیبانی',
     's3sub': 'درخواست شما توسط پشتیبانی سایروس توریست بررسی و تأیید می‌شود.',
     's4': 'تأیید قوانین و ادامهٔ ثبت‌نام',
@@ -26,6 +44,15 @@ const Map<String, Map<String, String>> _tx = {
     's1': 'Create your account ID and verify Gmail or SMS',
     's1done': 'Your account is verified — this step is done',
     's2': 'Fill in the registration form',
+    'sFee': 'Membership fee + one-year registration',
+    'feeAmount': 'Amount',
+    'feeCard': 'Card number',
+    'feeHolder': 'Card holder',
+    'feeCopy': 'Copy card number',
+    'feeCopied': 'Card number copied.',
+    'feeAsk': 'Call support to check the price and pay for the one-year registration.',
+    'feeCall': 'Call support to check the price',
+    'feeHint': 'After the card-to-card transfer, send the receipt to support.',
     's3': 'Support review and approval',
     's3sub': 'Your request is reviewed and approved by Cyrus Tourist support.',
     's4': 'Accept the terms and continue',
@@ -42,6 +69,15 @@ const Map<String, Map<String, String>> _tx = {
     's1': 'إنشاء معرّف الحساب وتأكيد Gmail أو الرسائل النصية',
     's1done': 'تم تأكيد حسابك — اكتملت هذه الخطوة',
     's2': 'تعبئة نموذج التسجيل',
+    'sFee': 'رسوم العضوية + التسجيل لمدة سنة',
+    'feeAmount': 'المبلغ',
+    'feeCard': 'رقم البطاقة',
+    'feeHolder': 'باسم',
+    'feeCopy': 'نسخ رقم البطاقة',
+    'feeCopied': 'تم نسخ رقم البطاقة.',
+    'feeAsk': 'اتصل بالدعم للاستعلام عن السعر والدفع لمدة سنة.',
+    'feeCall': 'اتصل بالدعم للاستعلام عن السعر',
+    'feeHint': 'بعد التحويل من بطاقة إلى بطاقة، أرسل الإيصال إلى الدعم.',
     's3': 'مراجعة الدعم والموافقة',
     's3sub': 'يقوم فريق دعم سايروس توريست بمراجعة طلبك والموافقة عليه.',
     's4': 'الموافقة على الشروط ومتابعة التسجيل',
@@ -76,6 +112,7 @@ class RegistrationStepsCard extends StatefulWidget {
 class _RegistrationStepsCardState extends State<RegistrationStepsCard> {
   AccountInfo? _info;
   bool _loading = true;
+  Map<String, String> _fee = const {};
 
   @override
   void initState() {
@@ -83,7 +120,25 @@ class _RegistrationStepsCardState extends State<RegistrationStepsCard> {
     _load();
   }
 
+  /// مبلغ و کارت از پنل ادمین (بدون نیاز به بروزرسانی اپ).
+  Future<void> _loadFee() async {
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 6);
+    try {
+      final req = await client.getUrl(Uri.parse('${ApiConfig.panelBaseUrl}/api/app/flags')).timeout(const Duration(seconds: 8));
+      final res = await req.close().timeout(const Duration(seconds: 8));
+      final j = jsonDecode(await res.transform(utf8.decoder).join());
+      final f = j is Map ? j['reg_fee'] : null;
+      if (f is Map && mounted) {
+        setState(() => _fee = {for (final k in ['amount', 'card', 'holder', 'note']) k: '${f[k] ?? ''}'.trim()});
+      }
+    } catch (_) {
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   Future<void> _load() async {
+    _loadFee();
     final a = await AccountService.me();
     if (!mounted) return;
     setState(() {
@@ -149,6 +204,58 @@ class _RegistrationStepsCardState extends State<RegistrationStepsCard> {
     );
   }
 
+  List<Widget> _feeChildren() {
+    final amount = _fee['amount'] ?? '';
+    final card = _fee['card'] ?? '';
+    final holder = _fee['holder'] ?? '';
+    final note = _fee['note'] ?? '';
+    final callBtn = Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: ElevatedButton.icon(
+        onPressed: () => launchUrl(Uri(scheme: 'tel', path: _kSupportPhone)),
+        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xff11998e), foregroundColor: Colors.white),
+        icon: const Icon(Icons.call_rounded, size: 18),
+        label: Directionality(textDirection: TextDirection.ltr, child: Text('${_t('feeCall')}  $_kSupportPhone')),
+      ),
+    );
+    if (amount.isEmpty && card.isEmpty) {
+      return [Text(_t('feeAsk'), style: TextStyle(color: _soft, fontSize: 12, height: 1.7)), callBtn];
+    }
+    Widget line(String k, String v, {bool ltr = false, bool bold = false}) => Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(children: [
+            Text('$k: ', style: TextStyle(color: _soft, fontSize: 12)),
+            Expanded(
+              child: Directionality(
+                textDirection: ltr ? TextDirection.ltr : Directionality.of(context),
+                child: Text(v, style: TextStyle(color: _ink, fontSize: bold ? 14 : 12.5, fontWeight: bold ? FontWeight.w900 : FontWeight.w700, letterSpacing: ltr ? 1 : 0)),
+              ),
+            ),
+          ]),
+        );
+    return [
+      const SizedBox(height: 4),
+      if (amount.isNotEmpty) line(_t('feeAmount'), amount, bold: true),
+      if (card.isNotEmpty) line(_t('feeCard'), card, ltr: true, bold: true),
+      if (holder.isNotEmpty) line(_t('feeHolder'), holder),
+      if (card.isNotEmpty)
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: card.replaceAll(RegExp(r'[^0-9]'), '')));
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('feeCopied'))));
+            },
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            label: Text(_t('feeCopy')),
+          ),
+        ),
+      if (note.isNotEmpty) Text(note, style: TextStyle(color: _soft, fontSize: 12, height: 1.7)),
+      Text(_t('feeHint'), style: TextStyle(color: _soft, fontSize: 12, height: 1.7)),
+      callBtn,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const SizedBox.shrink();
@@ -191,8 +298,9 @@ class _RegistrationStepsCardState extends State<RegistrationStepsCard> {
           ],
         ]),
         _step(2, _t('s2')),
-        _step(3, _t('s3'), sub: _t('s3sub')),
-        _step(4, _t('s4')),
+        _step(3, _t('sFee'), children: _feeChildren()),
+        _step(4, _t('s3'), sub: _t('s3sub')),
+        _step(5, _t('s4')),
         if (_verified) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_t('verifiedHint'), style: TextStyle(color: _soft, fontSize: 12, height: 1.8))),
       ]),
     );
