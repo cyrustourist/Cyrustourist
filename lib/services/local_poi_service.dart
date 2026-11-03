@@ -55,6 +55,20 @@ class LocalPoiService {
     }
   }
 
+  /// نام نزدیک‌ترین مکان نام‌دار (تا [maxMeters] متر) برای ساخت آدرس آفلاین؛ null اگر نبود.
+  Future<String?> nearestName(LatLng c, {double maxMeters = 300}) async {
+    final d = await _data();
+    if (d == null) return null;
+    return d.nearestName(c, maxMeters);
+  }
+
+  /// جستجوی آفلاین مکان‌ها بر اساس نام (فارسی یا انگلیسی)؛ لیست خالی اگر پایگاه در دسترس نباشد.
+  Future<List<({String name, double lat, double lng})>> searchByName(String query, {int limit = 8}) async {
+    final d = await _data();
+    if (d == null) return const [];
+    return d.searchByName(query, limit);
+  }
+
   /// null = پایگاه آفلاین در دسترس نیست (برنامه باید از اینترنت استفاده کند).
   Future<List<MapPlace>?> search({
     required LatLng center,
@@ -92,6 +106,63 @@ class _PoiData {
 
   static int _ci(double v) => (v / LocalPoiService._cell).floor();
   static int _key(int la, int lo) => la * 100000 + lo;
+
+  static String _n(String s) => s
+      .replaceAll('ي', 'ی')
+      .replaceAll('ك', 'ک')
+      .replaceAll('‌', ' ')
+      .trim()
+      .toLowerCase();
+
+  String? nearestName(LatLng c, double maxMeters) {
+    final dLat = maxMeters / 111320.0;
+    final dLon = maxMeters / (111320.0 * math.max(0.2, math.cos(c.latitude * math.pi / 180)));
+    final la0 = _ci(c.latitude - dLat), la1 = _ci(c.latitude + dLat);
+    final lo0 = _ci(c.longitude - dLon), lo1 = _ci(c.longitude + dLon);
+    String? best;
+    var bestD = maxMeters;
+    for (var la = la0; la <= la1; la++) {
+      for (var lo = lo0; lo <= lo1; lo++) {
+        final list = _grid[_key(la, lo)];
+        if (list == null) continue;
+        for (final i in list) {
+          final r = rows[i];
+          final name = '${r[3]}'.trim();
+          if (name.isEmpty) continue;
+          final dy = ((r[0] as num).toDouble() - c.latitude) * 111320.0;
+          final dx = ((r[1] as num).toDouble() - c.longitude) * 111320.0 * math.cos(c.latitude * math.pi / 180);
+          final dist = math.sqrt(dx * dx + dy * dy);
+          if (dist <= bestD) {
+            bestD = dist;
+            best = name;
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  List<({String name, double lat, double lng})> searchByName(String query, int limit) {
+    final q = _n(query);
+    if (q.length < 2) return const [];
+    final starts = <({String name, double lat, double lng})>[];
+    final contains = <({String name, double lat, double lng})>[];
+    for (final r in rows) {
+      final fa = _n('${r[3]}');
+      final en = _n('${r[4]}');
+      final hitStart = fa.startsWith(q) || (en.isNotEmpty && en.startsWith(q));
+      final hitAny = hitStart || fa.contains(q) || (en.isNotEmpty && en.contains(q));
+      if (!hitAny) continue;
+      final item = (name: '${r[3]}', lat: (r[0] as num).toDouble(), lng: (r[1] as num).toDouble());
+      if (hitStart) {
+        starts.add(item);
+      } else {
+        contains.add(item);
+      }
+      if (starts.length >= limit) break;
+    }
+    return [...starts, ...contains].take(limit).toList();
+  }
 
   List<MapPlace> search(LatLng c, double radius, MapPlaceType type, List<String> tags, int limit) {
     final exact = <String>{};
