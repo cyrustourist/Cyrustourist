@@ -80,3 +80,4 @@ flutter:
     - assets/fallback/settings.json
     - assets/translations/
     - assets/tiles/
+    - assets/poi/
