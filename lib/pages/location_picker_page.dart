@@ -9,6 +9,9 @@ import 'package:latlong2/latlong.dart';
 
 import '../config/api_config.dart';
 import '../core/language/menu_translations.dart';
+import '../services/local_gazetteer.dart';
+import '../services/local_poi_service.dart';
+import '../services/offline_geocoder.dart';
 import '../widgets/resilient_tile_layer.dart';
 
 const Color _bg = Color(0xff0b1a24);
@@ -227,6 +230,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     });
     if (!mounted || seq != _searchSeq) return;
     final hits = <_Hit>[];
+    if (j is! List || j.isEmpty) {
+      // اینترنت/سرور در دسترس نیست یا نتیجه نداد: جستجوی آفلاین روی خود گوشی
+      hits.addAll(await _offlineSearch(q));
+      if (!mounted || seq != _searchSeq) return;
+    }
     if (j is List) {
       for (final e in j) {
         if (e is! Map) continue;
@@ -244,8 +252,30 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     setState(() {
       _hits = hits;
       _searching = false;
-      _noRes = j != null && hits.isEmpty;
+      _noRes = hits.isEmpty;
     });
+  }
+
+  /// جستجوی آفلاین: فهرست شهرها/جاذبه‌های اصلی + پایگاه مکان‌های داخل اپ.
+  Future<List<_Hit>> _offlineSearch(String q) async {
+    final out = <_Hit>[];
+    final seen = <String>{};
+    for (final p in LocalGazetteer.search(q, limit: 5)) {
+      if (seen.add('${p.lat.toStringAsFixed(3)},${p.lng.toStringAsFixed(3)}')) {
+        out.add(_Hit(p.fa, '', p.lat, p.lng));
+      }
+    }
+    try {
+      final poi = await LocalPoiService.instance.searchByName(q, limit: 8);
+      for (final h in poi) {
+        if (out.length >= 8) break;
+        if (seen.add('${h.lat.toStringAsFixed(3)},${h.lng.toStringAsFixed(3)}')) {
+          final a = await OfflineGeocoder.reverse(LatLng(h.lat, h.lng));
+          out.add(_Hit(h.name, a == null ? '' : [a.state, a.city].where((x) => x.isNotEmpty).join('، '), h.lat, h.lng));
+        }
+      }
+    } catch (_) {}
+    return out;
   }
 
   void _pickHit(_Hit h) {
@@ -274,7 +304,18 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       'addressdetails': '1',
       'accept-language': _lang(),
     });
-    if (!mounted || seq != _revSeq || j is! Map) return;
+    if (!mounted || seq != _revSeq) return;
+    if (j is! Map) {
+      // بدون اینترنت: آدرس، استان و شهر از روی پایگاه آفلاین داخل گوشی پر می‌شود
+      final off = await OfflineGeocoder.reverse(p);
+      if (!mounted || seq != _revSeq || off == null) return;
+      setState(() {
+        _state = off.state;
+        _city = off.city;
+        if (!_addrTouched) _addr.text = off.text;
+      });
+      return;
+    }
     final a = j['address'] is Map ? Map<String, dynamic>.from(j['address'] as Map) : <String, dynamic>{};
     String g(List<String> ks) {
       for (final k in ks) {
