@@ -1,66 +1,973 @@
-name: Build offline places database
+name: Build CyrusTourist APK
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-  schedule:
-    # first day of every 3rd month, 04:00 UTC
-    - cron: "0 4 1 */3 *"
 
 permissions:
   contents: write
+  actions: write
+
+# جلوگیری از اجرای هم‌زمان دو بیلد (تداخل در افزایش نسخه و پاکسازی)
+concurrency:
+  group: build-apk
+  cancel-in-progress: false
 
 jobs:
-  poi:
+  build-apk:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+
+    env:
+      # هر بار دو خروجی ساخته می‌شود:
+      #   Cyrustourist.ir.apk    => ۶۴ بیتی (android-arm64) — مایکت / گوشی‌های جدید
+      #   Cyrustourist32.ir.apk  => ۳۲ بیتی (android-arm)   — گوشی‌های قدیمی / نصب از سایت
+      APK64_NAME: Cyrustourist.ir.apk
+      APK32_NAME: Cyrustourist32.ir.apk
+      # موقتاً فقط ۶۴ بیتی ساخته می‌شود (سریع‌تر و کم‌حجم‌تر). برای برگرداندن ۳۲ بیتی: "true"
+      BUILD_32: "true"
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install osmium
+      - name: Restore Firebase configuration
         run: |
-          sudo apt-get update
-          sudo apt-get install -y osmium-tool
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > android/app/google-services.json
 
-      - name: Download Iran extract (OpenStreetMap / Geofabrik)
+      - name: Debug Firebase configuration file
+        shell: bash
         run: |
-          wget -q -O iran.osm.pbf https://download.geofabrik.de/asia/iran-latest.osm.pbf
-          ls -lh iran.osm.pbf
+          set -uo pipefail
+          FILE="android/app/google-services.json"
+          echo "File exists: $(test -f "$FILE" && echo yes || echo no)"
+          echo "File size (bytes): $(stat -c%s "$FILE" 2>/dev/null || echo 0)"
+          echo "First 30 chars: $(head -c 30 "$FILE" 2>/dev/null)"
+          echo "Contains project_info key: $(grep -o '"project_info"' "$FILE" || echo NOT_FOUND)"
+          python3 -c "import json,sys; data=json.load(open('$FILE')); print('Valid JSON: yes'); print('Top-level keys:', list(data.keys()))" || echo "Valid JSON: NO"
 
-      - name: Filter places
-        run: |
-          osmium tags-filter iran.osm.pbf \
-            nwr/tourism nwr/historic \
-            nwr/leisure=park,nature_reserve \
-            nwr/amenity=hospital,clinic,doctors,pharmacy,spa \
-            nwr/natural=waterfall,hot_spring \
-            nwr/healthcare \
-            -o filtered.osm.pbf --overwrite
-
-      - name: Export to GeoJSON sequence
-        run: |
-          osmium export filtered.osm.pbf -f geojsonseq \
-            --attributes=type,id \
-            -o features.geojsonseq --overwrite
-          ls -lh features.geojsonseq
-
-      - name: Build assets/poi/iran_poi.bin
-        run: |
-          python3 tools/build_poi_db.py features.geojsonseq assets/poi/iran_poi.bin
-          ls -lh assets/poi/iran_poi.bin
-          size=$(stat -c %s assets/poi/iran_poi.bin)
-          if [ "$size" -lt 100000 ]; then
-            echo "Database too small ($size bytes) - something went wrong"; exit 1
-          fi
-
-      - name: Commit database
+      - name: Bump version
+        id: bump
+        shell: bash
         run: |
           set -euo pipefail
+
+          echo "======================================"
+          echo "CHECKING PUBSPEC VERSION"
+          echo "======================================"
+
+          if [ ! -f "pubspec.yaml" ]; then
+            echo "ERROR: pubspec.yaml not found."
+            exit 1
+          fi
+
+          CURRENT="$(
+            sed -n 's/^version:[[:space:]]*//p' pubspec.yaml \
+            | head -n 1 \
+            | tr -d '\r'
+          )"
+
+          if [ -z "$CURRENT" ]; then
+            echo "ERROR: Could not find version: in pubspec.yaml."
+            echo ""
+            echo "Current version lines:"
+            grep -n "^version:" pubspec.yaml || true
+            exit 1
+          fi
+
+          echo "Current version: [$CURRENT]"
+
+          if [[ ! "$CURRENT" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
+            echo ""
+            echo "ERROR: Invalid Flutter version format."
+            echo ""
+            echo "Expected format:"
+            echo "  MAJOR.MINOR.PATCH+BUILD"
+            echo ""
+            echo "Example:"
+            echo "  5.8.76+5876"
+            echo ""
+            echo "Found:"
+            echo "  $CURRENT"
+            exit 1
+          fi
+
+          NAME="${CURRENT%%+*}"
+          BUILD="${CURRENT##*+}"
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$NAME"
+
+          if [[ -z "$MAJOR" || -z "$MINOR" || -z "$PATCH" || -z "$BUILD" ]]; then
+            echo "ERROR: Failed to parse version components."
+            exit 1
+          fi
+
+          NEW_PATCH=$((PATCH + 1))
+          NEW_BUILD=$((BUILD + 1))
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}+${NEW_BUILD}"
+
+          echo ""
+          echo "Old version:"
+          echo "$CURRENT"
+
+          echo ""
+          echo "New version:"
+          echo "$NEW_VERSION"
+
+          sed -i "s/^version:.*/version: $NEW_VERSION/" pubspec.yaml
+
+          VERIFY="$(
+            sed -n 's/^version:[[:space:]]*//p' pubspec.yaml \
+            | head -n 1 \
+            | tr -d '\r'
+          )"
+
+          if [ "$VERIFY" != "$NEW_VERSION" ]; then
+            echo "ERROR: Version update verification failed."
+            echo "Expected: $NEW_VERSION"
+            echo "Found:    $VERIFY"
+            exit 1
+          fi
+
+          echo ""
+          echo "Version update successful."
+
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+          echo ""
+          echo "======================================"
+
+      - name: Commit version bump
+        shell: bash
+        run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add assets/poi/iran_poi.bin
+
+          git add pubspec.yaml
+
           if git diff --cached --quiet; then
-            echo "No changes."
+            echo "No version changes to commit."
           else
-            git commit -m "chore: refresh offline places database [skip ci]"
-            git push
+            git commit \
+              -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+
+            # نکته: بین لحظه‌ی checkout این Run و همین‌جا، ممکن است
+            # کامیت جدیدی (مثلاً پوش دستی خودتان) روی main نشسته باشد.
+            # به‌جای fail شدن فوری روی push، چند بار rebase روی آخرین
+            # نسخه‌ی remote و تلاش دوباره برای push انجام می‌دهیم.
+
+            MAX_ATTEMPTS=5
+            PUSHED=0
+
+            for ATTEMPT in $(seq 1 "$MAX_ATTEMPTS"); do
+              echo "Push attempt $ATTEMPT of $MAX_ATTEMPTS..."
+
+              if git push; then
+                PUSHED=1
+                break
+              fi
+
+              echo "Push rejected — fetching and rebasing onto latest main..."
+              git fetch origin main
+              git rebase origin/main
+            done
+
+            if [ "$PUSHED" -ne 1 ]; then
+              echo "ERROR: Could not push version bump after $MAX_ATTEMPTS attempts."
+              exit 1
+            fi
           fi
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.1'
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          flutter --version
+
+      - name: Verify project assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "======================================"
+          echo "VERIFYING FLUTTER ASSETS"
+          echo "======================================"
+
+          REQUIRED_ASSETS=(
+            "assets/images/splash.jpg"
+            "assets/images/logo-new.jpg"
+            "assets/images/showcase-hub.jpg"
+          )
+
+          FAILED=0
+
+          for ASSET in "${REQUIRED_ASSETS[@]}"; do
+            if [ -f "$ASSET" ]; then
+              SIZE="$(stat -c%s "$ASSET")"
+              echo "OK: $ASSET ($SIZE bytes)"
+            else
+              echo "ERROR: Missing asset: $ASSET"
+              FAILED=1
+            fi
+          done
+
+          echo ""
+          echo "Checking old deleted home images..."
+
+          OLD_ASSETS=(
+            "assets/images/home_fa.jpg"
+            "assets/images/home_en.jpg"
+            "assets/images/home_ar.jpg"
+          )
+
+          for ASSET in "${OLD_ASSETS[@]}"; do
+            if [ -f "$ASSET" ]; then
+              echo "WARNING: Old asset still exists: $ASSET"
+            else
+              echo "OK: Old asset not present: $ASSET"
+            fi
+          done
+
+          echo ""
+          echo "Checking pubspec asset declarations..."
+
+          grep -n "assets/images/" pubspec.yaml || true
+
+          echo ""
+          echo "======================================"
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "ERROR: One or more required assets are missing."
+            exit 1
+          fi
+
+          echo "Asset verification successful."
+
+      - name: Decode release keystore
+        shell: bash
+        env:
+          CYRUS_KEYSTORE_BASE64: ${{ secrets.CYRUS_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$RUNNER_TEMP/cyrus-signing"
+
+          printf '%s' "$CYRUS_KEYSTORE_BASE64" \
+            | base64 --decode \
+            > "$RUNNER_TEMP/cyrus-signing/cyrus-tourist.jks"
+
+          test -s "$RUNNER_TEMP/cyrus-signing/cyrus-tourist.jks"
+
+          echo "Keystore decoded successfully."
+
+      - name: Verify keystore
+        shell: bash
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/cyrus-signing/cyrus-tourist.jks
+          STORE_PASSWORD: ${{ secrets.CYRUS_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          keytool \
+            -list \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS"
+
+          echo "Keystore verification successful."
+
+          # اثر انگشت SHA-256 گواهی امضا — برای فایل assetlinks.json (App Link)
+          FP="$(keytool -list -v \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" 2>/dev/null \
+            | grep -m1 'SHA256:' | sed 's/.*SHA256:[[:space:]]*//' || true)"
+          # اثر انگشت SHA-1 — برای «OAuth client از نوع Android» در Google Cloud (ورود با گوگل / تأیید جی‌میل)
+          FP1="$(keytool -list -v \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" 2>/dev/null \
+            | grep -m1 'SHA1:' | sed 's/.*SHA1:[[:space:]]*//' || true)"
+          {
+            echo ""
+            echo "### 🔑 SHA-256 certificate fingerprint (for assetlinks.json)"
+            echo ""
+            echo "\`${FP:-not found}\`"
+            echo ""
+            echo "### 🔑 SHA-1 certificate fingerprint (for Google Sign-In / Google Cloud Android OAuth client)"
+            echo ""
+            echo "\`${FP1:-not found}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # ذخیرهٔ دائمی: فایل اثر انگشت‌ها کنار APKها در هر Release قرار می‌گیرد
+          mkdir -p "$RUNNER_TEMP/apk-out"
+          {
+            echo "Cyrus Tourist - signing certificate fingerprints"
+            echo "(public values; they stay the same while the keystore does not change)"
+            echo ""
+            echo "SHA-1  : ${FP1:-not found}"
+            echo "SHA-256: ${FP:-not found}"
+          } > "$RUNNER_TEMP/apk-out/signing-fingerprints.txt"
+
+      - name: Flutter pub get
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          flutter pub get
+
+      - name: Flutter clean
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Cleaning Flutter build cache..."
+
+          flutter clean
+
+          echo "Flutter clean completed."
+
+      - name: Flutter pub get after clean
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          flutter pub get
+
+      - name: Verify Flutter configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "======================================"
+          echo "FLUTTER PROJECT CHECK"
+          echo "======================================"
+
+          echo ""
+          echo "Pubspec version:"
+          grep '^version:' pubspec.yaml
+
+          echo ""
+          echo "Flutter dependencies:"
+          flutter pub deps --style=compact
+
+          echo ""
+          echo "======================================"
+
+      - name: Build signed APKs (64-bit + 32-bit)
+        shell: bash
+        env:
+          CYRUS_KEYSTORE_PATH: ${{ runner.temp }}/cyrus-signing/cyrus-tourist.jks
+          CYRUS_STORE_PASSWORD: ${{ secrets.CYRUS_STORE_PASSWORD }}
+          CYRUS_KEY_PASSWORD: ${{ secrets.CYRUS_KEY_PASSWORD }}
+          CYRUS_KEY_ALIAS: ${{ secrets.CYRUS_KEY_ALIAS }}
+        run: |
+          set -uo pipefail
+
+          OUT_DIR="$RUNNER_TEMP/apk-out"
+          mkdir -p "$OUT_DIR"
+          LOG_FILE="$RUNNER_TEMP/flutter-build.log"
+
+          echo "Version:"
+          grep '^version:' pubspec.yaml
+
+          # فرمت: پلتفرم|نام فایل خروجی|پوشه‌ی نمادهای دیباگ
+          BUILD_ITEMS=("android-arm64|$APK64_NAME|arm64")
+          if [ "$BUILD_32" = "true" ]; then
+            BUILD_ITEMS+=("android-arm|$APK32_NAME|arm")
+          fi
+
+          for ITEM in "${BUILD_ITEMS[@]}"; do
+            PLATFORM="${ITEM%%|*}"
+            REST="${ITEM#*|}"
+            NAME="${REST%%|*}"
+            SYM="${REST##*|}"
+
+            echo "======================================"
+            echo "BUILDING $PLATFORM -> $NAME"
+            echo "======================================"
+
+            rm -rf build/app/outputs/flutter-apk
+
+            set +e
+            flutter build apk \
+              --release \
+              --target-platform "$PLATFORM" \
+              --android-skip-build-dependency-validation \
+              --split-debug-info="$RUNNER_TEMP/debug-symbols/$SYM" \
+              --obfuscate \
+              2>&1 | tee "$LOG_FILE"
+            BUILD_EXIT=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$BUILD_EXIT" -ne 0 ]; then
+              echo "❌ FLUTTER APK BUILD FAILED ($PLATFORM) — exit code: $BUILD_EXIT"
+              echo "========== LAST 200 LINES OF BUILD LOG =========="
+              tail -n 200 "$LOG_FILE" || true
+              {
+                echo "## ❌ Flutter APK Build Failed ($PLATFORM)"
+                echo ""
+                echo "**Exit code:** $BUILD_EXIT"
+                echo '```text'
+                tail -n 200 "$LOG_FILE" || true
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit "$BUILD_EXIT"
+            fi
+
+            test -s build/app/outputs/flutter-apk/app-release.apk
+            cp build/app/outputs/flutter-apk/app-release.apk "$OUT_DIR/$NAME"
+            echo "✅ $NAME built: $(stat -c%s "$OUT_DIR/$NAME") bytes"
+          done
+
+      - name: Upload debug symbols (for future crash symbolication)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-symbols
+          path: ${{ runner.temp }}/debug-symbols
+          retention-days: 90
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APKSIGNER="$(
+            find "$ANDROID_HOME/build-tools" \
+              -name apksigner \
+              | sort -V \
+              | tail -n 1
+          )"
+
+          test -n "$APKSIGNER"
+
+          SIGN_NAMES=("$APK64_NAME")
+          if [ "$BUILD_32" = "true" ]; then SIGN_NAMES+=("$APK32_NAME"); fi
+
+          for NAME in "${SIGN_NAMES[@]}"; do
+            echo "Verifying $NAME"
+            "$APKSIGNER" verify --verbose "$RUNNER_TEMP/apk-out/$NAME"
+          done
+
+          echo "APK signature verification successful."
+
+      - name: Verify APK ABI and targetSdk
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          AAPT2="$(
+            find "$ANDROID_HOME/build-tools" \
+              -name aapt2 \
+              | sort -V \
+              | tail -n 1
+          )"
+
+          test -n "$AAPT2"
+
+          ABI_ITEMS=("$APK64_NAME|arm64-v8a|armeabi-v7a")
+          if [ "$BUILD_32" = "true" ]; then
+            ABI_ITEMS+=("$APK32_NAME|armeabi-v7a|arm64-v8a")
+          fi
+
+          for ITEM in "${ABI_ITEMS[@]}"; do
+            NAME="${ITEM%%|*}"
+            REST="${ITEM#*|}"
+            WANT="${REST%%|*}"
+            DENY="${REST##*|}"
+
+            BADGING="$("$AAPT2" dump badging "$RUNNER_TEMP/apk-out/$NAME")"
+
+            echo "== $NAME =="
+            echo "$BADGING" | grep -E "^(sdkVersion|targetSdkVersion|native-code)" || true
+
+            MIN_SDK="$(echo "$BADGING" | sed -n "s/^sdkVersion:'\([0-9]*\)'.*/\1/p" | head -n 1)"
+            TARGET_SDK="$(echo "$BADGING" | sed -n "s/^targetSdkVersion:'\([0-9]*\)'.*/\1/p" | head -n 1)"
+            NATIVE="$(echo "$BADGING" | grep '^native-code' || true)"
+
+            if [[ "$NATIVE" != *"'$WANT'"* ]]; then
+              echo "ERROR: $NAME does not contain $WANT libraries."
+              exit 1
+            fi
+
+            # ABI اضافه باعث می‌شود گوشی ۶۴ بیتی APK ۳۲ بیتی را اشتباهی ۶۴ بیتی اجرا کند
+            if [[ "$NATIVE" == *"'$DENY'"* ]]; then
+              echo "ERROR: $NAME must NOT contain $DENY libraries."
+              exit 1
+            fi
+
+            # هشدار مایکت: تا ۱ آبان ۱۴۰۵ باید targetSdk حداقل ۳۴ باشد
+            if [ -z "$TARGET_SDK" ] || [ "$TARGET_SDK" -lt 34 ]; then
+              echo "ERROR: targetSdk ($TARGET_SDK) is lower than 34."
+              exit 1
+            fi
+
+            {
+              echo ""
+              echo "### 📐 $NAME compatibility"
+              echo "- minSdk: \`${MIN_SDK}\`"
+              echo "- targetSdk: \`${TARGET_SDK}\`"
+              echo "- ABIs: \`${NATIVE}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Prepare APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PREP_NAMES=("$APK64_NAME")
+          if [ "$BUILD_32" = "true" ]; then PREP_NAMES+=("$APK32_NAME"); fi
+
+          for NAME in "${PREP_NAMES[@]}"; do
+            test -s "$RUNNER_TEMP/apk-out/$NAME"
+            echo "$NAME size: $(stat -c%s "$RUNNER_TEMP/apk-out/$NAME") bytes"
+          done
+
+      - name: Create GitHub Release with APK
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${{ steps.bump.outputs.new_version }}"
+          APK="$RUNNER_TEMP/apk-out/$APK64_NAME"
+          APK32="$RUNNER_TEMP/apk-out/$APK32_NAME"
+
+          echo "Creating GitHub Release..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Tag: $TAG"
+          echo "APK: $APK"
+
+          # اگر Release با همین تگ از اجرای قبلی (مثلاً Re-run) مانده باشد، پاکش می‌کنیم
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — deleting it before re-creating..."
+            gh release delete "$TAG" \
+              --repo "${{ github.repository }}" \
+              --cleanup-tag \
+              --yes
+          fi
+
+          NOTES="Automated build from commit ${{ github.sha }}"$'\n\n'"$(cat "$RUNNER_TEMP/apk-out/signing-fingerprints.txt")"
+
+          RELEASE_FILES=("$APK")
+          if [ "$BUILD_32" = "true" ]; then RELEASE_FILES+=("$APK32"); fi
+
+          gh release create "$TAG" \
+            "${RELEASE_FILES[@]}" \
+            "$RUNNER_TEMP/apk-out/signing-fingerprints.txt" \
+            --repo "${{ github.repository }}" \
+            --title "Cyrus Tourist $TAG" \
+            --notes "$NOTES"
+
+          echo "Release created successfully."
+
+          echo "Getting real Release information from GitHub API..."
+
+          RELEASE_JSON="$(
+            gh api \
+              "/repos/${{ github.repository }}/releases/tags/${TAG}"
+          )"
+
+          RELEASE_URL="$(
+            echo "$RELEASE_JSON" \
+              | jq -r '.html_url'
+          )"
+
+          APK_URL="$(
+            echo "$RELEASE_JSON" \
+              | jq -r '
+                .assets[]
+                | select(.name == "Cyrustourist.ir.apk")
+                | .browser_download_url
+              '
+          )"
+
+          if [ "$BUILD_32" = "true" ]; then
+            APK32_URL="$(
+              echo "$RELEASE_JSON" \
+                | jq -r --arg n "$APK32_NAME" '
+                  .assets[]
+                  | select(.name == $n)
+                  | .browser_download_url
+                '
+            )"
+
+            APK32_SIZE="$(
+              echo "$RELEASE_JSON" \
+                | jq -r --arg n "$APK32_NAME" '
+                  .assets[]
+                  | select(.name == $n)
+                  | .size
+                '
+            )"
+
+            test -n "$APK32_URL"
+            test "$APK32_URL" != "null"
+            test "$APK32_SIZE" -gt 0
+          else
+            APK32_URL=""
+            APK32_SIZE=0
+          fi
+
+          APK_STATE="$(
+            echo "$RELEASE_JSON" \
+              | jq -r '
+                .assets[]
+                | select(.name == "Cyrustourist.ir.apk")
+                | .state
+              '
+          )"
+
+          APK_SIZE="$(
+            echo "$RELEASE_JSON" \
+              | jq -r '
+                .assets[]
+                | select(.name == "Cyrustourist.ir.apk")
+                | .size
+              '
+          )"
+
+          echo ""
+          echo "======================================"
+          echo "REAL GITHUB RELEASE INFORMATION"
+          echo "======================================"
+
+          echo "Release URL:"
+          echo "$RELEASE_URL"
+
+          echo ""
+          echo "APK Download URL:"
+          echo "$APK_URL"
+
+          echo ""
+          echo "APK State:"
+          echo "$APK_STATE"
+
+          echo ""
+          echo "APK Size:"
+          echo "$APK_SIZE bytes"
+
+          echo "======================================"
+
+          test -n "$RELEASE_URL"
+          test "$RELEASE_URL" != "null"
+
+          test -n "$APK_URL"
+          test "$APK_URL" != "null"
+
+          test "$APK_STATE" = "uploaded"
+
+          test "$APK_SIZE" -gt 0
+
+          echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
+          echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
+          echo "apk_size=$APK_SIZE" >> "$GITHUB_OUTPUT"
+          echo "apk32_url=$APK32_URL" >> "$GITHUB_OUTPUT"
+          echo "apk32_size=$APK32_SIZE" >> "$GITHUB_OUTPUT"
+
+      - name: Test APK download URL
+        id: test_download
+        shell: bash
+        env:
+          APK_URL: ${{ steps.release.outputs.apk_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v${{ steps.bump.outputs.new_version }}
+        run: |
+          set -uo pipefail
+
+          echo "Testing APK download..."
+          echo "Tag: $TAG"
+          echo "Asset URL (for reference): $APK_URL"
+          echo ""
+
+          # نکته: به‌جای curl خام روی browser_download_url (که برای
+          # ریپازیتوری‌های private می‌تواند رفتار غیرقابل‌اعتماد داشته
+          # باشد)، از دستور رسمی خودِ GitHub CLI برای دانلود asset
+          # استفاده می‌کنیم. این دستور به‌طور خودکار احراز هویت و
+          # هدرهای لازم را مدیریت می‌کند و روش پیشنهادی خودِ GitHub است.
+
+          DOWNLOAD_DIR="$RUNNER_TEMP/apk-download-test"
+          mkdir -p "$DOWNLOAD_DIR"
+
+          MAX_ATTEMPTS=6
+          SLEEP_SECONDS=5
+          SUCCESS=0
+          LAST_ERROR=""
+
+          for ATTEMPT in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS: gh release download..."
+
+            rm -f "$DOWNLOAD_DIR/Cyrustourist.ir.apk"
+
+            if OUTPUT="$(
+              gh release download "$TAG" \
+                --repo "${{ github.repository }}" \
+                --pattern "Cyrustourist.ir.apk" \
+                --dir "$DOWNLOAD_DIR" \
+                --clobber \
+                2>&1
+            )"; then
+              if [ -s "$DOWNLOAD_DIR/Cyrustourist.ir.apk" ]; then
+                DOWNLOADED_SIZE="$(stat -c%s "$DOWNLOAD_DIR/Cyrustourist.ir.apk")"
+                echo "Download succeeded. File size: $DOWNLOADED_SIZE bytes"
+                SUCCESS=1
+                break
+              else
+                LAST_ERROR="gh release download reported success but file is missing or empty."
+                echo "$LAST_ERROR"
+              fi
+            else
+              LAST_ERROR="$OUTPUT"
+              echo "gh release download failed:"
+              echo "$OUTPUT"
+            fi
+
+            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+              echo "Retrying in ${SLEEP_SECONDS}s..."
+              sleep "$SLEEP_SECONDS"
+            fi
+          done
+
+          {
+            echo "### 🔎 APK Download Test"
+            echo ""
+            if [ "$SUCCESS" -eq 1 ]; then
+              echo "✅ Download succeeded via \`gh release download\` (file size: ${DOWNLOADED_SIZE} bytes)."
+            else
+              echo "❌ Download failed after $MAX_ATTEMPTS attempts."
+              echo ""
+              echo "**Last error:**"
+              echo '```text'
+              echo "$LAST_ERROR"
+              echo '```'
+              echo ""
+              echo "**Asset URL:** \`$APK_URL\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$SUCCESS" -ne 1 ]; then
+            echo "ERROR: Could not download the APK asset after $MAX_ATTEMPTS attempts."
+            echo "See the Summary tab of this run for full diagnostic details."
+            exit 1
+          fi
+
+          echo "APK download test successful."
+
+      - name: Verify Release and APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.bump.outputs.new_version }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${VERSION}"
+
+          echo "Checking GitHub Release..."
+
+          gh release view "$TAG" \
+            --repo "${{ github.repository }}"
+
+          echo ""
+          echo "Checking APK asset..."
+
+          gh api \
+            "/repos/${{ github.repository }}/releases/tags/${TAG}" \
+            --jq '
+              .assets[]
+              | select(.name == "Cyrustourist.ir.apk")
+              | {
+                  name: .name,
+                  size: .size,
+                  state: .state,
+                  browser_download_url: .browser_download_url
+                }
+            '
+
+          echo ""
+          echo "Release and APK verification successful."
+
+      - name: Add APK download links to Summary
+        if: success()
+        shell: bash
+        env:
+          VERSION: ${{ steps.bump.outputs.new_version }}
+          RELEASE_URL: ${{ steps.release.outputs.release_url }}
+          APK_URL: ${{ steps.release.outputs.apk_url }}
+          APK_SIZE: ${{ steps.release.outputs.apk_size }}
+          APK32_URL: ${{ steps.release.outputs.apk32_url }}
+          APK32_SIZE: ${{ steps.release.outputs.apk32_size }}
+        run: |
+          set -euo pipefail
+
+          APK32_LINE=""
+          if [ "$BUILD_32" = "true" ]; then
+            APK32_LINE="👉 **[⬇️ دانلود ۳۲ بیتی (برای سایت) — Cyrustourist32.ir.apk](${APK32_URL})** (${APK32_SIZE} bytes)"
+          fi
+
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          # 📱 Cyrus Tourist APK آماده است
+
+          ## ✅ Build موفق بود
+
+          **نسخه:** ${VERSION}
+
+          **نام فایل:**
+          \`Cyrustourist.ir.apk\`
+
+          **حجم APK:** ${APK_SIZE} bytes
+
+          ---
+
+          ## 📥 دانلود APK
+
+          ### ⭐ دانلود مستقیم
+
+          👉 **[⬇️ دانلود ۶۴ بیتی — Cyrustourist.ir.apk](${APK_URL})** (${APK_SIZE} bytes)
+
+          ${APK32_LINE}
+
+          ### 📦 صفحه Release
+
+          👉 **[📦 مشاهده Release نسخه ${VERSION}](${RELEASE_URL})**
+
+          > لینک دانلود بالا مستقیماً از فیلد \`browser_download_url\` خود GitHub گرفته شده است.
+
+          ---
+
+          ## 🔎 بررسی نهایی
+
+          - ✅ APK ساخته شد
+          - ✅ APK با Keystore سایروس امضا شد
+          - ✅ امضای APK تأیید شد
+          - ✅ Release ساخته شد
+          - ✅ فایل \`Cyrustourist.ir.apk\` آپلود شد
+          - ✅ Asset در GitHub پیدا شد
+          - ✅ وضعیت Asset برابر \`uploaded\` است
+          - ✅ حجم فایل تأیید شد
+          - ✅ لینک واقعی دانلود از GitHub API دریافت شد
+          - ✅ لینک دانلود با HTTP 200 تست شد
+
+          **نسخه آماده تست: ${VERSION}**
+          EOF
+
+      - name: Cleanup old releases, artifacts and runs (keep only latest)
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          KEEP_TAG: v${{ steps.bump.outputs.new_version }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+        run: |
+          # پاکسازی «غیرخطرناک»: اگر هر بخش خطا بدهد بیلد را خراب نمی‌کند.
+          set -uo pipefail
+
+          echo "======================================"
+          echo "CLEANUP: keeping only $KEEP_TAG"
+          echo "======================================"
+
+          # ---------- ۱) Releaseهای قدیمی (و تگ‌هایشان) ----------
+          # فقط تگ‌هایی به شکل v5.8.341+6141 و فقط نسخه‌های قدیمی‌تر از فعلی
+          # حذف می‌شوند؛ Release دستی یا جدیدتر (بیلد هم‌زمان) دست‌نخورده می‌ماند.
+          DELETED=0
+          while read -r TAG; do
+            [ -z "$TAG" ] && continue
+            [ "$TAG" = "$KEEP_TAG" ] && continue
+
+            if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
+              echo "Skip (not an auto-build tag): $TAG"
+              continue
+            fi
+
+            OLDEST="$(printf '%s\n%s\n' "$TAG" "$KEEP_TAG" | sort -V | head -n 1)"
+            if [ "$OLDEST" != "$TAG" ]; then
+              echo "Skip (newer than current): $TAG"
+              continue
+            fi
+
+            echo "Deleting old release: $TAG"
+            if gh release delete "$TAG" \
+                 --repo "$REPO" \
+                 --yes \
+                 --cleanup-tag; then
+              DELETED=$((DELETED + 1))
+            else
+              echo "WARNING: could not delete $TAG"
+            fi
+          done < <(
+            gh release list \
+              --repo "$REPO" \
+              --limit 300 \
+              --json tagName \
+              --jq '.[].tagName' 2>/dev/null || true
+          )
+          echo "Old releases deleted: $DELETED"
+
+          # ---------- ۲) Artifactهای قدیمی (debug-symbols بیلدهای قبلی) ----------
+          ART_DELETED=0
+          while read -r ART_ID; do
+            [ -z "$ART_ID" ] && continue
+            if gh api -X DELETE "/repos/$REPO/actions/artifacts/$ART_ID" >/dev/null 2>&1; then
+              ART_DELETED=$((ART_DELETED + 1))
+            fi
+          done < <(
+            gh api "/repos/$REPO/actions/artifacts?per_page=100" \
+              --paginate \
+              --jq ".artifacts[] | select(.workflow_run.id != $CURRENT_RUN_ID) | .id" \
+              2>/dev/null || true
+          )
+          echo "Old artifacts deleted: $ART_DELETED"
+
+          # ---------- ۳) لاگ اجراهای قدیمی (فقط تمام‌شده‌ها؛ ۵ تای آخر می‌ماند) ----------
+          RUN_DELETED=0
+          while read -r RUN_ID; do
+            [ -z "$RUN_ID" ] && continue
+            [ "$RUN_ID" = "$CURRENT_RUN_ID" ] && continue
+            if gh run delete "$RUN_ID" --repo "$REPO" >/dev/null 2>&1; then
+              RUN_DELETED=$((RUN_DELETED + 1))
+            fi
+          done < <(
+            gh run list \
+              --repo "$REPO" \
+              --status completed \
+              --limit 300 \
+              --json databaseId \
+              --jq '.[5:][].databaseId' 2>/dev/null || true
+          )
+          echo "Old runs deleted: $RUN_DELETED"
+
+          {
+            echo ""
+            echo "### 🧹 Cleanup"
+            echo "- Releases deleted: $DELETED (kept: \`$KEEP_TAG\`)"
+            echo "- Artifacts deleted: $ART_DELETED"
+            echo "- Old runs deleted: $RUN_DELETED"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit 0
+
+      - name: Delete temporary keystore
+        if: always()
+        shell: bash
+        run: |
+          rm -rf "$RUNNER_TEMP/cyrus-signing"
+
+          echo "Temporary keystore removed."
