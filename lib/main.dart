@@ -28,6 +28,7 @@ import 'core/language/app_language.dart';
 import 'core/language/menu_translations.dart';
 import 'services/map_places_service.dart';
 import 'services/local_gazetteer.dart';
+import 'services/local_poi_service.dart';
 import 'pages/category_explorer_page.dart';
 
 
@@ -90,6 +91,10 @@ void main() async {
   await CallService.detectLaunch();
 
   runApp(const CyrusTouristApp());
+
+  // پایگاه آفلاین جاذبه‌ها/اقامتگاه‌ها/مراکز سلامت را پیش‌هنگام بارگذاری می‌کنیم
+  // تا اولین جستجو بدون اینترنت منتظر باز و رمزگشایی فایل نماند.
+  unawaited(LocalPoiService.instance.warmUp());
 
   // اعلان‌ها/FCM به اینترنت نیاز دارند (توکن، عضویت در Topic)؛ اگر قبل از runApp
   // منتظرشان بمانیم، با اینترنت قطع برنامه روی اسپلش اولیهٔ اندروید گیر می‌کند.
