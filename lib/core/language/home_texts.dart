@@ -15,6 +15,30 @@ class HomeTexts {
   }
 
   static const Map<String, Map<String, String>> _t = {
+    'shortcutGroups': {
+      'fa': 'گروه‌های گردشگری و پیام‌رسان',
+      'en': 'Travel Groups & Messenger',
+      'ar': 'مجموعات السياحة والمراسلة',
+      'tr': 'Seyahat Grupları ve Mesajlaşma',
+      'ru': 'Туристические группы и чат',
+      'fr': 'Groupes de voyage et messagerie',
+      'de': 'Reisegruppen & Messenger',
+      'es': 'Grupos de viaje y mensajería',
+      'zh': '旅游群组与消息',
+      'it': 'Gruppi di viaggio e messaggi',
+    },
+    'shortcutCalls': {
+      'fa': 'تماس صوتی و تصویری',
+      'en': 'Voice & Video Call',
+      'ar': 'مكالمة صوتية ومرئية',
+      'tr': 'Sesli ve Görüntülü Arama',
+      'ru': 'Голосовой и видеозвонок',
+      'fr': 'Appel vocal et vidéo',
+      'de': 'Sprach- & Videoanruf',
+      'es': 'Llamada de voz y video',
+      'zh': '语音与视频通话',
+      'it': 'Chiamata vocale e video',
+    },
     'adTitle': {
       'fa': 'تبلیغات ویژه',
       'en': 'Featured Ads',
