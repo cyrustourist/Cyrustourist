@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/language/home_texts.dart';
 import '../../core/language/menu_translations.dart';
+import '../../pages/calls_page.dart';
+import '../../pages/groups/groups_hub_page.dart';
 import '../cyrus_ad_banner.dart';
 import '../stories/stories_bar.dart';
 import 'cyrus_home_style.dart';
@@ -201,6 +203,7 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
                           _brand(s),
                           const StoriesBar(),
                           _searchRow(s, lang, rtl),
+                          _shortcuts(s, lang),
                           _grid(s, lang),
                           _adSection(s, lang),
                           _note(s, lang),
@@ -361,6 +364,96 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
           border: Border.all(color: s.accent, width: 2),
         ),
         child: Icon(icon, size: 20, color: s.isDay ? s.optionText : s.accentText),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // دو کلید میانبر: گروه‌ها/پیام‌رسان و تماس صوتی/تصویری
+  // ------------------------------------------------------------
+
+  Widget _shortcuts(CyrusHomeStyle s, String lang) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+      child: Row(
+        children: [
+          Expanded(
+            child: _shortcutButton(
+              s,
+              icon: Icons.forum_rounded,
+              label: HomeTexts.get(lang, 'shortcutGroups'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const GroupsHubPage()),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _shortcutButton(
+              s,
+              icon: Icons.videocam_rounded,
+              secondIcon: Icons.call_rounded,
+              label: HomeTexts.get(lang, 'shortcutCalls'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CallsPage()),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _shortcutButton(
+    CyrusHomeStyle s, {
+    required IconData icon,
+    IconData? secondIcon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          s.playTap();
+          onTap();
+        },
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: s.accent, width: 2),
+            gradient: LinearGradient(colors: s.cardGradient),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: s.isDay ? s.optionText : s.accentText),
+              if (secondIcon != null) ...[
+                const SizedBox(width: 3),
+                Icon(secondIcon, size: 19, color: s.isDay ? s.optionText : s.accentText),
+              ],
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: s.titleColor,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    height: 1.25,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
