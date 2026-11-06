@@ -370,7 +370,7 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
   }
 
   // ------------------------------------------------------------
-  // دو کلید میانبر: گروه‌ها/پیام‌رسان و تماس صوتی/تصویری
+  // دو کلید میانبر: گروه‌های گردشگری و تماس‌ها (آیکون صوتی/تصویری)
   // ------------------------------------------------------------
 
   Widget _shortcuts(CyrusHomeStyle s, String lang) {
@@ -384,7 +384,7 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
           Expanded(
             child: _shortcutButton(
               s,
-              icon: Icons.forum_rounded,
+              icon: Icons.groups_rounded,
               label: HomeTexts.get(lang, 'shortcutGroups'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const GroupsHubPage()),
