@@ -39,6 +39,18 @@ class HomeTexts {
       'zh': '语音与视频通话',
       'it': 'Chiamata vocale e video',
     },
+    'shortcutGames': {
+      'fa': 'بازی و سرگرمی',
+      'en': 'Games & Fun',
+      'ar': 'ألعاب وترفيه',
+      'tr': 'Oyun ve Eğlence',
+      'ru': 'Игры и развлечения',
+      'fr': 'Jeux et divertissement',
+      'de': 'Spiele & Spaß',
+      'es': 'Juegos y diversión',
+      'zh': '游戏与娱乐',
+      'it': 'Giochi e svago',
+    },
     'adTitle': {
       'fa': 'تبلیغات ویژه',
       'en': 'Featured Ads',
