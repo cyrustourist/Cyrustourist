@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../groups/group_ui.dart';
+import 'dice_games.dart';
 import 'game_api.dart';
 import 'game_engine.dart';
 import 'game_play_page.dart';
@@ -102,6 +103,75 @@ class _GamesHubPageState extends State<GamesHubPage> {
                   Navigator.of(ctx).pop();
                   _push(GamePlayPage(kind: kind, mode: PlayMode.online));
                 }),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// مار و پله و منچ: ربات یا دو نفره روی یک گوشی (بدون اینترنت).
+  void _openDiceMode(DiceKind kind) {
+    final snakes = kind == DiceKind.snakes;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${GameT.t(snakes ? 'snakes' : 'ludo')} · ${GameT.t('choose_mode')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 12),
+                _modeTile(Icons.smart_toy_rounded, GameT.t('mode_bot'), GameT.t('mode_bot_sub'), () {
+                  Navigator.of(ctx).pop();
+                  if (snakes) {
+                    _push(const SnakesPage(mode: DiceMode.bot));
+                  } else {
+                    _pickLudoLevel();
+                  }
+                }),
+                _modeTile(Icons.people_alt_rounded, GameT.t('mode_local'), GameT.t('mode_local_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(snakes ? const SnakesPage(mode: DiceMode.local) : const LudoPage(mode: DiceMode.local));
+                }),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _pickLudoLevel() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final l in BotLevel.values)
+                  _modeTile(
+                    l == BotLevel.easy ? Icons.sentiment_satisfied_rounded : (l == BotLevel.normal ? Icons.sentiment_neutral_rounded : Icons.local_fire_department_rounded),
+                    GameT.t('lvl_${l.name}'),
+                    '',
+                    () {
+                      Navigator.of(ctx).pop();
+                      _push(LudoPage(mode: DiceMode.bot, level: l));
+                    },
+                  ),
               ],
             ),
           ),
@@ -431,8 +501,8 @@ class _GamesHubPageState extends State<GamesHubPage> {
                   children: [
                     _gameCard('⭕❌', GameT.t('ttt'), () => _openMode(GameKind.ttt)),
                     _gameCard('🔴🟡', GameT.t('c4'), () => _openMode(GameKind.c4)),
-                    _gameCard('🐍', GameT.t('snakes'), null),
-                    _gameCard('🎲', GameT.t('ludo'), null),
+                    _gameCard('🐍', GameT.t('snakes'), () => _openDiceMode(DiceKind.snakes)),
+                    _gameCard('🎲', GameT.t('ludo'), () => _openDiceMode(DiceKind.ludo)),
                     _gameCard('♟️', GameT.t('chess'), null),
                     _gameCard('🎯', GameT.t('backgammon'), null),
                   ],
