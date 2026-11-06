@@ -351,7 +351,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
     _applyRoom(Map<String, dynamic>.from(j['room'] as Map));
     _poll?.cancel();
     _tick = 0;
-    _poll = Timer.periodic(const Duration(seconds: 1), (_) => _pollTick());
+    _poll = Timer.periodic(const Duration(seconds: 2), (_) => _pollTick());
   }
 
   void _applyRoom(Map<String, dynamic> r) {
@@ -405,7 +405,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
     if (!mounted || _polling || roomId.isEmpty) return;
     _tick++;
     final myTurnNow = status == 'playing' && turn == myMark;
-    if (myTurnNow && _tick % 4 != 0) return;
+    if (myTurnNow && _tick % 3 != 0) return;
     _polling = true;
     try {
       final j = await GameApi.get('/api/game/state', <String, String>{'room_id': roomId, 'since': '$version'});
@@ -463,7 +463,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
     });
     if (!mounted) return;
     if (j != null && j['success'] == true) {
-      _tick = 3; // نوبت بعدی تایمر حتماً state را بگیرد تا پیام همین حالا دیده شود
+      _tick = 2; // نوبت بعدی تایمر حتماً state را بگیرد تا پیام همین حالا دیده شود
       version = 0;
     } else if (j != null && j['error'] == 'chat_locked') {
       gToast(context, GameT.t('chat_locked'));
