@@ -54,7 +54,9 @@ dependencies:
   # تماس صوتی (WebRTC) بین دو گوشی
   flutter_webrtc: ^0.12.5
 
-  nearby_connections: ^4.1.0
+  nearby_connections: ^4.3.0
+  permission_handler: 11.3.1
+  location: ^7.0.1
 
 dev_dependencies:
   flutter_test:
