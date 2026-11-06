@@ -92,6 +92,7 @@ class GameT {
     },
     'net_err': {'fa': 'اتصال به سرور برقرار نشد', 'en': 'Could not reach the server'},
     'disabled': {'fa': 'این بخش موقتاً غیرفعال است', 'en': 'This section is temporarily off'},
+    'connecting': {'fa': 'در حال اتصال به حریف…', 'en': 'Connecting to opponent…'},
     'leaderboard': {'fa': 'برترین‌ها', 'en': 'Top players'},
     'offline_note': {
       'fa': 'سکه‌ی بازی آفلاین کمتر و روزانه محدود است؛ بازی آنلاین سکه‌ی بیشتری دارد.',
