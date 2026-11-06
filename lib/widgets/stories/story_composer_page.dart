@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/language/menu_translations.dart';
 import '../../core/language/new_texts.dart';
 import '../../services/story_service.dart';
+import 'story_photo_editor_page.dart';
 
 const Color _bg = Color(0xff071722);
 const Color _card = Color(0xff0e2433);
@@ -77,9 +78,24 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
       final b = await _compress(raw);
       if (!mounted) return;
       setState(() => _bytes = b);
+      // بعد از انتخاب عکس، ویرایشگر (برش، ابعاد، رنگ‌بندی) باز می‌شود
+      await _edit();
     } catch (_) {
       _snack(NT.t('g_fail'));
     }
+  }
+
+  /// ویرایش عکس: برش پیشرفته، نسبت ابعاد و رنگ‌بندی. انصراف = عکس بدون تغییر می‌ماند.
+  Future<void> _edit() async {
+    final src = _bytes;
+    if (src == null || !mounted) return;
+    final out = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(builder: (_) => StoryPhotoEditorPage(bytes: src)),
+    );
+    if (out == null || !mounted) return;
+    final b = await _compress(out);
+    if (!mounted) return;
+    setState(() => _bytes = b);
   }
 
   Future<void> _publish() async {
@@ -137,6 +153,18 @@ class _StoryComposerPageState extends State<StoryComposerPage> {
             : Image.memory(_bytes!, fit: BoxFit.contain),
       ),
       const SizedBox(height: 12),
+      if (_bytes != null) ...[
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: _card, foregroundColor: _gold, side: BorderSide(color: _gold.withValues(alpha: 0.6)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: _edit,
+            icon: const Icon(Icons.tune_rounded),
+            label: Text(MenuLanguage.current == 'fa' ? 'ویرایش عکس (برش، ابعاد، رنگ‌بندی)' : 'Edit photo (crop, size, colors)', style: const TextStyle(fontWeight: FontWeight.w800)),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
       Row(children: [
         Expanded(
           child: OutlinedButton.icon(
