@@ -1,0 +1,1204 @@
+import 'dart:math';
+
+import 'package:flutter/material.dart';
+
+import '../groups/group_ui.dart';
+import 'game_api.dart';
+import 'game_engine.dart' show BotLevel;
+import 'game_texts.dart';
+
+/// بازی‌های تاسی: «مار و پله» و «منچ» (با ربات یا دو نفره روی یک گوشی).
+/// بدون اینترنت کار می‌کنند و نتیجه مثل بازی‌های آفلاین دیگر با [GameWallet.reportOffline] سکه می‌دهد.
+
+enum DiceKind { snakes, ludo }
+
+enum DiceMode { bot, local }
+
+const Map<String, Map<String, String>> _dtx = {
+  'roll': {'fa': 'تاس بینداز', 'en': 'Roll the dice'},
+  'rolling': {'fa': 'در حال انداختن…', 'en': 'Rolling…'},
+  'exact': {'fa': 'برای رسیدن به ۱۰۰ باید عدد دقیق بیاید', 'en': 'You need the exact number to reach 100'},
+  'ladder': {'fa': 'نردبان! بالا رفتید', 'en': 'Ladder! Climb up'},
+  'snake': {'fa': 'مار! پایین افتادید', 'en': 'Snake! Slide down'},
+  'extra': {'fa': 'شش آمد؛ یک بار دیگر', 'en': 'A six — roll again'},
+  'pick': {'fa': 'یک مهره را انتخاب کنید', 'en': 'Tap a piece to move'},
+  'need_six': {'fa': 'برای بیرون آوردن مهره ۶ لازم است', 'en': 'You need a six to leave home'},
+  'no_move': {'fa': 'حرکتی ممکن نیست', 'en': 'No move possible'},
+  'captured': {'fa': 'مهره زده شد!', 'en': 'Captured!'},
+  'start': {'fa': 'شروع', 'en': 'START'},
+  'cell': {'fa': 'خانه {n}', 'en': 'Square {n}'},
+  'snakes_rule': {
+    'fa': 'تاس بریزید و به خانهٔ ۱۰۰ برسید. نردبان بالا می‌برد و مار پایین می‌آورد. برای رسیدن به ۱۰۰ عدد دقیق لازم است و ۶ یک بار دیگر تاس می‌دهد.',
+    'en': 'Roll and reach square 100. Ladders lift you up, snakes slide you down. You need the exact number to finish, and a six gives another roll.'
+  },
+  'ludo_rule': {
+    'fa': 'با ۶ مهره از خانه بیرون می‌آید. مهرهٔ حریف را بزنید تا به خانه برگردد (خانه‌های ستاره‌دار و شروع امن‌اند). هر ۴ مهره را زودتر به مرکز برسانید. ۶، زدن مهره و رسیدن به مرکز یک بار دیگر تاس می‌دهد.',
+    'en': 'A six brings a piece out. Capture opponent pieces to send them home (star and start squares are safe). Be first to bring all 4 pieces to the centre. A six, a capture or reaching the centre gives another roll.'
+  },
+};
+
+String _dt(String key, [Map<String, String>? p]) {
+  final m = _dtx[key];
+  var s = m == null ? key : (m[GameT.fa ? 'fa' : 'en'] ?? m['en'] ?? key);
+  if (p != null) {
+    p.forEach((k, v) => s = s.replaceAll('{$k}', v));
+  }
+  return s;
+}
+
+// ---------------------------------------------------------------- ابزارهای مشترک
+
+Widget _diceChip(String name, Color color, String sub, bool active) {
+  return Expanded(
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: gPanel,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: active ? gGold : gLine, width: active ? 2.2 : 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13.5)),
+                if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: gMuted, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _diceResultCard({
+  required String title,
+  required int gained,
+  required VoidCallback onAgain,
+  required VoidCallback onBack,
+}) {
+  return Container(
+    margin: const EdgeInsets.only(top: 12),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(color: gPanel, borderRadius: BorderRadius.circular(18), border: Border.all(color: gGold)),
+    child: Column(
+      children: [
+        Text(title, style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 18)),
+        const SizedBox(height: 4),
+        Text(
+          gained > 0 ? '🪙 ${GameT.t('gained', <String, String>{'n': '$gained'})}' : GameT.t('no_reward'),
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg),
+                onPressed: onAgain,
+                child: Text(GameT.t('play_again'), style: const TextStyle(fontWeight: FontWeight.w900)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: gLine)),
+                onPressed: onBack,
+                child: Text(GameT.t('back')),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _DiePainter extends CustomPainter {
+  const _DiePainter(this.v);
+  final int v;
+
+  @override
+  void paint(Canvas canvas, Size s) {
+    final r = RRect.fromRectAndRadius(Offset.zero & s, Radius.circular(s.width * 0.2));
+    canvas.drawRRect(r, Paint()..color = Colors.white);
+    final dot = Paint()..color = const Color(0xff111111);
+    final a = s.width * 0.27;
+    final b = s.width * 0.5;
+    final c = s.width * 0.73;
+    List<Offset> p;
+    switch (v) {
+      case 1:
+        p = <Offset>[Offset(b, b)];
+        break;
+      case 2:
+        p = <Offset>[Offset(a, a), Offset(c, c)];
+        break;
+      case 3:
+        p = <Offset>[Offset(a, a), Offset(b, b), Offset(c, c)];
+        break;
+      case 4:
+        p = <Offset>[Offset(a, a), Offset(c, a), Offset(a, c), Offset(c, c)];
+        break;
+      case 5:
+        p = <Offset>[Offset(a, a), Offset(c, a), Offset(b, b), Offset(a, c), Offset(c, c)];
+        break;
+      default:
+        p = <Offset>[Offset(a, a), Offset(c, a), Offset(a, b), Offset(c, b), Offset(a, c), Offset(c, c)];
+    }
+    for (final o in p) {
+      canvas.drawCircle(o, s.width * 0.085, dot);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiePainter old) => old.v != v;
+}
+
+Widget _diceControls({
+  required int die,
+  required bool rolling,
+  required bool enabled,
+  required VoidCallback onRoll,
+}) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      AnimatedScale(
+        scale: rolling ? 1.12 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: SizedBox(width: 62, height: 62, child: CustomPaint(painter: _DiePainter(die))),
+      ),
+      const SizedBox(width: 16),
+      FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: gGold,
+          foregroundColor: gBg,
+          disabledBackgroundColor: gLine,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+        ),
+        onPressed: enabled ? onRoll : null,
+        icon: const Icon(Icons.casino_rounded),
+        label: Text(rolling ? _dt('rolling') : _dt('roll'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+      ),
+    ],
+  );
+}
+
+Widget _tokenDot(Color color, double d, {bool glow = false}) {
+  return Container(
+    width: d,
+    height: d,
+    decoration: BoxDecoration(
+      color: color,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white, width: max(1.5, d * 0.09)),
+      boxShadow: <BoxShadow>[
+        BoxShadow(
+          color: glow ? gGold : Colors.black54,
+          blurRadius: glow ? d * 0.7 : d * 0.25,
+          spreadRadius: glow ? d * 0.12 : 0,
+          offset: glow ? Offset.zero : Offset(0, d * 0.08),
+        ),
+      ],
+    ),
+  );
+}
+
+// ================================================================= مار و پله
+
+const Map<int, int> _kJumps = <int, int>{
+  1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100, // نردبان
+  16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78, // مار
+};
+
+const List<Color> _snakePlayerColors = <Color>[Color(0xffff5a5f), Color(0xff4dabf7)];
+
+/// مرکز خانهٔ n (۱ تا ۱۰۰) روی صفحهٔ ۱۰×۱۰ با واحد u.
+Offset _snakeCellCenter(int n, double u) {
+  final r = (n - 1) ~/ 10;
+  final i = (n - 1) % 10;
+  final col = r.isEven ? i : 9 - i;
+  return Offset((col + 0.5) * u, (9 - r + 0.5) * u);
+}
+
+class SnakesPage extends StatefulWidget {
+  const SnakesPage({super.key, required this.mode});
+  final DiceMode mode;
+
+  @override
+  State<SnakesPage> createState() => _SnakesPageState();
+}
+
+class _SnakesPageState extends State<SnakesPage> {
+  final GameWallet _w = GameWallet.instance;
+  final Random _rnd = Random();
+  final List<int> pos = <int>[0, 0];
+  int turn = 0;
+  int die = 1;
+  bool rolling = false;
+  bool busy = false;
+  int winner = -1;
+  String msg = '';
+  int gained = 0;
+  bool resultReady = false;
+  int _gen = 0;
+
+  bool get isBot => widget.mode == DiceMode.bot;
+  bool get finished => winner >= 0;
+  bool get humanTurn => !finished && !(isBot && turn == 1);
+
+  List<String> get names => isBot
+      ? <String>[GameT.t('you'), GameT.t('robot')]
+      : <String>[GameT.t('player1'), GameT.t('player2')];
+
+  void _restart() {
+    _gen++;
+    setState(() {
+      pos[0] = 0;
+      pos[1] = 0;
+      turn = 0;
+      die = 1;
+      rolling = false;
+      busy = false;
+      winner = -1;
+      msg = '';
+      gained = 0;
+      resultReady = false;
+    });
+  }
+
+  Future<void> _roll() async {
+    if (busy || finished) return;
+    final gen = _gen;
+    setState(() {
+      busy = true;
+      rolling = true;
+      msg = '';
+    });
+    for (var i = 0; i < 8; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+      if (!mounted || gen != _gen) return;
+      setState(() => die = _rnd.nextInt(6) + 1);
+    }
+    final r = _rnd.nextInt(6) + 1;
+    setState(() {
+      die = r;
+      rolling = false;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted || gen != _gen) return;
+    await _move(r, gen);
+  }
+
+  Future<void> _move(int r, int gen) async {
+    final who = turn;
+    var note = '';
+    final target = pos[who] + r;
+    if (target > 100) {
+      note = _dt('exact');
+    } else {
+      setState(() => pos[who] = target);
+      await Future<void>.delayed(const Duration(milliseconds: 550));
+      if (!mounted || gen != _gen) return;
+      final j = _kJumps[target];
+      if (j != null) {
+        note = j > target ? _dt('ladder') : _dt('snake');
+        setState(() {
+          pos[who] = j;
+          msg = note;
+        });
+        await Future<void>.delayed(const Duration(milliseconds: 650));
+        if (!mounted || gen != _gen) return;
+      }
+      if (pos[who] == 100) {
+        setState(() {
+          winner = who;
+          busy = false;
+        });
+        _finish();
+        return;
+      }
+    }
+    final again = r == 6;
+    if (again) note = note.isEmpty ? _dt('extra') : '$note · ${_dt('extra')}';
+    setState(() {
+      msg = note;
+      if (!again) turn = 1 - turn;
+      busy = false;
+    });
+    _maybeBot(gen);
+  }
+
+  void _maybeBot(int gen) {
+    if (!isBot || turn != 1 || finished) return;
+    Future<void>.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted || gen != _gen || finished || turn != 1 || busy) return;
+      _roll();
+    });
+  }
+
+  Future<void> _finish() async {
+    final String result;
+    final String level;
+    if (isBot) {
+      // مار و پله شانسی است؛ پاداش سطح «آسان» ثبت می‌شود
+      result = winner == 0 ? 'win' : 'loss';
+      level = 'easy';
+    } else {
+      result = 'win';
+      level = 'local';
+    }
+    final g = await _w.reportOffline(result, level);
+    if (!mounted) return;
+    setState(() {
+      gained = g;
+      resultReady = true;
+    });
+  }
+
+  String _statusText() {
+    final n = names;
+    if (finished) {
+      if (isBot) return winner == 0 ? GameT.t('you_win') : GameT.t('you_lose');
+      return GameT.t('wins', <String, String>{'n': n[winner]});
+    }
+    if (isBot) return turn == 0 ? GameT.t('your_turn') : GameT.t('opp_turn');
+    return GameT.t('turn_of', <String, String>{'n': n[turn]});
+  }
+
+  Widget _token(int p, double u) {
+    final n = pos[p];
+    final dx = (p == 0 ? -0.17 : 0.17) * u;
+    final Offset c;
+    if (n <= 0) {
+      c = Offset((0.7 + p * 0.7) * u, 10 * u + 0.45 * u);
+    } else {
+      final base = _snakeCellCenter(n, u);
+      c = Offset(base.dx + dx, base.dy);
+    }
+    final d = u * 0.46;
+    return AnimatedPositioned(
+      key: ValueKey<int>(p),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOut,
+      left: c.dx - d / 2,
+      top: c.dy - d / 2,
+      width: d,
+      height: d,
+      child: _tokenDot(_snakePlayerColors[p], d, glow: !finished && turn == p),
+    );
+  }
+
+  Widget _board(double w) {
+    final u = w / 10;
+    return SizedBox(
+      width: w,
+      height: w + u * 0.9,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: RepaintBoundary(child: CustomPaint(painter: _SnakesPainter(_dt('start')))),
+          ),
+          _token(0, u),
+          _token(1, u),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = names;
+    return Directionality(
+      textDirection: gDir,
+      child: Scaffold(
+        backgroundColor: gBg,
+        appBar: AppBar(
+          backgroundColor: gBg,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: gGold),
+          title: Text(GameT.t('snakes'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (ctx, cons) {
+              final w = min(cons.maxWidth - 24, 520.0);
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+                child: Center(
+                  child: SizedBox(
+                    width: w,
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            _diceChip(n[0], _snakePlayerColors[0], pos[0] == 0 ? '' : _dt('cell', <String, String>{'n': '${pos[0]}'}), !finished && turn == 0),
+                            const SizedBox(width: 10),
+                            _diceChip(n[1], _snakePlayerColors[1], pos[1] == 0 ? '' : _dt('cell', <String, String>{'n': '${pos[1]}'}), !finished && turn == 1),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(_statusText(), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                        SizedBox(
+                          height: 20,
+                          child: Text(msg, style: const TextStyle(color: gSky, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                        ),
+                        const SizedBox(height: 4),
+                        _board(w),
+                        const SizedBox(height: 14),
+                        _diceControls(die: die, rolling: rolling, enabled: humanTurn && !busy, onRoll: _roll),
+                        if (finished && resultReady)
+                          _diceResultCard(
+                            title: _statusText(),
+                            gained: gained,
+                            onAgain: _restart,
+                            onBack: () => Navigator.of(context).pop(),
+                          ),
+                        const SizedBox(height: 14),
+                        Text(_dt('snakes_rule'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 11.5, height: 1.7)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SnakesPainter extends CustomPainter {
+  const _SnakesPainter(this.startLabel);
+  final String startLabel;
+
+  static const List<Color> _snakeColors = <Color>[
+    Color(0xff2ecc71),
+    Color(0xffe74c3c),
+    Color(0xffb36bdc),
+    Color(0xfff39c12),
+    Color(0xff1abc9c),
+    Color(0xffff6fa5),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = size.width / 10;
+    final cell = Paint();
+    for (var n = 1; n <= 100; n++) {
+      final c = _snakeCellCenter(n, u);
+      final r = (n - 1) ~/ 10;
+      final i = (n - 1) % 10;
+      final col = r.isEven ? i : 9 - i;
+      cell.color = n == 100
+          ? const Color(0xff8a6d1a)
+          : ((r + col).isEven ? const Color(0xff12394f) : const Color(0xff0d2a3b));
+      final rect = Rect.fromCenter(center: c, width: u, height: u);
+      canvas.drawRect(rect, cell);
+      final tp = TextPainter(
+        text: TextSpan(text: n == 100 ? '🏁 100' : '$n', style: TextStyle(color: const Color(0x88ffffff), fontSize: u * 0.26)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, rect.topLeft + Offset(u * 0.08, u * 0.04));
+    }
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, u * 10, u * 10),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..color = gLine
+        ..strokeWidth = 2,
+    );
+
+    // نوار شروع
+    final strip = RRect.fromRectAndRadius(Rect.fromLTWH(0, u * 10 + u * 0.08, u * 10, u * 0.8), Radius.circular(u * 0.25));
+    canvas.drawRRect(strip, Paint()..color = const Color(0xff0f2f42));
+    final st = TextPainter(
+      text: TextSpan(text: startLabel, style: TextStyle(color: gMuted, fontSize: u * 0.3, fontWeight: FontWeight.w800)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    st.paint(canvas, Offset(u * 3.0, u * 10 + u * 0.48 - st.height / 2));
+
+    // نردبان‌ها و مارها
+    var si = 0;
+    _kJumps.forEach((from, to) {
+      final a = _snakeCellCenter(from, u);
+      final b = _snakeCellCenter(to, u);
+      if (to > from) {
+        _ladder(canvas, a, b, u);
+      } else {
+        _snake(canvas, a, b, u, _snakeColors[si % _snakeColors.length]);
+        si++;
+      }
+    });
+  }
+
+  void _ladder(Canvas canvas, Offset a, Offset b, double u) {
+    final dx = b.dx - a.dx;
+    final dy = b.dy - a.dy;
+    final len = sqrt(dx * dx + dy * dy);
+    if (len < 1) return;
+    final nx = -dy / len;
+    final ny = dx / len;
+    final w = u * 0.13;
+    final rail = Paint()
+      ..color = const Color(0xffd9a441)
+      ..strokeWidth = u * 0.07
+      ..strokeCap = StrokeCap.round;
+    final rung = Paint()
+      ..color = const Color(0xffb8842c)
+      ..strokeWidth = u * 0.055
+      ..strokeCap = StrokeCap.round;
+    final off = Offset(nx * w, ny * w);
+    canvas.drawLine(a + off, b + off, rail);
+    canvas.drawLine(a - off, b - off, rail);
+    final n = max(2, (len / (u * 0.38)).floor());
+    for (var i = 1; i < n; i++) {
+      final t = i / n;
+      final p = Offset(a.dx + dx * t, a.dy + dy * t);
+      canvas.drawLine(p + off, p - off, rung);
+    }
+  }
+
+  void _snake(Canvas canvas, Offset a, Offset b, double u, Color color) {
+    final dx = b.dx - a.dx;
+    final dy = b.dy - a.dy;
+    final len = sqrt(dx * dx + dy * dy);
+    if (len < 1) return;
+    final nx = -dy / len;
+    final ny = dx / len;
+    final waves = max(2, (len / (u * 1.6)).round()).toDouble();
+    final path = Path();
+    const steps = 40;
+    for (var i = 0; i <= steps; i++) {
+      final t = i / steps;
+      final off = sin(t * pi * waves) * u * 0.2;
+      final p = Offset(a.dx + dx * t + nx * off, a.dy + dy * t + ny * off);
+      if (i == 0) {
+        path.moveTo(p.dx, p.dy);
+      } else {
+        path.lineTo(p.dx, p.dy);
+      }
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = u * 0.2
+        ..color = color,
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = u * 0.07
+        ..color = const Color(0x55ffffff),
+    );
+    canvas.drawCircle(a, u * 0.17, Paint()..color = color);
+    final eye = Offset(nx * u * 0.07, ny * u * 0.07);
+    canvas.drawCircle(a + eye, u * 0.045, Paint()..color = Colors.white);
+    canvas.drawCircle(a - eye, u * 0.045, Paint()..color = Colors.white);
+    canvas.drawCircle(a + eye, u * 0.02, Paint()..color = Colors.black);
+    canvas.drawCircle(a - eye, u * 0.02, Paint()..color = Colors.black);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SnakesPainter old) => old.startLabel != startLabel;
+}
+
+// ================================================================= منچ
+
+const List<Color> _ludoPlayerColors = <Color>[Color(0xffe53935), Color(0xfffdd835)];
+const Color _ludoRed = Color(0xffe53935);
+const Color _ludoGreen = Color(0xff43a047);
+const Color _ludoYellow = Color(0xfffdd835);
+const Color _ludoBlue = Color(0xff1e88e5);
+const List<Offset> _yardSlots = <Offset>[Offset(2, 2), Offset(4, 2), Offset(2, 4), Offset(4, 4)];
+
+/// منطق منچ دو نفره: بازیکن ۰ قرمز (شروع خانهٔ ۰)، بازیکن ۱ زرد (شروع خانهٔ ۲۶).
+/// پیشروی p: ۰ = در خانه، ۱..۵۱ = مسیر اصلی، ۵۲..۵۶ = ستون پایانی، ۵۷ = رسیده به مرکز.
+class _Ludo {
+  _Ludo._();
+
+  static const List<int> off = <int>[0, 26];
+  static const Set<int> safe = <int>{0, 8, 13, 21, 26, 34, 39, 47};
+  static final List<List<int>> track = _build();
+
+  static List<List<int>> _build() {
+    final t = <List<int>>[];
+    for (var c = 1; c <= 5; c++) {
+      t.add(<int>[6, c]);
+    }
+    for (var r = 5; r >= 0; r--) {
+      t.add(<int>[r, 6]);
+    }
+    t.add(<int>[0, 7]);
+    t.add(<int>[0, 8]);
+    for (var r = 1; r <= 5; r++) {
+      t.add(<int>[r, 8]);
+    }
+    for (var c = 9; c <= 14; c++) {
+      t.add(<int>[6, c]);
+    }
+    t.add(<int>[7, 14]);
+    t.add(<int>[8, 14]);
+    for (var c = 13; c >= 9; c--) {
+      t.add(<int>[8, c]);
+    }
+    for (var r = 9; r <= 14; r++) {
+      t.add(<int>[r, 8]);
+    }
+    t.add(<int>[14, 7]);
+    t.add(<int>[14, 6]);
+    for (var r = 13; r >= 9; r--) {
+      t.add(<int>[r, 6]);
+    }
+    for (var c = 5; c >= 0; c--) {
+      t.add(<int>[8, c]);
+    }
+    t.add(<int>[7, 0]);
+    t.add(<int>[6, 0]);
+    return t;
+  }
+
+  static int trackIndex(int pl, int p) => (off[pl] + p - 1) % 52;
+
+  static List<int> legal(List<List<int>> t, int pl, int roll) {
+    final out = <int>[];
+    for (var i = 0; i < 4; i++) {
+      final p = t[pl][i];
+      if (p == 0) {
+        if (roll == 6) out.add(i);
+      } else if (p + roll <= 57) {
+        out.add(i);
+      }
+    }
+    return out;
+  }
+
+  /// مهره را حرکت می‌دهد (t تغییر می‌کند) و تعداد مهره‌های زده‌شده را برمی‌گرداند.
+  static int move(List<List<int>> t, int pl, int i, int roll) {
+    final p = t[pl][i];
+    final np = p == 0 ? 1 : p + roll;
+    t[pl][i] = np;
+    var captured = 0;
+    if (np >= 1 && np <= 51) {
+      final idx = trackIndex(pl, np);
+      if (!safe.contains(idx)) {
+        final opp = 1 - pl;
+        for (var j = 0; j < 4; j++) {
+          final q = t[opp][j];
+          if (q >= 1 && q <= 51 && trackIndex(opp, q) == idx) {
+            t[opp][j] = 0;
+            captured++;
+          }
+        }
+      }
+    }
+    return captured;
+  }
+
+  static bool danger(List<List<int>> t, int pl, int idx) {
+    final opp = 1 - pl;
+    for (var j = 0; j < 4; j++) {
+      final q = t[opp][j];
+      if (q < 1 || q > 51) continue;
+      final d = (idx - trackIndex(opp, q) + 52) % 52;
+      if (d >= 1 && d <= 6) return true;
+    }
+    return false;
+  }
+
+  static int botPick(List<List<int>> t, int pl, int roll, BotLevel level, Random rnd) {
+    final opts = legal(t, pl, roll);
+    if (opts.isEmpty) return -1;
+    if (level == BotLevel.easy || opts.length == 1) return opts[rnd.nextInt(opts.length)];
+    if (level == BotLevel.normal && rnd.nextInt(100) < 25) return opts[rnd.nextInt(opts.length)];
+    var best = -1e9;
+    var bestI = opts.first;
+    for (final i in opts) {
+      final p = t[pl][i];
+      final copy = <List<int>>[for (final row in t) List<int>.from(row)];
+      final cap = move(copy, pl, i, roll);
+      final np = copy[pl][i];
+      var s = cap * 100.0 + roll + np * 0.1;
+      if (np == 57) s += 80;
+      if (p == 0) s += 45;
+      if (p < 52 && np >= 52) s += 30;
+      if (np >= 1 && np <= 51) {
+        final idx = trackIndex(pl, np);
+        if (safe.contains(idx)) {
+          s += 18;
+        } else if (level == BotLevel.hard && danger(copy, pl, idx)) {
+          s -= 25;
+        }
+      }
+      if (level == BotLevel.hard && p >= 1 && p <= 51) {
+        final cur = trackIndex(pl, p);
+        if (!safe.contains(cur) && danger(t, pl, cur)) s += 20;
+      }
+      s += rnd.nextDouble();
+      if (s > best) {
+        best = s;
+        bestI = i;
+      }
+    }
+    return bestI;
+  }
+}
+
+class LudoPage extends StatefulWidget {
+  const LudoPage({super.key, required this.mode, this.level = BotLevel.normal});
+  final DiceMode mode;
+  final BotLevel level;
+
+  @override
+  State<LudoPage> createState() => _LudoPageState();
+}
+
+class _LudoPageState extends State<LudoPage> {
+  final GameWallet _w = GameWallet.instance;
+  final Random _rnd = Random();
+  final List<List<int>> toks = <List<int>>[
+    <int>[0, 0, 0, 0],
+    <int>[0, 0, 0, 0],
+  ];
+  int turn = 0;
+  int die = 1;
+  bool rolling = false;
+  bool busy = false;
+  bool awaiting = false;
+  int pendingRoll = 0;
+  List<int> movable = <int>[];
+  int yardTries = 0;
+  int winner = -1;
+  String msg = '';
+  int gained = 0;
+  bool resultReady = false;
+  int _gen = 0;
+
+  bool get isBot => widget.mode == DiceMode.bot;
+  bool get finished => winner >= 0;
+  bool get humanTurn => !finished && !(isBot && turn == 1);
+
+  List<String> get names => isBot
+      ? <String>[GameT.t('you'), GameT.t('robot')]
+      : <String>[GameT.t('player1'), GameT.t('player2')];
+
+  int _home(int pl) => toks[pl].where((p) => p == 57).length;
+
+  void _restart() {
+    _gen++;
+    setState(() {
+      for (final row in toks) {
+        for (var i = 0; i < 4; i++) {
+          row[i] = 0;
+        }
+      }
+      turn = 0;
+      die = 1;
+      rolling = false;
+      busy = false;
+      awaiting = false;
+      pendingRoll = 0;
+      movable = <int>[];
+      yardTries = 0;
+      winner = -1;
+      msg = '';
+      gained = 0;
+      resultReady = false;
+    });
+  }
+
+  Future<void> _roll() async {
+    if (busy || awaiting || finished) return;
+    final gen = _gen;
+    setState(() {
+      busy = true;
+      rolling = true;
+      msg = '';
+    });
+    for (var i = 0; i < 8; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+      if (!mounted || gen != _gen) return;
+      setState(() => die = _rnd.nextInt(6) + 1);
+    }
+    final r = _rnd.nextInt(6) + 1;
+    setState(() {
+      die = r;
+      rolling = false;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted || gen != _gen) return;
+    await _afterRoll(r, gen);
+  }
+
+  Future<void> _afterRoll(int r, int gen) async {
+    final opts = _Ludo.legal(toks, turn, r);
+    if (opts.isEmpty) {
+      final allYard = toks[turn].every((p) => p == 0);
+      final again = allYard && yardTries < 2;
+      setState(() => msg = allYard ? _dt('need_six') : _dt('no_move'));
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+      if (!mounted || gen != _gen) return;
+      setState(() {
+        if (again) {
+          yardTries++;
+        } else {
+          yardTries = 0;
+          turn = 1 - turn;
+        }
+        busy = false;
+        msg = '';
+      });
+      _maybeBot(gen);
+      return;
+    }
+    if (isBot && turn == 1) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted || gen != _gen) return;
+      final i = _Ludo.botPick(toks, turn, r, widget.level, _rnd);
+      await _doMove(i, r, gen);
+      return;
+    }
+    if (opts.length == 1) {
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      if (!mounted || gen != _gen) return;
+      await _doMove(opts.first, r, gen);
+      return;
+    }
+    setState(() {
+      awaiting = true;
+      pendingRoll = r;
+      movable = opts;
+      msg = _dt('pick');
+    });
+  }
+
+  void _onTokenTap(int pl, int i) {
+    if (!awaiting || pl != turn || !movable.contains(i) || finished) return;
+    final r = pendingRoll;
+    final gen = _gen;
+    setState(() {
+      awaiting = false;
+      movable = <int>[];
+      msg = '';
+    });
+    _doMove(i, r, gen);
+  }
+
+  Future<void> _doMove(int i, int r, int gen) async {
+    final who = turn;
+    var cap = 0;
+    setState(() {
+      cap = _Ludo.move(toks, who, i, r);
+      msg = cap > 0 ? _dt('captured') : '';
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 650));
+    if (!mounted || gen != _gen) return;
+    if (_home(who) == 4) {
+      setState(() {
+        winner = who;
+        busy = false;
+      });
+      _finish();
+      return;
+    }
+    final extra = r == 6 || cap > 0 || toks[who][i] == 57;
+    setState(() {
+      if (!extra) turn = 1 - turn;
+      yardTries = 0;
+      busy = false;
+      if (extra) msg = _dt('extra');
+    });
+    _maybeBot(gen);
+  }
+
+  void _maybeBot(int gen) {
+    if (!isBot || turn != 1 || finished) return;
+    Future<void>.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted || gen != _gen || finished || turn != 1 || busy || awaiting) return;
+      _roll();
+    });
+  }
+
+  Future<void> _finish() async {
+    final String result;
+    final String level;
+    if (isBot) {
+      result = winner == 0 ? 'win' : 'loss';
+      level = widget.level.name;
+    } else {
+      result = 'win';
+      level = 'local';
+    }
+    final g = await _w.reportOffline(result, level);
+    if (!mounted) return;
+    setState(() {
+      gained = g;
+      resultReady = true;
+    });
+  }
+
+  String _statusText() {
+    final n = names;
+    if (finished) {
+      if (isBot) return winner == 0 ? GameT.t('you_win') : GameT.t('you_lose');
+      return GameT.t('wins', <String, String>{'n': n[winner]});
+    }
+    if (isBot) return turn == 0 ? GameT.t('your_turn') : GameT.t('opp_turn');
+    return GameT.t('turn_of', <String, String>{'n': n[turn]});
+  }
+
+  /// مرکز مهره روی صفحهٔ ۱۵×۱۵ (واحد خانه).
+  Offset _unit(int pl, int i, int p) {
+    if (p == 0) {
+      final b = pl == 0 ? 0.0 : 9.0;
+      return Offset(b + _yardSlots[i].dx, b + _yardSlots[i].dy);
+    }
+    if (p <= 51) {
+      final cell = _Ludo.track[_Ludo.trackIndex(pl, p)];
+      return Offset(cell[1] + 0.5, cell[0] + 0.5);
+    }
+    if (p <= 56) {
+      final k = p - 51;
+      return Offset(pl == 0 ? k + 0.5 : 14 - k + 0.5, 7.5);
+    }
+    return Offset(pl == 0 ? 6.8 : 8.2, 7.5 + (i - 1.5) * 0.3);
+  }
+
+  Widget _board(double w) {
+    final u = w / 15;
+    final groups = <String, List<int>>{};
+    final keys = List<String>.filled(8, '');
+    for (var pl = 0; pl < 2; pl++) {
+      for (var i = 0; i < 4; i++) {
+        final p = toks[pl][i];
+        String key;
+        if (p >= 1 && p <= 51) {
+          key = 't${_Ludo.trackIndex(pl, p)}';
+        } else if (p >= 52 && p <= 56) {
+          key = 'h$pl-$p';
+        } else {
+          key = 'u$pl-$i';
+        }
+        keys[pl * 4 + i] = key;
+        groups.putIfAbsent(key, () => <int>[]).add(pl * 4 + i);
+      }
+    }
+    final children = <Widget>[
+      Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: const _LudoPainter()))),
+    ];
+    for (var id = 0; id < 8; id++) {
+      final pl = id ~/ 4;
+      final i = id % 4;
+      final p = toks[pl][i];
+      var c = _unit(pl, i, p);
+      final grp = groups[keys[id]]!;
+      if (grp.length > 1) {
+        final a = 2 * pi * grp.indexOf(id) / grp.length;
+        c = c + Offset(cos(a) * 0.2, sin(a) * 0.2);
+      }
+      final d = (p == 57 ? 0.42 : 0.62) * u;
+      final hit = max(d, u * 1.1);
+      final canTap = awaiting && pl == turn && movable.contains(i);
+      children.add(
+        AnimatedPositioned(
+          key: ValueKey<int>(id),
+          duration: const Duration(milliseconds: 380),
+          curve: Curves.easeInOut,
+          left: c.dx * u - hit / 2,
+          top: c.dy * u - hit / 2,
+          width: hit,
+          height: hit,
+          child: IgnorePointer(
+            ignoring: !canTap,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _onTokenTap(pl, i),
+              child: Center(child: _tokenDot(_ludoPlayerColors[pl], d, glow: canTap)),
+            ),
+          ),
+        ),
+      );
+    }
+    return SizedBox(width: w, height: w, child: Stack(children: children));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = names;
+    return Directionality(
+      textDirection: gDir,
+      child: Scaffold(
+        backgroundColor: gBg,
+        appBar: AppBar(
+          backgroundColor: gBg,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: gGold),
+          title: Text(GameT.t('ludo'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (ctx, cons) {
+              final w = min(cons.maxWidth - 24, 520.0);
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+                child: Center(
+                  child: SizedBox(
+                    width: w,
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            _diceChip(n[0], _ludoPlayerColors[0], '${_home(0)}/4', !finished && turn == 0),
+                            const SizedBox(width: 10),
+                            _diceChip(n[1], _ludoPlayerColors[1], '${_home(1)}/4', !finished && turn == 1),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(_statusText(), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                        SizedBox(
+                          height: 20,
+                          child: Text(msg, style: const TextStyle(color: gSky, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                        ),
+                        const SizedBox(height: 4),
+                        _board(w),
+                        const SizedBox(height: 14),
+                        _diceControls(die: die, rolling: rolling, enabled: humanTurn && !busy && !awaiting, onRoll: _roll),
+                        if (finished && resultReady)
+                          _diceResultCard(
+                            title: _statusText(),
+                            gained: gained,
+                            onAgain: _restart,
+                            onBack: () => Navigator.of(context).pop(),
+                          ),
+                        const SizedBox(height: 14),
+                        Text(_dt('ludo_rule'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 11.5, height: 1.7)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LudoPainter extends CustomPainter {
+  const _LudoPainter();
+
+  Color _light(Color c) => Color.lerp(c, Colors.white, 0.45) ?? c;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = size.width / 15;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(u * 0.4)),
+      Paint()..color = const Color(0xfff6efe2),
+    );
+
+    // چهار گوشه (خانه‌ها): بالا-چپ قرمز، بالا-راست سبز، پایین-راست زرد، پایین-چپ آبی
+    const colors = <Color>[_ludoRed, _ludoGreen, _ludoYellow, _ludoBlue];
+    const origins = <Offset>[Offset(0, 0), Offset(9, 0), Offset(9, 9), Offset(0, 9)];
+    for (var k = 0; k < 4; k++) {
+      final o = origins[k];
+      canvas.drawRect(Rect.fromLTWH(o.dx * u, o.dy * u, 6 * u, 6 * u), Paint()..color = colors[k]);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH((o.dx + 1) * u, (o.dy + 1) * u, 4 * u, 4 * u), Radius.circular(u * 0.5)),
+        Paint()..color = const Color(0xfffffbf2),
+      );
+      for (final s in _yardSlots) {
+        canvas.drawCircle(
+          Offset((o.dx + s.dx) * u, (o.dy + s.dy) * u),
+          u * 0.52,
+          Paint()..color = _light(colors[k]),
+        );
+      }
+    }
+
+    // مسیر اصلی
+    final fill = Paint()..color = const Color(0xfffffbf2);
+    final border = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = const Color(0x33000000)
+      ..strokeWidth = 1;
+    for (final cell in _Ludo.track) {
+      final rect = Rect.fromLTWH(cell[1] * u, cell[0] * u, u, u);
+      canvas.drawRect(rect, fill);
+      canvas.drawRect(rect, border);
+    }
+
+    // ستون‌های پایانی
+    final homeCols = <Color, List<List<int>>>{
+      _ludoRed: <List<int>>[for (var c = 1; c <= 5; c++) <int>[7, c]],
+      _ludoGreen: <List<int>>[for (var r = 1; r <= 5; r++) <int>[r, 7]],
+      _ludoYellow: <List<int>>[for (var c = 9; c <= 13; c++) <int>[7, c]],
+      _ludoBlue: <List<int>>[for (var r = 9; r <= 13; r++) <int>[r, 7]],
+    };
+    homeCols.forEach((color, cells) {
+      for (final cell in cells) {
+        final rect = Rect.fromLTWH(cell[1] * u, cell[0] * u, u, u);
+        canvas.drawRect(rect, Paint()..color = color);
+        canvas.drawRect(rect, border);
+      }
+    });
+
+    // خانه‌های شروع (رنگی) و خانه‌های امن (ستاره)
+    const starts = <int, Color>{0: _ludoRed, 13: _ludoGreen, 26: _ludoYellow, 39: _ludoBlue};
+    starts.forEach((idx, color) {
+      final cell = _Ludo.track[idx];
+      final rect = Rect.fromLTWH(cell[1] * u, cell[0] * u, u, u);
+      canvas.drawRect(rect, Paint()..color = color);
+      canvas.drawRect(rect, border);
+    });
+    for (final idx in _Ludo.safe) {
+      if (starts.containsKey(idx)) continue;
+      final cell = _Ludo.track[idx];
+      final tp = TextPainter(
+        text: TextSpan(text: '★', style: TextStyle(color: const Color(0xff9a8f7a), fontSize: u * 0.75)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset((cell[1] + 0.5) * u - tp.width / 2, (cell[0] + 0.5) * u - tp.height / 2));
+    }
+
+    // مرکز: چهار مثلث رنگی
+    final mid = Offset(7.5 * u, 7.5 * u);
+    void tri(Offset a, Offset b, Color c) {
+      final path = Path()
+        ..moveTo(a.dx, a.dy)
+        ..lineTo(b.dx, b.dy)
+        ..lineTo(mid.dx, mid.dy)
+        ..close();
+      canvas.drawPath(path, Paint()..color = c);
+    }
+
+    tri(Offset(6 * u, 6 * u), Offset(6 * u, 9 * u), _ludoRed);
+    tri(Offset(6 * u, 6 * u), Offset(9 * u, 6 * u), _ludoGreen);
+    tri(Offset(9 * u, 6 * u), Offset(9 * u, 9 * u), _ludoYellow);
+    tri(Offset(6 * u, 9 * u), Offset(9 * u, 9 * u), _ludoBlue);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LudoPainter old) => false;
+}
