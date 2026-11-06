@@ -45,6 +45,9 @@ class OfflineMeshService extends ChangeNotifier {
   String myName = '';
   String myUid = '';
 
+  /// پیام‌های بازی (کلید 'g') به‌جای چت به این تابع می‌رسند؛ فقط همسایه‌ی مستقیم، بدون relay.
+  void Function(Map<String, dynamic> m)? gameHandler;
+
   final List<OfflineMsg> messages = [];
   final Map<String, OfflinePeer> peers = {}; // endpointId → همتای وصل‌شده
   final Set<String> _seen = {};
@@ -263,6 +266,11 @@ class OfflineMeshService extends ChangeNotifier {
     if (p.type != PayloadType.BYTES || p.bytes == null) return;
     try {
       final m = jsonDecode(utf8.decode(p.bytes!)) as Map<String, dynamic>;
+      if (m['g'] != null) {
+        final h = gameHandler;
+        if (h != null) h(m);
+        return;
+      }
       final id = '${m['id']}';
       if (!_markSeen(id)) return;
       final msg = OfflineMsg(
@@ -293,6 +301,13 @@ class OfflineMeshService extends ChangeNotifier {
       if (id == except) continue;
       Nearby().sendBytesPayload(id, bytes).catchError((_) {});
     }
+  }
+
+  /// ارسال پیام بازی به همه‌ی گوشی‌های وصل‌شده (گیرنده با فیلد 'to' خودش را تشخیص می‌دهد).
+  void sendGame(Map<String, dynamic> m) {
+    if (!running) return;
+    final out = <String, dynamic>{...m, 'u': myUid, 'n': myName};
+    _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(out))));
   }
 
   Future<void> send(String text) async {
