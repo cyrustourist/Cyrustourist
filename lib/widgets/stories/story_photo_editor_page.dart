@@ -815,8 +815,10 @@ class _ExportArgs {
 }
 
 Uint8List _exportIsolate(_ExportArgs a) {
-  var im = img.decodeImage(a.bytes);
-  if (im == null) throw StateError('decode');
+  final decoded = img.decodeImage(a.bytes);
+  if (decoded == null) throw StateError('decode');
+  // Keep the working image non-nullable throughout crop/resize/export.
+  img.Image im = decoded;
 
   final x = (a.l * im.width).round().clamp(0, im.width - 1);
   final y = (a.t * im.height).round().clamp(0, im.height - 1);
