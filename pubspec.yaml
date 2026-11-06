@@ -2,7 +2,7 @@ name: cyrustourist_app3
 description: CyrusTourist base app - splash, home and tourist map.
 publish_to: "none"
 
-version: 6.1.146+6553
+version: 6.1.142+6549
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -53,6 +53,8 @@ dependencies:
 
   # تماس صوتی (WebRTC) بین دو گوشی
   flutter_webrtc: ^0.12.5
+
+  nearby_connections: ^4.1.0
 
 dev_dependencies:
   flutter_test:
