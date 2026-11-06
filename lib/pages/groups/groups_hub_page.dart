@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../services/group_service.dart';
+import '../offline/offline_chat_page.dart';
 import '../../services/group_texts.dart';
 import 'create_group_page.dart';
 import 'group_chat_page.dart';
@@ -234,6 +235,13 @@ class _GroupsHubPageState extends State<GroupsHubPage> with SingleTickerProvider
           centerTitle: true,
           iconTheme: const IconThemeData(color: gGold),
           title: Text(GT.t('menu_groups'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+          actions: [
+            IconButton(
+              tooltip: 'Offline',
+              icon: const Icon(Icons.wifi_tethering_rounded, color: gGold),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineChatPage())),
+            ),
+          ],
           bottom: TabBar(
             controller: _tabs,
             indicatorColor: gGold,
