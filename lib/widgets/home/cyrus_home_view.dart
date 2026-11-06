@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/language/home_texts.dart';
 import '../../core/language/menu_translations.dart';
 import '../../pages/calls_page.dart';
+import '../../pages/games/games_hub_page.dart';
 import '../../pages/groups/groups_hub_page.dart';
 import '../cyrus_ad_banner.dart';
 import '../stories/stories_bar.dart';
@@ -375,7 +376,10 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
   Widget _shortcuts(CyrusHomeStyle s, String lang) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
         children: [
           Expanded(
             child: _shortcutButton(
@@ -397,6 +401,18 @@ class _CyrusHomeViewState extends State<CyrusHomeView>
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const CallsPage()),
               ),
+            ),
+          ),
+        ],
+          ),
+          const SizedBox(height: 12),
+          // کلید «بازی و سرگرمی» (آفلاین و آنلاین)
+          _shortcutButton(
+            s,
+            icon: Icons.sports_esports_rounded,
+            label: HomeTexts.get(lang, 'shortcutGames'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const GamesHubPage()),
             ),
           ),
         ],
