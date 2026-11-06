@@ -8,6 +8,7 @@ import '../groups/group_ui.dart';
 import 'game_api.dart';
 import 'game_board.dart';
 import 'game_engine.dart';
+import 'game_p2p.dart';
 import 'game_texts.dart';
 
 enum PlayMode { bot, local, nearby, online }
@@ -94,6 +95,14 @@ class _GamePlayPageState extends State<GamePlayPage> {
   bool _polling = false;
   final TextEditingController _chatCtrl = TextEditingController();
 
+  // اتصال مستقیم گوشی‌به‌گوشی (WebRTC)؛ اگر وصل نشد همان مسیر قدیمی ورکر کار می‌کند
+  GameP2p? _p2p;
+  bool p2pActive = false;
+  bool _p2pTried = false;
+  Timer? _p2pTimeout;
+  Timer? _p2pClock;
+  int _lastMoveMs = 0;
+
   // نزدیک
   StreamSubscription<Map<String, dynamic>>? _sub;
   bool myRematch = false;
@@ -101,6 +110,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
   bool peerGone = false;
 
   bool get finished => winner != 0 || draw || status == 'done';
+  bool get p2pConnecting => mode == PlayMode.online && _p2p != null && !p2pActive && status == 'playing' && !finished;
   GameKind get kind => widget.kind;
   PlayMode get mode => widget.mode;
 
@@ -138,6 +148,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
   @override
   void dispose() {
     _poll?.cancel();
+    _stopP2p();
     _chatCtrl.dispose();
     if (mode == PlayMode.nearby) {
       _sub?.cancel();
@@ -205,8 +216,12 @@ class _GamePlayPageState extends State<GamePlayPage> {
         }
         break;
       case PlayMode.online:
-        if (status != 'playing' || turn != myMark) return;
-        _onlineMove(move);
+        if (status != 'playing' || turn != myMark || p2pConnecting) return;
+        if (p2pActive) {
+          _p2pMove(move);
+        } else {
+          _onlineMove(move);
+        }
         break;
     }
   }
@@ -331,6 +346,9 @@ class _GamePlayPageState extends State<GamePlayPage> {
   }
 
   Future<void> _startOnline() async {
+    _stopP2p();
+    p2pActive = false;
+    _p2pTried = false;
     setState(() {
       searching = true;
       onlineError = '';
@@ -388,6 +406,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
           .toList();
       if (st == 'done') _poll?.cancel();
     });
+    if (st == 'playing' && r['p2p'] != false && !_p2pTried && !p2pActive && !wasFinished) _startP2p();
     if (st == 'done' && !wasFinished) {
       // سرور کیف پول را برای همین بازی همراه پاسخ می‌دهد؛ تفاوت سکه = جایزه
       Future<void>.delayed(const Duration(milliseconds: 250), () async {
@@ -402,7 +421,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
   }
 
   Future<void> _pollTick() async {
-    if (!mounted || _polling || roomId.isEmpty) return;
+    if (!mounted || _polling || roomId.isEmpty || p2pActive) return;
     _tick++;
     final myTurnNow = status == 'playing' && turn == myMark;
     if (myTurnNow && _tick % 3 != 0) return;
@@ -448,6 +467,18 @@ class _GamePlayPageState extends State<GamePlayPage> {
   }
 
   Future<void> _claimTimeout() async {
+    if (p2pActive) {
+      if (finished || turn == myMark || turnMsLeft > 0) return;
+      _p2pClock?.cancel();
+      setState(() {
+        status = 'done';
+        winner = myMark;
+        endReason = 'timeout';
+        resultReady = true;
+      });
+      _p2pCloseRoom();
+      return;
+    }
     final j = await GameApi.post('/api/game/timeout', <String, dynamic>{'room_id': roomId});
     if (!mounted) return;
     if (j != null && j['room'] is Map) _applyRoom(Map<String, dynamic>.from(j['room'] as Map));
@@ -456,6 +487,17 @@ class _GamePlayPageState extends State<GamePlayPage> {
   Future<void> _sendChat({String? phrase}) async {
     final text = _chatCtrl.text.trim();
     if (phrase == null && text.isEmpty) return;
+    if (p2pActive) {
+      if (phrase == null && !_w.chatOn) {
+        gToast(context, GameT.t('chat_locked'));
+        return;
+      }
+      if (phrase == null) _chatCtrl.clear();
+      final body = phrase != null ? '#$phrase' : text;
+      _p2pAddChat(myMark, body);
+      _p2p?.send(<String, dynamic>{'t': 'chat', 'm': body});
+      return;
+    }
     if (phrase == null) _chatCtrl.clear();
     final j = await GameApi.post('/api/game/chat', <String, dynamic>{
       'room_id': roomId,
@@ -479,6 +521,170 @@ class _GamePlayPageState extends State<GamePlayPage> {
     } else {
       gToast(context, e == 'no_coins' ? GameT.t('no_coins') : GameT.t('net_err'));
     }
+  }
+
+  // ------------------------------------------------------------ گوشی‌به‌گوشی (WebRTC)
+
+  void _startP2p() {
+    if (roomId.isEmpty) return;
+    _p2pTried = true;
+    final p = GameP2p(
+      roomId: roomId,
+      isHost: myMark == 1,
+      onConfirmed: _p2pConfirmed,
+      onMessage: _p2pMessage,
+      onClosed: _p2pClosed,
+    );
+    _p2p = p;
+    p.start();
+    _p2pTimeout?.cancel();
+    // اگر در ۱۲ ثانیه وصل نشد (مثلاً حریف نسخهٔ قدیمی دارد)، بازی از مسیر ورکر ادامه می‌یابد
+    _p2pTimeout = Timer(const Duration(seconds: 12), () {
+      if (p2pActive) return;
+      _p2p?.close();
+      _p2p = null;
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _stopP2p() {
+    _p2pTimeout?.cancel();
+    _p2pClock?.cancel();
+    _p2p?.close();
+    _p2p = null;
+    p2pActive = false;
+  }
+
+  void _p2pConfirmed() {
+    if (!mounted || p2pActive || finished) return;
+    _p2pTimeout?.cancel();
+    _poll?.cancel(); // از این لحظه هیچ درخواستی به ورکر نمی‌رود
+    _lastMoveMs = DateTime.now().millisecondsSinceEpoch;
+    _p2pClock?.cancel();
+    _p2pClock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || finished) return;
+      final left = 120000 - (DateTime.now().millisecondsSinceEpoch - _lastMoveMs);
+      final v = left < 0 ? 0 : left;
+      if ((v == 0) != (turnMsLeft == 0)) {
+        setState(() => turnMsLeft = v);
+      } else {
+        turnMsLeft = v;
+      }
+    });
+    setState(() {
+      p2pActive = true;
+      oppOnline = true;
+      turnMsLeft = 120000;
+    });
+  }
+
+  void _p2pMove(int mv) {
+    if (turn != myMark || GameEngine.apply(kind, board, turn, mv) == null) return;
+    _p2p?.send(<String, dynamic>{'t': 'mv', 'm': mv});
+    _p2pApply(mv);
+  }
+
+  void _p2pApply(int mv) {
+    final res = GameEngine.apply(kind, board, turn, mv);
+    if (res == null) return;
+    _lastMoveMs = DateTime.now().millisecondsSinceEpoch;
+    setState(() {
+      board = res.board;
+      line = res.line;
+      turnMsLeft = 120000;
+      if (res.winner != 0) {
+        winner = res.winner;
+      } else if (res.draw) {
+        draw = true;
+      } else {
+        turn = turn == 1 ? 2 : 1;
+      }
+      if (winner != 0 || draw) {
+        status = 'done';
+        endReason = 'normal';
+      }
+    });
+    if (winner != 0 || draw) _p2pFinish();
+  }
+
+  void _p2pMessage(Map<String, dynamic> m) {
+    if (!mounted) return;
+    switch (m['t']) {
+      case 'mv':
+        final mv = (m['m'] as num?)?.toInt();
+        if (mv == null || finished || turn == myMark) return;
+        _p2pApply(mv);
+        break;
+      case 'chat':
+        final text = '${m['m'] ?? ''}';
+        if (text.isEmpty || text.length > 90) return;
+        _p2pAddChat(myMark == 1 ? 2 : 1, text);
+        break;
+      case 'resign':
+        if (finished) return;
+        _p2pClock?.cancel();
+        setState(() {
+          status = 'done';
+          winner = myMark;
+          endReason = 'resign';
+          resultReady = true;
+        });
+        _p2pCloseRoom();
+        break;
+    }
+  }
+
+  void _p2pClosed() {
+    if (!mounted || !p2pActive || finished) return;
+    _p2pClock?.cancel();
+    setState(() {
+      status = 'done';
+      endReason = 'abandoned';
+      resultReady = true;
+    });
+    _p2pCloseRoom();
+  }
+
+  void _p2pAddChat(int mark, String text) {
+    final list = <Map<String, dynamic>>[
+      ...chat,
+      <String, dynamic>{'u': mark, 'm': text.length > 80 ? text.substring(0, 80) : text, 't': DateTime.now().millisecondsSinceEpoch},
+    ];
+    setState(() => chat = list.length > 20 ? list.sublist(list.length - 20) : list);
+  }
+
+  /// اتاق در ورکر بسته می‌شود (بدون سکه).
+  void _p2pCloseRoom() {
+    if (roomId.isNotEmpty) {
+      GameApi.post('/api/game/resign', <String, dynamic>{'room_id': roomId});
+    }
+  }
+
+  void _p2pFinish() {
+    _p2pClock?.cancel();
+    final result = draw ? 'draw' : (winner == myMark ? 'win' : 'loss');
+    _reportP2p(result);
+  }
+
+  /// نتیجه را به ورکر می‌گوید؛ سکه وقتی ثبت می‌شود که هر دو گوشی نتیجهٔ هماهنگ بگویند.
+  Future<void> _reportP2p(String result) async {
+    for (var i = 0; i < 4; i++) {
+      final j = await GameApi.post('/api/game/p2p_result', <String, dynamic>{'room_id': roomId, 'result': result});
+      if (!mounted) return;
+      if (j != null) {
+        _w.applyWallet(j['wallet']);
+        final settled = j['settled'] == true;
+        setState(() {
+          gained = settled ? ((j['gained'] as num?)?.toInt() ?? 0) : 0;
+          resultReady = true;
+        });
+        if (settled || j['success'] != true) return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 2500));
+      if (!mounted) return;
+    }
+    // حریف نتیجه را نفرستاد یا اینترنت نبود: بازی تمام است، فقط سکه‌ای ثبت نشد
+    if (mounted) setState(() => resultReady = true);
   }
 
   // ------------------------------------------------------------ خروج
@@ -507,6 +713,10 @@ class _GamePlayPageState extends State<GamePlayPage> {
   }
 
   Future<void> _doLeave() async {
+    if (mode == PlayMode.online && p2pActive && !finished) {
+      _p2p?.send(<String, dynamic>{'t': 'resign'});
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
     if (mode == PlayMode.online && roomId.isNotEmpty && status != 'done') {
       GameApi.post('/api/game/resign', <String, dynamic>{'room_id': roomId});
     }
@@ -522,7 +732,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
   bool _canTap() {
     if (finished || busy || botThinking) return false;
     if (mode == PlayMode.local) return true;
-    if (mode == PlayMode.online) return status == 'playing' && turn == myMark;
+    if (mode == PlayMode.online) return status == 'playing' && turn == myMark && !p2pConnecting;
     return turn == myMark && !peerGone;
   }
 
@@ -567,6 +777,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
 
   String _statusText() {
     if (mode == PlayMode.online && status == 'waiting') return GameT.t('searching');
+    if (p2pConnecting) return GameT.t('connecting');
     if (finished) {
       if (mode == PlayMode.online && endReason == 'resign') return winner == myMark ? GameT.t('opp_left') : GameT.t('you_lose');
       if (mode == PlayMode.online && endReason == 'timeout') return winner == myMark ? GameT.t('timeout_end') : GameT.t('you_lose');
