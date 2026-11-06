@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:nearby_connections/nearby_connections.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:location/location.dart' as location;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'user_profile_service.dart';
@@ -66,21 +68,66 @@ class OfflineMeshService extends ChangeNotifier {
     myName = n.isEmpty ? 'Traveler' : n;
   }
 
-  /// مجوزهای لازم (مکان، بلوتوث، وای‌فای نزدیک). true = همه داده شد.
+  // جلوگیری از رشد نامحدود حافظه در نشست‌های طولانی.
+  bool _markSeen(String id) {
+    if (_seen.contains(id)) return false;
+    _seen.add(id);
+    if (_seen.length > 1000) {
+      _seen.remove(_seen.first);
+    }
+    return true;
+  }
+
+  /// مجوزهای لازم برای Nearby Connections.
+  /// مجوزها با permission_handler و روشن‌کردن GPS با location انجام می‌شود؛
+  /// متدهای قدیمی Nearby از نسخه 4.0.0 به بعد وجود ندارند.
   Future<bool> askPermissions() async {
     try {
-      final n = Nearby();
-      final loc = await n.askLocationPermission();
-      final bt = await n.askBluetoothPermission();
-      try {
-        // فقط در نسخه‌های جدید پکیج / اندروید ۱۳+
-        await (n as dynamic).askNearbyWifiDevicesPermission();
-      } catch (_) {}
-      try {
-        await n.enableLocationServices();
-      } catch (_) {}
-      return loc && bt;
-    } catch (_) {
+      // Nearby Connections برای این سرویس فقط روی Android پشتیبانی می‌شود.
+      if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+        return false;
+      }
+
+      // مجوز مکان برای سازگاری با نسخه‌های قدیمی اندروید و رفتار Nearby.
+      final locationPermission =
+          await Permission.locationWhenInUse.request();
+      if (!locationPermission.isGranted) return false;
+
+      // مجوزهای Bluetooth؛ در اندرویدهای قدیمی مجوزهای جدیدتر
+      // توسط permission_handler به‌عنوان غیرقابل‌اعمال مدیریت می‌شوند.
+      final bluetoothStatuses = await <Permission>[
+        Permission.bluetooth,
+        Permission.bluetoothAdvertise,
+        Permission.bluetoothConnect,
+        Permission.bluetoothScan,
+      ].request();
+
+      final bluetoothPermissions = <Permission>[
+        Permission.bluetooth,
+        Permission.bluetoothAdvertise,
+        Permission.bluetoothConnect,
+        Permission.bluetoothScan,
+      ];
+      for (final permission in bluetoothPermissions) {
+        if (!(bluetoothStatuses[permission]?.isGranted ?? false)) {
+          return false;
+        }
+      }
+
+      // از Android 13 برای اسکن دستگاه‌های نزدیک لازم است.
+      final nearbyWifiPermission =
+          await Permission.nearbyWifiDevices.request();
+      if (!nearbyWifiPermission.isGranted) return false;
+
+      // GPS باید روشن باشد؛ در صورت خاموش بودن، پنجره فعال‌سازی سیستم نمایش داده می‌شود.
+      final locationService = location.Location.instance;
+      var serviceEnabled = await locationService.serviceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await locationService.requestService();
+      }
+      return serviceEnabled;
+    } catch (e) {
+      debugPrint('OfflineMeshService.askPermissions failed: $e');
       return false;
     }
   }
@@ -94,8 +141,9 @@ class OfflineMeshService extends ChangeNotifier {
       return false;
     }
     final label = '$myName|$myUid';
+    final nearby = Nearby();
     try {
-      await Nearby().startAdvertising(
+      final advertisingStarted = await nearby.startAdvertising(
         label,
         Strategy.P2P_CLUSTER,
         onConnectionInitiated: _onInit,
@@ -103,7 +151,11 @@ class OfflineMeshService extends ChangeNotifier {
         onDisconnected: _onDisc,
         serviceId: _serviceId,
       );
-      await Nearby().startDiscovery(
+      if (!advertisingStarted) {
+        throw StateError('Nearby advertising could not be started');
+      }
+
+      final discoveryStarted = await nearby.startDiscovery(
         label,
         Strategy.P2P_CLUSTER,
         onEndpointFound: (id, name, serviceId) {
@@ -118,6 +170,10 @@ class OfflineMeshService extends ChangeNotifier {
         },
         serviceId: _serviceId,
       );
+      if (!discoveryStarted) {
+        throw StateError('Nearby discovery could not be started');
+      }
+
       running = true;
       status = 'on';
       notifyListeners();
@@ -126,8 +182,8 @@ class OfflineMeshService extends ChangeNotifier {
       running = false;
       status = 'error';
       try {
-        await Nearby().stopAdvertising();
-        await Nearby().stopDiscovery();
+        await nearby.stopAdvertising();
+        await nearby.stopDiscovery();
       } catch (_) {}
       notifyListeners();
       return false;
@@ -135,11 +191,23 @@ class OfflineMeshService extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    final nearby = Nearby();
+    // هر مرحله جداگانه متوقف می‌شود تا شکست یک مرحله مانع بقیه نشود.
     try {
-      await Nearby().stopAdvertising();
-      await Nearby().stopDiscovery();
-      await Nearby().stopAllEndpoints();
-    } catch (_) {}
+      await nearby.stopAdvertising();
+    } catch (e) {
+      debugPrint('OfflineMeshService.stopAdvertising: $e');
+    }
+    try {
+      await nearby.stopDiscovery();
+    } catch (e) {
+      debugPrint('OfflineMeshService.stopDiscovery: $e');
+    }
+    try {
+      await nearby.stopAllEndpoints();
+    } catch (e) {
+      debugPrint('OfflineMeshService.stopAllEndpoints: $e');
+    }
     running = false;
     status = '';
     peers.clear();
@@ -196,8 +264,7 @@ class OfflineMeshService extends ChangeNotifier {
     try {
       final m = jsonDecode(utf8.decode(p.bytes!)) as Map<String, dynamic>;
       final id = '${m['id']}';
-      if (_seen.contains(id)) return;
-      _seen.add(id);
+      if (!_markSeen(id)) return;
       final msg = OfflineMsg(
         id: id,
         uid: '${m['u']}',
@@ -232,7 +299,7 @@ class OfflineMeshService extends ChangeNotifier {
     final t = text.trim();
     if (t.isEmpty || !running) return;
     final id = '$myUid-${DateTime.now().microsecondsSinceEpoch}';
-    _seen.add(id);
+    _markSeen(id);
     final ts = DateTime.now().millisecondsSinceEpoch;
     _add(OfflineMsg(id: id, uid: myUid, name: myName, text: t, ts: ts, mine: true));
     final m = {'id': id, 'u': myUid, 'n': myName, 't': t, 'ts': ts, 'ttl': _maxTtl};
