@@ -942,7 +942,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
     final ok = await _mesh.start();
     if (!mounted) return;
     setState(() => _starting = false);
-    if (!ok) gToast(context, GameT.t('nearby_perm'));
+    if (!ok) gToast(context, _mesh.lastError.isEmpty ? GameT.t('nearby_perm') : '${GameT.t('nearby_perm')}\n(${_mesh.lastError.length > 70 ? _mesh.lastError.substring(0, 70) : _mesh.lastError})');
   }
 
   void _createNearby() {
