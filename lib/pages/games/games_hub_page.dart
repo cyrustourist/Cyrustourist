@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../groups/group_ui.dart';
+import 'backgammon_page.dart';
 import 'dice_games.dart';
 import 'game_api.dart';
 import 'game_engine.dart';
@@ -103,6 +104,78 @@ class _GamesHubPageState extends State<GamesHubPage> {
                   Navigator.of(ctx).pop();
                   _push(GamePlayPage(kind: kind, mode: PlayMode.online));
                 }),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// تخته‌نرد: ربات، دو نفره روی یک گوشی، گوشی‌های نزدیک (بدون اینترنت) و آنلاین.
+  void _openBgMode() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${GameT.t('backgammon')} · ${GameT.t('choose_mode')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 12),
+                _modeTile(Icons.smart_toy_rounded, GameT.t('mode_bot'), GameT.t('mode_bot_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _pickBgLevel();
+                }),
+                _modeTile(Icons.people_alt_rounded, GameT.t('mode_local'), GameT.t('mode_local_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(const BackgammonPage(mode: BgMode.local));
+                }),
+                _modeTile(Icons.wifi_tethering_rounded, GameT.t('mode_nearby'), GameT.t('mode_nearby_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(const BackgammonPage(mode: BgMode.nearby));
+                }),
+                _modeTile(Icons.public_rounded, GameT.t('mode_online'), GameT.t('mode_online_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(const BackgammonPage(mode: BgMode.online));
+                }),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _pickBgLevel() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final l in BotLevel.values)
+                  _modeTile(
+                    l == BotLevel.easy ? Icons.sentiment_satisfied_rounded : (l == BotLevel.normal ? Icons.sentiment_neutral_rounded : Icons.local_fire_department_rounded),
+                    GameT.t('lvl_${l.name}'),
+                    '',
+                    () {
+                      Navigator.of(ctx).pop();
+                      _push(BackgammonPage(mode: BgMode.bot, level: l));
+                    },
+                  ),
               ],
             ),
           ),
@@ -554,7 +627,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('🐍', GameT.t('snakes'), () => _openDiceMode(DiceKind.snakes)),
                     _gameCard('🎲', GameT.t('ludo'), () => _openDiceMode(DiceKind.ludo)),
                     _gameCard('♟️', GameT.t('chess'), null),
-                    _gameCard('🎯', GameT.t('backgammon'), null),
+                    _gameCard('⚪🔴', GameT.t('backgammon'), _openBgMode),
                   ],
                 ),
                 const SizedBox(height: 14),
