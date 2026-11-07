@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/language/menu_translations.dart';
 import '../../services/offline_mesh_service.dart';
@@ -64,10 +65,24 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
     if (!mounted) return;
     setState(() => _starting = false);
     if (!ok) {
-      final msg = _svc.status == 'perm'
-          ? _t('مجوز مکان و بلوتوث/وای‌فای نزدیک را بدهید و GPS را روشن کنید', 'Allow location and Bluetooth/Nearby Wi‑Fi permissions and turn on location')
-          : _t('شبکه‌ی آفلاین روشن نشد. دوباره تلاش کنید', 'Could not start the offline network. Try again');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      final e = _svc.lastError;
+      final up = e.toUpperCase();
+      String msg;
+      if (_svc.status == 'perm') {
+        msg = _t('مجوزهای برنامه را بدهید (مکان و دستگاه‌های نزدیک) و GPS را روشن کنید', 'Allow the app permissions (Location and Nearby devices) and turn on location');
+      } else if (up.contains('PERMISSION')) {
+        msg = _t('مجوز «دستگاه‌های نزدیک» و «مکان» را از تنظیمات برنامه فعال کنید', 'Enable “Nearby devices” and Location permissions in the app settings');
+      } else if (up.contains('BLUETOOTH') || up.contains('WIFI')) {
+        msg = _t('بلوتوث و وای‌فای گوشی را روشن کنید (نیازی به اینترنت نیست)', 'Turn on Bluetooth and Wi‑Fi (no internet needed)');
+      } else {
+        msg = _t('شبکه‌ی آفلاین روشن نشد. بلوتوث، وای‌فای و GPS را روشن کنید و دوباره تلاش کنید', 'Could not start. Turn on Bluetooth, Wi‑Fi and location, then try again');
+      }
+      if (e.isNotEmpty) msg = '$msg\n(${e.length > 70 ? e.substring(0, 70) : e})';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        duration: const Duration(seconds: 7),
+        content: Text(msg),
+        action: SnackBarAction(label: _t('تنظیمات', 'Settings'), onPressed: openAppSettings),
+      ));
     }
   }
 
