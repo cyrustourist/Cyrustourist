@@ -1941,3 +1941,25 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     );
   }
 }
+
+// ================================================================= ابزارهای مشترک برای بازی‌های دیگر (تخته‌نرد)
+
+/// کارت بازیکن (باید داخل Row باشد)
+Widget sharedDiceChip(String name, Color color, String sub, bool active) => _diceChip(name, color, sub, active);
+
+/// تاس با نقطه‌ها؛ [dim] یعنی این تاس مصرف شده است.
+Widget sharedDie(int v, {double size = 44, bool dim = false}) {
+  return Opacity(
+    opacity: dim ? 0.3 : 1,
+    child: SizedBox(width: size, height: size, child: CustomPaint(painter: _DiePainter(v))),
+  );
+}
+
+/// کارت نتیجهٔ بازی (برنده/بازنده، سکه، دکمه‌ها)
+Widget sharedResultCard({
+  required String title,
+  required int gained,
+  required VoidCallback onAgain,
+  required VoidCallback onBack,
+}) =>
+    _diceResultCard(title: title, gained: gained, onAgain: onAgain, onBack: onBack);
