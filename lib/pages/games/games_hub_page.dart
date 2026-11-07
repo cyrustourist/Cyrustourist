@@ -134,12 +134,26 @@ class _GamesHubPageState extends State<GamesHubPage> {
                   if (snakes) {
                     _push(const SnakesPage(mode: DiceMode.bot));
                   } else {
-                    _pickLudoLevel();
+                    _pickLudoPlayers(bot: true);
                   }
                 }),
+                if (!snakes)
+                  _modeTile(
+                    Icons.wifi_tethering_rounded,
+                    GameT.t('mode_nearby'),
+                    GameT.fa ? 'بازی گروهی تا ۴ گوشی نزدیک، بدون اینترنت' : 'Group game with up to 4 nearby phones, no internet',
+                    () {
+                      Navigator.of(ctx).pop();
+                      _push(const LudoNearbyPage());
+                    },
+                  ),
                 _modeTile(Icons.people_alt_rounded, GameT.t('mode_local'), GameT.t('mode_local_sub'), () {
                   Navigator.of(ctx).pop();
-                  _push(snakes ? const SnakesPage(mode: DiceMode.local) : const LudoPage(mode: DiceMode.local));
+                  if (snakes) {
+                    _push(const SnakesPage(mode: DiceMode.local));
+                  } else {
+                    _pickLudoPlayers(bot: false);
+                  }
                 }),
               ],
             ),
@@ -149,7 +163,43 @@ class _GamesHubPageState extends State<GamesHubPage> {
     );
   }
 
-  void _pickLudoLevel() {
+  /// منچ: انتخاب ۲ یا ۴ نفره (با ربات: شما + ۱ یا ۳ ربات؛ روی یک گوشی: ۲ یا ۴ نفر).
+  void _pickLudoPlayers({required bool bot}) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final n in const <int>[2, 4])
+                  _modeTile(
+                    n == 2 ? Icons.looks_two_rounded : Icons.looks_4_rounded,
+                    GameT.fa ? '$n نفره' : '$n players',
+                    '',
+                    () {
+                      Navigator.of(ctx).pop();
+                      if (bot) {
+                        _pickLudoLevel(n);
+                      } else {
+                        _push(LudoPage(mode: DiceMode.local, players: n));
+                      }
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _pickLudoLevel(int players) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: gPanel,
@@ -169,7 +219,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     '',
                     () {
                       Navigator.of(ctx).pop();
-                      _push(LudoPage(mode: DiceMode.bot, level: l));
+                      _push(LudoPage(mode: DiceMode.bot, level: l, players: players));
                     },
                   ),
               ],
