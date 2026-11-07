@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:nearby_connections/nearby_connections.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location/location.dart' as location;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,13 +15,19 @@ import 'user_profile_service.dart';
 
 /// پیام شبکه‌ی آفلاین
 class OfflineMsg {
-  OfflineMsg({required this.id, required this.uid, required this.name, required this.text, required this.ts, required this.mine});
+  OfflineMsg({required this.id, required this.uid, required this.name, required this.text, required this.ts, required this.mine, this.room = '', this.imagePath});
   final String id;
   final String uid;
   final String name;
   final String text;
   final int ts;
   final bool mine;
+
+  /// اتاق پیام: '' = شبکه‌ی عمومی، 'g<id>' = گروه، 'd<uidA>_<uidB>' = گفتگوی شخصی.
+  final String room;
+
+  /// مسیر فایل عکس روی همین گوشی (اگر پیام عکس باشد)
+  final String? imagePath;
 }
 
 class OfflinePeer {
@@ -50,6 +58,11 @@ class OfflineMeshService extends ChangeNotifier {
 
   final List<OfflineMsg> messages = [];
   final Map<String, OfflinePeer> peers = {}; // endpointId → همتای وصل‌شده
+
+  // انتقال عکس: فایل (payload) و پیام توصیفی (متادیتا) جدا می‌رسند و با شناسه‌ی payload به هم وصل می‌شوند
+  final Map<int, String> _fileUris = <int, String>{};
+  final Map<int, Map<String, dynamic>> _fileMeta = <int, Map<String, dynamic>>{};
+  final Set<int> _fileDone = <int>{};
   final Set<String> _seen = {};
   final Set<String> _pending = {}; // اتصال‌های در حال برقراری
   final Map<String, String> _names = {}; // endpointId → "نام|uid"
@@ -238,7 +251,7 @@ class OfflineMeshService extends ChangeNotifier {
     Nearby().acceptConnection(
       id,
       onPayLoadRecieved: _onPayload,
-      onPayloadTransferUpdate: (id, u) {},
+      onPayloadTransferUpdate: (id, u) => _onTransfer(u),
     );
   }
 
@@ -263,9 +276,28 @@ class OfflineMeshService extends ChangeNotifier {
   }
 
   void _onPayload(String fromEndpoint, Payload p) {
+    if (p.type == PayloadType.FILE) {
+      // برای سازگاری با نسخه‌های مختلف پلاگین، فیلدها به‌صورت پویا خوانده می‌شوند
+      try {
+        final dynamic d = p;
+        final int pid = d.id as int;
+        final dynamic uri = d.uri ?? d.filePath;
+        if (uri != null) _fileUris[pid] = '$uri';
+        _tryFinishImage(pid);
+      } catch (_) {}
+      return;
+    }
     if (p.type != PayloadType.BYTES || p.bytes == null) return;
     try {
       final m = jsonDecode(utf8.decode(p.bytes!)) as Map<String, dynamic>;
+      if (m['img'] != null) {
+        final pid = (m['pid'] as num?)?.toInt();
+        if (pid != null) {
+          _fileMeta[pid] = m;
+          _tryFinishImage(pid);
+        }
+        return;
+      }
       if (m['g'] != null) {
         final h = gameHandler;
         if (h != null) h(m);
@@ -280,6 +312,7 @@ class OfflineMeshService extends ChangeNotifier {
         text: '${m['t']}',
         ts: (m['ts'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
         mine: '${m['u']}' == myUid,
+        room: '${m['r'] ?? ''}',
       );
       _add(msg);
       final ttl = (m['ttl'] as num?)?.toInt() ?? 0;
@@ -288,6 +321,71 @@ class OfflineMeshService extends ChangeNotifier {
         _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(m))), except: fromEndpoint);
       }
     } catch (_) {}
+  }
+
+  void _onTransfer(dynamic u) {
+    try {
+      final int pid = u.id as int;
+      final st = '${u.status}';
+      if (st.contains('SUCCESS')) {
+        _fileDone.add(pid);
+        _tryFinishImage(pid);
+      } else if (st.contains('FAILURE') || st.contains('CANCELED')) {
+        _fileUris.remove(pid);
+        _fileMeta.remove(pid);
+        _fileDone.remove(pid);
+      }
+    } catch (_) {}
+  }
+
+  /// وقتی فایل کامل شد و پیام توصیفی هم رسید، عکس را در پوشه‌ی برنامه ذخیره و به چت اضافه می‌کند.
+  Future<void> _tryFinishImage(int pid) async {
+    final meta = _fileMeta[pid];
+    final uri = _fileUris[pid];
+    if (meta == null || uri == null || !_fileDone.contains(pid)) return;
+    _fileMeta.remove(pid);
+    _fileUris.remove(pid);
+    _fileDone.remove(pid);
+    final id = '${meta['id']}';
+    if (!_markSeen(id)) return;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final folder = Directory('${dir.path}/offline_photos');
+      await folder.create(recursive: true);
+      final dest = '${folder.path}/${id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')}.jpg';
+      await (Nearby() as dynamic).copyFileAndDeleteOriginal(uri, dest);
+      if (!await File(dest).exists()) return;
+      _add(OfflineMsg(
+        id: id,
+        uid: '${meta['u']}',
+        name: '${meta['n']}',
+        text: '${meta['t'] ?? ''}',
+        ts: (meta['ts'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
+        mine: '${meta['u']}' == myUid,
+        room: '${meta['r'] ?? ''}',
+        imagePath: dest,
+      ));
+    } catch (_) {}
+  }
+
+  /// ارسال عکس با کیفیت به همه‌ی گوشی‌های وصل‌شده (مستقیم، بدون عبور از گوشی‌های دیگر).
+  /// خروجی false یعنی هیچ گوشی‌ای وصل نیست.
+  Future<bool> sendImage(String path, {String room = '', String caption = ''}) async {
+    if (!running || peers.isEmpty) return false;
+    final id = '$myUid-${DateTime.now().microsecondsSinceEpoch}';
+    _markSeen(id);
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    _add(OfflineMsg(id: id, uid: myUid, name: myName, text: caption, ts: ts, mine: true, room: room, imagePath: path));
+    final dynamic nearby = Nearby();
+    for (final ep in peers.keys.toList()) {
+      try {
+        final pid = await nearby.sendFilePayload(ep, path) as int;
+        final meta = <String, dynamic>{'img': 1, 'pid': pid, 'id': id, 'u': myUid, 'n': myName, 't': caption, 'ts': ts};
+        if (room.isNotEmpty) meta['r'] = room;
+        await Nearby().sendBytesPayload(ep, Uint8List.fromList(utf8.encode(jsonEncode(meta))));
+      } catch (_) {}
+    }
+    return true;
   }
 
   void _add(OfflineMsg m) {
@@ -310,14 +408,18 @@ class OfflineMeshService extends ChangeNotifier {
     _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(out))));
   }
 
-  Future<void> send(String text) async {
+  /// پیام‌های یک اتاق (گروه یا گفتگوی شخصی)؛ اتاق خالی = شبکه‌ی عمومی.
+  List<OfflineMsg> messagesFor(String room) => messages.where((m) => m.room == room).toList();
+
+  Future<void> send(String text, {String room = ''}) async {
     final t = text.trim();
     if (t.isEmpty || !running) return;
     final id = '$myUid-${DateTime.now().microsecondsSinceEpoch}';
     _markSeen(id);
     final ts = DateTime.now().millisecondsSinceEpoch;
-    _add(OfflineMsg(id: id, uid: myUid, name: myName, text: t, ts: ts, mine: true));
-    final m = {'id': id, 'u': myUid, 'n': myName, 't': t, 'ts': ts, 'ttl': _maxTtl};
+    _add(OfflineMsg(id: id, uid: myUid, name: myName, text: t, ts: ts, mine: true, room: room));
+    final m = <String, dynamic>{'id': id, 'u': myUid, 'n': myName, 't': t, 'ts': ts, 'ttl': _maxTtl};
+    if (room.isNotEmpty) m['r'] = room;
     _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(m))));
   }
 }
