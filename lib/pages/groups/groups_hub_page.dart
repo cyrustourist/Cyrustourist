@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../services/group_service.dart';
+import '../../services/offline_cache.dart';
 import '../offline/offline_chat_page.dart';
+import 'offline_fallback.dart';
 import '../../services/group_texts.dart';
 import 'create_group_page.dart';
 import 'group_chat_page.dart';
@@ -22,6 +24,7 @@ class _GroupsHubPageState extends State<GroupsHubPage> with SingleTickerProvider
   GroupMine? _mine;
   bool _loading = true;
   final Map<int, int> _seen = {};
+  List<OfflineItem> _cachedGroups = const [];
 
   final TextEditingController _q = TextEditingController();
   Timer? _debounce;
@@ -36,6 +39,9 @@ class _GroupsHubPageState extends State<GroupsHubPage> with SingleTickerProvider
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
     _load();
+    OfflineCache.loadGroups().then((v) {
+      if (mounted) setState(() => _cachedGroups = v);
+    });
     _wakeSub = GroupPush.wakes.listen((_) {
       _wakeDebounce?.cancel();
       _wakeDebounce = Timer(const Duration(seconds: 2), () => _load(silent: true));
@@ -61,6 +67,7 @@ class _GroupsHubPageState extends State<GroupsHubPage> with SingleTickerProvider
         seen[g.id] = await GroupService.seenId(g.id);
       }
       unawaited(GroupPush.syncTopics(force: true));
+      unawaited(OfflineCache.saveGroups(m.chats.where((g) => g.status != 'pending').map((g) => OfflineItem('${g.id}', g.name))));
     }
     if (!mounted) return;
     setState(() {
@@ -136,12 +143,21 @@ class _GroupsHubPageState extends State<GroupsHubPage> with SingleTickerProvider
     final m = _mine;
     if (_loading) return const Center(child: CircularProgressIndicator(color: gGold));
     if (m == null || !m.ok) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(m?.message.isNotEmpty == true ? m!.message : GT.t('net'), style: const TextStyle(color: gMuted)),
-          const SizedBox(height: 10),
-          OutlinedButton(onPressed: _load, child: Text(GT.t('retry'))),
-        ]),
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(14, 40, 14, 24),
+        children: offlineFallback(
+          message: m?.message.isNotEmpty == true ? m!.message : GT.t('net'),
+          onRetry: _load,
+          retryLabel: GT.t('retry'),
+          heading: offT('گروه‌های من (آفلاین)', 'My groups (offline)'),
+          emptyText: offT('هنوز گروهی ذخیره نشده. یک بار با اینترنت این صفحه را باز کنید.', 'No groups saved yet. Open this page once with internet.'),
+          items: _cachedGroups,
+          icon: Icons.groups_rounded,
+          onOpen: (c) => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => OfflineChatPage(room: OfflineCache.groupRoom(c.id), title: c.name)),
+          ),
+          onNetwork: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineChatPage())),
+        ),
       );
     }
     if (!m.enabled) return Center(child: Text(GT.t('disabled'), style: const TextStyle(color: gMuted)));
