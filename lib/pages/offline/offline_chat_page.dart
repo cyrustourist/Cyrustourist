@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/language/menu_translations.dart';
 import '../../services/offline_mesh_service.dart';
@@ -8,8 +11,11 @@ const Color _card = Color(0xff0e2433);
 const Color _gold = Color(0xffffd36a);
 
 /// چت گروهی آفلاین گردشگران: بدون اینترنت، بین گوشی‌های نزدیک.
+/// با [room] و [title] برای یک گروه یا گفتگوی شخصی مشخص هم استفاده می‌شود.
 class OfflineChatPage extends StatefulWidget {
-  const OfflineChatPage({super.key});
+  const OfflineChatPage({super.key, this.room = '', this.title});
+  final String room;
+  final String? title;
 
   @override
   State<OfflineChatPage> createState() => _OfflineChatPageState();
@@ -22,6 +28,7 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
   bool _starting = false;
 
   bool get _fa => MenuLanguage.current == 'fa';
+  List<OfflineMsg> get _msgs => _svc.messagesFor(widget.room);
   String _t(String fa, String en) => _fa ? fa : en;
 
   @override
@@ -68,7 +75,7 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
     final t = _ctrl.text;
     if (t.trim().isEmpty) return;
     _ctrl.clear();
-    _svc.send(t);
+    _svc.send(t, room: widget.room);
   }
 
   @override
@@ -83,7 +90,7 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
           elevation: 0,
           centerTitle: true,
           iconTheme: const IconThemeData(color: _gold),
-          title: Text(_t('شبکه‌ی آفلاین گردشگران', 'Offline Tourist Network'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 17)),
+          title: Text(widget.title ?? _t('شبکه‌ی آفلاین گردشگران', 'Offline Tourist Network'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 17)),
         ),
         body: SafeArea(
           child: Column(
@@ -149,30 +156,35 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
   }
 
   Widget _list(bool on) {
-    if (!on && _svc.messages.isEmpty) {
+    if (!on && _msgs.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            _t(
-              'وقتی اینترنت قطع است یا در سفر هستید، شبکه را روشن کنید تا با گوشی‌های نزدیک (چند ده متر) پیام گروهی رد و بدل کنید.\nهمه باید این صفحه را باز و شبکه را روشن کنند.',
-              'When there is no internet, turn this on to chat with nearby phones (tens of meters).\nEveryone must open this page and start the network.',
-            ),
+            widget.room.isEmpty
+                ? _t(
+                    'وقتی اینترنت قطع است یا در سفر هستید، شبکه را روشن کنید تا با گوشی‌های نزدیک (چند ده متر) پیام گروهی رد و بدل کنید.\nهمه باید این صفحه را باز و شبکه را روشن کنند.',
+                    'When there is no internet, turn this on to chat with nearby phones (tens of meters).\nEveryone must open this page and start the network.',
+                  )
+                : _t(
+                    'شبکه را روشن کنید تا با گوشی‌های نزدیک گفتگو کنید.\nطرف مقابل هم باید همین گفتگو را باز و شبکه را روشن کند.',
+                    'Turn the network on to chat with nearby phones.\nThe other person must open this chat and start the network too.',
+                  ),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white60, height: 1.7),
           ),
         ),
       );
     }
-    if (_svc.messages.isEmpty) {
+    if (_msgs.isEmpty) {
       return Center(child: Text(_t('در جستجوی گوشی‌های اطراف…', 'Looking for nearby phones…'), style: const TextStyle(color: Colors.white54)));
     }
     return ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-      itemCount: _svc.messages.length,
+      itemCount: _msgs.length,
       itemBuilder: (_, i) {
-        final m = _svc.messages[i];
+        final m = _msgs[i];
         final t = DateTime.fromMillisecondsSinceEpoch(m.ts);
         final hh = t.hour.toString().padLeft(2, '0');
         final mm = t.minute.toString().padLeft(2, '0');
@@ -191,7 +203,18 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (!m.mine) Text(m.name, style: const TextStyle(color: _gold, fontWeight: FontWeight.w800, fontSize: 12)),
-                Text(m.text, style: const TextStyle(color: Colors.white, height: 1.5)),
+                if (m.imagePath != null)
+                  GestureDetector(
+                    onTap: () => _openPhoto(m.imagePath!),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(File(m.imagePath!), width: 220, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox(width: 220, height: 80, child: Icon(Icons.broken_image_rounded, color: Colors.white38))),
+                      ),
+                    ),
+                  ),
+                if (m.text.isNotEmpty) Text(m.text, style: const TextStyle(color: Colors.white, height: 1.5)),
                 Text('$hh:$mm', style: const TextStyle(color: Colors.white38, fontSize: 10)),
               ],
             ),
@@ -201,12 +224,45 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
     );
   }
 
+  /// ارسال عکس با کیفیت بالا (حداکثر ۲۵۶۰ پیکسل) مستقیم به گوشی‌های نزدیک.
+  Future<void> _sendPhoto() async {
+    if (!_svc.running || _svc.peers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('ابتدا شبکه را روشن کنید و منتظر وصل شدن گوشی‌ها بمانید', 'Start the network and wait for phones to connect first'))));
+      return;
+    }
+    try {
+      final x = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 2560, maxHeight: 2560, imageQuality: 90);
+      if (x == null) return;
+      final ok = await _svc.sendImage(x.path, room: widget.room);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? _t('عکس در حال ارسال است؛ تا رسیدن کامل منتظر بمانید', 'Photo is being sent; it may take a moment') : _t('گوشی‌ای وصل نیست', 'No phone connected')),
+      ));
+    } catch (_) {}
+  }
+
+  void _openPhoto(String path) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(8),
+        child: InteractiveViewer(child: Image.file(File(path))),
+      ),
+    );
+  }
+
   Widget _inputBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       color: _card,
       child: Row(
         children: [
+          IconButton(
+            onPressed: _sendPhoto,
+            tooltip: _t('ارسال عکس', 'Send photo'),
+            icon: const Icon(Icons.photo_rounded, color: _gold),
+          ),
           Expanded(
             child: TextField(
               controller: _ctrl,
@@ -217,7 +273,7 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
               onSubmitted: (_) => _send(),
               decoration: InputDecoration(
                 counterText: '',
-                hintText: _t('پیام برای گروه…', 'Message the group…'),
+                hintText: widget.room.isEmpty ? _t('پیام برای گروه…', 'Message the group…') : _t('پیام…', 'Message…'),
                 hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
                 fillColor: _bg,
