@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../services/offline_mesh_service.dart';
 import '../groups/group_ui.dart';
 import 'game_api.dart';
 import 'game_engine.dart' show BotLevel;
+import 'game_play_page.dart' show NearbyGameLink;
 import 'game_texts.dart';
 
 /// بازی‌های تاسی: «مار و پله» و «منچ» (با ربات یا دو نفره روی یک گوشی).
@@ -26,6 +29,18 @@ const Map<String, Map<String, String>> _dtx = {
   'no_move': {'fa': 'حرکتی ممکن نیست', 'en': 'No move possible'},
   'captured': {'fa': 'مهره زده شد!', 'en': 'Captured!'},
   'start': {'fa': 'شروع', 'en': 'START'},
+  'player_n': {'fa': 'بازیکن {n}', 'en': 'Player {n}'},
+  'lu_host': {'fa': 'ساخت بازی (میزبان)', 'en': 'Host a game'},
+  'lu_join': {'fa': 'پیوستن به بازی', 'en': 'Join a game'},
+  'lu_join_short': {'fa': 'پیوستن · {n} نفر', 'en': 'Join · {n}'},
+  'lu_players': {'fa': 'بازیکنان: {n} از ۴', 'en': 'Players: {n} of 4'},
+  'lu_code': {'fa': 'کد بازی: {c}', 'en': 'Game code: {c}'},
+  'lu_start': {'fa': 'شروع بازی', 'en': 'Start game'},
+  'lu_needmin': {'fa': 'حداقل ۲ بازیکن لازم است', 'en': 'At least 2 players needed'},
+  'lu_wait_host': {'fa': 'پیوستید. منتظر شروع بازی توسط میزبان…', 'en': 'Joined. Waiting for the host to start…'},
+  'lu_none': {'fa': 'بازی‌ای در اطراف پیدا نشد.\nمیزبان باید «ساخت بازی» را بزند و همه نزدیک هم باشند.', 'en': 'No game found nearby.\nThe host must tap “Host a game”, and everyone must be close.'},
+  'lu_lost': {'fa': 'ارتباط با میزبان قطع شد', 'en': 'Lost connection to the host'},
+  'lu_note': {'fa': 'بدون اینترنت و بدون ورکر. همهٔ گوشی‌ها باید شبکهٔ آفلاین را روشن کنند و نزدیک هم باشند. تا ۴ نفر.', 'en': 'No internet needed. Everyone must turn on the offline network and stay close. Up to 4 players.'},
   'cell': {'fa': 'خانه {n}', 'en': 'Square {n}'},
   'snakes_rule': {
     'fa': 'تاس بریزید و به خانهٔ ۱۰۰ برسید. نردبان بالا می‌برد و مار پایین می‌آورد. برای رسیدن به ۱۰۰ عدد دقیق لازم است و ۶ یک بار دیگر تاس می‌دهد.',
@@ -624,19 +639,19 @@ class _SnakesPainter extends CustomPainter {
 
 // ================================================================= منچ
 
-const List<Color> _ludoPlayerColors = <Color>[Color(0xffe53935), Color(0xfffdd835)];
 const Color _ludoRed = Color(0xffe53935);
 const Color _ludoGreen = Color(0xff43a047);
 const Color _ludoYellow = Color(0xfffdd835);
 const Color _ludoBlue = Color(0xff1e88e5);
 const List<Offset> _yardSlots = <Offset>[Offset(2, 2), Offset(4, 2), Offset(2, 4), Offset(4, 4)];
+const List<Color> _ludoSeatColors = <Color>[_ludoRed, _ludoGreen, _ludoYellow, _ludoBlue];
+const List<Offset> _yardOrigins = <Offset>[Offset(0, 0), Offset(9, 0), Offset(9, 9), Offset(0, 9)];
 
-/// منطق منچ دو نفره: بازیکن ۰ قرمز (شروع خانهٔ ۰)، بازیکن ۱ زرد (شروع خانهٔ ۲۶).
+/// منطق منچ ۲ تا ۴ نفره. هر بازیکن یک «صندلی» رنگی دارد: ۰ قرمز، ۱ سبز، ۲ زرد، ۳ آبی (ساعتگرد).
 /// پیشروی p: ۰ = در خانه، ۱..۵۱ = مسیر اصلی، ۵۲..۵۶ = ستون پایانی، ۵۷ = رسیده به مرکز.
 class _Ludo {
   _Ludo._();
 
-  static const List<int> off = <int>[0, 26];
   static const Set<int> safe = <int>{0, 8, 13, 21, 26, 34, 39, 47};
   static final List<List<int>> track = _build();
 
@@ -677,7 +692,8 @@ class _Ludo {
     return t;
   }
 
-  static int trackIndex(int pl, int p) => (off[pl] + p - 1) % 52;
+  /// خانهٔ مسیر اصلی برای مهره‌ای با پیشروی p از صندلی seat.
+  static int trackIndex(int seat, int p) => (seat * 13 + p - 1) % 52;
 
   static List<int> legal(List<List<int>> t, int pl, int roll) {
     final out = <int>[];
@@ -693,20 +709,22 @@ class _Ludo {
   }
 
   /// مهره را حرکت می‌دهد (t تغییر می‌کند) و تعداد مهره‌های زده‌شده را برمی‌گرداند.
-  static int move(List<List<int>> t, int pl, int i, int roll) {
+  static int move(List<List<int>> t, List<int> seats, int pl, int i, int roll) {
     final p = t[pl][i];
     final np = p == 0 ? 1 : p + roll;
     t[pl][i] = np;
     var captured = 0;
     if (np >= 1 && np <= 51) {
-      final idx = trackIndex(pl, np);
+      final idx = trackIndex(seats[pl], np);
       if (!safe.contains(idx)) {
-        final opp = 1 - pl;
-        for (var j = 0; j < 4; j++) {
-          final q = t[opp][j];
-          if (q >= 1 && q <= 51 && trackIndex(opp, q) == idx) {
-            t[opp][j] = 0;
-            captured++;
+        for (var o = 0; o < t.length; o++) {
+          if (o == pl) continue;
+          for (var j = 0; j < 4; j++) {
+            final q = t[o][j];
+            if (q >= 1 && q <= 51 && trackIndex(seats[o], q) == idx) {
+              t[o][j] = 0;
+              captured++;
+            }
           }
         }
       }
@@ -714,18 +732,20 @@ class _Ludo {
     return captured;
   }
 
-  static bool danger(List<List<int>> t, int pl, int idx) {
-    final opp = 1 - pl;
-    for (var j = 0; j < 4; j++) {
-      final q = t[opp][j];
-      if (q < 1 || q > 51) continue;
-      final d = (idx - trackIndex(opp, q) + 52) % 52;
-      if (d >= 1 && d <= 6) return true;
+  static bool danger(List<List<int>> t, List<int> seats, int pl, int idx) {
+    for (var o = 0; o < t.length; o++) {
+      if (o == pl) continue;
+      for (var j = 0; j < 4; j++) {
+        final q = t[o][j];
+        if (q < 1 || q > 51) continue;
+        final d = (idx - trackIndex(seats[o], q) + 52) % 52;
+        if (d >= 1 && d <= 6) return true;
+      }
     }
     return false;
   }
 
-  static int botPick(List<List<int>> t, int pl, int roll, BotLevel level, Random rnd) {
+  static int botPick(List<List<int>> t, List<int> seats, int pl, int roll, BotLevel level, Random rnd) {
     final opts = legal(t, pl, roll);
     if (opts.isEmpty) return -1;
     if (level == BotLevel.easy || opts.length == 1) return opts[rnd.nextInt(opts.length)];
@@ -735,23 +755,23 @@ class _Ludo {
     for (final i in opts) {
       final p = t[pl][i];
       final copy = <List<int>>[for (final row in t) List<int>.from(row)];
-      final cap = move(copy, pl, i, roll);
+      final cap = move(copy, seats, pl, i, roll);
       final np = copy[pl][i];
       var s = cap * 100.0 + roll + np * 0.1;
       if (np == 57) s += 80;
       if (p == 0) s += 45;
       if (p < 52 && np >= 52) s += 30;
       if (np >= 1 && np <= 51) {
-        final idx = trackIndex(pl, np);
+        final idx = trackIndex(seats[pl], np);
         if (safe.contains(idx)) {
           s += 18;
-        } else if (level == BotLevel.hard && danger(copy, pl, idx)) {
+        } else if (level == BotLevel.hard && danger(copy, seats, pl, idx)) {
           s -= 25;
         }
       }
       if (level == BotLevel.hard && p >= 1 && p <= 51) {
-        final cur = trackIndex(pl, p);
-        if (!safe.contains(cur) && danger(t, pl, cur)) s += 20;
+        final cur = trackIndex(seats[pl], p);
+        if (!safe.contains(cur) && danger(t, seats, pl, cur)) s += 20;
       }
       s += rnd.nextDouble();
       if (s > best) {
@@ -761,12 +781,157 @@ class _Ludo {
     }
     return bestI;
   }
+
+  /// مرکز مهره روی صفحهٔ ۱۵×۱۵ (واحد خانه).
+  static Offset unit(List<int> seats, int pl, int i, int p) {
+    final c = seats[pl];
+    if (p == 0) {
+      final o = _yardOrigins[c];
+      return Offset(o.dx + _yardSlots[i].dx, o.dy + _yardSlots[i].dy);
+    }
+    if (p <= 51) {
+      final cell = track[trackIndex(c, p)];
+      return Offset(cell[1] + 0.5, cell[0] + 0.5);
+    }
+    if (p <= 56) {
+      final k = p - 51;
+      switch (c) {
+        case 0:
+          return Offset(k + 0.5, 7.5);
+        case 1:
+          return Offset(7.5, k + 0.5);
+        case 2:
+          return Offset(14 - k + 0.5, 7.5);
+        default:
+          return Offset(7.5, 14 - k + 0.5);
+      }
+    }
+    final f = (i - 1.5) * 0.3;
+    switch (c) {
+      case 0:
+        return Offset(6.8, 7.5 + f);
+      case 1:
+        return Offset(7.5 + f, 6.8);
+      case 2:
+        return Offset(8.2, 7.5 + f);
+      default:
+        return Offset(7.5 + f, 8.2);
+    }
+  }
+}
+
+
+/// صندلی‌های رنگی برای ۲ تا ۴ بازیکن: ۲ نفره قرمز و زرد، بقیه ساعتگرد.
+List<int> _ludoSeats(int n) {
+  if (n >= 4) return <int>[0, 1, 2, 3];
+  if (n == 3) return <int>[0, 1, 2];
+  return <int>[0, 2];
+}
+
+Widget _ludoChips({
+  required List<int> seats,
+  required List<String> names,
+  required List<int> home,
+  required int turn,
+  required bool over,
+}) {
+  Widget chip(int k) => _diceChip(names[k], _ludoSeatColors[seats[k]], '${home[k]}/4', !over && turn == k);
+  const gap = SizedBox(width: 10);
+  if (seats.length == 2) {
+    return Row(children: <Widget>[chip(0), gap, chip(1)]);
+  }
+  if (seats.length == 3) {
+    return Column(
+      children: <Widget>[
+        Row(children: <Widget>[chip(0), gap, chip(1)]),
+        const SizedBox(height: 8),
+        Row(children: <Widget>[chip(2), gap, const Expanded(child: SizedBox())]),
+      ],
+    );
+  }
+  return Column(
+    children: <Widget>[
+      Row(children: <Widget>[chip(0), gap, chip(1)]),
+      const SizedBox(height: 8),
+      Row(children: <Widget>[chip(3), gap, chip(2)]),
+    ],
+  );
+}
+
+/// صفحهٔ منچ با مهره‌ها. [movable] مهره‌های قابل انتخابِ بازیکنِ نوبت است (خالی = لمس غیرفعال).
+Widget _buildLudoBoard({
+  required double w,
+  required List<int> seats,
+  required List<List<int>> toks,
+  required int turn,
+  required List<int> movable,
+  required void Function(int pl, int i) onTap,
+}) {
+  final u = w / 15;
+  final count = seats.length * 4;
+  final groups = <String, List<int>>{};
+  final keys = List<String>.filled(count, '');
+  for (var pl = 0; pl < seats.length; pl++) {
+    for (var i = 0; i < 4; i++) {
+      final p = toks[pl][i];
+      String key;
+      if (p >= 1 && p <= 51) {
+        key = 't${_Ludo.trackIndex(seats[pl], p)}';
+      } else if (p >= 52 && p <= 56) {
+        key = 'h$pl-$p';
+      } else {
+        key = 'u$pl-$i';
+      }
+      keys[pl * 4 + i] = key;
+      groups.putIfAbsent(key, () => <int>[]).add(pl * 4 + i);
+    }
+  }
+  final children = <Widget>[
+    Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: const _LudoPainter()))),
+  ];
+  for (var id = 0; id < count; id++) {
+    final pl = id ~/ 4;
+    final i = id % 4;
+    final p = toks[pl][i];
+    var c = _Ludo.unit(seats, pl, i, p);
+    final grp = groups[keys[id]]!;
+    if (grp.length > 1) {
+      final a = 2 * pi * grp.indexOf(id) / grp.length;
+      c = c + Offset(cos(a) * 0.2, sin(a) * 0.2);
+    }
+    final d = (p == 57 ? 0.42 : 0.62) * u;
+    final hit = max(d, u * 1.1);
+    final canTap = pl == turn && movable.contains(i);
+    children.add(
+      AnimatedPositioned(
+        key: ValueKey<int>(id),
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeInOut,
+        left: c.dx * u - hit / 2,
+        top: c.dy * u - hit / 2,
+        width: hit,
+        height: hit,
+        child: IgnorePointer(
+          ignoring: !canTap,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onTap(pl, i),
+            child: Center(child: _tokenDot(_ludoSeatColors[seats[pl]], d, glow: canTap)),
+          ),
+        ),
+      ),
+    );
+  }
+  return SizedBox(width: w, height: w, child: Stack(children: children));
 }
 
 class LudoPage extends StatefulWidget {
-  const LudoPage({super.key, required this.mode, this.level = BotLevel.normal});
+  const LudoPage({super.key, required this.mode, this.level = BotLevel.normal, this.players = 2});
   final DiceMode mode;
   final BotLevel level;
+
+  /// ۲ (قرمز و زرد) یا ۴ بازیکن
+  final int players;
 
   @override
   State<LudoPage> createState() => _LudoPageState();
@@ -775,10 +940,8 @@ class LudoPage extends StatefulWidget {
 class _LudoPageState extends State<LudoPage> {
   final GameWallet _w = GameWallet.instance;
   final Random _rnd = Random();
-  final List<List<int>> toks = <List<int>>[
-    <int>[0, 0, 0, 0],
-    <int>[0, 0, 0, 0],
-  ];
+  late final List<int> seats = _ludoSeats(widget.players);
+  late final List<List<int>> toks = <List<int>>[for (var i = 0; i < seats.length; i++) <int>[0, 0, 0, 0]];
   int turn = 0;
   int die = 1;
   bool rolling = false;
@@ -795,11 +958,16 @@ class _LudoPageState extends State<LudoPage> {
 
   bool get isBot => widget.mode == DiceMode.bot;
   bool get finished => winner >= 0;
-  bool get humanTurn => !finished && !(isBot && turn == 1);
+  bool isBotSeat(int pl) => isBot && pl != 0;
+  bool get humanTurn => !finished && !isBotSeat(turn);
 
-  List<String> get names => isBot
-      ? <String>[GameT.t('you'), GameT.t('robot')]
-      : <String>[GameT.t('player1'), GameT.t('player2')];
+  List<String> get names {
+    final n = seats.length;
+    if (isBot) {
+      return <String>[GameT.t('you'), for (var k = 1; k < n; k++) n == 2 ? GameT.t('robot') : '${GameT.t('robot')} $k'];
+    }
+    return <String>[for (var k = 1; k <= n; k++) _dt('player_n', <String, String>{'n': '$k'})];
+  }
 
   int _home(int pl) => toks[pl].where((p) => p == 57).length;
 
@@ -862,7 +1030,7 @@ class _LudoPageState extends State<LudoPage> {
           yardTries++;
         } else {
           yardTries = 0;
-          turn = 1 - turn;
+          turn = (turn + 1) % seats.length;
         }
         busy = false;
         msg = '';
@@ -870,10 +1038,10 @@ class _LudoPageState extends State<LudoPage> {
       _maybeBot(gen);
       return;
     }
-    if (isBot && turn == 1) {
+    if (isBotSeat(turn)) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       if (!mounted || gen != _gen) return;
-      final i = _Ludo.botPick(toks, turn, r, widget.level, _rnd);
+      final i = _Ludo.botPick(toks, seats, turn, r, widget.level, _rnd);
       await _doMove(i, r, gen);
       return;
     }
@@ -907,7 +1075,7 @@ class _LudoPageState extends State<LudoPage> {
     final who = turn;
     var cap = 0;
     setState(() {
-      cap = _Ludo.move(toks, who, i, r);
+      cap = _Ludo.move(toks, seats, who, i, r);
       msg = cap > 0 ? _dt('captured') : '';
     });
     await Future<void>.delayed(const Duration(milliseconds: 650));
@@ -922,7 +1090,7 @@ class _LudoPageState extends State<LudoPage> {
     }
     final extra = r == 6 || cap > 0 || toks[who][i] == 57;
     setState(() {
-      if (!extra) turn = 1 - turn;
+      if (!extra) turn = (turn + 1) % seats.length;
       yardTries = 0;
       busy = false;
       if (extra) msg = _dt('extra');
@@ -931,9 +1099,9 @@ class _LudoPageState extends State<LudoPage> {
   }
 
   void _maybeBot(int gen) {
-    if (!isBot || turn != 1 || finished) return;
+    if (!isBotSeat(turn) || finished) return;
     Future<void>.delayed(const Duration(milliseconds: 800), () {
-      if (!mounted || gen != _gen || finished || turn != 1 || busy || awaiting) return;
+      if (!mounted || gen != _gen || finished || !isBotSeat(turn) || busy || awaiting) return;
       _roll();
     });
   }
@@ -962,83 +1130,9 @@ class _LudoPageState extends State<LudoPage> {
       if (isBot) return winner == 0 ? GameT.t('you_win') : GameT.t('you_lose');
       return GameT.t('wins', <String, String>{'n': n[winner]});
     }
-    if (isBot) return turn == 0 ? GameT.t('your_turn') : GameT.t('opp_turn');
+    if (isBot && turn == 0) return GameT.t('your_turn');
+    if (isBot && seats.length == 2) return GameT.t('opp_turn');
     return GameT.t('turn_of', <String, String>{'n': n[turn]});
-  }
-
-  /// مرکز مهره روی صفحهٔ ۱۵×۱۵ (واحد خانه).
-  Offset _unit(int pl, int i, int p) {
-    if (p == 0) {
-      final b = pl == 0 ? 0.0 : 9.0;
-      return Offset(b + _yardSlots[i].dx, b + _yardSlots[i].dy);
-    }
-    if (p <= 51) {
-      final cell = _Ludo.track[_Ludo.trackIndex(pl, p)];
-      return Offset(cell[1] + 0.5, cell[0] + 0.5);
-    }
-    if (p <= 56) {
-      final k = p - 51;
-      return Offset(pl == 0 ? k + 0.5 : 14 - k + 0.5, 7.5);
-    }
-    return Offset(pl == 0 ? 6.8 : 8.2, 7.5 + (i - 1.5) * 0.3);
-  }
-
-  Widget _board(double w) {
-    final u = w / 15;
-    final groups = <String, List<int>>{};
-    final keys = List<String>.filled(8, '');
-    for (var pl = 0; pl < 2; pl++) {
-      for (var i = 0; i < 4; i++) {
-        final p = toks[pl][i];
-        String key;
-        if (p >= 1 && p <= 51) {
-          key = 't${_Ludo.trackIndex(pl, p)}';
-        } else if (p >= 52 && p <= 56) {
-          key = 'h$pl-$p';
-        } else {
-          key = 'u$pl-$i';
-        }
-        keys[pl * 4 + i] = key;
-        groups.putIfAbsent(key, () => <int>[]).add(pl * 4 + i);
-      }
-    }
-    final children = <Widget>[
-      Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: const _LudoPainter()))),
-    ];
-    for (var id = 0; id < 8; id++) {
-      final pl = id ~/ 4;
-      final i = id % 4;
-      final p = toks[pl][i];
-      var c = _unit(pl, i, p);
-      final grp = groups[keys[id]]!;
-      if (grp.length > 1) {
-        final a = 2 * pi * grp.indexOf(id) / grp.length;
-        c = c + Offset(cos(a) * 0.2, sin(a) * 0.2);
-      }
-      final d = (p == 57 ? 0.42 : 0.62) * u;
-      final hit = max(d, u * 1.1);
-      final canTap = awaiting && pl == turn && movable.contains(i);
-      children.add(
-        AnimatedPositioned(
-          key: ValueKey<int>(id),
-          duration: const Duration(milliseconds: 380),
-          curve: Curves.easeInOut,
-          left: c.dx * u - hit / 2,
-          top: c.dy * u - hit / 2,
-          width: hit,
-          height: hit,
-          child: IgnorePointer(
-            ignoring: !canTap,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _onTokenTap(pl, i),
-              child: Center(child: _tokenDot(_ludoPlayerColors[pl], d, glow: canTap)),
-            ),
-          ),
-        ),
-      );
-    }
-    return SizedBox(width: w, height: w, child: Stack(children: children));
   }
 
   @override
@@ -1066,13 +1160,7 @@ class _LudoPageState extends State<LudoPage> {
                     width: w,
                     child: Column(
                       children: [
-                        Row(
-                          children: [
-                            _diceChip(n[0], _ludoPlayerColors[0], '${_home(0)}/4', !finished && turn == 0),
-                            const SizedBox(width: 10),
-                            _diceChip(n[1], _ludoPlayerColors[1], '${_home(1)}/4', !finished && turn == 1),
-                          ],
-                        ),
+                        _ludoChips(seats: seats, names: n, home: <int>[for (var k = 0; k < seats.length; k++) _home(k)], turn: turn, over: finished),
                         const SizedBox(height: 10),
                         Text(_statusText(), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
                         SizedBox(
@@ -1080,7 +1168,7 @@ class _LudoPageState extends State<LudoPage> {
                           child: Text(msg, style: const TextStyle(color: gSky, fontSize: 12.5, fontWeight: FontWeight.w700)),
                         ),
                         const SizedBox(height: 4),
-                        _board(w),
+                        _buildLudoBoard(w: w, seats: seats, toks: toks, turn: turn, movable: awaiting ? movable : const <int>[], onTap: _onTokenTap),
                         const SizedBox(height: 14),
                         _diceControls(die: die, rolling: rolling, enabled: humanTurn && !busy && !awaiting, onRoll: _roll),
                         if (finished && resultReady)
@@ -1201,4 +1289,655 @@ class _LudoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LudoPainter old) => false;
+}
+
+// ================================================================= منچ جمعی (گوشی‌های نزدیک، بدون اینترنت)
+
+class _OpenRoom {
+  _OpenRoom(this.code, this.hostUid, this.hostName, this.count, this.ts);
+  final String code;
+  final String hostUid;
+  final String hostName;
+  int count;
+  int ts;
+}
+
+/// منچ ۲ تا ۴ نفره بین چند گوشی نزدیک (Nearby، بدون اینترنت). یک گوشی «میزبان» است؛
+/// قوانین و تاس فقط روی میزبان اجرا می‌شود و وضعیت بازی به بقیه فرستاده می‌شود.
+/// اگر بازیکنی از برد خارج شود، میزبان نوبت او را خودکار بازی می‌کند.
+class LudoNearbyPage extends StatefulWidget {
+  const LudoNearbyPage({super.key});
+
+  @override
+  State<LudoNearbyPage> createState() => _LudoNearbyPageState();
+}
+
+class _LudoNearbyPageState extends State<LudoNearbyPage> {
+  final OfflineMeshService _mesh = OfflineMeshService.instance;
+  final GameWallet _w = GameWallet.instance;
+  final Random _rnd = Random();
+  StreamSubscription<Map<String, dynamic>>? _sub;
+  Timer? _tick;
+  bool _starting = false;
+
+  // لابی
+  String stage = 'menu'; // menu | host | join | play
+  bool isHost = false;
+  bool joined = false;
+  String code = '';
+  String hostUid = '';
+  final List<String> ids = <String>[];
+  final List<String> pnames = <String>[];
+  final Map<String, _OpenRoom> rooms = <String, _OpenRoom>{};
+
+  // بازی
+  List<int> seats = <int>[0, 2];
+  List<List<int>> toks = <List<int>>[];
+  int turn = 0;
+  int die = 1;
+  String ph = 'roll'; // roll | rolling | shown | pick | over
+  List<int> movable = <int>[];
+  String msgKey = '';
+  int winner = -1;
+  int seq = 0;
+  int yardTries = 0;
+  bool busy = false;
+  int gained = 0;
+  bool reported = false;
+  bool resultReady = false;
+  bool lost = false;
+  int _gen = 0;
+  int _lastSnap = 0;
+
+  int get me => ids.indexOf(_mesh.myUid);
+
+  @override
+  void initState() {
+    super.initState();
+    NearbyGameLink.instance.attach();
+    _sub = NearbyGameLink.instance.events.stream.listen(_onEvent);
+    _mesh.addListener(_onMesh);
+    _tick = Timer.periodic(const Duration(seconds: 2), (_) => _onTick());
+  }
+
+  @override
+  void dispose() {
+    _gen++;
+    if (stage == 'join' && joined && code.isNotEmpty) {
+      _send(<String, dynamic>{'g': 'lu_leave', 'to': hostUid, 'code': code});
+    }
+    _tick?.cancel();
+    _sub?.cancel();
+    _mesh.removeListener(_onMesh);
+    NearbyGameLink.instance.detach();
+    super.dispose();
+  }
+
+  void _send(Map<String, dynamic> m) => NearbyGameLink.instance.send(m);
+
+  void _onMesh() {
+    if (!mounted) return;
+    setState(() {});
+    if (stage == 'play' && isHost) _maybeAuto();
+  }
+
+  void _onTick() {
+    if (!mounted || !_mesh.running) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (stage == 'host') {
+      _send(<String, dynamic>{'g': 'lu_open', 'code': code, 'cnt': ids.length});
+    } else if (stage == 'join') {
+      rooms.removeWhere((k, v) => now - v.ts > 7000);
+      if (code.isNotEmpty && !joined) {
+        _send(<String, dynamic>{'g': 'lu_join', 'to': hostUid, 'code': code});
+      }
+      setState(() {});
+    } else if (stage == 'play') {
+      if (isHost) {
+        _send(_snap());
+      } else if (!lost && now - _lastSnap > 15000 && ph != 'over') {
+        setState(() => lost = true);
+      }
+    }
+  }
+
+  Future<void> _toggleNet() async {
+    if (_starting) return;
+    if (_mesh.running) {
+      await _mesh.stop();
+      return;
+    }
+    setState(() => _starting = true);
+    final ok = await _mesh.start();
+    if (!mounted) return;
+    setState(() => _starting = false);
+    if (!ok) gToast(context, GameT.t('nearby_perm'));
+  }
+
+  // ---------------------------------------------------------------- پیام‌ها
+
+  void _onEvent(Map<String, dynamic> m) {
+    if (!mounted) return;
+    final g = '${m['g']}';
+    if (!g.startsWith('lu_')) return;
+    final from = '${m['u']}';
+    final fromName = '${m['n']}';
+    final toMe = '${m['to']}' == _mesh.myUid;
+    switch (g) {
+      case 'lu_open':
+        if (stage == 'join') {
+          final c = '${m['code']}';
+          setState(() {
+            rooms[c] = _OpenRoom(c, from, fromName, (m['cnt'] as num?)?.toInt() ?? 1, DateTime.now().millisecondsSinceEpoch);
+          });
+        }
+        break;
+      case 'lu_join':
+        if (stage == 'host' && toMe && '${m['code']}' == code && !ids.contains(from) && ids.length < 4) {
+          setState(() {
+            ids.add(from);
+            pnames.add(fromName);
+          });
+          _sendRoster();
+        } else if (stage == 'host' && toMe && ids.contains(from)) {
+          _sendRoster();
+        }
+        break;
+      case 'lu_leave':
+        if (stage == 'host' && toMe && '${m['code']}' == code && ids.contains(from) && from != _mesh.myUid) {
+          final k = ids.indexOf(from);
+          setState(() {
+            ids.removeAt(k);
+            pnames.removeAt(k);
+          });
+          _sendRoster();
+        }
+        break;
+      case 'lu_ros':
+        if (stage == 'join' && '${m['code']}' == code) {
+          final l = (m['ids'] as List<dynamic>).map((e) => '$e').toList();
+          final n = (m['names'] as List<dynamic>).map((e) => '$e').toList();
+          if (l.contains(_mesh.myUid)) {
+            setState(() {
+              ids
+                ..clear()
+                ..addAll(l);
+              pnames
+                ..clear()
+                ..addAll(n);
+              joined = true;
+            });
+          }
+        }
+        break;
+      case 'lu_s':
+        if (!isHost && '${m['code']}' == code && (stage == 'join' || stage == 'play')) _applySnap(m);
+        break;
+      case 'lu_roll':
+        if (isHost && stage == 'play' && toMe && '${m['code']}' == code && turn < ids.length && ids[turn] == from) {
+          _hostRoll(turn);
+        }
+        break;
+      case 'lu_pick':
+        if (isHost && stage == 'play' && toMe && '${m['code']}' == code && turn < ids.length && ids[turn] == from) {
+          _hostPick((m['i'] as num?)?.toInt() ?? -1);
+        }
+        break;
+    }
+  }
+
+  void _sendRoster() {
+    _send(<String, dynamic>{'g': 'lu_ros', 'code': code, 'ids': ids, 'names': pnames});
+  }
+
+  Map<String, dynamic> _snap() => <String, dynamic>{
+        'g': 'lu_s',
+        'code': code,
+        'ids': ids,
+        'names': pnames,
+        'seats': seats,
+        'toks': toks,
+        'turn': turn,
+        'die': die,
+        'ph': ph,
+        'mov': movable,
+        'msg': msgKey,
+        'win': winner,
+        'seq': seq,
+      };
+
+  void _push() {
+    seq++;
+    _send(_snap());
+    if (mounted) setState(() {});
+  }
+
+  void _applySnap(Map<String, dynamic> m) {
+    final sq = (m['seq'] as num?)?.toInt() ?? 0;
+    if (stage == 'play' && sq <= seq) {
+      _lastSnap = DateTime.now().millisecondsSinceEpoch;
+      return;
+    }
+    final l = (m['ids'] as List<dynamic>).map((e) => '$e').toList();
+    if (!l.contains(_mesh.myUid)) return;
+    setState(() {
+      seq = sq;
+      stage = 'play';
+      lost = false;
+      _lastSnap = DateTime.now().millisecondsSinceEpoch;
+      ids
+        ..clear()
+        ..addAll(l);
+      pnames
+        ..clear()
+        ..addAll((m['names'] as List<dynamic>).map((e) => '$e'));
+      seats = (m['seats'] as List<dynamic>).map((e) => (e as num).toInt()).toList();
+      toks = <List<int>>[
+        for (final r in (m['toks'] as List<dynamic>)) <int>[for (final x in (r as List<dynamic>)) (x as num).toInt()],
+      ];
+      turn = (m['turn'] as num).toInt();
+      die = (m['die'] as num).toInt();
+      ph = '${m['ph']}';
+      movable = (m['mov'] as List<dynamic>).map((e) => (e as num).toInt()).toList();
+      msgKey = '${m['msg']}';
+      winner = (m['win'] as num).toInt();
+    });
+    if (winner >= 0) _report();
+  }
+
+  // ---------------------------------------------------------------- میزبان
+
+  void _createGame() {
+    if (!_mesh.running) return;
+    code = '${1000 + _rnd.nextInt(9000)}';
+    isHost = true;
+    joined = true;
+    ids
+      ..clear()
+      ..add(_mesh.myUid);
+    pnames
+      ..clear()
+      ..add(_mesh.myName);
+    setState(() => stage = 'host');
+    _send(<String, dynamic>{'g': 'lu_open', 'code': code, 'cnt': 1});
+  }
+
+  void _openJoin() {
+    isHost = false;
+    joined = false;
+    code = '';
+    ids.clear();
+    pnames.clear();
+    setState(() => stage = 'join');
+  }
+
+  void _joinRoom(_OpenRoom r) {
+    setState(() {
+      code = r.code;
+      hostUid = r.hostUid;
+      joined = false;
+    });
+    _send(<String, dynamic>{'g': 'lu_join', 'to': hostUid, 'code': code});
+  }
+
+  void _hostStart() {
+    if (ids.length < 2) return;
+    _gen++;
+    seats = _ludoSeats(ids.length);
+    toks = <List<int>>[for (var i = 0; i < seats.length; i++) <int>[0, 0, 0, 0]];
+    turn = 0;
+    die = 1;
+    ph = 'roll';
+    movable = <int>[];
+    msgKey = '';
+    winner = -1;
+    yardTries = 0;
+    busy = false;
+    reported = false;
+    resultReady = false;
+    stage = 'play';
+    _lastSnap = DateTime.now().millisecondsSinceEpoch;
+    _push();
+    _maybeAuto();
+  }
+
+  bool _gone(int pl) => pl != 0 && !_mesh.peers.values.any((p) => p.uid == ids[pl]);
+
+  void _maybeAuto() {
+    if (!isHost || stage != 'play' || winner >= 0 || busy || ph != 'roll' || turn >= ids.length) return;
+    if (!_gone(turn)) return;
+    final gen = _gen;
+    final pl = turn;
+    Future<void>.delayed(const Duration(milliseconds: 900), () {
+      if (!mounted || gen != _gen) return;
+      _hostRoll(pl);
+    });
+  }
+
+  Future<void> _hostRoll(int pl) async {
+    if (!isHost || busy || ph != 'roll' || turn != pl || winner >= 0) return;
+    final gen = _gen;
+    busy = true;
+    ph = 'rolling';
+    msgKey = '';
+    _push();
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted || gen != _gen) return;
+    final r = _rnd.nextInt(6) + 1;
+    die = r;
+    final opts = _Ludo.legal(toks, turn, r);
+    if (opts.isEmpty) {
+      final allYard = toks[turn].every((p) => p == 0);
+      final again = allYard && yardTries < 2;
+      msgKey = allYard ? 'need_six' : 'no_move';
+      ph = 'shown';
+      _push();
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (!mounted || gen != _gen) return;
+      if (again) {
+        yardTries++;
+      } else {
+        yardTries = 0;
+        turn = (turn + 1) % seats.length;
+      }
+      ph = 'roll';
+      msgKey = '';
+      busy = false;
+      _push();
+      _maybeAuto();
+      return;
+    }
+    if (_gone(turn)) {
+      ph = 'shown';
+      _push();
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted || gen != _gen) return;
+      final i = _Ludo.botPick(toks, seats, turn, r, BotLevel.normal, _rnd);
+      await _hostMove(i, r, gen);
+      return;
+    }
+    if (opts.length == 1) {
+      ph = 'shown';
+      _push();
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      if (!mounted || gen != _gen) return;
+      await _hostMove(opts.first, r, gen);
+      return;
+    }
+    ph = 'pick';
+    movable = opts;
+    msgKey = 'pick';
+    busy = false;
+    _push();
+  }
+
+  void _hostPick(int i) {
+    if (!isHost || ph != 'pick' || !movable.contains(i)) return;
+    final gen = _gen;
+    ph = 'shown';
+    movable = <int>[];
+    msgKey = '';
+    busy = true;
+    _hostMove(i, die, gen);
+  }
+
+  Future<void> _hostMove(int i, int r, int gen) async {
+    final who = turn;
+    final cap = _Ludo.move(toks, seats, who, i, r);
+    msgKey = cap > 0 ? 'captured' : '';
+    ph = 'shown';
+    _push();
+    await Future<void>.delayed(const Duration(milliseconds: 650));
+    if (!mounted || gen != _gen) return;
+    if (toks[who].every((p) => p == 57)) {
+      winner = who;
+      ph = 'over';
+      busy = false;
+      _push();
+      _report();
+      return;
+    }
+    final extra = r == 6 || cap > 0 || toks[who][i] == 57;
+    if (!extra) turn = (turn + 1) % seats.length;
+    yardTries = 0;
+    ph = 'roll';
+    msgKey = extra ? 'extra' : '';
+    busy = false;
+    _push();
+    _maybeAuto();
+  }
+
+  // ---------------------------------------------------------------- بازیکن
+
+  void _myRoll() {
+    if (ph != 'roll' || turn != me) return;
+    if (isHost) {
+      _hostRoll(me);
+    } else {
+      _send(<String, dynamic>{'g': 'lu_roll', 'to': hostUid, 'code': code});
+    }
+  }
+
+  void _myPick(int pl, int i) {
+    if (ph != 'pick' || turn != me || pl != me || !movable.contains(i)) return;
+    if (isHost) {
+      _hostPick(i);
+    } else {
+      _send(<String, dynamic>{'g': 'lu_pick', 'to': hostUid, 'code': code, 'i': i});
+    }
+  }
+
+  Future<void> _report() async {
+    if (reported) return;
+    reported = true;
+    final g = await _w.reportOffline(winner == me ? 'win' : 'loss', 'nearby');
+    if (!mounted) return;
+    setState(() {
+      gained = g;
+      resultReady = true;
+    });
+  }
+
+  // ---------------------------------------------------------------- رابط
+
+  String _status() {
+    if (winner >= 0) return winner == me ? GameT.t('you_win') : GameT.t('wins', <String, String>{'n': pnames[winner]});
+    if (turn == me) return GameT.t('your_turn');
+    return GameT.t('turn_of', <String, String>{'n': pnames[turn]});
+  }
+
+  Widget _netCard() {
+    final on = _mesh.running;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: on ? gPanel : gGold,
+          foregroundColor: on ? gGold : gBg,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+        onPressed: _toggleNet,
+        icon: _starting
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            : Icon(on ? Icons.wifi_tethering_off_rounded : Icons.wifi_tethering_rounded),
+        label: Text(
+          on ? '${GameT.t('nearby_stop')} · ${_mesh.peers.length}' : GameT.t('nearby_start'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+    );
+  }
+
+  Widget _bigButton(IconData icon, String text, VoidCallback? onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: gGold,
+          foregroundColor: gBg,
+          disabledBackgroundColor: gLine,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(text, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+      ),
+    );
+  }
+
+  Widget _row(String name, {Widget? trailing}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(color: gPanel, borderRadius: BorderRadius.circular(16), border: Border.all(color: gLine)),
+      child: Row(
+        children: [
+          const Icon(Icons.phone_android_rounded, color: gTeal),
+          const SizedBox(width: 10),
+          Expanded(child: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _menuBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        if (_mesh.running) ...[
+          _bigButton(Icons.add_circle_rounded, _dt('lu_host'), _createGame),
+          _bigButton(Icons.login_rounded, _dt('lu_join'), _openJoin),
+        ],
+        const SizedBox(height: 10),
+        Text(_dt('lu_note'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 12, height: 1.8)),
+      ],
+    );
+  }
+
+  Widget _hostBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        Text(_dt('lu_players', <String, String>{'n': '${ids.length}'}), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 15)),
+        const SizedBox(height: 8),
+        for (final n in pnames) _row(n),
+        const SizedBox(height: 6),
+        Text(_dt('lu_code', <String, String>{'c': code}), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 12)),
+        const SizedBox(height: 10),
+        _bigButton(Icons.play_arrow_rounded, ids.length < 2 ? _dt('lu_needmin') : _dt('lu_start'), ids.length < 2 ? null : _hostStart),
+      ],
+    );
+  }
+
+  Widget _joinBody() {
+    final list = rooms.values.toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        if (code.isNotEmpty && joined) ...[
+          Text(_dt('lu_wait_host'), textAlign: TextAlign.center, style: const TextStyle(color: gGold, fontWeight: FontWeight.w800, height: 1.8)),
+          const SizedBox(height: 10),
+          for (final n in pnames) _row(n),
+        ] else ...[
+          if (list.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: Text(_dt('lu_none'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, height: 1.9))),
+          for (final r in list)
+            _row(
+              r.hostName,
+              trailing: code == r.code
+                  ? Text(GameT.t('nearby_wait'), style: const TextStyle(color: gMuted, fontSize: 12))
+                  : FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg),
+                      onPressed: () => _joinRoom(r),
+                      child: Text(_dt('lu_join_short', <String, String>{'n': '${r.count}'}), style: const TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _playBody(double w) {
+    final canRoll = ph == 'roll' && turn == me && winner < 0 && !lost;
+    final pickable = ph == 'pick' && turn == me && !lost ? movable : const <int>[];
+    final shownDie = ph == 'rolling' ? 1 + (DateTime.now().millisecond ~/ 170) % 6 : die;
+    return Column(
+      children: [
+        _ludoChips(
+          seats: seats,
+          names: pnames,
+          home: <int>[for (var k = 0; k < seats.length; k++) toks[k].where((p) => p == 57).length],
+          turn: turn,
+          over: winner >= 0,
+        ),
+        const SizedBox(height: 10),
+        Text(_status(), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+        SizedBox(
+          height: 20,
+          child: Text(lost ? _dt('lu_lost') : (msgKey.isEmpty ? '' : _dt(msgKey)), style: const TextStyle(color: gSky, fontSize: 12.5, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(height: 4),
+        _buildLudoBoard(w: w, seats: seats, toks: toks, turn: turn, movable: pickable, onTap: _myPick),
+        const SizedBox(height: 14),
+        _diceControls(die: shownDie, rolling: ph == 'rolling', enabled: canRoll, onRoll: _myRoll),
+        if (winner >= 0 && resultReady)
+          _diceResultCard(
+            title: _status(),
+            gained: gained,
+            onAgain: () => Navigator.of(context).pop(),
+            onBack: () => Navigator.of(context).pop(),
+          ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget body;
+    switch (stage) {
+      case 'host':
+        body = _hostBody();
+        break;
+      case 'join':
+        body = _joinBody();
+        break;
+      case 'play':
+        body = const SizedBox.shrink();
+        break;
+      default:
+        body = _menuBody();
+    }
+    return Directionality(
+      textDirection: gDir,
+      child: Scaffold(
+        backgroundColor: gBg,
+        appBar: AppBar(
+          backgroundColor: gBg,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: gGold),
+          title: Text('${GameT.t('ludo')} · ${GameT.t('nearby_title')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (ctx, cons) {
+              final w = min(cons.maxWidth - 24, 520.0);
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+                child: Center(
+                  child: SizedBox(
+                    width: w,
+                    child: stage == 'play' ? _playBody(w) : body,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
 }
