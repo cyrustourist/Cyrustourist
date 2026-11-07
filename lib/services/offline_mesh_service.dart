@@ -104,53 +104,48 @@ class OfflineMeshService extends ChangeNotifier {
         return false;
       }
 
-      // مجوز مکان برای سازگاری با نسخه‌های قدیمی اندروید و رفتار Nearby.
-      final locationPermission =
-          await Permission.locationWhenInUse.request();
-      if (!locationPermission.isGranted) return false;
-
-      // مجوزهای Bluetooth؛ در اندرویدهای قدیمی مجوزهای جدیدتر
-      // توسط permission_handler به‌عنوان غیرقابل‌اعمال مدیریت می‌شوند.
-      final bluetoothStatuses = await <Permission>[
+      // همه‌ی مجوزهای لازم درخواست می‌شوند. مجوزهایی که روی این نسخه‌ی اندروید وجود ندارند
+      // (مثلاً bluetoothScan قبل از اندروید ۱۲ یا nearbyWifiDevices قبل از ۱۳) در permission_handler
+      // «رد‌شده» برمی‌گردند؛ پس نتیجه‌ی تک‌تک آن‌ها شرط نیست و خود Nearby هنگام شروع، کمبود مجوز را اعلام می‌کند.
+      for (final permission in <Permission>[
+        Permission.locationWhenInUse,
         Permission.bluetooth,
         Permission.bluetoothAdvertise,
         Permission.bluetoothConnect,
         Permission.bluetoothScan,
-      ].request();
-
-      final bluetoothPermissions = <Permission>[
-        Permission.bluetooth,
-        Permission.bluetoothAdvertise,
-        Permission.bluetoothConnect,
-        Permission.bluetoothScan,
-      ];
-      for (final permission in bluetoothPermissions) {
-        if (!(bluetoothStatuses[permission]?.isGranted ?? false)) {
-          return false;
+        Permission.nearbyWifiDevices,
+      ]) {
+        try {
+          await permission.request();
+        } catch (e) {
+          debugPrint('OfflineMeshService permission $permission: $e');
         }
       }
 
-      // از Android 13 برای اسکن دستگاه‌های نزدیک لازم است.
-      final nearbyWifiPermission =
-          await Permission.nearbyWifiDevices.request();
-      if (!nearbyWifiPermission.isGranted) return false;
-
-      // GPS باید روشن باشد؛ در صورت خاموش بودن، پنجره فعال‌سازی سیستم نمایش داده می‌شود.
-      final locationService = location.Location.instance;
-      var serviceEnabled = await locationService.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await locationService.requestService();
+      // GPS: در اندروید ۱۱ و پایین‌تر برای پیدا کردن گوشی‌های نزدیک لازم است. اگر کاربر
+      // روشن نکرد، شروع شبکه تلاش می‌کند و در صورت خطا پیام درست نشان داده می‌شود.
+      try {
+        final locationService = location.Location.instance;
+        if (!await locationService.serviceEnabled()) {
+          await locationService.requestService();
+        }
+      } catch (e) {
+        debugPrint('OfflineMeshService gps: $e');
       }
-      return serviceEnabled;
+      return true;
     } catch (e) {
       debugPrint('OfflineMeshService.askPermissions failed: $e');
       return false;
     }
   }
 
+  /// آخرین خطای شروع شبکه (برای نمایش راهنمای دقیق‌تر به کاربر)
+  String lastError = '';
+
   Future<bool> start() async {
     if (running) return true;
     await _loadIdentity();
+    lastError = '';
     if (!await askPermissions()) {
       status = 'perm';
       notifyListeners();
@@ -194,9 +189,10 @@ class OfflineMeshService extends ChangeNotifier {
       status = 'on';
       notifyListeners();
       return true;
-    } catch (_) {
+    } catch (e) {
       running = false;
       status = 'error';
+      lastError = '$e';
       try {
         await nearby.stopAdvertising();
         await nearby.stopDiscovery();
