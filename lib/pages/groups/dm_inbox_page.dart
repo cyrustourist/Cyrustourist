@@ -6,9 +6,12 @@ import '../../services/call_texts.dart';
 import '../../services/friends_service.dart';
 import '../../services/group_service.dart';
 import '../../services/group_texts.dart';
+import '../../services/offline_cache.dart';
 import '../../widgets/call_widgets.dart';
+import '../offline/offline_chat_page.dart';
 import 'group_chat_page.dart';
 import 'group_ui.dart';
+import 'offline_fallback.dart';
 
 /// پیام‌های شخصی: تب «گفتگوها» (گفتگوهای باز) و تب «دوستان من» (لمس دوست = شروع گفتگو، دکمهٔ افزودن دوست).
 class DmInboxPage extends StatefulWidget {
@@ -30,6 +33,7 @@ class _DmInboxPageState extends State<DmInboxPage> with SingleTickerProviderStat
   bool _friendsLoading = true;
   String _friendsError = '';
   bool _adding = false;
+  List<OfflineItem> _cachedFriends = const [];
 
   @override
   void initState() {
@@ -37,6 +41,9 @@ class _DmInboxPageState extends State<DmInboxPage> with SingleTickerProviderStat
     _tabs = TabController(length: 2, vsync: this);
     _load();
     _loadFriends();
+    OfflineCache.loadFriends().then((v) {
+      if (mounted) setState(() => _cachedFriends = v);
+    });
     _wakeSub = GroupPush.wakes.listen((d) {
       if (d['type'] == 'dm_msg') _load(silent: true);
     });
@@ -77,6 +84,7 @@ class _DmInboxPageState extends State<DmInboxPage> with SingleTickerProviderStat
       if (r.ok) {
         _friends = r.data ?? const [];
         _friendsError = '';
+        unawaited(OfflineCache.saveFriends(_friends.map((f) => OfflineItem(f.uid, f.name))));
       } else {
         _friendsError = r.needsProfile ? CT.t('need_profile') : r.text;
       }
@@ -86,6 +94,26 @@ class _DmInboxPageState extends State<DmInboxPage> with SingleTickerProviderStat
   Future<void> _open(GroupInfo g) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => GroupChatPage(group: g)));
     if (mounted) _load(silent: true);
+  }
+
+  Future<void> _openOffline(OfflineItem f) async {
+    final room = await OfflineCache.dmRoom(f.id);
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => OfflineChatPage(room: room, title: f.name)));
+  }
+
+  List<Widget> _offlineList(String message, VoidCallback onRetry) {
+    return offlineFallback(
+      message: message,
+      onRetry: onRetry,
+      retryLabel: GT.t('retry'),
+      heading: offT('دوستان من (آفلاین)', 'My friends (offline)'),
+      emptyText: offT('هنوز دوستی ذخیره نشده. یک بار با اینترنت این صفحه را باز کنید.', 'No friends saved yet. Open this page once with internet.'),
+      items: _cachedFriends,
+      icon: Icons.person_rounded,
+      onOpen: _openOffline,
+      onNetwork: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineChatPage())),
+    );
   }
 
   Future<void> _hide(GroupInfo g) async {
@@ -162,12 +190,9 @@ class _DmInboxPageState extends State<DmInboxPage> with SingleTickerProviderStat
     final m = _mine;
     if (_loading) return const Center(child: CircularProgressIndicator(color: gGold));
     if (m == null || !m.ok) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(m?.message.isNotEmpty == true ? m!.message : GT.t('net'), style: const TextStyle(color: gMuted)),
-          const SizedBox(height: 10),
-          OutlinedButton(onPressed: _load, child: Text(GT.t('retry'))),
-        ]),
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(14, 40, 14, 24),
+        children: _offlineList(m?.message.isNotEmpty == true ? m!.message : GT.t('net'), _load),
       );
     }
     if (!m.dmEnabled) return Center(child: Text(GT.t('disabled'), style: const TextStyle(color: gMuted)));
@@ -220,15 +245,9 @@ class _DmInboxPageState extends State<DmInboxPage> with SingleTickerProviderStat
     if (_friendsLoading) {
       body = const Center(child: CircularProgressIndicator(color: gGold));
     } else if (_friendsError.isNotEmpty) {
-      body = Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Text(_friendsError, textAlign: TextAlign.center, style: const TextStyle(color: gMuted, height: 1.8)),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton(onPressed: _loadFriends, child: Text(GT.t('retry'))),
-        ]),
+      body = ListView(
+        padding: const EdgeInsets.fromLTRB(14, 30, 14, 24),
+        children: _offlineList(_friendsError, _loadFriends),
       );
     } else if (_friends.isEmpty) {
       body = ListView(children: [
