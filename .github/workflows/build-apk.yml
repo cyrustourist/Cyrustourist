@@ -26,7 +26,7 @@ jobs:
       APK64_NAME: Cyrustourist.ir.apk
       APK32_NAME: Cyrustourist32.ir.apk
       # موقتاً فقط ۶۴ بیتی ساخته می‌شود (سریع‌تر و کم‌حجم‌تر). برای برگرداندن ۳۲ بیتی: "true"
-      BUILD_32: "false"
+      BUILD_32: "true"
 
     steps:
       - name: Checkout
