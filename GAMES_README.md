@@ -6,6 +6,7 @@
 - حالت‌ها: ربات (آسان/معمولی/سخت) و دو نفره روی یک گوشی (بدون اینترنت)، گوشی نزدیک (Nearby، بدون اینترنت)، آنلاین (حریف تصادفی).
 - شبکه‌ی Nearby همان شبکه‌ی چت آفلاین است؛ فقط دو خط به `offline_mesh_service.dart` اضافه شد (`gameHandler` و `sendGame`).
 - تست موتور: `flutter test test/game_engine_test.dart`
+- حکم (چهار نفره، شما + ربات هم‌تیمی در برابر دو ربات): `hokm_engine.dart` و `hokm_page.dart`؛ بدون اینترنت و بدون نیاز به ورکر. تست: `flutter test test/hokm_engine_test.dart`
 
 ## ورکر (worker71.js)
 مسیرها: `/api/game/` + config, wallet, daily, goal, buy, equip, offline, top, quick, create, join, rooms, state, move, resign, timeout, chat
