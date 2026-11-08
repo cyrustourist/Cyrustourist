@@ -1630,7 +1630,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
   }
 
   void _clockTick() {
-    if (!mounted || stage != 'play' || !started) return;
+    if (!mounted || stage != 'play') return;
     if (isHost && winner < 0 && dlMs > 0 && DateTime.now().millisecondsSinceEpoch > dlMs && !busy) {
       _autoPlay();
       return;
