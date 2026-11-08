@@ -10,6 +10,7 @@ import 'game_engine.dart';
 import 'game_play_page.dart';
 import 'game_shop_sheet.dart';
 import 'game_texts.dart';
+import 'hokm_page.dart';
 import 'nearby_duel_page.dart';
 
 /// صفحه‌ی «بازی و سرگرمی»: کیف سکه و سطح، جایزه‌ی روزانه، هدف‌ها، انتخاب بازی و حالت.
@@ -338,6 +339,46 @@ class _GamesHubPageState extends State<GamesHubPage> {
     );
   }
 
+  /// حکم: فقط با ربات (شما + ربات هم‌تیمی در برابر دو ربات حریف)، بدون اینترنت.
+  void _pickHokmLevel() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${GameT.t('hokm')} · ${GameT.t('choose_mode')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text(
+                  GameT.fa ? 'شما و یک ربات هم‌تیمی در برابر دو ربات حریف؛ بدون اینترنت' : 'You and a robot partner vs two robots; no internet',
+                  style: const TextStyle(color: gMuted, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                for (final l in BotLevel.values)
+                  _modeTile(
+                    l == BotLevel.easy ? Icons.sentiment_satisfied_rounded : (l == BotLevel.normal ? Icons.sentiment_neutral_rounded : Icons.local_fire_department_rounded),
+                    GameT.t('lvl_${l.name}'),
+                    '',
+                    () {
+                      Navigator.of(ctx).pop();
+                      _push(HokmPage(level: l));
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _push(Widget page) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
     if (mounted) _w.refresh();
@@ -632,6 +673,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('🎲', GameT.t('ludo'), () => _openDiceMode(DiceKind.ludo)),
                     _gameCard('♟️', GameT.t('chess'), null),
                     _gameCard('⚪🔴', GameT.t('backgammon'), _openBgMode),
+                    _gameCard('♠️♥️', GameT.t('hokm'), _pickHokmLevel),
                   ],
                 ),
                 const SizedBox(height: 14),
