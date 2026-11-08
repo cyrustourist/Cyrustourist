@@ -400,6 +400,8 @@ class _HokmPageState extends State<HokmPage> {
   }
 
   Widget _myHand(double w) {
+    // تا حاکم حکم را انتخاب نکرده کارت‌ها پخش نشده‌اند
+    if (h.trump < 0) return const SizedBox(height: 120);
     final cw = ((w - 6 * 4 - 1) / 7).floorToDouble().clamp(30.0, 58.0).toDouble();
     final legal = (phase == _Phase.play && h.turn == 0 && !h.trickFull) ? h.legal(0) : <HCard>[];
     final myTurn = legal.isNotEmpty;
