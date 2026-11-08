@@ -35,6 +35,7 @@ class GameT {
     'snakes': {'fa': 'مار و پله', 'en': 'Snakes & Ladders'},
     'ludo': {'fa': 'منچ', 'en': 'Ludo'},
     'backgammon': {'fa': 'تخته‌نرد', 'en': 'Backgammon'},
+    'hokm': {'fa': 'حکم', 'en': 'Hokm'},
     'chess': {'fa': 'شطرنج', 'en': 'Chess'},
     'games': {'fa': 'بازی‌ها', 'en': 'Games'},
     'choose_mode': {'fa': 'چطور بازی می‌کنید؟', 'en': 'How do you want to play?'},
