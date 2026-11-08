@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../groups/group_ui.dart';
 import 'backgammon_page.dart';
 import 'dice_games.dart';
+import 'dice_skins.dart';
 import 'game_api.dart';
 import 'game_engine.dart';
 import 'game_play_page.dart';
@@ -26,6 +27,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
   void initState() {
     super.initState();
     _w.addListener(_onChange);
+    DiceSkins.load();
     _boot();
   }
 
