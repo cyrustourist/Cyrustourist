@@ -8,6 +8,7 @@ import '../groups/group_ui.dart';
 import 'game_api.dart';
 import 'game_engine.dart' show BotLevel;
 import 'game_play_page.dart' show NearbyGameLink;
+import 'dice_skins.dart';
 import 'game_texts.dart';
 
 /// بازی‌های تاسی: «مار و پله» و «منچ» (با ربات یا دو نفره روی یک گوشی).
@@ -140,17 +141,37 @@ Widget _diceResultCard({
 }
 
 class _DiePainter extends CustomPainter {
-  const _DiePainter(this.v);
+  const _DiePainter(this.v, [this.skin]);
   final int v;
+  final DiceSkin? skin;
 
   @override
   void paint(Canvas canvas, Size s) {
-    final r = RRect.fromRectAndRadius(Offset.zero & s, Radius.circular(s.width * 0.2));
-    canvas.drawRRect(r, Paint()..color = Colors.white);
-    final dot = Paint()..color = const Color(0xff111111);
-    final a = s.width * 0.27;
+    final sk = skin ?? DiceSkins.skin;
+    final rect = Offset.zero & s;
+    final rr = RRect.fromRectAndRadius(rect.deflate(s.width * 0.04), Radius.circular(s.width * 0.22));
+    canvas.drawRRect(rr.shift(Offset(0, s.width * 0.05)), Paint()..color = const Color(0x66000000));
+    canvas.drawRRect(
+      rr,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color.lerp(sk.face, Colors.white, 0.28) ?? sk.face, sk.face, Color.lerp(sk.face, Colors.black, 0.22) ?? sk.face],
+          stops: const <double>[0, 0.55, 1],
+        ).createShader(rect),
+    );
+    canvas.drawRRect(
+      rr,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s.width * 0.045
+        ..color = sk.edge,
+    );
+    final dot = Paint()..color = sk.pip;
+    final a = s.width * 0.28;
     final b = s.width * 0.5;
-    final c = s.width * 0.73;
+    final c = s.width * 0.72;
     List<Offset> p;
     switch (v) {
       case 1:
@@ -173,11 +194,12 @@ class _DiePainter extends CustomPainter {
     }
     for (final o in p) {
       canvas.drawCircle(o, s.width * 0.085, dot);
+      canvas.drawCircle(o - Offset(s.width * 0.02, s.width * 0.02), s.width * 0.025, Paint()..color = const Color(0x44ffffff));
     }
   }
 
   @override
-  bool shouldRepaint(covariant _DiePainter old) => old.v != v;
+  bool shouldRepaint(covariant _DiePainter old) => true;
 }
 
 Widget _diceControls({
@@ -190,9 +212,17 @@ Widget _diceControls({
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
       AnimatedScale(
-        scale: rolling ? 1.12 : 1.0,
+        scale: rolling ? 1.15 : 1.0,
         duration: const Duration(milliseconds: 120),
-        child: SizedBox(width: 62, height: 62, child: CustomPaint(painter: _DiePainter(die))),
+        child: Container(
+          width: 66,
+          height: 66,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: <BoxShadow>[if (enabled) const BoxShadow(color: Color(0x88ffd23f), blurRadius: 18, spreadRadius: 1)],
+          ),
+          child: CustomPaint(painter: _DiePainter(die)),
+        ),
       ),
       const SizedBox(width: 16),
       FilledButton.icon(
@@ -639,10 +669,10 @@ class _SnakesPainter extends CustomPainter {
 
 // ================================================================= منچ
 
-const Color _ludoRed = Color(0xffe53935);
-const Color _ludoGreen = Color(0xff43a047);
-const Color _ludoYellow = Color(0xfffdd835);
-const Color _ludoBlue = Color(0xff1e88e5);
+const Color _ludoRed = Color(0xffe8453c);
+const Color _ludoGreen = Color(0xff3fae49);
+const Color _ludoYellow = Color(0xfff6c445);
+const Color _ludoBlue = Color(0xff2f8fe8);
 const List<Offset> _yardSlots = <Offset>[Offset(2, 2), Offset(4, 2), Offset(2, 4), Offset(4, 4)];
 const List<Color> _ludoSeatColors = <Color>[_ludoRed, _ludoGreen, _ludoYellow, _ludoBlue];
 const List<Offset> _yardOrigins = <Offset>[Offset(0, 0), Offset(9, 0), Offset(9, 9), Offset(0, 9)];
@@ -821,6 +851,35 @@ class _Ludo {
 }
 
 
+/// مهرهٔ براق منچ
+Widget _pawn(Color c, double d, {bool glow = false}) {
+  Color mix(Color a, Color b, double t) => Color.lerp(a, b, t) ?? a;
+  return Container(
+    width: d,
+    height: d,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: RadialGradient(
+        center: const Alignment(-0.35, -0.4),
+        colors: <Color>[mix(c, Colors.white, 0.6), c, mix(c, Colors.black, 0.38)],
+        stops: const <double>[0, 0.55, 1],
+      ),
+      border: Border.all(color: mix(c, Colors.black, 0.5), width: max(1.2, d * 0.07)),
+      boxShadow: <BoxShadow>[
+        BoxShadow(
+          color: glow ? gGold : const Color(0x99000000),
+          blurRadius: glow ? d * 0.9 : d * 0.3,
+          spreadRadius: glow ? d * 0.18 : 0,
+          offset: glow ? Offset.zero : Offset(0, d * 0.13),
+        ),
+      ],
+    ),
+    child: Center(
+      child: Container(width: d * 0.34, height: d * 0.34, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0x40ffffff))),
+    ),
+  );
+}
+
 /// صندلی‌های رنگی برای ۲ تا ۴ بازیکن: ۲ نفره قرمز و زرد، بقیه ساعتگرد.
 List<int> _ludoSeats(int n) {
   if (n >= 4) return <int>[0, 1, 2, 3];
@@ -887,7 +946,7 @@ Widget _buildLudoBoard({
     }
   }
   final children = <Widget>[
-    Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: const _LudoPainter()))),
+    Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: _LudoPainter(activeSeat: seats[turn])))),
   ];
   for (var id = 0; id < count; id++) {
     final pl = id ~/ 4;
@@ -899,7 +958,7 @@ Widget _buildLudoBoard({
       final a = 2 * pi * grp.indexOf(id) / grp.length;
       c = c + Offset(cos(a) * 0.2, sin(a) * 0.2);
     }
-    final d = (p == 57 ? 0.42 : 0.62) * u;
+    final d = (p == 57 ? 0.42 : 0.7) * u;
     final hit = max(d, u * 1.1);
     final canTap = pl == turn && movable.contains(i);
     children.add(
@@ -916,7 +975,7 @@ Widget _buildLudoBoard({
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => onTap(pl, i),
-            child: Center(child: _tokenDot(_ludoSeatColors[seats[pl]], d, glow: canTap)),
+            child: Center(child: _pawn(_ludoSeatColors[seats[pl]], d, glow: canTap)),
           ),
         ),
       ),
@@ -1194,104 +1253,211 @@ class _LudoPageState extends State<LudoPage> {
 }
 
 class _LudoPainter extends CustomPainter {
-  const _LudoPainter();
+  const _LudoPainter({required this.activeSeat});
+  final int activeSeat;
 
-  Color _light(Color c) => Color.lerp(c, Colors.white, 0.45) ?? c;
+  Color _mix(Color a, Color b, double t) => Color.lerp(a, b, t) ?? a;
+
+  /// یک «حفره» روی تخته (مثل تختهٔ چوبی کنده‌کاری‌شده)
+  void _hole(Canvas canvas, Offset o, double r, {Color? ring, Color tint = const Color(0xffc27a52), bool star = false}) {
+    canvas.drawCircle(o + Offset(0, r * 0.14), r * 1.05, Paint()..color = const Color(0x66ffffff));
+    final rect = Rect.fromCircle(center: o, radius: r);
+    canvas.drawCircle(
+      o,
+      r,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.3, -0.45),
+          colors: <Color>[_mix(tint, Colors.white, 0.16), _mix(tint, Colors.black, 0.34)],
+        ).createShader(rect),
+    );
+    if (ring != null) {
+      canvas.drawCircle(
+        o,
+        r * 0.84,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = r * 0.28
+          ..color = ring,
+      );
+    }
+    canvas.drawCircle(
+      o,
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.13
+        ..color = const Color(0x77000000),
+    );
+    if (star) {
+      final tp = TextPainter(
+        text: TextSpan(text: '★', style: TextStyle(color: const Color(0xff7a3b22), fontSize: r * 1.25)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, o - Offset(tp.width / 2, tp.height / 2));
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final u = size.width / 15;
+    final full = Offset.zero & size;
+
+    // قاب چوبی
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(u * 0.4)),
-      Paint()..color = const Color(0xfff6efe2),
+      RRect.fromRectAndRadius(full, Radius.circular(u * 0.6)),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[Color(0xff8a4c2d), Color(0xff3b1d12)],
+        ).createShader(full),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(full.deflate(u * 0.18), Radius.circular(u * 0.45)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = u * 0.07
+        ..color = const Color(0xccf0c36a),
     );
 
-    // چهار گوشه (خانه‌ها): بالا-چپ قرمز، بالا-راست سبز، پایین-راست زرد، پایین-چپ آبی
-    const colors = <Color>[_ludoRed, _ludoGreen, _ludoYellow, _ludoBlue];
-    const origins = <Offset>[Offset(0, 0), Offset(9, 0), Offset(9, 9), Offset(0, 9)];
+    // چهار خانهٔ رنگی گوشه‌ها
     for (var k = 0; k < 4; k++) {
-      final o = origins[k];
-      canvas.drawRect(Rect.fromLTWH(o.dx * u, o.dy * u, 6 * u, 6 * u), Paint()..color = colors[k]);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH((o.dx + 1) * u, (o.dy + 1) * u, 4 * u, 4 * u), Radius.circular(u * 0.5)),
-        Paint()..color = const Color(0xfffffbf2),
-      );
-      for (final s in _yardSlots) {
-        canvas.drawCircle(
-          Offset((o.dx + s.dx) * u, (o.dy + s.dy) * u),
-          u * 0.52,
-          Paint()..color = _light(colors[k]),
+      final c = _ludoSeatColors[k];
+      final o = _yardOrigins[k];
+      final rr = RRect.fromRectAndRadius(Rect.fromLTWH(o.dx * u + 0.45 * u, o.dy * u + 0.45 * u, 5.1 * u, 5.1 * u), Radius.circular(u * 0.9));
+      if (k == activeSeat) {
+        canvas.drawRRect(
+          rr,
+          Paint()
+            ..color = c.withAlpha(190)
+            ..maskFilter = MaskFilter.blur(BlurStyle.outer, u * 0.7),
         );
       }
-    }
-
-    // مسیر اصلی
-    final fill = Paint()..color = const Color(0xfffffbf2);
-    final border = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = const Color(0x33000000)
-      ..strokeWidth = 1;
-    for (final cell in _Ludo.track) {
-      final rect = Rect.fromLTWH(cell[1] * u, cell[0] * u, u, u);
-      canvas.drawRect(rect, fill);
-      canvas.drawRect(rect, border);
-    }
-
-    // ستون‌های پایانی
-    final homeCols = <Color, List<List<int>>>{
-      _ludoRed: <List<int>>[for (var c = 1; c <= 5; c++) <int>[7, c]],
-      _ludoGreen: <List<int>>[for (var r = 1; r <= 5; r++) <int>[r, 7]],
-      _ludoYellow: <List<int>>[for (var c = 9; c <= 13; c++) <int>[7, c]],
-      _ludoBlue: <List<int>>[for (var r = 9; r <= 13; r++) <int>[r, 7]],
-    };
-    homeCols.forEach((color, cells) {
-      for (final cell in cells) {
-        final rect = Rect.fromLTWH(cell[1] * u, cell[0] * u, u, u);
-        canvas.drawRect(rect, Paint()..color = color);
-        canvas.drawRect(rect, border);
+      canvas.drawRRect(
+        rr,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[_mix(c, Colors.white, 0.18), _mix(c, Colors.black, 0.4)],
+          ).createShader(rr.outerRect),
+      );
+      final mid = Offset((o.dx + 3) * u, (o.dy + 3) * u);
+      canvas.drawCircle(mid, 2.15 * u, Paint()..color = const Color(0x40000000));
+      canvas.drawCircle(
+        mid,
+        2.15 * u,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = u * 0.08
+          ..color = const Color(0x55ffffff),
+      );
+      for (final sl in _yardSlots) {
+        _hole(canvas, Offset((o.dx + sl.dx) * u, (o.dy + sl.dy) * u), u * 0.62, ring: _mix(c, Colors.white, 0.25), tint: _mix(c, Colors.black, 0.55));
       }
-    });
-
-    // خانه‌های شروع (رنگی) و خانه‌های امن (ستاره)
-    const starts = <int, Color>{0: _ludoRed, 13: _ludoGreen, 26: _ludoYellow, 39: _ludoBlue};
-    starts.forEach((idx, color) {
-      final cell = _Ludo.track[idx];
-      final rect = Rect.fromLTWH(cell[1] * u, cell[0] * u, u, u);
-      canvas.drawRect(rect, Paint()..color = color);
-      canvas.drawRect(rect, border);
-    });
-    for (final idx in _Ludo.safe) {
-      if (starts.containsKey(idx)) continue;
-      final cell = _Ludo.track[idx];
-      final tp = TextPainter(
-        text: TextSpan(text: '★', style: TextStyle(color: const Color(0xff9a8f7a), fontSize: u * 0.75)),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset((cell[1] + 0.5) * u - tp.width / 2, (cell[0] + 0.5) * u - tp.height / 2));
     }
 
-    // مرکز: چهار مثلث رنگی
-    final mid = Offset(7.5 * u, 7.5 * u);
-    void tri(Offset a, Offset b, Color c) {
-      final path = Path()
-        ..moveTo(a.dx, a.dy)
-        ..lineTo(b.dx, b.dy)
-        ..lineTo(mid.dx, mid.dy)
-        ..close();
-      canvas.drawPath(path, Paint()..color = c);
+    // صلیب چوبی روشن
+    final plate = Path.combine(
+      PathOperation.union,
+      Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(0.35 * u, 6 * u, 14.3 * u, 3 * u), Radius.circular(u * 0.5))),
+      Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(6 * u, 0.35 * u, 3 * u, 14.3 * u), Radius.circular(u * 0.5))),
+    );
+    canvas.drawPath(
+      plate.shift(Offset(0, u * 0.14)),
+      Paint()
+        ..color = const Color(0x66000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawPath(
+      plate,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xfff7e6bd), Color(0xffdcb47a)],
+        ).createShader(full),
+    );
+
+    // حفره‌های مسیر اصلی
+    final hr = u * 0.4;
+    for (var i = 0; i < _Ludo.track.length; i++) {
+      final cell = _Ludo.track[i];
+      final o = Offset((cell[1] + 0.5) * u, (cell[0] + 0.5) * u);
+      final startOwner = i % 13 == 0 ? i ~/ 13 : -1;
+      if (startOwner >= 0) {
+        _hole(canvas, o, hr, ring: _ludoSeatColors[startOwner], tint: _mix(_ludoSeatColors[startOwner], const Color(0xffc27a52), 0.55));
+      } else {
+        _hole(canvas, o, hr, star: _Ludo.safe.contains(i));
+      }
     }
 
-    tri(Offset(6 * u, 6 * u), Offset(6 * u, 9 * u), _ludoRed);
-    tri(Offset(6 * u, 6 * u), Offset(9 * u, 6 * u), _ludoGreen);
-    tri(Offset(9 * u, 6 * u), Offset(9 * u, 9 * u), _ludoYellow);
-    tri(Offset(6 * u, 9 * u), Offset(9 * u, 9 * u), _ludoBlue);
+    // ستون‌های پایانی رنگی
+    for (var k = 0; k < 4; k++) {
+      for (var n = 1; n <= 5; n++) {
+        late final double cx;
+        late final double cy;
+        switch (k) {
+          case 0:
+            cx = n + 0.5;
+            cy = 7.5;
+            break;
+          case 1:
+            cx = 7.5;
+            cy = n + 0.5;
+            break;
+          case 2:
+            cx = 14 - n + 0.5;
+            cy = 7.5;
+            break;
+          default:
+            cx = 7.5;
+            cy = 14 - n + 0.5;
+        }
+        _hole(canvas, Offset(cx * u, cy * u), hr, ring: _ludoSeatColors[k], tint: _mix(_ludoSeatColors[k], Colors.white, 0.35));
+      }
+    }
+
+    // مرکز: چهار قطاع رنگی
+    final c = Offset(7.5 * u, 7.5 * u);
+    final hub = Rect.fromCircle(center: c, radius: 1.45 * u);
+    canvas.drawCircle(c, 1.58 * u, Paint()..color = const Color(0x66000000));
+    const starts = <double>[3 * pi / 4, -3 * pi / 4, -pi / 4, pi / 4];
+    for (var k = 0; k < 4; k++) {
+      canvas.drawArc(hub, starts[k], pi / 2, true, Paint()..color = _ludoSeatColors[k]);
+    }
+    canvas.drawCircle(
+      c,
+      1.45 * u,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = u * 0.12
+        ..color = const Color(0xfff0c36a),
+    );
+    canvas.drawCircle(c, 0.42 * u, Paint()..color = const Color(0xfffff3cf));
+    canvas.drawCircle(
+      c,
+      0.42 * u,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = u * 0.08
+        ..color = const Color(0xffd9a441),
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _LudoPainter old) => false;
+  bool shouldRepaint(covariant _LudoPainter old) => old.activeSeat != activeSeat;
 }
 
 // ================================================================= منچ جمعی (گوشی‌های نزدیک، بدون اینترنت)
+
+class _ChatMsg {
+  const _ChatMsg(this.name, this.text, this.mine);
+  final String name;
+  final String text;
+  final bool mine;
+}
 
 class _OpenRoom {
   _OpenRoom(this.code, this.hostUid, this.hostName, this.count, this.ts);
@@ -1329,6 +1495,12 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
   final List<String> ids = <String>[];
   final List<String> pnames = <String>[];
   final Map<String, _OpenRoom> rooms = <String, _OpenRoom>{};
+
+  // چت بین بازیکنان
+  bool chatOn = true;
+  final List<_ChatMsg> chat = <_ChatMsg>[];
+  final TextEditingController _chatCtl = TextEditingController();
+  int _lastChatMs = 0;
 
   // بازی
   List<int> seats = <int>[0, 2];
@@ -1370,6 +1542,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     _sub?.cancel();
     _mesh.removeListener(_onMesh);
     NearbyGameLink.instance.detach();
+    _chatCtl.dispose();
     super.dispose();
   }
 
@@ -1472,6 +1645,17 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
         break;
       case 'lu_s':
         if (!isHost && '${m['code']}' == code && (stage == 'join' || stage == 'play')) _applySnap(m);
+        break;
+      case 'lu_chat':
+        if (chatOn && '${m['code']}' == code && ids.contains(from) && from != _mesh.myUid) {
+          final t = '${m['t']}';
+          if (t.isNotEmpty && t.length <= 80) {
+            setState(() {
+              chat.add(_ChatMsg(fromName, t, false));
+              if (chat.length > 30) chat.removeAt(0);
+            });
+          }
+        }
         break;
       case 'lu_roll':
         if (isHost && stage == 'play' && toMe && '${m['code']}' == code && turn < ids.length && ids[turn] == from) {
@@ -1738,6 +1922,88 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     });
   }
 
+  void _sendChat(String raw) {
+    final t = raw.trim();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (!chatOn || t.isEmpty || t.length > 60 || now - _lastChatMs < 1000) return;
+    _lastChatMs = now;
+    _send(<String, dynamic>{'g': 'lu_chat', 'code': code, 't': t});
+    setState(() {
+      chat.add(_ChatMsg(_mesh.myName, t, true));
+      if (chat.length > 30) chat.removeAt(0);
+    });
+    _chatCtl.clear();
+  }
+
+  Widget _chatBox() {
+    if (!chatOn) return const SizedBox.shrink();
+    final phrases = GameT.fa
+        ? <String>['👍 آفرین', '😅 اوه نه!', '⏳ زود باش', '🔥 بزن!', '🤝 بازی خوبی بود']
+        : <String>['👍 Nice', '😅 Oh no!', '⏳ Hurry up', '🔥 Go!', '🤝 Good game'];
+    final last = chat.length > 4 ? chat.sublist(chat.length - 4) : chat;
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: gPanel, borderRadius: BorderRadius.circular(18), border: Border.all(color: gLine)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final m in last)
+            Align(
+              alignment: m.mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: m.mine ? const Color(0xff1b4d57) : gBg, borderRadius: BorderRadius.circular(12)),
+                child: Text(m.mine ? m.text : '${m.name}: ${m.text}', style: const TextStyle(color: Colors.white, fontSize: 13)),
+              ),
+            ),
+          SizedBox(
+            height: 38,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (final p in phrases)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 6),
+                    child: ActionChip(
+                      backgroundColor: gBg,
+                      side: const BorderSide(color: gLine),
+                      label: Text(p, style: const TextStyle(color: Colors.white, fontSize: 12.5)),
+                      onPressed: () => _sendChat(p),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chatCtl,
+                  maxLength: 60,
+                  style: const TextStyle(color: Colors.white),
+                  onSubmitted: _sendChat,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    counterText: '',
+                    filled: true,
+                    fillColor: gBg,
+                    hintText: GameT.fa ? 'پیام برای بازیکنان…' : 'Message the players…',
+                    hintStyle: const TextStyle(color: gMuted, fontSize: 13),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: gLine)),
+                  ),
+                ),
+              ),
+              IconButton(onPressed: () => _sendChat(_chatCtl.text), icon: const Icon(Icons.send_rounded, color: gGold)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // ---------------------------------------------------------------- رابط
 
   String _status() {
@@ -1883,6 +2149,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
         _buildLudoBoard(w: w, seats: seats, toks: toks, turn: turn, movable: pickable, onTap: _myPick),
         const SizedBox(height: 14),
         _diceControls(die: shownDie, rolling: ph == 'rolling', enabled: canRoll, onRoll: _myRoll),
+        _chatBox(),
         if (winner >= 0 && resultReady)
           _diceResultCard(
             title: _status(),
@@ -1920,6 +2187,13 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
           centerTitle: true,
           iconTheme: const IconThemeData(color: gGold),
           title: Text('${GameT.t('ludo')} · ${GameT.t('nearby_title')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+          actions: [
+            IconButton(
+              tooltip: GameT.fa ? 'چت بازیکنان' : 'Player chat',
+              onPressed: () => setState(() => chatOn = !chatOn),
+              icon: Icon(chatOn ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded, color: chatOn ? gGold : gMuted),
+            ),
+          ],
         ),
         body: SafeArea(
           child: LayoutBuilder(
@@ -1963,3 +2237,8 @@ Widget sharedResultCard({
   required VoidCallback onBack,
 }) =>
     _diceResultCard(title: title, gained: gained, onAgain: onAgain, onBack: onBack);
+
+/// پیش‌نمایش یک تاس با ظاهر مشخص (فروشگاه)
+Widget sharedDieSkin(String code, {double size = 40}) {
+  return SizedBox(width: size, height: size, child: CustomPaint(painter: _DiePainter(5, DiceSkins.byCode(code))));
+}
