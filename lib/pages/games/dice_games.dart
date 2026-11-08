@@ -9,6 +9,8 @@ import 'game_api.dart';
 import 'game_engine.dart' show BotLevel;
 import 'game_play_page.dart' show NearbyGameLink;
 import 'dice_skins.dart';
+import 'game_fx.dart';
+import 'game_widgets.dart';
 import 'game_texts.dart';
 
 /// بازی‌های تاسی: «مار و پله» و «منچ» (با ربات یا دو نفره روی یک گوشی).
@@ -337,6 +339,7 @@ class _SnakesPageState extends State<SnakesPage> {
       setState(() => die = _rnd.nextInt(6) + 1);
     }
     final r = _rnd.nextInt(6) + 1;
+    GameFx.roll();
     setState(() {
       die = r;
       rolling = false;
@@ -353,12 +356,18 @@ class _SnakesPageState extends State<SnakesPage> {
     if (target > 100) {
       note = _dt('exact');
     } else {
+      GameFx.move();
       setState(() => pos[who] = target);
       await Future<void>.delayed(const Duration(milliseconds: 550));
       if (!mounted || gen != _gen) return;
       final j = _kJumps[target];
       if (j != null) {
         note = j > target ? _dt('ladder') : _dt('snake');
+        if (j > target) {
+          GameFx.move();
+        } else {
+          GameFx.hit();
+        }
         setState(() {
           pos[who] = j;
           msg = note;
@@ -367,6 +376,7 @@ class _SnakesPageState extends State<SnakesPage> {
         if (!mounted || gen != _gen) return;
       }
       if (pos[who] == 100) {
+        GameFx.win();
         setState(() {
           winner = who;
           busy = false;
@@ -475,6 +485,7 @@ class _SnakesPageState extends State<SnakesPage> {
           centerTitle: true,
           iconTheme: const IconThemeData(color: gGold),
           title: Text(GameT.t('snakes'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+          actions: [gameFxAction(() => setState(() {}))],
         ),
         body: SafeArea(
           child: LayoutBuilder(
@@ -1067,6 +1078,7 @@ class _LudoPageState extends State<LudoPage> {
       setState(() => die = _rnd.nextInt(6) + 1);
     }
     final r = _rnd.nextInt(6) + 1;
+    GameFx.roll();
     setState(() {
       die = r;
       rolling = false;
@@ -1137,9 +1149,15 @@ class _LudoPageState extends State<LudoPage> {
       cap = _Ludo.move(toks, seats, who, i, r);
       msg = cap > 0 ? _dt('captured') : '';
     });
+    if (cap > 0) {
+      GameFx.hit();
+    } else {
+      GameFx.move();
+    }
     await Future<void>.delayed(const Duration(milliseconds: 650));
     if (!mounted || gen != _gen) return;
     if (_home(who) == 4) {
+      GameFx.win();
       setState(() {
         winner = who;
         busy = false;
@@ -1207,6 +1225,7 @@ class _LudoPageState extends State<LudoPage> {
           centerTitle: true,
           iconTheme: const IconThemeData(color: gGold),
           title: Text(GameT.t('ludo'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+          actions: [gameFxAction(() => setState(() {}))],
         ),
         body: SafeArea(
           child: LayoutBuilder(
@@ -1499,7 +1518,6 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
   // چت بین بازیکنان
   bool chatOn = true;
   final List<_ChatMsg> chat = <_ChatMsg>[];
-  final TextEditingController _chatCtl = TextEditingController();
   int _lastChatMs = 0;
 
   // بازی
@@ -1521,6 +1539,18 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
   int _gen = 0;
   int _lastSnap = 0;
 
+  // زمان نوبت (روی میزبان اجرا می‌شود؛ به بقیه «ثانیه‌ی باقی‌مانده» فرستاده می‌شود)
+  int dlMs = 0;
+  String _dlKey = '';
+  int tl = 0;
+  int tlAt = 0;
+  Timer? _clock;
+  final Map<int, int> _timeouts = <int, int>{};
+
+  // بازی دوباره
+  final Set<String> rmVotes = <String>{};
+  bool rmSent = false;
+
   int get me => ids.indexOf(_mesh.myUid);
 
   @override
@@ -1530,11 +1560,13 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     _sub = NearbyGameLink.instance.events.stream.listen(_onEvent);
     _mesh.addListener(_onMesh);
     _tick = Timer.periodic(const Duration(seconds: 2), (_) => _onTick());
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) => _clockTick());
   }
 
   @override
   void dispose() {
     _gen++;
+    _clock?.cancel();
     if (stage == 'join' && joined && code.isNotEmpty) {
       _send(<String, dynamic>{'g': 'lu_leave', 'to': hostUid, 'code': code});
     }
@@ -1542,7 +1574,6 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     _sub?.cancel();
     _mesh.removeListener(_onMesh);
     NearbyGameLink.instance.detach();
-    _chatCtl.dispose();
     super.dispose();
   }
 
@@ -1571,6 +1602,53 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
       } else if (!lost && now - _lastSnap > 15000 && ph != 'over') {
         setState(() => lost = true);
       }
+    }
+  }
+
+  // ---------------------------------------------------------------- زمان نوبت
+
+  void _updateDeadline() {
+    final waiting = winner < 0 && !busy && (ph == 'roll' || ph == 'pick');
+    final key = waiting ? '$ph|$turn' : '';
+    if (key.isEmpty) {
+      dlMs = 0;
+      _dlKey = '';
+      return;
+    }
+    if (key != _dlKey) {
+      _dlKey = key;
+      dlMs = DateTime.now().millisecondsSinceEpoch + (ph == 'pick' ? 30 : 25) * 1000;
+    }
+  }
+
+  int _tlNow() => dlMs == 0 ? 0 : max(0, ((dlMs - DateTime.now().millisecondsSinceEpoch) / 1000).ceil());
+
+  int _secsLeft() {
+    if (isHost) return _tlNow();
+    if (tl <= 0) return 0;
+    return max(0, tl - ((DateTime.now().millisecondsSinceEpoch - tlAt) / 1000).floor());
+  }
+
+  void _clockTick() {
+    if (!mounted || stage != 'play' || !started) return;
+    if (isHost && winner < 0 && dlMs > 0 && DateTime.now().millisecondsSinceEpoch > dlMs && !busy) {
+      _autoPlay();
+      return;
+    }
+    setState(() {});
+  }
+
+  /// پایان مهلت: میزبان به‌جای بازیکن تاس می‌اندازد یا یک مهره را انتخاب می‌کند.
+  void _autoPlay() {
+    final pl = turn;
+    if (pl >= ids.length) return;
+    _timeouts[pl] = (_timeouts[pl] ?? 0) + 1;
+    dlMs = 0;
+    _dlKey = '';
+    if (ph == 'roll') {
+      _hostRoll(pl);
+    } else if (ph == 'pick') {
+      _hostPick(_Ludo.botPick(toks, seats, turn, die, BotLevel.normal, _rnd));
     }
   }
 
@@ -1646,6 +1724,11 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
       case 'lu_s':
         if (!isHost && '${m['code']}' == code && (stage == 'join' || stage == 'play')) _applySnap(m);
         break;
+      case 'lu_rm':
+        if (isHost && stage == 'play' && toMe && '${m['code']}' == code && ids.contains(from) && winner >= 0) {
+          setState(() => rmVotes.add(from));
+        }
+        break;
       case 'lu_chat':
         if (chatOn && '${m['code']}' == code && ids.contains(from) && from != _mesh.myUid) {
           final t = '${m['t']}';
@@ -1659,11 +1742,13 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
         break;
       case 'lu_roll':
         if (isHost && stage == 'play' && toMe && '${m['code']}' == code && turn < ids.length && ids[turn] == from) {
+          _timeouts[turn] = 0;
           _hostRoll(turn);
         }
         break;
       case 'lu_pick':
         if (isHost && stage == 'play' && toMe && '${m['code']}' == code && turn < ids.length && ids[turn] == from) {
+          _timeouts[turn] = 0;
           _hostPick((m['i'] as num?)?.toInt() ?? -1);
         }
         break;
@@ -1688,10 +1773,12 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
         'msg': msgKey,
         'win': winner,
         'seq': seq,
+        'tl': _tlNow(),
       };
 
   void _push() {
     seq++;
+    _updateDeadline();
     _send(_snap());
     if (mounted) setState(() {});
   }
@@ -1704,10 +1791,14 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     }
     final l = (m['ids'] as List<dynamic>).map((e) => '$e').toList();
     if (!l.contains(_mesh.myUid)) return;
+    final prevMsg = msgKey;
+    final prevSeq = seq;
     setState(() {
       seq = sq;
       stage = 'play';
       lost = false;
+      tl = (m['tl'] as num?)?.toInt() ?? 0;
+      tlAt = DateTime.now().millisecondsSinceEpoch;
       _lastSnap = DateTime.now().millisecondsSinceEpoch;
       ids
         ..clear()
@@ -1725,8 +1816,24 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
       movable = (m['mov'] as List<dynamic>).map((e) => (e as num).toInt()).toList();
       msgKey = '${m['msg']}';
       winner = (m['win'] as num).toInt();
+      if (winner < 0) {
+        reported = false;
+        resultReady = false;
+        gained = 0;
+        rmSent = false;
+      }
     });
-    if (winner >= 0) _report();
+    if (sq != prevSeq) {
+      if (msgKey == 'captured' && prevMsg != 'captured') {
+        GameFx.hit();
+      } else if (ph == 'roll' || ph == 'pick') {
+        GameFx.move();
+      }
+    }
+    if (winner >= 0) {
+      GameFx.win();
+      _report();
+    }
   }
 
   // ---------------------------------------------------------------- میزبان
@@ -1779,13 +1886,18 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     busy = false;
     reported = false;
     resultReady = false;
+    gained = 0;
+    rmVotes.clear();
+    _timeouts.clear();
+    dlMs = 0;
+    _dlKey = '';
     stage = 'play';
     _lastSnap = DateTime.now().millisecondsSinceEpoch;
     _push();
     _maybeAuto();
   }
 
-  bool _gone(int pl) => pl != 0 && !_mesh.peers.values.any((p) => p.uid == ids[pl]);
+  bool _gone(int pl) => (pl != 0 && !_mesh.peers.values.any((p) => p.uid == ids[pl])) || (_timeouts[pl] ?? 0) >= 2;
 
   void _maybeAuto() {
     if (!isHost || stage != 'play' || winner >= 0 || busy || ph != 'roll' || turn >= ids.length) return;
@@ -1809,6 +1921,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     if (!mounted || gen != _gen) return;
     final r = _rnd.nextInt(6) + 1;
     die = r;
+    GameFx.roll();
     final opts = _Ludo.legal(toks, turn, r);
     if (opts.isEmpty) {
       final allYard = toks[turn].every((p) => p == 0);
@@ -1869,6 +1982,11 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     final who = turn;
     final cap = _Ludo.move(toks, seats, who, i, r);
     msgKey = cap > 0 ? 'captured' : '';
+    if (cap > 0) {
+      GameFx.hit();
+    } else {
+      GameFx.move();
+    }
     ph = 'shown';
     _push();
     await Future<void>.delayed(const Duration(milliseconds: 650));
@@ -1877,6 +1995,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
       winner = who;
       ph = 'over';
       busy = false;
+      GameFx.win();
       _push();
       _report();
       return;
@@ -1895,6 +2014,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
 
   void _myRoll() {
     if (ph != 'roll' || turn != me) return;
+    _timeouts[me] = 0;
     if (isHost) {
       _hostRoll(me);
     } else {
@@ -1902,8 +2022,19 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     }
   }
 
+  /// «بازی دوباره» با همان بازیکنان (فقط روی اتصال مستقیم؛ بدون ورکر)
+  void _rematch() {
+    if (isHost) {
+      _hostStart();
+    } else if (!rmSent) {
+      _send(<String, dynamic>{'g': 'lu_rm', 'to': hostUid, 'code': code});
+      setState(() => rmSent = true);
+    }
+  }
+
   void _myPick(int pl, int i) {
     if (ph != 'pick' || turn != me || pl != me || !movable.contains(i)) return;
+    _timeouts[me] = 0;
     if (isHost) {
       _hostPick(i);
     } else {
@@ -1932,76 +2063,11 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
       chat.add(_ChatMsg(_mesh.myName, t, true));
       if (chat.length > 30) chat.removeAt(0);
     });
-    _chatCtl.clear();
   }
 
   Widget _chatBox() {
     if (!chatOn) return const SizedBox.shrink();
-    final phrases = GameT.fa
-        ? <String>['👍 آفرین', '😅 اوه نه!', '⏳ زود باش', '🔥 بزن!', '🤝 بازی خوبی بود']
-        : <String>['👍 Nice', '😅 Oh no!', '⏳ Hurry up', '🔥 Go!', '🤝 Good game'];
-    final last = chat.length > 4 ? chat.sublist(chat.length - 4) : chat;
-    return Container(
-      margin: const EdgeInsets.only(top: 14),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: gPanel, borderRadius: BorderRadius.circular(18), border: Border.all(color: gLine)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final m in last)
-            Align(
-              alignment: m.mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 5),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(color: m.mine ? const Color(0xff1b4d57) : gBg, borderRadius: BorderRadius.circular(12)),
-                child: Text(m.mine ? m.text : '${m.name}: ${m.text}', style: const TextStyle(color: Colors.white, fontSize: 13)),
-              ),
-            ),
-          SizedBox(
-            height: 38,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                for (final p in phrases)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 6),
-                    child: ActionChip(
-                      backgroundColor: gBg,
-                      side: const BorderSide(color: gLine),
-                      label: Text(p, style: const TextStyle(color: Colors.white, fontSize: 12.5)),
-                      onPressed: () => _sendChat(p),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _chatCtl,
-                  maxLength: 60,
-                  style: const TextStyle(color: Colors.white),
-                  onSubmitted: _sendChat,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    counterText: '',
-                    filled: true,
-                    fillColor: gBg,
-                    hintText: GameT.fa ? 'پیام برای بازیکنان…' : 'Message the players…',
-                    hintStyle: const TextStyle(color: gMuted, fontSize: 13),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: gLine)),
-                  ),
-                ),
-              ),
-              IconButton(onPressed: () => _sendChat(_chatCtl.text), icon: const Icon(Icons.send_rounded, color: gGold)),
-            ],
-          ),
-        ],
-      ),
-    );
+    return GameChatPanel(lines: <ChatLine>[for (final m in chat) ChatLine(m.name, m.text, m.mine)], onSend: _sendChat);
   }
 
   // ---------------------------------------------------------------- رابط
@@ -2148,15 +2214,28 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
         const SizedBox(height: 4),
         _buildLudoBoard(w: w, seats: seats, toks: toks, turn: turn, movable: pickable, onTap: _myPick),
         const SizedBox(height: 14),
+        if (winner < 0 && (ph == 'roll' || ph == 'pick') && _secsLeft() > 0) GameTimerBar(left: _secsLeft(), total: ph == 'pick' ? 30 : 25),
+        const SizedBox(height: 8),
         _diceControls(die: shownDie, rolling: ph == 'rolling', enabled: canRoll, onRoll: _myRoll),
         _chatBox(),
-        if (winner >= 0 && resultReady)
+        if (winner >= 0 && resultReady) ...<Widget>[
           _diceResultCard(
             title: _status(),
             gained: gained,
-            onAgain: () => Navigator.of(context).pop(),
+            onAgain: _rematch,
             onBack: () => Navigator.of(context).pop(),
           ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              isHost
+                  ? (rmVotes.isEmpty ? '' : (GameT.fa ? '${rmVotes.length} نفر بازی دوباره می‌خواهند' : '${rmVotes.length} want a rematch'))
+                  : (rmSent ? (GameT.fa ? 'درخواست بازی دوباره ارسال شد؛ منتظر میزبان…' : 'Rematch requested; waiting for the host…') : ''),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: gSky, fontSize: 12.5),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -2188,6 +2267,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
           iconTheme: const IconThemeData(color: gGold),
           title: Text('${GameT.t('ludo')} · ${GameT.t('nearby_title')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
           actions: [
+            gameFxAction(() => setState(() {})),
             IconButton(
               tooltip: GameT.fa ? 'چت بازیکنان' : 'Player chat',
               onPressed: () => setState(() => chatOn = !chatOn),
