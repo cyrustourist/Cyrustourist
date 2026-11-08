@@ -8,9 +8,11 @@ import '../groups/group_ui.dart';
 import 'dice_games.dart' show sharedDie, sharedDiceChip, sharedResultCard;
 import 'game_api.dart';
 import 'game_engine.dart' show BotLevel;
+import 'game_fx.dart';
 import 'game_p2p.dart';
 import 'game_play_page.dart' show NearbyGameLink;
 import 'game_texts.dart';
+import 'game_widgets.dart';
 
 /// تخته‌نرد دو نفره: با ربات، دو نفره روی یک گوشی، گوشی‌های نزدیک (بدون اینترنت) و آنلاین (اتصال مستقیم).
 /// قوانین کامل: میله، زدن مهره، خروج مهره، جفت‌ها (۴ حرکت) و «استفاده از بیشترین تعداد تاس».
@@ -517,6 +519,24 @@ class _BackgammonPageState extends State<BackgammonPage> {
   Timer? _poll;
   Timer? _p2pTimeout;
   bool _polling = false;
+  bool _onlineDone = false;
+
+  // چت، زمان نوبت و بازی دوباره (همه فقط روی اتصال مستقیم بین دو گوشی؛ بدون ورکر)
+  bool chatOn = true;
+  final List<ChatLine> chat = <ChatLine>[];
+  int _lastChatMs = 0;
+  int dlMs = 0;
+  String _dlKey = '';
+  int tl = 0;
+  int tlAt = 0;
+  Timer? _clock;
+  final Map<int, int> _timeouts = <int, int>{};
+  bool _forceAuto = false;
+  bool rmMine = false;
+  bool rmPeer = false;
+
+  bool get _isNet => mode == BgMode.nearby || mode == BgMode.online;
+  bool get _autoTurn => (mode == BgMode.bot && s.turn == 1) || (_isAuth && _isNet && (_forceAuto || (_timeouts[s.turn] ?? 0) >= 2));
 
   bool get _isAuth => mode == BgMode.bot || mode == BgMode.local || isHost;
   bool get _canAct => !lost && winner < 0 && (mode == BgMode.local || (mode == BgMode.bot ? s.turn == 0 : s.turn == myIdx));
@@ -535,6 +555,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
         _resetState();
         break;
       case BgMode.nearby:
+        _clock = Timer.periodic(const Duration(seconds: 1), (_) => _clockTick());
         stage = 'menu';
         NearbyGameLink.instance.attach();
         _sub = NearbyGameLink.instance.events.stream.listen(_onEvent);
@@ -542,6 +563,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
         _tick = Timer.periodic(const Duration(seconds: 2), (_) => _onTick());
         break;
       case BgMode.online:
+        _clock = Timer.periodic(const Duration(seconds: 1), (_) => _clockTick());
         stage = 'search';
         WidgetsBinding.instance.addPostFrameCallback((_) => _startOnline());
         break;
@@ -551,6 +573,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
   @override
   void dispose() {
     _gen++;
+    _clock?.cancel();
     _tick?.cancel();
     _poll?.cancel();
     _p2pTimeout?.cancel();
@@ -584,6 +607,12 @@ class _BackgammonPageState extends State<BackgammonPage> {
     resultReady = false;
     gained = 0;
     lost = false;
+    rmMine = false;
+    rmPeer = false;
+    _forceAuto = false;
+    _timeouts.clear();
+    dlMs = 0;
+    _dlKey = '';
   }
 
   void _newGame() {
@@ -593,7 +622,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
   }
 
   void _afterTurnStart() {
-    if (!mounted || mode != BgMode.bot || s.turn != 1 || ph != 'roll' || winner >= 0) return;
+    if (!mounted || !_autoTurn || ph != 'roll' || winner >= 0) return;
     final gen = _gen;
     Future<void>.delayed(const Duration(milliseconds: 800), () {
       if (!mounted || gen != _gen) return;
@@ -616,6 +645,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
         'rolling': rolling,
         'busy': busy,
         'names': pnames,
+        'tl': _tlNow(),
       };
 
   void _sendNet(Map<String, dynamic> m) {
@@ -629,8 +659,9 @@ class _BackgammonPageState extends State<BackgammonPage> {
   /// رسم دوباره؛ در حالت میزبان وضعیت را هم برای حریف می‌فرستد.
   void _sync() {
     if (!mounted) return;
-    if ((mode == BgMode.nearby || mode == BgMode.online) && isHost && started) {
+    if (_isNet && isHost && started) {
       seq++;
+      _updateDeadline();
       _sendNet(_snap());
     }
     setState(() {});
@@ -655,6 +686,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
     rolled = a == b ? <int>[a, a, a, a] : <int>[a, b];
     s.dice = List<int>.from(rolled);
     rolling = false;
+    GameFx.roll();
     legal = _Bg.legal(s);
     if (legal.isEmpty) {
       msgKey = 'no_moves';
@@ -669,10 +701,11 @@ class _BackgammonPageState extends State<BackgammonPage> {
     sel = null;
     _autoSel();
     _sync();
-    if (mode == BgMode.bot && s.turn == 1) _botPlay(gen);
+    if (_autoTurn) _botPlay(gen);
   }
 
   void _endTurn() {
+    _forceAuto = false;
     s.dice = <int>[];
     s.turn = 1 - s.turn;
     ph = 'roll';
@@ -691,7 +724,13 @@ class _BackgammonPageState extends State<BackgammonPage> {
     s.dice.remove(m.die);
     sel = null;
     msgKey = hit ? 'hit' : '';
+    if (hit) {
+      GameFx.hit();
+    } else {
+      GameFx.move();
+    }
     if (s.off[p] == 15) {
+      GameFx.win();
       winner = p;
       ph = 'over';
       legal = <_Mv>[];
@@ -716,17 +755,18 @@ class _BackgammonPageState extends State<BackgammonPage> {
   }
 
   Future<void> _botPlay(int gen) async {
-    while (mounted && gen == _gen && ph == 'move' && mode == BgMode.bot && s.turn == 1 && winner < 0 && !busy) {
+    while (mounted && gen == _gen && ph == 'move' && _autoTurn && winner < 0 && !busy) {
       await Future<void>.delayed(const Duration(milliseconds: 650));
       if (!mounted || gen != _gen || legal.isEmpty) return;
-      _applyMoveLocal(_Bg.botPick(s, legal, widget.level, _rnd));
+      _applyMoveLocal(_Bg.botPick(s, legal, mode == BgMode.bot ? widget.level : BotLevel.normal, _rnd));
     }
   }
 
   // ---------------------------------------------------------------- اقدام کاربر
 
   void _myRoll() {
-    if (!_canAct || ph != 'roll' || busy) return;
+    if (!_canAct || ph != 'roll' || busy || _forceAuto) return;
+    _timeouts[s.turn] = 0;
     if (_isAuth) {
       _doRoll();
     } else {
@@ -735,6 +775,8 @@ class _BackgammonPageState extends State<BackgammonPage> {
   }
 
   void _humanMove(_Mv m) {
+    if (_forceAuto) return;
+    _timeouts[s.turn] = 0;
     if (_isAuth) {
       _applyMoveLocal(m);
     } else {
@@ -779,6 +821,11 @@ class _BackgammonPageState extends State<BackgammonPage> {
     if (reported) return;
     reported = true;
     if (mode == BgMode.online) {
+      if (_onlineDone) {
+        if (mounted) setState(() => resultReady = true);
+        return;
+      }
+      _onlineDone = true;
       await _reportOnline(winner == myIdx ? 'win' : 'loss');
       return;
     }
@@ -833,10 +880,33 @@ class _BackgammonPageState extends State<BackgammonPage> {
         if (!isHost) _applySnap(m);
         break;
       case 'bg_roll':
-        if (isHost && s.turn == 1 && ph == 'roll') _doRoll();
+        if (isHost && s.turn == 1 && ph == 'roll' && !_forceAuto) {
+          _timeouts[1] = 0;
+          _doRoll();
+        }
+        break;
+      case 'bg_chat':
+        {
+          final txt = '${m['t']}';
+          if (chatOn && txt.isNotEmpty && txt.length <= 80) {
+            setState(() {
+              chat.add(ChatLine(pnames[1 - myIdx], txt, false));
+              if (chat.length > 30) chat.removeAt(0);
+            });
+          }
+        }
+        break;
+      case 'bg_rm':
+        rmPeer = true;
+        if (isHost && rmMine && winner >= 0) {
+          _newGame();
+        } else {
+          setState(() {});
+        }
         break;
       case 'bg_mv':
-        if (isHost && s.turn == 1 && ph == 'move' && !busy) {
+        if (isHost && s.turn == 1 && ph == 'move' && !busy && !_forceAuto) {
+          _timeouts[1] = 0;
           final f = (m['f'] as num?)?.toInt();
           final t = (m['t'] as num?)?.toInt();
           final d = (m['d'] as num?)?.toInt();
@@ -856,11 +926,14 @@ class _BackgammonPageState extends State<BackgammonPage> {
     _lastSnap = DateTime.now().millisecondsSinceEpoch;
     if (started && sq <= seq) return;
     List<int> ints(dynamic l) => (l as List<dynamic>).map((e) => (e as num).toInt()).toList();
+    final prevMsg = msgKey;
     setState(() {
       seq = sq;
       started = true;
       stage = 'play';
       lost = false;
+      tl = (m['tl'] as num?)?.toInt() ?? 0;
+      tlAt = DateTime.now().millisecondsSinceEpoch;
       s = _BgState(pts: ints(m['pts']), bar: ints(m['bar']), off: ints(m['off']), turn: (m['turn'] as num).toInt(), dice: ints(m['dice']));
       rolled = ints(m['rolled']);
       ph = '${m['ph']}';
@@ -873,8 +946,25 @@ class _BackgammonPageState extends State<BackgammonPage> {
       legal = ph == 'move' ? _Bg.legal(s) : <_Mv>[];
       if (!(sel != null && legal.any((x) => x.from == sel))) sel = null;
       if (sel == null && _canAct && ph == 'move') _autoSel();
+      if (winner < 0) {
+        reported = false;
+        resultReady = false;
+        gained = 0;
+        rmMine = false;
+        rmPeer = false;
+      }
     });
-    if (winner >= 0) _finish();
+    if (msgKey == 'hit' && prevMsg != 'hit') {
+      GameFx.hit();
+    } else if (rolling) {
+      GameFx.roll();
+    } else {
+      GameFx.move();
+    }
+    if (winner >= 0) {
+      GameFx.win();
+      _finish();
+    }
   }
 
   // ---------------------------------------------------------------- گوشی‌های نزدیک
@@ -1082,6 +1172,81 @@ class _BackgammonPageState extends State<BackgammonPage> {
     }
   }
 
+  // ---------------------------------------------------------------- زمان نوبت، چت، بازی دوباره
+
+  void _updateDeadline() {
+    final waiting = winner < 0 && !busy && (ph == 'roll' || ph == 'move') && !_forceAuto;
+    final key = waiting ? '$ph|${s.turn}|${s.dice.length}' : '';
+    if (key.isEmpty) {
+      dlMs = 0;
+      _dlKey = '';
+      return;
+    }
+    if (key != _dlKey) {
+      _dlKey = key;
+      dlMs = DateTime.now().millisecondsSinceEpoch + (ph == 'move' ? 40 : 25) * 1000;
+    }
+  }
+
+  int _tlNow() => dlMs == 0 ? 0 : max(0, ((dlMs - DateTime.now().millisecondsSinceEpoch) / 1000).ceil());
+
+  int _secsLeft() {
+    if (isHost) return _tlNow();
+    if (tl <= 0) return 0;
+    return max(0, tl - ((DateTime.now().millisecondsSinceEpoch - tlAt) / 1000).floor());
+  }
+
+  void _clockTick() {
+    if (!mounted || stage != 'play' || !started || !_isNet) return;
+    if (isHost && winner < 0 && dlMs > 0 && DateTime.now().millisecondsSinceEpoch > dlMs && !busy) {
+      _autoPlay();
+      return;
+    }
+    setState(() {});
+  }
+
+  /// پایان مهلت: میزبان به‌جای بازیکن تاس می‌اندازد و حرکت‌های ممکن را انجام می‌دهد.
+  void _autoPlay() {
+    final pl = s.turn;
+    _timeouts[pl] = (_timeouts[pl] ?? 0) + 1;
+    dlMs = 0;
+    _dlKey = '';
+    _forceAuto = true;
+    if (ph == 'roll') {
+      _doRoll();
+    } else if (ph == 'move') {
+      _botPlay(_gen);
+    }
+  }
+
+  void _sendChat(String raw) {
+    final t = raw.trim();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (!chatOn || t.isEmpty || t.length > 60 || now - _lastChatMs < 1000) return;
+    _lastChatMs = now;
+    _sendNet(<String, dynamic>{'g': 'bg_chat', 't': t});
+    setState(() {
+      chat.add(ChatLine(pnames[myIdx], t, true));
+      if (chat.length > 30) chat.removeAt(0);
+    });
+  }
+
+  /// «بازی دوباره» با همان حریف؛ فقط از طریق اتصال مستقیم بین دو گوشی
+  void _rematch() {
+    if (mode == BgMode.bot || mode == BgMode.local) {
+      _newGame();
+      return;
+    }
+    if (rmMine) return;
+    rmMine = true;
+    _sendNet(<String, dynamic>{'g': 'bg_rm'});
+    if (isHost && rmPeer) {
+      _newGame();
+      return;
+    }
+    setState(() {});
+  }
+
   // ---------------------------------------------------------------- رابط
 
   String _status() {
@@ -1228,6 +1393,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
             child: CustomPaint(painter: _BgPainter(s: s, sel: sel, dests: dests, srcs: srcs)),
           ),
         ),
+        if (_isNet && winner < 0 && (ph == 'roll' || ph == 'move') && _secsLeft() > 0) GameTimerBar(left: _secsLeft(), total: ph == 'move' ? 40 : 25),
         const SizedBox(height: 10),
         if (canOff)
           Padding(
@@ -1253,19 +1419,19 @@ class _BackgammonPageState extends State<BackgammonPage> {
             ),
           ],
         ),
-        if (winner >= 0 && resultReady)
-          sharedResultCard(
-            title: _status(),
-            gained: gained,
-            onAgain: () {
-              if (mode == BgMode.bot || mode == BgMode.local) {
-                _newGame();
-              } else {
-                Navigator.of(context).pop();
-              }
-            },
-            onBack: () => Navigator.of(context).pop(),
-          ),
+        if (_isNet && chatOn) GameChatPanel(lines: chat, onSend: _sendChat),
+        if (winner >= 0 && resultReady) ...<Widget>[
+          sharedResultCard(title: _status(), gained: gained, onAgain: _rematch, onBack: () => Navigator.of(context).pop()),
+          if (_isNet && (rmPeer || rmMine))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                rmMine ? (GameT.fa ? 'درخواست بازی دوباره ارسال شد؛ منتظر حریف…' : 'Rematch requested; waiting…') : (GameT.fa ? 'حریف بازی دوباره می‌خواهد' : 'Your opponent wants a rematch'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: gSky, fontSize: 12.5),
+              ),
+            ),
+        ],
         const SizedBox(height: 14),
         Text(_bt('rule'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 11.5, height: 1.7)),
       ],
@@ -1284,6 +1450,15 @@ class _BackgammonPageState extends State<BackgammonPage> {
           centerTitle: true,
           iconTheme: const IconThemeData(color: gGold),
           title: Text(GameT.t('backgammon'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+          actions: [
+            gameFxAction(() => setState(() {})),
+            if (_isNet)
+              IconButton(
+                tooltip: GameT.fa ? 'چت' : 'Chat',
+                onPressed: () => setState(() => chatOn = !chatOn),
+                icon: Icon(chatOn ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded, color: chatOn ? gGold : gMuted),
+              ),
+          ],
         ),
         body: SafeArea(
           child: LayoutBuilder(
