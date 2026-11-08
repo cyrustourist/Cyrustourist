@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../groups/group_ui.dart';
 import 'game_api.dart';
+import 'dice_games.dart' show sharedDieSkin;
+import 'dice_skins.dart';
 import 'game_board.dart';
 import 'game_texts.dart';
 
 class _Item {
-  const _Item(this.key, this.code, this.price, this.level, this.isIcon);
+  const _Item(this.key, this.code, this.price, this.level, this.isIcon, {this.isDice = false});
   final String key;
   final String code;
   final int price;
   final int level;
   final bool isIcon;
+  final bool isDice;
 }
 
 // همان فهرست و قیمت‌های سرور؛ سرور هنگام خرید دوباره بررسی می‌کند.
@@ -28,6 +31,11 @@ const List<_Item> _themes = [
   _Item('theme_desert', 'desert', 300, 3, false),
   _Item('theme_forest', 'forest', 450, 4, false),
   _Item('theme_caspian', 'caspian', 600, 5, false),
+];
+
+// تاس‌ها: خرید از سرور (فهرست dice_*)، انتخاب روی همین گوشی ذخیره می‌شود.
+final List<_Item> _dice = <_Item>[
+  for (final d in DiceSkins.all) _Item(d.key, d.code, d.price, d.level, false, isDice: true),
 ];
 
 Future<void> showGameShop(BuildContext context) {
@@ -54,11 +62,13 @@ class _ShopSheetState extends State<_ShopSheet> {
   void initState() {
     super.initState();
     _w.addListener(_onChange);
+    DiceSkins.current.addListener(_onChange);
   }
 
   @override
   void dispose() {
     _w.removeListener(_onChange);
+    DiceSkins.current.removeListener(_onChange);
     super.dispose();
   }
 
@@ -68,15 +78,23 @@ class _ShopSheetState extends State<_ShopSheet> {
 
   Future<void> _act(_Item it) async {
     if (_busy.isNotEmpty) return;
+    if (it.isDice && (it.price == 0 || _w.owned.contains(it.key))) {
+      await DiceSkins.select(it.code);
+      return;
+    }
     setState(() => _busy = it.key);
     final owned = _w.owned.contains(it.key);
-    final e = owned ? await _w.equip(it.key) : await _w.buy(it.key);
+    final e = it.isDice ? (owned ? '' : await _w.buy(it.key)) : (owned ? await _w.equip(it.key) : await _w.buy(it.key));
     if (!mounted) return;
     setState(() => _busy = '');
     if (e.isEmpty) {
       if (!owned) {
         gToast(context, GameT.t('bought'));
-        await _w.equip(it.key);
+        if (it.isDice) {
+          await DiceSkins.select(it.code);
+        } else {
+          await _w.equip(it.key);
+        }
       }
     } else if (e == 'no_coins') {
       gToast(context, GameT.t('no_coins'));
@@ -90,8 +108,8 @@ class _ShopSheetState extends State<_ShopSheet> {
   }
 
   Widget _tile(_Item it) {
-    final owned = _w.owned.contains(it.key);
-    final equipped = it.isIcon ? _w.equippedIcon == it.code : _w.equippedTheme == it.code;
+    final owned = _w.owned.contains(it.key) || (it.isDice && it.price == 0);
+    final equipped = it.isDice ? DiceSkins.current.value == it.code : (it.isIcon ? _w.equippedIcon == it.code : _w.equippedTheme == it.code);
     final locked = !owned && _w.level < it.level;
     final th = GameTheme.byCode(it.code);
     String label;
@@ -114,7 +132,9 @@ class _ShopSheetState extends State<_ShopSheet> {
       ),
       child: Row(
         children: [
-          if (it.isIcon)
+          if (it.isDice)
+            sharedDieSkin(it.code, size: 38)
+          else if (it.isIcon)
             Text(kGameIconEmoji[it.code] ?? '🦁', style: const TextStyle(fontSize: 30))
           else
             Container(
@@ -123,7 +143,12 @@ class _ShopSheetState extends State<_ShopSheet> {
               decoration: BoxDecoration(color: th.board, borderRadius: BorderRadius.circular(9), border: Border.all(color: th.line, width: 2)),
             ),
           const SizedBox(width: 12),
-          Expanded(child: Text(GameT.t(it.key), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+          Expanded(
+            child: Text(
+              it.isDice ? (GameT.fa ? DiceSkins.byCode(it.code).faName : DiceSkins.byCode(it.code).enName) : GameT.t(it.key),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+            ),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: equipped ? gTeal : gGold,
@@ -168,6 +193,8 @@ class _ShopSheetState extends State<_ShopSheet> {
             for (final it in _icons) _tile(it),
             _head(GameT.t('themes')),
             for (final it in _themes) _tile(it),
+            _head(GameT.fa ? 'تاس‌ها' : 'Dice'),
+            for (final it in _dice) _tile(it),
           ],
         ),
       ),
