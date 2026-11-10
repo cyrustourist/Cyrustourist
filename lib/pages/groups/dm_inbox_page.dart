@@ -9,6 +9,7 @@ import '../../services/group_texts.dart';
 import '../../services/offline_cache.dart';
 import '../../widgets/call_widgets.dart';
 import '../offline/offline_chat_page.dart';
+import '../offline/offline_hub_page.dart';
 import 'group_chat_page.dart';
 import 'group_ui.dart';
 import 'offline_fallback.dart';
@@ -112,7 +113,7 @@ class _DmInboxPageState extends State<DmInboxPage> with SingleTickerProviderStat
       items: _cachedFriends,
       icon: Icons.person_rounded,
       onOpen: _openOffline,
-      onNetwork: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineChatPage())),
+      onNetwork: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineHubPage())),
     );
   }
 
