@@ -131,10 +131,98 @@ class MainActivity : FlutterActivity() {
         return true
     }
 
+    /**
+     * کپی فایل دریافتی (جابه‌جایی فایل بدون اینترنت) در پوشهٔ عمومی گوشی با جریان (stream)، بدون بارگذاری کل فایل در حافظه.
+     * عکس → Pictures/Cyrustourist ، ویدیو → Movies/Cyrustourist ، بقیه → Download/Cyrustourist.
+     * خروجی: "gallery" یا "downloads"؛ در شکست null.
+     */
+    private fun saveFileToPublic(path: String, rawName: String, mime: String): String? {
+        val src = File(path)
+        if (!src.exists()) return null
+        val name = rawName.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim().ifEmpty { "file" }
+        val isImg = mime.startsWith("image/")
+        val isVid = mime.startsWith("video/")
+        val kind = if (isImg || isVid) "gallery" else "downloads"
+        if (Build.VERSION.SDK_INT >= 29) {
+            val collection = when {
+                isImg -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                isVid -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                else -> MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            }
+            val folder = when {
+                isImg -> Environment.DIRECTORY_PICTURES
+                isVid -> Environment.DIRECTORY_MOVIES
+                else -> Environment.DIRECTORY_DOWNLOADS
+            }
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, folder + "/Cyrustourist")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+            val resolver = applicationContext.contentResolver
+            val uri = resolver.insert(collection, values) ?: return null
+            try {
+                resolver.openOutputStream(uri)?.use { out ->
+                    src.inputStream().use { it.copyTo(out, 256 * 1024) }
+                } ?: return null
+            } catch (e: Throwable) {
+                try { resolver.delete(uri, null, null) } catch (_: Throwable) {}
+                return null
+            }
+            values.clear()
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            return kind
+        }
+        @Suppress("DEPRECATION")
+        val base = Environment.getExternalStoragePublicDirectory(
+            when {
+                isImg -> Environment.DIRECTORY_PICTURES
+                isVid -> Environment.DIRECTORY_MOVIES
+                else -> Environment.DIRECTORY_DOWNLOADS
+            }
+        )
+        val dir = File(base, "Cyrustourist")
+        if (!dir.exists() && !dir.mkdirs()) return null
+        var dest = File(dir, name)
+        var n = 1
+        val dot = name.lastIndexOf('.')
+        val stem = if (dot > 0) name.substring(0, dot) else name
+        val ext = if (dot > 0) name.substring(dot) else ""
+        while (dest.exists()) {
+            dest = File(dir, stem + " (" + n + ")" + ext)
+            n++
+        }
+        src.inputStream().use { input -> dest.outputStream().use { input.copyTo(it, 256 * 1024) } }
+        MediaScannerConnection.scanFile(applicationContext, arrayOf(dest.absolutePath), arrayOf(mime), null)
+        return kind
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
         val messenger = flutterEngine.dartExecutor.binaryMessenger
+
+        MethodChannel(messenger, "cyrus/files").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "saveFile" -> {
+                    val path = call.argument<String>("path")
+                    val name = call.argument<String>("name") ?: "file"
+                    val mime = call.argument<String>("mime") ?: "application/octet-stream"
+                    if (path == null) {
+                        result.error("NO_PATH", "No file path", null)
+                    } else {
+                        Thread {
+                            val kind = try { saveFileToPublic(path, name, mime) } catch (e: Throwable) { null }
+                            runOnUiThread { result.success(kind) }
+                        }.start()
+                    }
+                }
+
+                else -> result.notImplemented()
+            }
+        }
 
         MethodChannel(messenger, "cyrus/image").setMethodCallHandler { call, result ->
             when (call.method) {
