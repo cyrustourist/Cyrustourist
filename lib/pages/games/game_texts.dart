@@ -36,6 +36,7 @@ class GameT {
     'ludo': {'fa': 'منچ', 'en': 'Ludo'},
     'backgammon': {'fa': 'تخته‌نرد', 'en': 'Backgammon'},
     'hokm': {'fa': 'حکم', 'en': 'Hokm'},
+    'fruit': {'fa': 'میوه‌چین', 'en': 'Fruit Match'},
     'chess': {'fa': 'شطرنج', 'en': 'Chess'},
     'games': {'fa': 'بازی‌ها', 'en': 'Games'},
     'choose_mode': {'fa': 'چطور بازی می‌کنید؟', 'en': 'How do you want to play?'},
