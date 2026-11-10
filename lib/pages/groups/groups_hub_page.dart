@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../services/group_service.dart';
 import '../../services/offline_cache.dart';
 import '../offline/offline_chat_page.dart';
+import '../offline/offline_hub_page.dart';
 import 'offline_fallback.dart';
 import '../../services/group_texts.dart';
 import 'create_group_page.dart';
@@ -156,7 +157,7 @@ class _GroupsHubPageState extends State<GroupsHubPage> with SingleTickerProvider
           onOpen: (c) => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => OfflineChatPage(room: OfflineCache.groupRoom(c.id), title: c.name)),
           ),
-          onNetwork: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineChatPage())),
+          onNetwork: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineHubPage())),
         ),
       );
     }
@@ -255,7 +256,7 @@ class _GroupsHubPageState extends State<GroupsHubPage> with SingleTickerProvider
             IconButton(
               tooltip: 'Offline',
               icon: const Icon(Icons.wifi_tethering_rounded, color: gGold),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineChatPage())),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OfflineHubPage())),
             ),
           ],
           bottom: TabBar(
