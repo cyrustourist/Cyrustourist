@@ -7,7 +7,6 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../core/language/menu_translations.dart';
 import '../../services/offline_mesh_service.dart';
 import '../groups/chat_media_save.dart';
-import 'file_transfer_page.dart';
 
 const Color _bg = Color(0xff071722);
 const Color _card = Color(0xff0e2433);
@@ -115,7 +114,6 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
               _statusCard(on),
               Expanded(child: _list(on)),
               if (on) _inputBar(),
-              if (widget.room.isEmpty) _transferBar(),
             ],
           ),
         ),
@@ -299,50 +297,6 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
         ),
       ),
     );
-  }
-
-  /// کلید پایین صفحه: جابه‌جایی عکس، فیلم و فایل بدون اینترنت (صفحهٔ جداگانه)
-  Widget _transferBar() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-      color: _bg,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _gold,
-          side: BorderSide(color: _gold.withValues(alpha: 0.6), width: 1.4),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-        onPressed: _openTransfer,
-        icon: const Icon(Icons.swap_horiz_rounded),
-        label: Text(_t('جابه‌جایی عکس، فیلم و فایل (بدون اینترنت)', 'Send photos, videos & files (no internet)'), style: const TextStyle(fontWeight: FontWeight.w900)),
-      ),
-    );
-  }
-
-  Future<void> _openTransfer() async {
-    if (_svc.running) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => Directionality(
-          textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: AlertDialog(
-            backgroundColor: _card,
-            content: Text(_t('برای جابه‌جایی فایل، شبکهٔ چت آفلاین خاموش می‌شود. ادامه می‌دهید؟', 'The offline chat network will be turned off for file transfer. Continue?'), style: const TextStyle(color: Colors.white, height: 1.7)),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(_t('خیر', 'No'), style: const TextStyle(color: Colors.white70))),
-              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(_t('بله', 'Yes'), style: const TextStyle(color: _gold))),
-            ],
-          ),
-        ),
-      );
-      if (ok != true || !mounted) return;
-      await _svc.stop();
-    }
-    if (!mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FileTransferPage()));
-    if (mounted) setState(() {});
   }
 
   Widget _inputBar() {
