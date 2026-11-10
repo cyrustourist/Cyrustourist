@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/language/menu_translations.dart';
 import '../../services/offline_mesh_service.dart';
+import 'file_transfer_page.dart';
 import '../groups/chat_media_save.dart';
 
 const Color _bg = Color(0xff071722);
@@ -148,7 +149,22 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
               ),
             ],
           ),
-          if (on && n > 0) ...[
+          if (on && n > 0 && widget.room.isEmpty) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(_t('افراد نزدیک', 'People nearby'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 13)),
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 190),
+              child: ListView(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                children: [for (final p in _svc.peers.values) _peerRow(p)],
+              ),
+            ),
+          ],
+          if (on && n > 0 && widget.room.isNotEmpty) ...[
             const SizedBox(height: 8),
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -169,6 +185,70 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
         ],
       ),
     );
+  }
+
+  /// ردیف یک گوشی نزدیک: نام + کلید پیام (گفتگوی دونفره) + کلید فایل
+  Widget _peerRow(OfflinePeer p) {
+    final initial = p.name.isEmpty ? '?' : String.fromCharCode(p.name.runes.first);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          CircleAvatar(radius: 16, backgroundColor: _bg, child: Text(initial, style: const TextStyle(color: _gold, fontWeight: FontWeight.w900))),
+          const SizedBox(width: 10),
+          Expanded(child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: _gold, visualDensity: VisualDensity.compact),
+            onPressed: () => _openDm(p),
+            icon: const Icon(Icons.chat_bubble_rounded, size: 18),
+            label: Text(_t('پیام', 'Message'), style: const TextStyle(fontWeight: FontWeight.w800)),
+          ),
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: const Color(0xff29e0ad), visualDensity: VisualDensity.compact),
+            onPressed: () => _sendFileTo(p),
+            icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+            label: Text(_t('فایل', 'File'), style: const TextStyle(fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// گفتگوی دونفره با یک گوشی نزدیک؛ نام اتاق برای هر دو گوشی یکی است (شناسه‌ها مرتب می‌شوند).
+  /// توجه: پیام‌ها مثل گروه‌ها روی همان شبکه پخش می‌شوند و رمزنگاری نشده‌اند.
+  Future<void> _openDm(OfflinePeer p) async {
+    final ids = <String>[_svc.myUid, p.uid]..sort();
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => OfflineChatPage(room: 'n${ids.join('_')}', title: p.name)));
+    if (mounted) setState(() {});
+  }
+
+  /// ارسال فایل به یک گوشی نزدیک: شبکه‌ی چت خاموش می‌شود و صفحه‌ی انتقال فایل باز می‌شود.
+  Future<void> _sendFileTo(OfflinePeer p) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: _card,
+          content: Text(
+            _t(
+              'برای ارسال فایل به «${p.name}»، شبکه‌ی چت خاموش می‌شود. از او بخواهید در گوشی خودش «ارسال عکس، فیلم و فایل» را باز کند و «دیده شدن» را بزند. ادامه می‌دهید؟',
+              'File transfer to “${p.name}” turns the chat network off. Ask them to open “Send photos, videos & files” and tap “Be visible”. Continue?',
+            ),
+            style: const TextStyle(color: Colors.white, height: 1.8),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(_t('خیر', 'No'), style: const TextStyle(color: Colors.white70))),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(_t('بله', 'Yes'), style: const TextStyle(color: _gold))),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _svc.stop();
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => FileTransferPage(target: p.name)));
+    if (mounted) setState(() {});
   }
 
   Widget _list(bool on) {
