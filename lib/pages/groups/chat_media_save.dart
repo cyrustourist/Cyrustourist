@@ -25,3 +25,16 @@ Future<bool> saveChatImageToGallery(String url, Map<String, String> headers) asy
     client.close(force: true);
   }
 }
+
+/// ذخیرهٔ عکسی که از قبل روی گوشی است (مثلاً عکس دریافتی چت آفلاین) در گالری، پوشهٔ «Cyrustourist».
+Future<bool> saveLocalImageToGallery(String path) async {
+  try {
+    final bytes = await File(path).readAsBytes();
+    if (bytes.isEmpty) return false;
+    final ok = await _imageChannel.invokeMethod<bool>('saveToGallery', {'bytes': bytes});
+    return ok == true;
+  } catch (e) {
+    debugPrint('saveLocalImage: ${e.runtimeType}');
+    return false;
+  }
+}
