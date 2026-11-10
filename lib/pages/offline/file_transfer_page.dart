@@ -13,7 +13,10 @@ const Color _teal = Color(0xff29e0ad);
 /// جابه‌جایی عکس، فیلم و فایل بین دو گوشی بدون اینترنت (کیفیت اصلی، بدون فشرده‌سازی).
 /// یک گوشی «دیده می‌شود» و گوشی دیگر او را پیدا می‌کند؛ بعد از تأیید کد، هر دو می‌توانند بفرستند و بگیرند.
 class FileTransferPage extends StatefulWidget {
-  const FileTransferPage({super.key});
+  const FileTransferPage({super.key, this.target = ''});
+
+  /// نام گوشی مقصد (وقتی از فهرست «افراد نزدیک» می‌آید)؛ در فهرست جستجو برجسته می‌شود.
+  final String target;
 
   @override
   State<FileTransferPage> createState() => _FileTransferPageState();
@@ -218,6 +221,16 @@ class _FileTransferPageState extends State<FileTransferPage> {
           ),
         ),
         const SizedBox(height: 18),
+        if (widget.target.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(14), border: Border.all(color: _teal.withValues(alpha: 0.6))),
+            child: Text(
+              _t('ارسال برای «${widget.target}»: از او بخواهید «دیده شدن» را بزند و شما «پیدا کردن گوشی» را بزنید.', 'Sending to “${widget.target}”: ask them to tap “Be visible”, then tap “Find a phone”.'),
+              style: const TextStyle(color: Colors.white, height: 1.8),
+            ),
+          ),
         _step('۱', _t('در یک گوشی «دیده شدن» را بزنید.', 'On one phone tap “Be visible”.')),
         _step('۲', _t('در گوشی دیگر «پیدا کردن گوشی» را بزنید و نام اولی را انتخاب کنید.', 'On the other tap “Find a phone” and pick the first one.')),
         _step('۳', _t('کد را در هر دو گوشی قبول کنید و فایل‌ها را بفرستید.', 'Accept the code on both and send files.')),
@@ -242,6 +255,9 @@ class _FileTransferPageState extends State<FileTransferPage> {
 
   Widget _search() {
     final list = _svc.found.entries.toList();
+    if (widget.target.isNotEmpty) {
+      list.sort((a, b) => (b.value == widget.target ? 1 : 0).compareTo(a.value == widget.target ? 1 : 0));
+    }
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
@@ -263,7 +279,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
             Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _gold.withValues(alpha: 0.25))),
+              decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: e.value == widget.target ? _teal : _gold.withValues(alpha: 0.25), width: e.value == widget.target ? 2 : 1)),
               child: Row(
                 children: [
                   const Icon(Icons.phone_android_rounded, color: _teal),
