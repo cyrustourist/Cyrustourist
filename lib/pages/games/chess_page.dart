@@ -77,6 +77,42 @@ String _ct(String key) {
   return m[GameT.fa ? 'fa' : 'en'] ?? m['en'] ?? key;
 }
 
+/// پیاده با نقاشی مستقیم: نماد متنی ♟ در اندروید به‌صورت ایموجی (همیشه سیاه) نمایش داده می‌شود،
+/// پس رنگ سفید/سیاه آن عوض نمی‌شد. نقاشی به فونت وابسته نیست.
+class _PawnPainter extends CustomPainter {
+  const _PawnPainter(this.white);
+  final bool white;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final fill = Paint()
+      ..color = (white ? const Color(0xffffffff) : const Color(0xff17171c))
+      ..style = PaintingStyle.fill;
+    final line = Paint()
+      ..color = (white ? const Color(0xff000000) : const Color(0xaaffffff))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.05
+      ..strokeJoin = StrokeJoin.round;
+    final head = Path()..addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.27), radius: w * 0.16));
+    final body = Path()
+      ..moveTo(w * 0.42, h * 0.40)
+      ..quadraticBezierTo(w * 0.40, h * 0.60, w * 0.27, h * 0.80)
+      ..lineTo(w * 0.73, h * 0.80)
+      ..quadraticBezierTo(w * 0.60, h * 0.60, w * 0.58, h * 0.40)
+      ..close();
+    final collar = Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.34, h * 0.37, w * 0.32, h * 0.07), Radius.circular(w * 0.03)));
+    final base = Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.22, h * 0.78, w * 0.56, h * 0.11), Radius.circular(w * 0.04)));
+    for (final path in <Path>[body, head, collar, base]) {
+      canvas.drawPath(path, fill);
+      canvas.drawPath(path, line);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PawnPainter old) => old.white != white;
+}
+
 /// اجرای ربات در Isolate تا صفحه قفل نشود
 Future<String?> _runBot(List<String> list, int level, int seed) => Isolate.run(() => chessBotPick(list, level, seed));
 
@@ -946,7 +982,7 @@ class _ChessPageState extends State<ChessPage> {
     final sb = StringBuffer();
     for (final t in const <int>[kQueen, kRook, kBishop, kKnight, kPawn]) {
       for (var i = 0; i < _chInitial[t] - counts[t]; i++) {
-        sb.write(_chGlyph[t]);
+        sb.write(t == kPawn ? '\u2659' : _chGlyph[t]);
       }
     }
     var mine = 0;
@@ -1036,7 +1072,9 @@ class _ChessPageState extends State<ChessPage> {
               if (bottomRow) Positioned(bottom: 0, right: 2, child: Text('abcdefgh'[f], style: TextStyle(fontSize: sz * 0.2, color: lblColor, fontWeight: FontWeight.w800))),
               if (isDest && piece == 0) Container(width: sz * 0.3, height: sz * 0.3, decoration: const BoxDecoration(color: Color(0x66000000), shape: BoxShape.circle)),
               if (isDest && piece != 0) Container(width: sz * 0.92, height: sz * 0.92, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0x88000000), width: 3))),
-              if (piece != 0)
+              if (piece.abs() == kPawn)
+                CustomPaint(size: Size(sz * 0.8, sz * 0.8), painter: _PawnPainter(piece > 0))
+              else if (piece != 0)
                 Text(
                   _chGlyph[piece.abs()],
                   style: TextStyle(
