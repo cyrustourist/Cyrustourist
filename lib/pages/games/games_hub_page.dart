@@ -10,6 +10,8 @@ import 'game_engine.dart';
 import 'game_play_page.dart';
 import 'game_shop_sheet.dart';
 import 'game_texts.dart';
+import 'chess_page.dart';
+import 'fruit_page.dart';
 import 'hokm_page.dart';
 import 'nearby_duel_page.dart';
 
@@ -329,6 +331,78 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     () {
                       Navigator.of(ctx).pop();
                       _push(GamePlayPage(kind: kind, mode: PlayMode.bot, level: l));
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// شطرنج: ربات، دو نفره روی یک گوشی، دو گوشی نزدیک (بدون اینترنت) و آنلاین.
+  void _openChessMode() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${GameT.t('chess')} · ${GameT.t('choose_mode')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 12),
+                _modeTile(Icons.smart_toy_rounded, GameT.t('mode_bot'), GameT.t('mode_bot_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _pickChessLevel();
+                }),
+                _modeTile(Icons.people_alt_rounded, GameT.t('mode_local'), GameT.t('mode_local_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(const ChessPage(mode: ChMode.local));
+                }),
+                _modeTile(Icons.wifi_tethering_rounded, GameT.t('mode_nearby'), GameT.t('mode_nearby_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(const ChessPage(mode: ChMode.nearby));
+                }),
+                _modeTile(Icons.public_rounded, GameT.t('mode_online'), GameT.t('mode_online_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(const ChessPage(mode: ChMode.online));
+                }),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _pickChessLevel() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final l in BotLevel.values)
+                  _modeTile(
+                    l == BotLevel.easy ? Icons.sentiment_satisfied_rounded : (l == BotLevel.normal ? Icons.sentiment_neutral_rounded : Icons.local_fire_department_rounded),
+                    GameT.t('lvl_${l.name}'),
+                    '',
+                    () {
+                      Navigator.of(ctx).pop();
+                      _push(ChessPage(mode: ChMode.bot, level: l));
                     },
                   ),
               ],
@@ -671,9 +745,10 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('🔴🟡', GameT.t('c4'), () => _openMode(GameKind.c4)),
                     _gameCard('🐍', GameT.t('snakes'), () => _openDiceMode(DiceKind.snakes)),
                     _gameCard('🎲', GameT.t('ludo'), () => _openDiceMode(DiceKind.ludo)),
-                    _gameCard('♟️', GameT.t('chess'), null),
+                    _gameCard('♟️', GameT.t('chess'), _openChessMode),
                     _gameCard('⚪🔴', GameT.t('backgammon'), _openBgMode),
                     _gameCard('♠️♥️', GameT.t('hokm'), _pickHokmLevel),
+                    _gameCard('🍓🍊', GameT.t('fruit'), () => _push(const FruitPage())),
                   ],
                 ),
                 const SizedBox(height: 14),
