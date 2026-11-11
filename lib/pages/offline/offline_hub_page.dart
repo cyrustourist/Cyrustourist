@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/language/menu_translations.dart';
 import '../../services/offline_mesh_service.dart';
 import 'file_transfer_page.dart';
+import 'live_call_page.dart';
 import 'offline_chat_page.dart';
 
 const Color _bg = Color(0xff071722);
@@ -48,32 +49,38 @@ class _OfflineHubPageState extends State<OfflineHubPage> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _openFiles() async {
-    if (_svc.running) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => Directionality(
-          textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: AlertDialog(
-            backgroundColor: _card,
-            content: Text(_t('برای جابه‌جایی فایل، شبکه‌ی چت آفلاین خاموش می‌شود. ادامه می‌دهید؟', 'The offline chat network will be turned off for file transfer. Continue?'), style: const TextStyle(color: Colors.white, height: 1.7)),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(_t('خیر', 'No'), style: const TextStyle(color: Colors.white70))),
-              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(_t('بله', 'Yes'), style: const TextStyle(color: _gold))),
-            ],
-          ),
+  /// شبکهٔ چت و بخش‌های دیگر هم‌زمان نمی‌توانند فعال باشند؛ قبل از رفتن به آن‌ها چت خاموش می‌شود.
+  Future<bool> _stopChatFor(String fa, String en) async {
+    if (!_svc.running) return true;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: _card,
+          content: Text(_t('برای $fa، شبکه‌ی چت آفلاین خاموش می‌شود. ادامه می‌دهید؟', 'The offline chat network will be turned off for $en. Continue?'), style: const TextStyle(color: Colors.white, height: 1.7)),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(_t('خیر', 'No'), style: const TextStyle(color: Colors.white70))),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(_t('بله', 'Yes'), style: const TextStyle(color: _gold))),
+          ],
         ),
-      );
-      if (ok != true || !mounted) return;
-      await _svc.stop();
-    }
-    if (!mounted) return;
+      ),
+    );
+    if (ok != true || !mounted) return false;
+    await _svc.stop();
+    return mounted;
+  }
+
+  Future<void> _openFiles() async {
+    if (!await _stopChatFor('جابه‌جایی فایل', 'file transfer')) return;
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FileTransferPage()));
     if (mounted) setState(() {});
   }
 
-  void _openCall() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('تماس صوتی زنده در به‌روزرسانی بعدی اضافه می‌شود', 'Live voice calls are coming in the next update'))));
+  Future<void> _openCall() async {
+    if (!await _stopChatFor('تماس صوتی', 'the voice call')) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LiveCallPage()));
+    if (mounted) setState(() {});
   }
 
   @override
@@ -116,7 +123,7 @@ class _OfflineHubPageState extends State<OfflineHubPage> {
                 color: _sky,
                 title: _t('تماس صوتی زنده', 'Live voice call'),
                 sub: _t('تماس مستقیم از راه وای‌فای، بدون اینترنت', 'Direct call over Wi‑Fi, no internet'),
-                badge: _t('به‌زودی', 'Soon'),
+                badge: _t('آزمایشی', 'Beta'),
                 onTap: _openCall,
               ),
               const SizedBox(height: 14),
