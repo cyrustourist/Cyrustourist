@@ -85,8 +85,9 @@ class LiveCall(private val ctx: Context) {
                 AudioFormat.ENCODING_PCM_16BIT,
                 maxOf(minRec, FRAME * 2 * 4)
             )
+            rec = r
             if (r.state != AudioRecord.STATE_INITIALIZED) {
-                r.release()
+                releaseAll()
                 restoreAudio()
                 return false
             }
@@ -110,7 +111,6 @@ class LiveCall(private val ctx: Context) {
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
-            rec = r
             track = t
             queue.clear()
             running = true
@@ -120,23 +120,28 @@ class LiveCall(private val ctx: Context) {
             recThread = Thread {
                 val pcm = ShortArray(FRAME)
                 while (running) {
-                    var n = 0
-                    while (n < FRAME && running) {
-                        val k = r.read(pcm, n, FRAME - n)
-                        if (k <= 0) break
-                        n += k
-                    }
-                    if (n < FRAME) {
-                        try {
+                    try {
+                        var n = 0
+                        while (n < FRAME && running) {
+                            val k = r.read(pcm, n, FRAME - n)
+                            if (k <= 0) break
+                            n += k
+                        }
+                        if (n < FRAME) {
                             Thread.sleep(5)
+                            continue
+                        }
+                        if (muted) continue
+                        val out = ByteArray(FRAME)
+                        for (i in 0 until FRAME) out[i] = linearToUlaw(pcm[i].toInt())
+                        main.post { sink?.success(out) }
+                    } catch (_: Throwable) {
+                        // ضبط متوقف شده؛ حلقه با running=false تمام می‌شود
+                        try {
+                            Thread.sleep(20)
                         } catch (_: InterruptedException) {
                         }
-                        continue
                     }
-                    if (muted) continue
-                    val out = ByteArray(FRAME)
-                    for (i in 0 until FRAME) out[i] = linearToUlaw(pcm[i].toInt())
-                    main.post { sink?.success(out) }
                 }
             }.also {
                 it.isDaemon = true
@@ -191,6 +196,11 @@ class LiveCall(private val ctx: Context) {
     @Synchronized
     fun stop() {
         running = false
+        try {
+            recThread?.join(200)
+            playThread?.join(200)
+        } catch (_: InterruptedException) {
+        }
         releaseAll()
         restoreAudio()
     }
