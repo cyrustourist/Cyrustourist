@@ -29,6 +29,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import android.view.WindowManager
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
@@ -203,6 +204,49 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
 
         val messenger = flutterEngine.dartExecutor.binaryMessenger
+
+        // تماس زنده آفلاین (آزمایشی): ضبط/پخش صدا؛ بسته‌ها از طریق Dart روی Nearby جابه‌جا می‌شوند
+        val live = LiveCall(applicationContext)
+        MethodChannel(messenger, "cyrus/livecall").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start" -> result.success(live.start())
+                "stop" -> {
+                    live.stop()
+                    result.success(true)
+                }
+                "play" -> {
+                    val b = call.argument<ByteArray>("bytes")
+                    if (b != null) live.play(b)
+                    result.success(true)
+                }
+                "mute" -> {
+                    live.setMuted(call.argument<Boolean>("on") ?: false)
+                    result.success(true)
+                }
+                "speaker" -> {
+                    live.setSpeaker(call.argument<Boolean>("on") ?: false)
+                    result.success(true)
+                }
+                "screen" -> {
+                    val on = call.argument<Boolean>("on") ?: false
+                    runOnUiThread {
+                        if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    }
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        EventChannel(messenger, "cyrus/livecall/mic").setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                live.setSink(events)
+            }
+
+            override fun onCancel(arguments: Any?) {
+                live.setSink(null)
+            }
+        })
 
         MethodChannel(messenger, "cyrus/files").setMethodCallHandler { call, result ->
             when (call.method) {
