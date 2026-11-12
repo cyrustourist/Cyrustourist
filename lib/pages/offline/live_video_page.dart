@@ -29,6 +29,8 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
   bool _busy = false;
   bool _dlg = false;
   bool _stats = false;
+  bool _swapped = false; // true = تصویر خودم بزرگ، تصویر مقابل کوچک
+  Offset? _pip; // موقعیت تصویر کوچک (با کشیدن عوض می‌شود)
 
   bool get _fa => MenuLanguage.current == 'fa';
   String _t(String fa, String en) => _fa ? fa : en;
@@ -244,9 +246,9 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
         Wrap(
           spacing: 8,
           children: [
-            for (var i = 0; i < 3; i++)
+            for (var i = 0; i < 4; i++)
               ChoiceChip(
-                label: Text(labels[i]),
+                label: Text(i == 3 ? _t('خودکار', 'Auto') : labels[i]),
                 selected: _svc.quality == i,
                 selectedColor: _gold,
                 backgroundColor: _card,
@@ -338,24 +340,40 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
     } else {
       qc = Colors.redAccent;
     }
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // تصویر مقابل
-        if (_svc.remoteVideoOn)
-          _frame(_svc.remoteFrame, _svc.remoteRot)
-        else
-          Container(
+    Widget remoteView(bool small) => _svc.remoteVideoOn
+        ? _frame(_svc.remoteFrame, _svc.remoteRot)
+        : Container(
             color: _bg,
             alignment: Alignment.center,
             child: Container(
-              width: 110,
-              height: 110,
+              width: small ? 44 : 110,
+              height: small ? 44 : 110,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: _card, shape: BoxShape.circle, border: Border.all(color: _gold, width: 3)),
-              child: Text(initial, style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 46)),
+              decoration: BoxDecoration(color: _card, shape: BoxShape.circle, border: Border.all(color: _gold, width: small ? 2 : 3)),
+              child: Text(initial, style: TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: small ? 20 : 46)),
             ),
-          ),
+          );
+    Widget localView(bool small) => _svc.cameraOff
+        ? Container(
+            color: _bg,
+            alignment: Alignment.center,
+            child: Icon(_svc.audioOnly ? Icons.headset_mic_rounded : Icons.videocam_off_rounded, color: Colors.white54, size: small ? 28 : 56),
+          )
+        : _frame(_svc.localFrame, _svc.localRot, mirror: _svc.frontCamera);
+    final big = _swapped ? localView(false) : remoteView(false);
+    final smallView = _swapped ? remoteView(true) : localView(true);
+    const pw = 92.0;
+    const ph = 128.0;
+    return LayoutBuilder(builder: (context, box) {
+      final topPad = MediaQuery.of(context).padding.top;
+      final def = Offset(box.maxWidth - pw - 12, topPad + 60);
+      var pos = _pip ?? def;
+      pos = Offset(pos.dx.clamp(6.0, box.maxWidth - pw - 6), pos.dy.clamp(topPad + 6, box.maxHeight - ph - 110));
+      return Stack(
+      fit: StackFit.expand,
+      children: [
+        // تصویر بزرگ
+        big,
         // نوار بالا
         SafeArea(
           child: Align(
@@ -391,18 +409,33 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  // تصویر خودم
-                  Container(
-                    width: 92,
-                    height: 128,
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white54, width: 1.5), color: Colors.black),
-                    clipBehavior: Clip.antiAlias,
-                    child: _svc.cameraOff
-                        ? const Center(child: Icon(Icons.videocam_off_rounded, color: Colors.white54))
-                        : _frame(_svc.localFrame, _svc.localRot, mirror: _svc.frontCamera),
+                  Material(
+                    color: _svc.audioOnly ? _gold : Colors.black54,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      tooltip: _t('فقط صدا', 'Audio only'),
+                      icon: Icon(Icons.headset_mic_rounded, color: _svc.audioOnly ? _bg : Colors.white),
+                      onPressed: _svc.toggleAudioOnly,
+                    ),
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+        // تصویر کوچک: با لمس جابه‌جا با بزرگ می‌شود و با کشیدن به هر جای صفحه می‌رود
+        Positioned(
+          left: pos.dx,
+          top: pos.dy,
+          child: GestureDetector(
+            onTap: () => setState(() => _swapped = !_swapped),
+            onPanUpdate: (d) => setState(() => _pip = Offset(pos.dx + d.delta.dx, pos.dy + d.delta.dy)),
+            child: Container(
+              width: pw,
+              height: ph,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white54, width: 1.5), color: Colors.black),
+              clipBehavior: Clip.antiAlias,
+              child: smallView,
             ),
           ),
         ),
@@ -410,7 +443,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
           Positioned(
             left: 12,
             right: 12,
-            top: 190,
+            top: 200,
             child: SafeArea(child: _statsPanel()),
           ),
         // دکمه‌ها
@@ -438,6 +471,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
         ),
       ],
     );
+    });
   }
 
   Widget _frame(Uint8List? b, int rot, {bool mirror = false}) {
@@ -471,6 +505,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
             children: [
               Text('RTT: ${rtt == null ? '—' : '$rtt ms'}    Loss: ${_svc.lossPct}%'),
               Text('Video: ${_svc.resolution.isEmpty ? '—' : _svc.resolution} @ ${_svc.fps} fps    ${_svc.rxKbps} kbps'),
+              Text('Quality: ${_svc.autoQuality ? 'Auto' : 'Manual'} (${const ['360p', '480p', '720p'][_svc.level]})'),
               Text('Path: ${_svc.pathInfo.isEmpty ? '—' : _svc.pathInfo}'),
               Text('Auth code: ${fp(_svc.myFp)}'),
               Text(_t('کد تأیید باید در هر دو گوشی یکی باشد؛ ارتباط با آن رمز و تأیید شده است.', 'The auth code must be identical on both phones; the link is encrypted and verified with it.'), style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
