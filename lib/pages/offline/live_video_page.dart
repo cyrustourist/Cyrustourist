@@ -114,7 +114,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
       case 'failed':
         return _t('اتصال برقرار نشد. دوباره تلاش کنید', 'Could not connect. Try again');
       case 'net':
-        return _t('تصویر وصل نشد. هر دو گوشی باید به یک وای‌فای (یا هات‌اسپات یکی از دو گوشی) وصل باشند. اینترنت لازم نیست.', 'Video did not connect. Both phones must be on the same Wi‑Fi (or one phone\'s hotspot). Internet is not needed.');
+        return _t('تصویر وصل نشد. هر دو گوشی باید به یک وای‌فای (یا هات‌اسپات یکی از دو گوشی) وصل باشند. اینترنت لازم نیست.\n${_svc.diagnostics}', 'Video did not connect. Both phones must be on the same Wi‑Fi (or one phone\'s hotspot). Internet is not needed.\n${_svc.diagnostics}');
       case 'media':
         return _t('دوربین یا میکروفون راه‌اندازی نشد (شاید برنامه‌ی دیگری از آن استفاده می‌کند)', 'Could not start the camera or microphone (another app may be using it)');
       default:
