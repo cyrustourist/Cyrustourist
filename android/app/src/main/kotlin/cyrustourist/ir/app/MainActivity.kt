@@ -207,6 +207,7 @@ class MainActivity : FlutterActivity() {
 
         // تماس زنده آفلاین (آزمایشی): ضبط/پخش صدا؛ بسته‌ها از طریق Dart روی Nearby جابه‌جا می‌شوند
         val live = LiveCall(applicationContext)
+        val cam = LiveCam(applicationContext)
         MethodChannel(messenger, "cyrus/livecall").setMethodCallHandler { call, result ->
             when (call.method) {
                 "start" -> result.success(live.start())
@@ -227,29 +228,22 @@ class MainActivity : FlutterActivity() {
                     live.setSpeaker(call.argument<Boolean>("on") ?: false)
                     result.success(true)
                 }
-                "wifiBind" -> {
-                    // تماس تصویری آفلاین: ترافیک برنامه روی وای‌فای برود (حتی بدون اینترنت)
-                    var ok = false
-                    try {
-                        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-                        @Suppress("DEPRECATION")
-                        for (n in cm.allNetworks) {
-                            val c = cm.getNetworkCapabilities(n) ?: continue
-                            if (c.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
-                                ok = cm.bindProcessToNetwork(n)
-                                break
-                            }
-                        }
-                    } catch (_: Throwable) {
-                    }
+                "camStart" -> {
+                    val ok = cam.start(
+                        call.argument<Boolean>("front") ?: true,
+                        call.argument<Int>("w") ?: 640,
+                        call.argument<Int>("h") ?: 480,
+                        call.argument<Int>("fps") ?: 10,
+                        call.argument<Int>("q") ?: 45
+                    )
                     result.success(ok)
                 }
-                "wifiUnbind" -> {
-                    try {
-                        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-                        cm.bindProcessToNetwork(null)
-                    } catch (_: Throwable) {
-                    }
+                "camQ" -> {
+                    cam.setQuality(call.argument<Int>("q") ?: 45)
+                    result.success(true)
+                }
+                "camStop" -> {
+                    cam.stop()
                     result.success(true)
                 }
                 "screen" -> {
@@ -263,6 +257,15 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        EventChannel(messenger, "cyrus/livecall/cam").setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                cam.setSink(events)
+            }
+
+            override fun onCancel(arguments: Any?) {
+                cam.setSink(null)
+            }
+        })
         EventChannel(messenger, "cyrus/livecall/mic").setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 live.setSink(events)
