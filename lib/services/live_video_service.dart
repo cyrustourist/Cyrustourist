@@ -689,9 +689,6 @@ class LiveVideoService extends ChangeNotifier {
     try {
       await pc?.close();
     } catch (_) {}
-    try {
-      await pc?.dispose();
-    } catch (_) {}
     final st = _local;
     _local = null;
     try {
