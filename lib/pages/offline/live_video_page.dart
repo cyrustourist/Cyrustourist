@@ -1,5 +1,6 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/language/menu_translations.dart';
@@ -14,7 +15,8 @@ const Color _muted = Color(0xff8fa5b2);
 const Color _red = Color(0xffc62f35);
 
 /// تماس تصویری زنده آفلاین (آزمایشی). جدا از تماس تصویری آنلاین برنامه.
-/// دو گوشی باید روی یک شبکهٔ محلی (یک وای‌فای یا هات‌اسپات) باشند؛ اینترنت لازم نیست.
+/// ارتباط روی Nearby Connections است (وای‌فای مشترک، هات‌اسپات، Wi‑Fi Direct یا بلوتوث، هر کدام که در دسترس باشد)؛
+/// اینترنت و آدرس IP مشترک لازم نیست.
 class LiveVideoPage extends StatefulWidget {
   const LiveVideoPage({super.key});
 
@@ -113,8 +115,8 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
         return _t('اتصال انجام نشد (رد شد یا کدها یکی نبود)', 'Connection was declined');
       case 'failed':
         return _t('اتصال برقرار نشد. دوباره تلاش کنید', 'Could not connect. Try again');
-      case 'net':
-        return _t('تصویر وصل نشد. هر دو گوشی باید به یک وای‌فای (یا هات‌اسپات یکی از دو گوشی) وصل باشند. اینترنت لازم نیست.\n${_svc.diagnostics}', 'Video did not connect. Both phones must be on the same Wi‑Fi (or one phone\'s hotspot). Internet is not needed.\n${_svc.diagnostics}');
+      case 'audio':
+        return _t('میکروفون راه‌اندازی نشد (شاید برنامهٔ دیگری از آن استفاده می‌کند)', 'Could not start the microphone (another app may be using it)');
       case 'media':
         return _t('دوربین یا میکروفون راه‌اندازی نشد (شاید برنامه‌ی دیگری از آن استفاده می‌کند)', 'Could not start the camera or microphone (another app may be using it)');
       default:
@@ -212,8 +214,8 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
           decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _teal.withValues(alpha: 0.45))),
           child: Text(
             _t(
-              'تماس تصویری مستقیم بین دو گوشی، بدون اینترنت. تصویر و صدا با WebRTC و رمزنگاری استاندارد آن (DTLS‑SRTP) مستقیم بین دو گوشی می‌رود. این بخش جدا از تماس تصویری آنلاین برنامه است و نسخهٔ آزمایشی است.',
-              'Direct video call between two phones, no internet. Video and audio go straight between the phones via WebRTC with its standard encryption (DTLS‑SRTP). Separate from the online video call; this is a beta.',
+              'تماس تصویری مستقیم بین دو گوشی، بدون اینترنت و بدون نیاز به IP. برنامه خودش بهترین راه ارتباط را انتخاب می‌کند (وای‌فای مشترک، هات‌اسپات، Wi‑Fi Direct یا بلوتوث) و تصویر و صدا رمزنگاری‌شده می‌رود. این بخش جدا از تماس تصویری آنلاین برنامه است و نسخهٔ آزمایشی است.',
+              'Direct video call between two phones, no internet and no IP needed. The app picks the best link itself (shared Wi‑Fi, hotspot, Wi‑Fi Direct or Bluetooth) and video and audio are encrypted. Separate from the online video call; this is a beta.',
             ),
             style: const TextStyle(color: Color(0xffc3d2db), height: 1.8),
           ),
@@ -229,7 +231,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  _t('شرط لازم: هر دو گوشی باید به یک وای‌فای وصل باشند (مودم بدون اینترنت هم کافی است) یا یکی هات‌اسپات بزند و دیگری به آن وصل شود.', 'Required: both phones on the same Wi‑Fi (a router without internet is fine), or one phone\'s hotspot with the other connected to it.'),
+                  _t('شرط لازم: در هر دو گوشی بلوتوث، وای‌فای و GPS روشن باشد. لازم نیست به یک وای‌فای وصل باشند؛ اگر وای‌فای یا هات‌اسپات مشترکی باشد سرعت و کیفیت بهتر می‌شود.', 'Required: Bluetooth, Wi‑Fi and location on in both phones. They do not need to share a Wi‑Fi; a shared Wi‑Fi or hotspot just gives better quality.'),
                   style: const TextStyle(color: Colors.white, height: 1.8, fontSize: 13),
                 ),
               ),
@@ -341,7 +343,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
       children: [
         // تصویر مقابل
         if (_svc.remoteVideoOn)
-          RTCVideoView(_svc.remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
+          _frame(_svc.remoteFrame, _svc.remoteRot)
         else
           Container(
             color: _bg,
@@ -397,7 +399,7 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
                     clipBehavior: Clip.antiAlias,
                     child: _svc.cameraOff
                         ? const Center(child: Icon(Icons.videocam_off_rounded, color: Colors.white54))
-                        : RTCVideoView(_svc.localRenderer, mirror: _svc.frontCamera, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                        : _frame(_svc.localFrame, _svc.localRot, mirror: _svc.frontCamera),
                   ),
                 ],
               ),
@@ -438,6 +440,21 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
     );
   }
 
+  Widget _frame(Uint8List? b, int rot, {bool mirror = false}) {
+    if (b == null) return const ColoredBox(color: Colors.black);
+    Widget img = RotatedBox(
+      quarterTurns: rot,
+      child: Image.memory(
+        b,
+        gaplessPlayback: true,
+        fit: BoxFit.cover,
+        errorBuilder: (c, e, st) => const ColoredBox(color: Colors.black),
+      ),
+    );
+    if (mirror) img = Transform.flip(flipX: true, child: img);
+    return SizedBox.expand(child: img);
+  }
+
   Widget _statsPanel() {
     final rtt = _svc.rttMs;
     String fp(String s) => s.length > 17 ? s.substring(0, 17) : s;
@@ -455,9 +472,8 @@ class _LiveVideoPageState extends State<LiveVideoPage> {
               Text('RTT: ${rtt == null ? '—' : '$rtt ms'}    Loss: ${_svc.lossPct}%'),
               Text('Video: ${_svc.resolution.isEmpty ? '—' : _svc.resolution} @ ${_svc.fps} fps    ${_svc.rxKbps} kbps'),
               Text('Path: ${_svc.pathInfo.isEmpty ? '—' : _svc.pathInfo}'),
-              Text('My DTLS: ${fp(_svc.myFp)}'),
-              Text('Peer DTLS: ${fp(_svc.peerFp)}'),
-              Text(_t('اگر اثر انگشت‌ها در دو گوشی برعکس هم یکی باشد، تماس رمزنگاری‌شده مستقیم است.', 'If the fingerprints match crosswise on both phones, the call is encrypted end to end.'), style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
+              Text('Auth code: ${fp(_svc.myFp)}'),
+              Text(_t('کد تأیید باید در هر دو گوشی یکی باشد؛ ارتباط با آن رمز و تأیید شده است.', 'The auth code must be identical on both phones; the link is encrypted and verified with it.'), style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
             ],
           ),
         ),
