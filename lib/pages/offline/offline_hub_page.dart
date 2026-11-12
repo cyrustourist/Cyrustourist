@@ -4,6 +4,7 @@ import '../../core/language/menu_translations.dart';
 import '../../services/offline_mesh_service.dart';
 import 'file_transfer_page.dart';
 import 'live_call_page.dart';
+import 'live_video_page.dart';
 import 'offline_chat_page.dart';
 
 const Color _bg = Color(0xff071722);
@@ -83,6 +84,12 @@ class _OfflineHubPageState extends State<OfflineHubPage> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _openVideo() async {
+    if (!await _stopChatFor('تماس تصویری', 'the video call')) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LiveVideoPage()));
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -125,6 +132,14 @@ class _OfflineHubPageState extends State<OfflineHubPage> {
                 sub: _t('تماس مستقیم از راه وای‌فای، بدون اینترنت', 'Direct call over Wi‑Fi, no internet'),
                 badge: _t('آزمایشی', 'Beta'),
                 onTap: _openCall,
+              ),
+              _tile(
+                icon: Icons.videocam_rounded,
+                color: _teal,
+                title: _t('تماس تصویری زنده', 'Live video call'),
+                sub: _t('تصویر و صدا مستقیم بین دو گوشی روی یک وای‌فای، بدون اینترنت', 'Video and audio straight between two phones on the same Wi‑Fi, no internet'),
+                badge: _t('آزمایشی', 'Beta'),
+                onTap: _openVideo,
               ),
               const SizedBox(height: 14),
               Text(
