@@ -50,8 +50,20 @@ class LiveVideoService extends ChangeNotifier {
   Uint8List? localFrame;
   int localRot = 0;
 
-  /// 0 = ۳۶۰p، 1 = ۴۸۰p، 2 = ۷۲۰p (قبل از شروع انتخاب می‌شود)
-  int quality = 1;
+  /// 0 = ۳۶۰p، 1 = ۴۸۰p، 2 = ۷۲۰p، 3 = خودکار (قبل از شروع انتخاب می‌شود)
+  int quality = 3;
+
+  /// سطح فعلی کیفیت (در حالت خودکار با سرعت اتصال بالا و پایین می‌رود)
+  int _level = 1;
+  int get level => _level;
+  bool get autoQuality => quality == 3;
+
+  /// «فقط صدا»: دوربین خودم خاموش است و تصویر مقابل هم دریافت نمی‌شود (مصرف شبکه کم)
+  bool audioOnly = false;
+  bool _peerAudioOnly = false;
+  int _goodTicks = 0;
+  int _badTicks = 0;
+  DateTime _levelAt = DateTime.now();
 
   bool muted = false;
   bool cameraOff = false;
@@ -312,7 +324,7 @@ class LiveVideoService extends ChangeNotifier {
 
   (int, int, int, int) get _preset {
     // عرض، ارتفاع، فریم بر ثانیه، کیفیت JPEG
-    switch (quality) {
+    switch (_level) {
       case 0:
         return (320, 240, 12, 50);
       case 2:
@@ -358,6 +370,12 @@ class LiveVideoService extends ChangeNotifier {
     _wBytes = 0;
     _lastRxAny = DateTime.now();
     _lastVideoAt = DateTime.now();
+    _level = quality == 3 ? 1 : quality;
+    audioOnly = false;
+    _peerAudioOnly = false;
+    _goodTicks = 0;
+    _badTicks = 0;
+    _levelAt = DateTime.now();
     _jpegQ = _preset.$4;
     _t0 = DateTime.now();
     stage = 'incall';
@@ -470,7 +488,7 @@ class LiveVideoService extends ChangeNotifier {
       frontCamera = front;
       notifyListeners();
     }
-    if (cameraOff || _peerId.isEmpty) return;
+    if (cameraOff || _peerAudioOnly || _peerId.isEmpty) return;
 
     // کنترل جریان: حداکثر ۲ فریم بدون تأیید در راه باشد (اگر تأیید ۲ ثانیه نیامد، دوباره اجازه می‌دهیم)
     final inflight = _lastAck < 0 ? _sentFrames : ((_vId - _lastAck) & 0xffff);
@@ -548,7 +566,7 @@ class LiveVideoService extends ChangeNotifier {
   }
 
   void _onVideoChunk(Uint8List b) {
-    if (stage != 'incall' || b.length < 12) return;
+    if (stage != 'incall' || audioOnly || b.length < 12) return;
     final id = (b[1] << 8) | b[2];
     final idx = b[3];
     final cnt = b[4];
@@ -624,6 +642,14 @@ class LiveVideoService extends ChangeNotifier {
           remoteFrame = null;
           notifyListeners();
         }
+      } else if (k == 'ao') {
+        // مقابل «فقط صدا» شده: تصویر خودم را برایش نمی‌فرستم و تصویری از او نمی‌آید
+        _peerAudioOnly = m['on'] == true;
+        if (_peerAudioOnly) {
+          remoteVideoOn = false;
+          remoteFrame = null;
+        }
+        notifyListeners();
       } else if (k == 'bye') {
         _end('ended', false);
       }
@@ -657,6 +683,25 @@ class LiveVideoService extends ChangeNotifier {
       _jpegQ = q;
       _ch.invokeMethod<bool>('camQ', <String, dynamic>{'q': q}).catchError((_) => false);
     }
+    // حالت خودکار: اگر اتصال ضعیف شد یک پله پایین، اگر مدتی خیلی خوب بود یک پله بالا
+    if (autoQuality && !cameraOff && !_peerAudioOnly && _ackMs > 0) {
+      if (_ackMs > 500 || lossPct > 15) {
+        _badTicks++;
+        _goodTicks = 0;
+      } else if (_ackMs < 130) {
+        _goodTicks++;
+        _badTicks = 0;
+      } else {
+        _goodTicks = 0;
+        _badTicks = 0;
+      }
+      final since = DateTime.now().difference(_levelAt).inSeconds;
+      if (_badTicks >= 2 && _level > 0 && since >= 8) {
+        _setLevel(_level - 1);
+      } else if (_goodTicks >= 6 && _jpegQ >= base && _level < 2 && since >= 15) {
+        _setLevel(_level + 1);
+      }
+    }
     // اگر ۱۰ ثانیه هیچ بسته‌ای نیامد، ارتباط از دست رفته است
     if (DateTime.now().difference(_lastRxAny).inSeconds > 10) {
       _end('lost', false);
@@ -665,7 +710,36 @@ class LiveVideoService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _setLevel(int l) async {
+    _level = l;
+    _levelAt = DateTime.now();
+    _badTicks = 0;
+    _goodTicks = 0;
+    _ackMs = 0;
+    _jpegQ = _preset.$4;
+    await _startCamera();
+    notifyListeners();
+  }
+
   // ------------------------------------------------------------------ کنترل‌ها
+
+  Future<void> toggleAudioOnly() async {
+    audioOnly = !audioOnly;
+    if (audioOnly) {
+      cameraOff = true;
+      localFrame = null;
+      remoteVideoOn = false;
+      remoteFrame = null;
+      await _stopCamera();
+      _sendCtl(<String, dynamic>{'k': 'ao', 'on': true});
+      _sendCtl(<String, dynamic>{'k': 'cam', 'on': false});
+    } else {
+      cameraOff = false;
+      _sendCtl(<String, dynamic>{'k': 'ao', 'on': false});
+      await _startCamera();
+    }
+    notifyListeners();
+  }
 
   Future<void> toggleMute() async {
     muted = !muted;
@@ -682,6 +756,10 @@ class LiveVideoService extends ChangeNotifier {
       await _stopCamera();
       _sendCtl(<String, dynamic>{'k': 'cam', 'on': false});
     } else {
+      if (audioOnly) {
+        audioOnly = false;
+        _sendCtl(<String, dynamic>{'k': 'ao', 'on': false});
+      }
       await _startCamera();
     }
     notifyListeners();
