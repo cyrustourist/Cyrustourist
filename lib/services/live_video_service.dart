@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show NetworkInterface, InternetAddressType;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -63,6 +64,13 @@ class LiveVideoService extends ChangeNotifier {
   String pathInfo = '';
   String myFp = '';
   String peerFp = '';
+
+  /// آدرس‌های شبکهٔ محلی دو گوشی (برای عیب‌یابی وقتی تصویر وصل نمی‌شود)
+  String myIps = '';
+  String peerIps = '';
+  bool _restarted = false;
+  bool _wifiBound = false;
+  Timer? _restartTimer;
 
   String _mode = '';
   String _peerId = '';
@@ -309,6 +317,8 @@ class LiveVideoService extends ChangeNotifier {
     pathInfo = '';
     myFp = '';
     peerFp = '';
+    peerIps = '';
+    _restarted = false;
     _remoteSet = false;
     _pendingCands.clear();
     _prevBytes = 0;
@@ -329,10 +339,18 @@ class LiveVideoService extends ChangeNotifier {
       _local = stream;
       localRenderer.srcObject = stream;
 
+      // ترافیک برنامه در طول تماس روی وای‌فای برود (حتی اگر وای‌فای اینترنت نداشته باشد و دیتای موبایل روشن باشد)
+      await _bindWifi();
+      myIps = await _localIps();
+      _sendSig(<String, dynamic>{'k': 'ips', 'v': myIps});
+
       // iceServers خالی: فقط آدرس‌های شبکهٔ محلی (host)، بدون STUN/TURN و بدون اینترنت
       final pc = await createPeerConnection(<String, dynamic>{
         'iceServers': <dynamic>[],
         'sdpSemantics': 'unified-plan',
+        'continualGatheringPolicy': 'gather_continually',
+        'tcpCandidatePolicy': 'enabled',
+        'iceCandidatePoolSize': 0,
       });
       _pc = pc;
 
@@ -359,6 +377,9 @@ class LiveVideoService extends ChangeNotifier {
       _connTimeout = Timer(const Duration(seconds: 30), () {
         if (stage == 'connecting') _end('ended', true, errorCode: 'net');
       });
+      // اگر تا ۱۰ ثانیه وصل نشد، تماس‌گیرنده یک بار جست‌وجوی مسیر را از نو شروع می‌کند (ICE restart)
+      _restartTimer?.cancel();
+      _restartTimer = Timer(const Duration(seconds: 10), () => _iceRestart());
 
       if (_mode == 'search') {
         // تماس‌گیرنده: کانال کنترل را می‌سازد و offer می‌فرستد
@@ -413,6 +434,7 @@ class LiveVideoService extends ChangeNotifier {
 
   Future<void> _onConnected() async {
     _connTimeout?.cancel();
+    _restartTimer?.cancel();
     stage = 'incall';
     _t0 = DateTime.now();
     notifyListeners();
@@ -443,6 +465,86 @@ class LiveVideoService extends ChangeNotifier {
     Future<void>.delayed(const Duration(milliseconds: 1500), () async {
       if (stage == 'incall') await _stopNearby();
     });
+  }
+
+  // ------------------------------------------------------------------ شبکهٔ محلی
+
+  Future<void> _bindWifi() async {
+    try {
+      _wifiBound = (await _screenChannel.invokeMethod<bool>('wifiBind')) ?? false;
+    } catch (_) {
+      _wifiBound = false;
+    }
+  }
+
+  Future<void> _unbindWifi() async {
+    if (!_wifiBound) return;
+    _wifiBound = false;
+    try {
+      await _screenChannel.invokeMethod<bool>('wifiUnbind');
+    } catch (_) {}
+  }
+
+  /// فهرست آدرس‌های IPv4 همهٔ رابط‌های شبکه (wlan0، ap0 برای هات‌اسپات و ...)
+  Future<String> _localIps() async {
+    try {
+      final list = await NetworkInterface.list(type: InternetAddressType.IPv4, includeLoopback: false);
+      final out = <String>[];
+      for (final i in list) {
+        for (final a in i.addresses) {
+          out.add('${i.name}:${a.address}');
+        }
+      }
+      return out.join(', ');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  static List<String> _ipOnly(String s) => s
+      .split(',')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .map((e) => e.contains(':') ? e.substring(e.indexOf(':') + 1) : e)
+      .toList();
+
+  static String _net24(String ip) {
+    final p = ip.split('.');
+    return p.length == 4 ? '${p[0]}.${p[1]}.${p[2]}' : ip;
+  }
+
+  /// آیا دو گوشی یک زیرشبکه دارند؟ null = نامعلوم
+  bool? get sameSubnet {
+    final a = _ipOnly(myIps);
+    final b = _ipOnly(peerIps);
+    if (a.isEmpty || b.isEmpty) return null;
+    for (final x in a) {
+      for (final y in b) {
+        if (_net24(x) == _net24(y)) return true;
+      }
+    }
+    return false;
+  }
+
+  /// متن عیب‌یابی که زیر پیام خطا نشان داده می‌شود
+  String get diagnostics {
+    final same = sameSubnet;
+    final s = same == null ? '؟' : (same ? 'بله' : 'خیر');
+    return 'IP من: ${myIps.isEmpty ? '—' : myIps}\nIP مقابل: ${peerIps.isEmpty ? '—' : peerIps}\nهم‌شبکه: $s';
+  }
+
+  Future<void> _iceRestart() async {
+    final pc = _pc;
+    if (pc == null || _ending || stage != 'connecting' || _restarted || _mode != 'search') return;
+    _restarted = true;
+    try {
+      _remoteSet = false;
+      final offer = await pc.createOffer(<String, dynamic>{'iceRestart': true});
+      await pc.setLocalDescription(offer);
+      _sendSig(<String, dynamic>{'k': 'offer', 'sdp': offer.sdp, 'type': offer.type});
+    } catch (e) {
+      debugPrint('LiveVideo iceRestart: $e');
+    }
   }
 
   // ------------------------------------------------------------------ علامت‌دهی روی Nearby
@@ -489,6 +591,8 @@ class LiveVideoService extends ChangeNotifier {
         _remoteSet = true;
         peerFp = _fingerprint(sdp);
         await _flushCands();
+      } else if (k == 'ips') {
+        peerIps = '${m['v'] ?? ''}';
       } else if (k == 'cand') {
         final c = RTCIceCandidate('${m['c']}', m['m'] as String?, (m['i'] as num?)?.toInt());
         if (_remoteSet) {
@@ -645,6 +749,8 @@ class LiveVideoService extends ChangeNotifier {
     _statsTimer = null;
     _connTimeout?.cancel();
     _connTimeout = null;
+    _restartTimer?.cancel();
+    _restartTimer = null;
     if (notifyPeer) {
       try {
         final dc = _dc;
@@ -657,6 +763,7 @@ class LiveVideoService extends ChangeNotifier {
     }
     await _closeMedia();
     await _stopNearby();
+    await _unbindWifi();
     try {
       await _screenChannel.invokeMethod<bool>('screen', <String, dynamic>{'on': false});
     } catch (_) {}
@@ -706,6 +813,7 @@ class LiveVideoService extends ChangeNotifier {
     } else {
       await _closeMedia();
       await _stopNearby();
+      await _unbindWifi();
     }
     stage = 'idle';
     error = '';
