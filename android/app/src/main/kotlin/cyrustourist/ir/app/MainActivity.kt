@@ -227,6 +227,31 @@ class MainActivity : FlutterActivity() {
                     live.setSpeaker(call.argument<Boolean>("on") ?: false)
                     result.success(true)
                 }
+                "wifiBind" -> {
+                    // تماس تصویری آفلاین: ترافیک برنامه روی وای‌فای برود (حتی بدون اینترنت)
+                    var ok = false
+                    try {
+                        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+                        @Suppress("DEPRECATION")
+                        for (n in cm.allNetworks) {
+                            val c = cm.getNetworkCapabilities(n) ?: continue
+                            if (c.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+                                ok = cm.bindProcessToNetwork(n)
+                                break
+                            }
+                        }
+                    } catch (_: Throwable) {
+                    }
+                    result.success(ok)
+                }
+                "wifiUnbind" -> {
+                    try {
+                        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+                        cm.bindProcessToNetwork(null)
+                    } catch (_: Throwable) {
+                    }
+                    result.success(true)
+                }
                 "screen" -> {
                     val on = call.argument<Boolean>("on") ?: false
                     runOnUiThread {
