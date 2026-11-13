@@ -292,6 +292,36 @@ class MainActivity : FlutterActivity() {
                     }
                 }
 
+                "appApk" -> {
+                    // یک کپی از APK همین برنامه برای ارسال به گوشی دیگر (بدون اینترنت)
+                    Thread {
+                        val out = HashMap<String, Any>()
+                        try {
+                            val ai = applicationInfo
+                            val splits = ai.splitSourceDirs
+                            if (splits != null && splits.isNotEmpty()) {
+                                // نصب از بستهٔ چندبخشی (مثل Play): APK اصلی تنهایی نصب نمی‌شود
+                                out["error"] = "split"
+                            } else {
+                                val ver = packageManager.getPackageInfo(packageName, 0).versionName ?: "app"
+                                cacheDir.listFiles()?.forEach {
+                                    if (it.name.startsWith("CyrusTourist-") && it.name.endsWith(".apk")) it.delete()
+                                }
+                                val dst = File(cacheDir, "CyrusTourist-" + ver + ".apk")
+                                File(ai.sourceDir).inputStream().use { i ->
+                                    dst.outputStream().use { o -> i.copyTo(o, 256 * 1024) }
+                                }
+                                out["path"] = dst.absolutePath
+                                out["name"] = dst.name
+                                out["size"] = dst.length()
+                            }
+                        } catch (e: Throwable) {
+                            out["error"] = "fail"
+                        }
+                        runOnUiThread { result.success(out) }
+                    }.start()
+                }
+
                 else -> result.notImplemented()
             }
         }
