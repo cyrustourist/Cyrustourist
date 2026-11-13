@@ -967,10 +967,10 @@ Widget _buildLudoBoard({
     final grp = groups[keys[id]]!;
     if (grp.length > 1) {
       final a = 2 * pi * grp.indexOf(id) / grp.length;
-      c = c + Offset(cos(a) * 0.2, sin(a) * 0.2);
+      c = c + Offset(cos(a) * 0.24, sin(a) * 0.24);
     }
-    final d = (p == 57 ? 0.42 : 0.7) * u;
-    final hit = max(d, u * 1.1);
+    final d = (p == 57 ? 0.5 : 0.88) * u;
+    final hit = max(d, u * 1.15);
     final canTap = pl == turn && movable.contains(i);
     children.add(
       AnimatedPositioned(
@@ -1230,9 +1230,9 @@ class _LudoPageState extends State<LudoPage> {
         body: SafeArea(
           child: LayoutBuilder(
             builder: (ctx, cons) {
-              final w = min(cons.maxWidth - 24, 520.0);
+              final w = min(cons.maxWidth - 8, 640.0);
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 20),
                 child: Center(
                   child: SizedBox(
                     width: w,
@@ -2278,9 +2278,9 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
         body: SafeArea(
           child: LayoutBuilder(
             builder: (ctx, cons) {
-              final w = min(cons.maxWidth - 24, 520.0);
+              final w = min(cons.maxWidth - 8, 640.0);
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+                padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
                 child: Center(
                   child: SizedBox(
                     width: w,
