@@ -426,6 +426,23 @@ class FileTransferService extends ChangeNotifier {
     }
   }
 
+  /// ارسال خود برنامه (APK نسخهٔ نصب‌شدهٔ همین گوشی) به گوشی مقابل.
+  /// خروجی: null = موفق، یا کد خطا: link | split | fail
+  Future<String?> sendAppApk() async {
+    if (stage != 'linked' || _peerId.isEmpty) return 'link';
+    try {
+      final r = await _filesChannel.invokeMethod<Map<dynamic, dynamic>>('appApk');
+      if (r == null) return 'fail';
+      final err = r['error'];
+      if (err != null) return '$err';
+      final ok = await sendFile('${r['path']}', '${r['name']}', (r['size'] as num).toInt());
+      return ok ? null : 'fail';
+    } catch (e) {
+      debugPrint('FileTransfer sendApp: ${e.runtimeType}');
+      return 'fail';
+    }
+  }
+
   /// بازگشت به صفحهٔ انتخاب (فهرست انتقال‌ها می‌ماند)
   Future<void> reset() async {
     await _stopNearby();
