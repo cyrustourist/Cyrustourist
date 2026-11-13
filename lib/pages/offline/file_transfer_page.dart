@@ -146,6 +146,22 @@ class _FileTransferPageState extends State<FileTransferPage> {
     }
   }
 
+  Future<void> _sendApp() async {
+    _snack(_t('در حال آماده‌سازی برنامه…', 'Preparing the app…'));
+    final e = await _svc.sendAppApk();
+    if (!mounted || e == null) return;
+    switch (e) {
+      case 'split':
+        _snack(_t('این نسخه از برنامه به‌صورت بستهٔ چندبخشی نصب شده و ارسالش ممکن نیست. فایل APK را از دانلود مستقیم نصب کنید.', 'This install is a split package and cannot be shared. Install the app from a direct APK download.'));
+        break;
+      case 'link':
+        _snack(_t('اتصال برقرار نیست', 'Not connected'));
+        break;
+      default:
+        _snack(_t('ارسال برنامه انجام نشد', 'Could not send the app'));
+    }
+  }
+
   String _size(int b) {
     if (b <= 0) return '';
     if (b < 1024 * 1024) return '${(b / 1024).ceil()} KB';
@@ -329,6 +345,10 @@ class _FileTransferPageState extends State<FileTransferPage> {
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+          child: _pickBtn(Icons.system_update_rounded, _t('ارسال نسخهٔ برنامه (APK)', 'Send this app (APK)'), _sendApp),
+        ),
         const SizedBox(height: 8),
         Expanded(
           child: items.isEmpty
@@ -351,7 +371,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
         if (it.mine) {
           status = _t('ارسال شد', 'Sent');
         } else {
-          status = it.saved == 'gallery' ? _t('ذخیره شد در گالری (پوشهٔ Cyrustourist)', 'Saved to gallery (Cyrustourist)') : _t('ذخیره شد در Download/Cyrustourist', 'Saved to Download/Cyrustourist');
+          status = it.saved == 'gallery' ? _t('ذخیره شد در گالری (پوشهٔ Cyrustourist)', 'Saved to gallery (Cyrustourist)') : _t('ذخیره شد در Download/Cyrustourist', 'Saved to Download/Cyrustourist') + (it.name.toLowerCase().endsWith('.apk') ? _t('\nبرای نصب، فایل را از مدیر فایل یا Download باز کنید.', '\nOpen the file from Downloads to install.') : '');
         }
         color = _teal;
         break;
