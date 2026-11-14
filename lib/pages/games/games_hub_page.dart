@@ -11,6 +11,7 @@ import 'game_play_page.dart';
 import 'game_shop_sheet.dart';
 import 'game_texts.dart';
 import 'chess_page.dart';
+import 'dots_page.dart';
 import 'esmfamil_nearby_page.dart';
 import 'esmfamil_page.dart';
 import 'fruit_page.dart';
@@ -186,6 +187,48 @@ class _GamesHubPageState extends State<GamesHubPage> {
                       _push(BackgammonPage(mode: BgMode.bot, level: l));
                     },
                   ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// نقطه‌بازی: ربات، گوشی نزدیک (۲ تا ۴ نفر) یا دو نفره روی یک گوشی؛ همه بدون اینترنت.
+  void _openDotsMode() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${GameT.fa ? 'نقطه‌بازی' : 'Dots & Boxes'} · ${GameT.t('choose_mode')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 12),
+                _modeTile(Icons.smart_toy_rounded, GameT.t('mode_bot'), GameT.t('mode_bot_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(const DotsPage(mode: DotsMode.bot));
+                }),
+                _modeTile(
+                  Icons.wifi_tethering_rounded,
+                  GameT.t('mode_nearby'),
+                  GameT.fa ? 'بازی گروهی ۲ تا ۴ نفره با گوشی‌های اطراف، بدون اینترنت' : 'Group game for 2 to 4 nearby phones, no internet',
+                  () {
+                    Navigator.of(ctx).pop();
+                    _push(const DotsPage(mode: DotsMode.nearby));
+                  },
+                ),
+                _modeTile(Icons.people_alt_rounded, GameT.t('mode_local'), GameT.t('mode_local_sub'), () {
+                  Navigator.of(ctx).pop();
+                  _push(const DotsPage(mode: DotsMode.local));
+                }),
               ],
             ),
           ),
@@ -796,6 +839,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('♠️♥️', GameT.t('hokm'), _pickHokmLevel),
                     _gameCard('🍓🍊', GameT.t('fruit'), () => _push(const FruitPage())),
                     _gameCard('✍️', 'اسم و فامیل', _openEsmMode),
+                    _gameCard('🔷', GameT.fa ? 'نقطه‌بازی' : 'Dots & Boxes', _openDotsMode),
                     _gameCard('🎭', 'پانتومیم', () => _push(const PantomimePage())),
                   ],
                 ),
