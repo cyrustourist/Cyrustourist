@@ -8,6 +8,7 @@ import '../groups/group_ui.dart';
 import 'game_api.dart';
 import 'game_engine.dart' show BotLevel;
 import 'game_play_page.dart' show NearbyGameLink;
+import 'dice_picker.dart' show showDicePicker;
 import 'dice_skins.dart';
 import 'game_fx.dart';
 import 'game_widgets.dart';
@@ -147,56 +148,157 @@ class _DiePainter extends CustomPainter {
   final int v;
   final DiceSkin? skin;
 
+  static List<Offset> _pips(int v, double w) {
+    final a = w * 0.28;
+    final b = w * 0.5;
+    final c = w * 0.72;
+    switch (v) {
+      case 1:
+        return <Offset>[Offset(b, b)];
+      case 2:
+        return <Offset>[Offset(a, a), Offset(c, c)];
+      case 3:
+        return <Offset>[Offset(a, a), Offset(b, b), Offset(c, c)];
+      case 4:
+        return <Offset>[Offset(a, a), Offset(c, a), Offset(a, c), Offset(c, c)];
+      case 5:
+        return <Offset>[Offset(a, a), Offset(c, a), Offset(b, b), Offset(a, c), Offset(c, c)];
+      default:
+        return <Offset>[Offset(a, a), Offset(c, a), Offset(a, b), Offset(c, b), Offset(a, c), Offset(c, c)];
+    }
+  }
+
+  void _pip(Canvas canvas, Offset o, double r, DiceSkin sk) {
+    final paint = Paint()..color = sk.pip;
+    if (sk.glow) {
+      canvas.drawCircle(o, r * 1.7, Paint()
+        ..color = sk.pip.withAlpha(120)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.9));
+    }
+    switch (sk.pipShape) {
+      case PipShape.ring:
+        canvas.drawCircle(
+            o,
+            r * 0.82,
+            Paint()
+              ..color = sk.pip
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = r * 0.5);
+        break;
+      case PipShape.square:
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: r * 1.8, height: r * 1.8), Radius.circular(r * 0.38)), paint);
+        break;
+      case PipShape.diamond:
+        final path = Path()
+          ..moveTo(o.dx, o.dy - r * 1.25)
+          ..lineTo(o.dx + r * 1.05, o.dy)
+          ..lineTo(o.dx, o.dy + r * 1.25)
+          ..lineTo(o.dx - r * 1.05, o.dy)
+          ..close();
+        canvas.drawPath(path, paint);
+        break;
+      case PipShape.circle:
+        canvas.drawCircle(o, r, paint);
+        canvas.drawCircle(o - Offset(r * 0.25, r * 0.25), r * 0.3, Paint()..color = const Color(0x44ffffff));
+        break;
+    }
+  }
+
   @override
   void paint(Canvas canvas, Size s) {
     final sk = skin ?? DiceSkins.skin;
+    final w = s.width;
     final rect = Offset.zero & s;
-    final rr = RRect.fromRectAndRadius(rect.deflate(s.width * 0.04), Radius.circular(s.width * 0.22));
-    canvas.drawRRect(rr.shift(Offset(0, s.width * 0.05)), Paint()..color = const Color(0x66000000));
+    final rr = RRect.fromRectAndRadius(rect.deflate(w * 0.04), Radius.circular(w * 0.22));
+    canvas.drawRRect(rr.shift(Offset(0, w * 0.05)), Paint()..color = const Color(0x66000000));
+    if (sk.glow) {
+      canvas.drawRRect(
+          rr.inflate(w * 0.02),
+          Paint()
+            ..color = sk.edge.withAlpha(150)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.1));
+    }
+    final isGlass = sk.style == DiceStyle.glass;
+    final c1 = isGlass ? const Color(0xbbffffff) : (Color.lerp(sk.face, Colors.white, 0.28) ?? sk.face);
+    final c2 = sk.face2 == null || isGlass ? sk.face : (Color.lerp(sk.face, sk.face2, 0.5) ?? sk.face);
+    final c3 = isGlass ? sk.face.withAlpha(0x55) : (Color.lerp(sk.face2 ?? sk.face, Colors.black, 0.22) ?? sk.face);
     canvas.drawRRect(
       rr,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[Color.lerp(sk.face, Colors.white, 0.28) ?? sk.face, sk.face, Color.lerp(sk.face, Colors.black, 0.22) ?? sk.face],
+          colors: <Color>[c1, c2, c3],
           stops: const <double>[0, 0.55, 1],
         ).createShader(rect),
     );
+    canvas.save();
+    canvas.clipRRect(rr);
+    switch (sk.style) {
+      case DiceStyle.glossy:
+      case DiceStyle.glass:
+        final gl = Rect.fromLTWH(w * 0.10, w * 0.07, w * 0.62, w * 0.30);
+        canvas.drawOval(
+            gl,
+            Paint()
+              ..shader = const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[Color(0x77ffffff), Color(0x00ffffff)],
+              ).createShader(gl));
+        break;
+      case DiceStyle.wood:
+        final g = Paint()
+          ..color = const Color(0x33000000)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w * 0.018;
+        for (var i = 1; i < 7; i++) {
+          final y = w * i / 7;
+          final path = Path()
+            ..moveTo(0, y)
+            ..quadraticBezierTo(w * 0.5, y + (i.isEven ? w * 0.05 : -w * 0.05), w, y);
+          canvas.drawPath(path, g);
+        }
+        break;
+      case DiceStyle.gem:
+        final lt = Paint()..color = const Color(0x2effffff);
+        final dk = Paint()..color = const Color(0x28000000);
+        final m = w / 2;
+        canvas.drawPath(Path()..moveTo(0, 0)..lineTo(w, 0)..lineTo(m, m)..close(), lt);
+        canvas.drawPath(Path()..moveTo(0, 0)..lineTo(0, w)..lineTo(m, m)..close(), lt);
+        canvas.drawPath(Path()..moveTo(w, 0)..lineTo(w, w)..lineTo(m, m)..close(), dk);
+        canvas.drawPath(Path()..moveTo(0, w)..lineTo(w, w)..lineTo(m, m)..close(), dk);
+        break;
+      case DiceStyle.neon:
+        canvas.drawRRect(
+            rr.deflate(w * 0.07),
+            Paint()
+              ..color = sk.edge.withAlpha(70)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = w * 0.015);
+        break;
+      case DiceStyle.classic:
+        break;
+    }
+    canvas.restore();
+    if (sk.glow) {
+      canvas.drawRRect(
+          rr,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = w * 0.06
+            ..color = sk.edge.withAlpha(160)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.04));
+    }
     canvas.drawRRect(
       rr,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = s.width * 0.045
+        ..strokeWidth = w * 0.045
         ..color = sk.edge,
     );
-    final dot = Paint()..color = sk.pip;
-    final a = s.width * 0.28;
-    final b = s.width * 0.5;
-    final c = s.width * 0.72;
-    List<Offset> p;
-    switch (v) {
-      case 1:
-        p = <Offset>[Offset(b, b)];
-        break;
-      case 2:
-        p = <Offset>[Offset(a, a), Offset(c, c)];
-        break;
-      case 3:
-        p = <Offset>[Offset(a, a), Offset(b, b), Offset(c, c)];
-        break;
-      case 4:
-        p = <Offset>[Offset(a, a), Offset(c, a), Offset(a, c), Offset(c, c)];
-        break;
-      case 5:
-        p = <Offset>[Offset(a, a), Offset(c, a), Offset(b, b), Offset(a, c), Offset(c, c)];
-        break;
-      default:
-        p = <Offset>[Offset(a, a), Offset(c, a), Offset(a, b), Offset(c, b), Offset(a, c), Offset(c, c)];
-    }
-    for (final o in p) {
-      canvas.drawCircle(o, s.width * 0.085, dot);
-      canvas.drawCircle(o - Offset(s.width * 0.02, s.width * 0.02), s.width * 0.025, Paint()..color = const Color(0x44ffffff));
+    for (final o in _pips(v, w)) {
+      _pip(canvas, o, w * 0.088, sk);
     }
   }
 
@@ -223,10 +325,30 @@ Widget _diceControls({
             borderRadius: BorderRadius.circular(16),
             boxShadow: <BoxShadow>[if (enabled) const BoxShadow(color: Color(0x88ffd23f), blurRadius: 18, spreadRadius: 1)],
           ),
-          child: CustomPaint(painter: _DiePainter(die)),
+          child: ValueListenableBuilder<String>(
+            valueListenable: DiceSkins.current,
+            builder: (_, __, ___) => CustomPaint(painter: _DiePainter(die)),
+          ),
         ),
       ),
-      const SizedBox(width: 16),
+      const SizedBox(width: 10),
+      Builder(
+        builder: (ctx) => InkWell(
+          onTap: () => showDicePicker(ctx),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: gPanel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: gLine),
+            ),
+            child: const Icon(Icons.palette_rounded, color: gGold),
+          ),
+        ),
+      ),
+      const SizedBox(width: 10),
       FilledButton.icon(
         style: FilledButton.styleFrom(
           backgroundColor: gGold,
@@ -2305,7 +2427,14 @@ Widget sharedDiceChip(String name, Color color, String sub, bool active) => _dic
 Widget sharedDie(int v, {double size = 44, bool dim = false}) {
   return Opacity(
     opacity: dim ? 0.3 : 1,
-    child: SizedBox(width: size, height: size, child: CustomPaint(painter: _DiePainter(v))),
+    child: SizedBox(
+      width: size,
+      height: size,
+      child: ValueListenableBuilder<String>(
+        valueListenable: DiceSkins.current,
+        builder: (_, __, ___) => CustomPaint(painter: _DiePainter(v)),
+      ),
+    ),
   );
 }
 
@@ -2319,6 +2448,6 @@ Widget sharedResultCard({
     _diceResultCard(title: title, gained: gained, onAgain: onAgain, onBack: onBack);
 
 /// پیش‌نمایش یک تاس با ظاهر مشخص (فروشگاه)
-Widget sharedDieSkin(String code, {double size = 40}) {
-  return SizedBox(width: size, height: size, child: CustomPaint(painter: _DiePainter(5, DiceSkins.byCode(code))));
+Widget sharedDieSkin(String code, {double size = 40, int v = 5}) {
+  return SizedBox(width: size, height: size, child: CustomPaint(painter: _DiePainter(v, DiceSkins.byCode(code))));
 }
