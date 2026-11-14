@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>DOTS &amp; BOXES · Cyrus Tourist</title>
+<style>
+:root{--c0:#2f8cff;--c1:#ff9f1a;--c2:#27d17f;--c3:#ff4f9a;--gold:#ffc928;--line:#1c3f8f}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;min-height:100%;background:#050d24;color:#fff;font-family:Tahoma,"Vazirmatn",system-ui,sans-serif}
+body{background:radial-gradient(120% 70% at 50% 0%,#164bb5 0%,#0a2260 42%,#050d24 100%) fixed;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+#app{max-width:560px;margin:0 auto;padding:8px 12px 18px;position:relative}
+.hd{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.logo{width:58px;height:62px;flex:none;filter:drop-shadow(0 0 8px #3aa0ff)}
+.ttl{flex:1;text-align:center;direction:ltr}
+.ttl b{display:block;font-size:26px;line-height:1.1;font-weight:900;letter-spacing:.5px;background:linear-gradient(#fff 30%,#ffd54a 75%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 rgba(0,0,0,.45))}
+.ttl span{display:block;font-size:13px;font-weight:800;color:var(--gold);direction:rtl;text-shadow:0 0 10px rgba(255,201,40,.55)}
+.gear{width:44px;height:44px;border-radius:50%;border:2px solid #3b86ff;background:rgba(10,40,110,.7);color:#fff;font-size:22px;cursor:pointer;box-shadow:0 0 14px rgba(47,140,255,.6)}
+.cards{direction:ltr;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin:10px 0 6px}
+.pc{flex:1;min-width:128px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:20px;border:2px solid var(--pcol);background:linear-gradient(rgba(10,25,70,.85),rgba(5,12,38,.92));box-shadow:0 0 0 rgba(0,0,0,0);transition:.2s;opacity:.72;direction:ltr}
+.pc.on{opacity:1;box-shadow:0 0 18px var(--pcol),inset 0 0 14px color-mix(in srgb,var(--pcol) 35%,transparent);transform:scale(1.03)}
+.av{width:44px;height:44px;border-radius:50%;border:3px solid var(--pcol);display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,color-mix(in srgb,var(--pcol) 45%,#06123a),#06123a);flex:none}
+.pi{min-width:0}.pn{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:84px}
+.ps{font-size:30px;font-weight:900;line-height:1.05}
+.tm{font-size:11px;color:var(--gold);font-weight:800;min-height:14px}
+.vs{font-size:28px;font-weight:900;font-style:italic;color:var(--gold);text-shadow:0 0 14px #ffb300;direction:ltr}
+.turn{text-align:center;font-weight:800;font-size:14px;min-height:22px;color:#cfe3ff}
+.bd{width:min(94vw,520px,calc(100vh - 360px));min-width:250px;aspect-ratio:1;margin:4px auto}
+.bd svg{width:100%;height:100%;display:block;touch-action:manipulation}
+.hit{stroke:transparent;stroke-width:46;stroke-linecap:round;cursor:pointer}
+.eu{stroke:rgba(110,160,255,.18);stroke-width:7;stroke-linecap:round}
+.eo{stroke-width:11;stroke-linecap:round}
+.dot{fill:#bfe2ff}
+.pop{animation:pop .45s ease-out}
+@keyframes pop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+.lastE{animation:ls .7s ease-out}
+@keyframes ls{0%{stroke-width:22;opacity:.5}100%{stroke-width:11;opacity:1}}
+.row{display:flex;gap:10px;justify-content:center;align-items:stretch;margin:12px 0 0}
+.btn{flex:1;border:2px solid #3b86ff;border-radius:18px;padding:11px 6px;font:inherit;font-size:15px;font-weight:900;color:#fff;cursor:pointer;background:linear-gradient(#1b4fc0,#0b2a78);box-shadow:0 0 12px rgba(47,140,255,.55),inset 0 2px 0 rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;gap:6px;direction:ltr}
+.btn:active{transform:translateY(2px)}
+.btn.g{flex:1.5;border-color:#5eea8e;background:linear-gradient(#35c85f,#128a3a);box-shadow:0 0 14px rgba(53,200,95,.65),inset 0 2px 0 rgba(255,255,255,.3);font-size:17px}
+.btn.o{border-color:#ffc14a;background:linear-gradient(#ff9d1f,#c75f00);box-shadow:0 0 14px rgba(255,160,30,.6),inset 0 2px 0 rgba(255,255,255,.3)}
+.btn.sel{outline:3px solid var(--gold)}
+.btn:disabled{opacity:.4}
+.chips{display:flex;gap:10px;justify-content:center;margin:12px 0 0}
+.chip{flex:1;max-width:130px;border:2px solid #2a5fd0;border-radius:20px;padding:7px 0;font:inherit;font-size:16px;font-weight:900;color:#cfe3ff;background:rgba(8,28,84,.8);cursor:pointer;direction:ltr}
+.chip.on{border-color:#6ec1ff;color:#fff;box-shadow:0 0 14px #2f9bff,inset 0 0 10px rgba(80,170,255,.45)}
+.ft{margin-top:16px;text-align:center;direction:ltr;position:relative;padding-top:6px}
+.ft b{display:block;font-size:20px;font-style:italic;letter-spacing:.5px;text-shadow:0 0 12px #3aa0ff}
+.ft span{font-size:12px;color:#9fc3ff;font-style:italic}
+.mt{position:absolute;left:0;right:0;bottom:-6px;height:46px;opacity:.55;z-index:-1}
+.mod{position:fixed;inset:0;z-index:50;background:rgba(2,8,28,.78);display:flex;align-items:center;justify-content:center;padding:18px}
+.box{width:100%;max-width:380px;border-radius:26px;border:2px solid #3b86ff;background:linear-gradient(#10286c,#071538);padding:18px;text-align:center;box-shadow:0 0 30px rgba(47,140,255,.6)}
+.box h2{margin:0 0 6px;font-size:24px;color:var(--gold);text-shadow:0 0 12px rgba(255,201,40,.6)}
+.box p{margin:6px 0;color:#cfe3ff}
+.big{font-size:44px}
+.fin{display:flex;gap:8px;justify-content:center;margin:10px 0;flex-wrap:wrap}
+.fin div{border:2px solid var(--pcol);border-radius:16px;padding:6px 12px;min-width:70px;background:rgba(0,0,0,.25)}
+.fin b{display:block;font-size:24px}.fin small{font-size:11px;color:#cfe3ff}
+.st{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.12);font-weight:700}
+.sr{display:flex;align-items:center;justify-content:space-between;margin:10px 0;gap:8px;font-weight:700}
+.sr .chip{max-width:none;padding:5px 0;font-size:14px}
+#lost{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0));z-index:60;background:#d93a49;border-radius:16px;padding:10px;text-align:center;font-weight:800}
+#lost button{margin-top:6px;border:0;border-radius:12px;padding:6px 18px;font:inherit;font-weight:800;background:#fff;color:#d93a49}
+.wait{text-align:center;padding:60px 10px;font-size:18px;font-weight:800;color:#cfe3ff}
+</style>
+</head>
+<body><div id="app"></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const TX={
+fa:{sub:'نقطه‌بازی سایروس توریست',undo:'بازگشت',new:'بازی جدید',scores:'امتیازها',ai:'بازی با ربات',two:'دو نفره',you:'شما',bot:'ربات',p:'بازیکن {0}',turn:'نوبت {0}',again:'{0} دوباره بازی می‌کند',win:'🏆 {0} برنده شد!',draw:'🤝 مساوی!',close:'بستن',snd:'صدا',vib:'لرزش',lvl:'سطح ربات',easy:'آسان',normal:'معمولی',hard:'سخت',lang:'زبان',set:'تنظیمات',wins:'برد',games:'بازی',vsai:'با ربات',vsfr:'دو نفره',vsnet:'گوشی نزدیک',lose:'باخت',draws:'مساوی',waitHost:'⏳ منتظر شروع دوباره توسط میزبان…',lost:'⚠️ ارتباط با میزبان قطع شده است. گوشی‌ها را نزدیک‌تر کنید…',exit:'خروج',conn:'در حال اتصال به میزبان…',gone:'قطع',bk:'بازگشت'},
+en:{sub:'Cyrus Tourist Dots',undo:'Undo',new:'New Game',scores:'Scores',ai:'Play vs AI',two:'Two Players',you:'You',bot:'AI',p:'Player {0}',turn:"{0}'s turn",again:'{0} plays again',win:'🏆 {0} wins!',draw:'🤝 Draw!',close:'Close',snd:'Sound',vib:'Vibration',lvl:'AI level',easy:'Easy',normal:'Normal',hard:'Hard',lang:'Language',set:'Settings',wins:'Wins',games:'Games',vsai:'vs AI',vsfr:'Two players',vsnet:'Nearby',lose:'Losses',draws:'Draws',waitHost:'⏳ Waiting for the host to restart…',lost:'⚠️ Lost connection to the host. Move the phones closer…',exit:'Exit',conn:'Connecting to the host…',gone:'offline',bk:'Back'}};
+let L='fa',M='bot',n=4,np=2,names=[],lvl='normal',gid=0,busy=0,hist=[],snd=1,vb=1,rec=0,mc=0,S=null,nb=[],setOpen=0,scOpen=0;
+const NET={on:0,me:0,host:1,last:0,seq:-1,gone:[],dl:0,hb:0};
+try{const c=JSON.parse(localStorage.getItem('dbcfg')||'{}');if(c.snd===0)snd=0;if(c.vb===0)vb=0;if(c.lvl)lvl=c.lvl}catch(e){}
+const saveCfg=()=>{try{localStorage.setItem('dbcfg',JSON.stringify({snd,vb,lvl}))}catch(e){}};
+const t=(k,...a)=>(TX[L][k]||k).replace(/\{(\d)\}/g,(_,i)=>a[i]);
+const N=x=>L==='fa'?String(x).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]):String(x);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const COL=['#2f8cff','#ff9f1a','#27d17f','#ff4f9a'];
+function send(m){try{NetCh.postMessage(JSON.stringify(m))}catch(e){}}
+// ---------- صدا و لرزش
+let AC;function tone(f,d,at=0,ty='sine',v=.18){if(!snd)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();const o=AC.createOscillator(),g=AC.createGain(),s=AC.currentTime+at;o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(v,s);g.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(g);g.connect(AC.destination);o.start(s);o.stop(s+d)}catch(e){}}
+function fx(k){if(k==='line'){tone(520,.08,0,'triangle');vib(12)}else if(k==='box'){[660,880,1175].forEach((f,i)=>tone(f,.16,i*.08,'triangle',.22));vib(40)}else if(k==='win'){[523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,.2,i*.14,'triangle',.26));vib([200,80,200,80,400])}}
+function vib(p){try{vb&&navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+// ---------- هندسه: خط‌های افقی (n+1)×n و عمودی n×(n+1)
+const H=()=>(n+1)*n,EC=()=>H()+n*(n+1),hI=(r,c)=>r*n+c,vI=(r,c)=>H()+r*(n+1)+c;
+const boxEdges=(r,c)=>[hI(r,c),hI(r+1,c),vI(r,c),vI(r,c+1)];
+function edgeBoxes(i){const o=[];if(i<H()){const r=(i/n)|0,c=i%n;if(r>0)o.push([r-1,c]);if(r<n)o.push([r,c])}else{const k=i-H(),r=(k/(n+1))|0,c=k%(n+1);if(c>0)o.push([r,c-1]);if(c<n)o.push([r,c])}return o}
+const sides=(s,bi)=>boxEdges((bi/n)|0,bi%n).filter(x=>s.e[x]).length;
+const newState=()=>({e:Array(EC()).fill(0),b:Array(n*n).fill(-1),turn:0,sc:Array(np).fill(0),over:0,last:-1});
+const clone=s=>({e:s.e.slice(),b:s.b.slice(),turn:s.turn,sc:s.sc.slice(),over:s.over,last:s.last});
+function applyMove(s,e,p){s.e[e]=p+1;s.last=e;const got=[];for(const[r,c]of edgeBoxes(e)){const bi=r*n+c;if(s.b[bi]<0&&sides(s,bi)===4){s.b[bi]=p;s.sc[p]++;got.push(bi)}}
+ if(s.sc.reduce((a,b)=>a+b,0)===n*n)s.over=1;else if(!got.length)s.turn=(s.turn+1)%np;return got}
+// ---------- هوش مصنوعی: همیشه خانهٔ آماده را می‌گیرد، خط امن می‌کشد، و اگر مجبور شد کمترین خانه را هدیه می‌دهد
+function pickMove(s,lv){const free=[];for(let i=0;i<EC();i++)if(!s.e[i])free.push(i);const take=[],safe=[],rnd=a=>a[Math.random()*a.length|0];
+ for(const i of free){let tk=0,un=0;for(const[r,c]of edgeBoxes(i)){const k=sides(s,r*n+c);if(k===3)tk=1;else if(k===2)un=1}if(tk)take.push(i);else if(!un)safe.push(i)}
+ if(lv==='easy')return take.length&&Math.random()<.7?rnd(take):rnd(free);
+ if(take.length)return rnd(take);if(safe.length)return rnd(safe);
+ let best=1e9,pk=[];for(const i of free){const T=clone(s);applyMove(T,i,0);let cnt=0,again=1;while(again){again=0;for(let j=0;j<EC();j++){if(T.e[j])continue;let can=0;for(const[r,c]of edgeBoxes(j))if(sides(T,r*n+c)===3)can=1;if(can){cnt+=applyMove(T,j,1).length;again=1;break}}}
+  if(cnt<best){best=cnt;pk=[i]}else if(cnt===best)pk.push(i)}
+ return lv==='hard'||Math.random()<.6?rnd(pk):rnd(free)}
+// ---------- نام‌ها و آمار
+const nameOf=i=>M==='net'?(names[i]||t('p',i+1)):M==='bot'?(i?t('bot'):t('you')):t('p',i+1);
+function stats(){try{return JSON.parse(localStorage.getItem('dbst')||'{}')}catch(e){return{}}}
+function record(){if(rec)return;rec=1;const k=M,st=stats(),o=st[k]||(st[k]={g:0,w:0,l:0,d:0}),me=M==='net'?NET.me:0,mx=Math.max(...S.sc),win=S.sc.filter(x=>x===mx).length;o.g++;if(M==='local'){}else if(win>1&&S.sc[me]===mx)o.d++;else if(S.sc[me]===mx)o.w++;else o.l++;try{localStorage.setItem('dbst',JSON.stringify(st))}catch(e){}}
+// ---------- اجرای حرکت
+function doMove(e,p){const got=applyMove(S,e,p);nb=got;fx(got.length?'box':'line');if(S.over){fx('win');record()}render()}
+function onEdge(i){if(!S||S.over||S.e[i])return;
+ if(M==='net'){if(NET.me!==S.turn)return;if(NET.host)hostApply(i,NET.me);else send({to:'host',p:{t:'mv',e:i}});return}
+ if(M==='bot'&&(S.turn!==0||busy))return;
+ hist.push(clone(S));if(hist.length>60)hist.shift();doMove(i,S.turn);if(M==='bot')botGo()}
+function botGo(){if(M!=='bot'||S.over||S.turn!==1||busy)return;busy=1;const g=gid;setTimeout(()=>{busy=0;if(g!==gid||S.over||S.turn!==1)return;doMove(pickMove(S,lvl),1);botGo()},520)}
+function undo(){if(M==='net'||!hist.length||busy)return;S=hist.pop();nb=[];rec=0;mc=0;render()}
+function newGame(){if(M==='net'){if(NET.host)netNew();return}gid++;busy=0;hist=[];rec=0;mc=0;nb=[];np=2;S=newState();render()}
+function setMode(m){M=m;newGame()}function setSize(v){n=v;newGame()}
+// ---------- نمایش
+const person='<svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.2" fill="#fff"/><path d="M3.5 21c0-5 3.8-7.4 8.5-7.4s8.5 2.4 8.5 7.4z" fill="#fff"/></svg>';
+const crown='<path d="M-22 10L-27-14-10 0 0-20 10 0 27-14 22 10Z" fill="#fff" opacity=".95"/><rect x="-22" y="13" width="44" height="7" rx="3.5" fill="#fff" opacity=".95"/>';
+const LOGO='<svg class="logo" viewBox="0 0 64 70"><defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5cc2ff"/><stop offset="1" stop-color="#0b3fb5"/></linearGradient><radialGradient id="gl"><stop offset="0" stop-color="#7fe0ff"/><stop offset=".55" stop-color="#2fae5f"/><stop offset="1" stop-color="#0b4fb0"/></radialGradient></defs><path d="M32 3C17 3 6 14 6 28c0 18 26 38 26 38s26-20 26-38C58 14 47 3 32 3z" fill="url(#lg)" stroke="#bfe6ff" stroke-width="2.5"/><circle cx="32" cy="27" r="17" fill="url(#gl)" stroke="#fff" stroke-width="2"/><path d="M32 14l11 9h-3v10H24V23h-3z" fill="#fff"/><rect x="29" y="26" width="6" height="7" fill="#e53935"/><ellipse cx="32" cy="60" rx="20" ry="4" fill="#38c6ff" opacity=".45"/></svg>';
+const MT='<svg class="mt" viewBox="0 0 400 46" preserveAspectRatio="none"><path d="M0 46V30l40-18 30 14 50-22 60 26 50-20 70 24 50-16 50 12v16z" fill="#06255f"/><g fill="#0a3b2a"><path d="M20 46l8-24 8 24zM44 46l7-20 7 20zM350 46l8-26 8 26zM372 46l7-22 7 22z"/></g></svg>';
+function board(){const sz=n*100+60,X=c=>30+c*100,sv=[];
+ sv.push(`<defs><filter id="gw" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>${COL.map((c,i)=>`<linearGradient id="g${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".62"/></linearGradient>`).join('')}</defs>`);
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++){const o=S.b[r*n+c];if(o>=0)sv.push(`<g class="${nb.includes(r*n+c)?'pop':''}" style="transform-origin:${X(c)+50}px ${X(r)+50}px"><rect x="${X(c)+9}" y="${X(r)+9}" width="82" height="82" rx="14" fill="url(#g${o})" stroke="#fff" stroke-opacity=".35" stroke-width="2"/><g transform="translate(${X(c)+50} ${X(r)+50}) scale(.95)">${crown}</g></g>`)}
+ const ln=i=>{let x1,y1,x2,y2;if(i<H()){const r=(i/n)|0,c=i%n;x1=X(c);y1=X(r);x2=X(c+1);y2=y1}else{const k=i-H(),r=(k/(n+1))|0,c=k%(n+1);x1=X(c);y1=X(r);x2=x1;y2=X(r+1)}return`x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"`};
+ let un='',ow='',ht='';for(let i=0;i<EC();i++){if(S.e[i])ow+=`<line ${ln(i)} class="eo${i===S.last?' lastE':''}" stroke="${COL[S.e[i]-1]}"/>`;else{un+=`<line ${ln(i)} class="eu"/>`;ht+=`<line ${ln(i)} class="hit" data-e="${i}"/>`}}
+ sv.push(un,`<g filter="url(#gw)">${ow}</g>`);
+ for(let r=0;r<=n;r++)for(let c=0;c<=n;c++)sv.push(`<circle class="dot" cx="${X(c)}" cy="${X(r)}" r="9"/>`);
+ sv.push(ht);return`<div class="bd"><svg id="bsv" viewBox="0 0 ${sz} ${sz}">${sv.join('')}</svg></div>`}
+function cards(){const o=[];for(let i=0;i<np;i++){if(np===2&&i===1)o.push('<div class="vs">VS</div>');o.push(`<div class="pc${S.turn===i&&!S.over?' on':''}" style="--pcol:${COL[i]}"><div class="av">${person}</div><div class="pi"><div class="pn">${esc(nameOf(i))}${M==='net'&&NET.gone[i]&&i?' ⚠':''}</div><div class="ps">${S.sc[i]}</div><div class="tm">${M==='net'&&S.turn===i&&!S.over?'<span id="tmr"></span>':''}</div></div></div>`)}return`<div class="cards">${o.join('')}</div>`}
+function render(){if(!S)return;const net=M==='net',own=!net||NET.host;
+ let h=`<div class="hd"><button class="gear" onclick="setOpen=1;render()">⚙</button><div class="ttl"><b>DOTS &amp; BOXES</b><span>${t('sub')}</span></div>${LOGO}</div>`;
+ h+=cards();
+ h+=`<div class="turn">${S.over?'':(net&&NET.me===S.turn?'👉 ':'')+t('turn',esc(nameOf(S.turn)))}</div>`;
+ h+=board();
+ h+=`<div class="row">${net?'':`<button class="btn" onclick="undo()" ${hist.length&&!busy?'':'disabled'}>↶ ${t('undo')}</button>`}${own?`<button class="btn g" onclick="newGame()">▶ ${t('new')}</button>`:''}<button class="btn" onclick="scOpen=1;render()">🏆 ${t('scores')}</button></div>`;
+ if(!net){h+=`<div class="chips">${[3,4,5].map(v=>`<button class="chip${n===v?' on':''}" onclick="setSize(${v})">${v}×${v}</button>`).join('')}</div><div class="row"><button class="btn${M==='bot'?' sel':''}" onclick="setMode('bot')">🤖 ${t('ai')}</button><button class="btn o${M==='local'?' sel':''}" onclick="setMode('local')">👥 ${t('two')}</button></div>`}
+ h+=`<div class="ft"><b>CYRUS TOURIST</b><span>From Iran to the World</span>${MT}</div>`;
+ if(S.over&&!mc)h+=overBox();if(setOpen)h+=setBox();if(scOpen)h+=scBox();
+ $('app').innerHTML=h;tickT();
+ document.querySelectorAll('.hit').forEach(el=>el.addEventListener('pointerdown',ev=>{ev.preventDefault();onEdge(+el.dataset.e)}))}
+function overBox(){const mx=Math.max(...S.sc),ws=S.sc.map((x,i)=>x===mx?i:-1).filter(i=>i>=0),net=M==='net';
+ return`<div class="mod"><div class="box"><div class="big">${ws.length>1?'🤝':'🏆'}</div><h2>${ws.length>1?t('draw'):t('win',esc(nameOf(ws[0])))}</h2><div class="fin">${S.sc.map((x,i)=>`<div style="--pcol:${COL[i]}"><b>${N(x)}</b><small>${esc(nameOf(i))}</small></div>`).join('')}</div>${net&&!NET.host?`<p>${t('waitHost')}</p><button class="btn" style="width:100%" onclick="send({x:'exit'})">${t('exit')}</button>`:`<div class="row"><button class="btn g" onclick="newGame()">▶ ${t('new')}</button><button class="btn" onclick="${net?"send({x:'exit'})":'mc=1;render()'}">${net?t('exit'):t('close')}</button></div>`}</div></div>`}
+function setBox(){const lv=['easy','normal','hard'];return`<div class="mod" onclick="if(event.target===this){setOpen=0;render()}"><div class="box"><h2>⚙ ${t('set')}</h2>
+<div class="sr"><span>🔊 ${t('snd')}</span><button class="chip${snd?' on':''}" style="max-width:90px" onclick="snd=snd?0:1;saveCfg();render()">${snd?'ON':'OFF'}</button></div>
+<div class="sr"><span>📳 ${t('vib')}</span><button class="chip${vb?' on':''}" style="max-width:90px" onclick="vb=vb?0:1;saveCfg();render()">${vb?'ON':'OFF'}</button></div>
+<div class="sr"><span>🤖 ${t('lvl')}</span></div><div class="chips" style="margin:0">${lv.map(k=>`<button class="chip${lvl===k?' on':''}" onclick="lvl='${k}';saveCfg();render()">${t(k)}</button>`).join('')}</div>
+<div class="sr"><span>🌐 ${t('lang')}</span></div><div class="chips" style="margin:0"><button class="chip${L==='fa'?' on':''}" onclick="setL('fa')">فارسی</button><button class="chip${L==='en'?' on':''}" onclick="setL('en')">English</button></div>
+<button class="btn" style="width:100%;margin-top:14px" onclick="setOpen=0;render()">${t('close')}</button></div></div>`}
+function setL(l){L=l;document.documentElement.lang=l;document.documentElement.dir=l==='fa'?'rtl':'ltr';render()}
+function scBox(){const st=stats(),row=(k,lb)=>{const o=st[k]||{g:0,w:0,l:0,d:0};return`<div class="st"><span>${lb}</span><span>${t('games')} ${N(o.g)}${k==='local'?'':` · ${t('wins')} ${N(o.w)} · ${t('lose')} ${N(o.l)} · ${t('draws')} ${N(o.d)}`}</span></div>`};
+ return`<div class="mod" onclick="if(event.target===this){scOpen=0;render()}"><div class="box"><h2>🏆 ${t('scores')}</h2>${row('bot',t('vsai'))}${row('local',t('vsfr'))}${row('net',t('vsnet'))}<button class="btn" style="width:100%;margin-top:14px" onclick="scOpen=0;render()">${t('close')}</button></div></div>`}
+function tickT(){const e=$('tmr');if(e&&M==='net'){const s=Math.max(0,Math.ceil((NET.dl-Date.now())/1000));e.textContent='⏱ '+N(s)}}
+setInterval(tickT,500);
+// ================= شبکه: میزبان داور است =================
+function snap(){return{t:'S',q:NET.seq,n,np,names,e:S.e,b:S.b,turn:S.turn,sc:S.sc,over:S.over,last:S.last,rem:Math.max(0,NET.dl-Date.now()),gone:NET.gone}}
+function bc(){if(NET.on&&NET.host)send({to:'*',p:snap()})}
+function hostApply(e,p){if(!S||S.over||p!==S.turn||!(e>=0&&e<EC())||S.e[e])return;doMove(e,p);NET.dl=Date.now()+25000;NET.seq++;bc()}
+function netNew(){gid++;mc=0;rec=0;nb=[];S=newState();NET.dl=Date.now()+25000;NET.seq++;render();bc()}
+function applySnap(s){NET.last=Date.now();hideLost();NET.dl=Date.now()+s.rem;if(s.q===NET.seq)return;if(s.q<NET.seq)return;
+ const prev=S,pb=prev&&prev.b.length===s.b.length?prev.b:null;NET.seq=s.q;n=s.n;np=s.np;names=s.names;NET.gone=s.gone||[];
+ S={e:s.e,b:s.b,turn:s.turn,sc:s.sc,over:s.over,last:s.last};nb=pb?s.b.map((x,i)=>x>=0&&pb[i]<0?i:-1).filter(i=>i>=0):[];
+ if(!prev||prev.over&&!s.over){mc=0;rec=0}
+ if(prev&&(s.last!==prev.last||s.e.length!==prev.e.length)&&s.last>=0)fx(nb.length?'box':'line');
+ if(s.over&&!(prev&&prev.over)){fx('win');record()}render()}
+function showLost(){if($('lost'))return;const d=document.createElement('div');d.id='lost';d.innerHTML=t('lost')+'<br><button onclick="send({x:\'exit\'})">'+t('exit')+'</button>';document.body.appendChild(d)}
+function hideLost(){const d=$('lost');if(d)d.remove()}
+function netInit(o){M='net';NET.on=1;NET.me=o.me|0;NET.host=o.host?1:0;n=o.size||4;names=o.names;np=names.length;NET.gone=names.map(()=>0);S=newState();
+ if(NET.host){NET.seq=0;NET.dl=Date.now()+25000;render();NET.hb=setInterval(bc,2000);setInterval(()=>{if(!S||S.over)return;const p=S.turn,left=NET.dl-Date.now();if(left<=0||(NET.gone[p]&&p&&left<23800))hostApply(pickMove(S,'normal'),p)},500)}
+ else{$('app').innerHTML='<div class="wait">'+t('conn')+'</div>';send({to:'host',p:{t:'hello'}});NET.hb=setInterval(()=>{const q=Date.now()-NET.last;if(q>15000)showLost();else if(q>4000)send({to:'host',p:{t:'hello'}})},2000)}}
+window.dbInit=function(o){setL(o.lang==='en'?'en':'fa');if(o.mode==='net'){netInit(o);return}M=o.mode==='local'?'local':'bot';n=o.size||4;newGame()};
+window.onNet=function(idx,str){if(!NET.on)return;let m;try{m=JSON.parse(str)}catch(e){return}if(!m)return;
+ if(NET.host){if(!(idx>0&&idx<np))return;if(m.t==='hello'){bc()}else if(m.t==='mv')hostApply(m.e|0,idx)}else if(idx===0&&m.t==='S')applySnap(m)};
+window.onGone=function(i,f){if(!NET.on||!NET.host||!(i>0&&i<np))return;f=f?1:0;if(NET.gone[i]===f)return;NET.gone[i]=f;render();bc()};
+// پیش‌نمایش مستقل (بدون برنامه)
+if(!window.__dbManual){setL('fa');newGame()}
+</script>
+</body>
+</html>
