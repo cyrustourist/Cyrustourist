@@ -15,6 +15,7 @@ import 'esmfamil_page.dart';
 import 'fruit_page.dart';
 import 'hokm_page.dart';
 import 'nearby_duel_page.dart';
+import 'pantomime_page.dart';
 
 /// صفحه‌ی «بازی و سرگرمی»: کیف سکه و سطح، جایزه‌ی روزانه، هدف‌ها، انتخاب بازی و حالت.
 class GamesHubPage extends StatefulWidget {
@@ -751,6 +752,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('♠️♥️', GameT.t('hokm'), _pickHokmLevel),
                     _gameCard('🍓🍊', GameT.t('fruit'), () => _push(const FruitPage())),
                     _gameCard('✍️', 'اسم و فامیل', () => _push(const EsmFamilPage())),
+                    _gameCard('🎭', 'پانتومیم', () => _push(const PantomimePage())),
                   ],
                 ),
                 const SizedBox(height: 14),
