@@ -1,1 +1,129 @@
-
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>پانتومیم سایروس</title>
+<style>
+:root{--a:#7fd0ff;--b:#b9e4ff;--c:#ffc6e4;--card:#fffdf8;--ink:#23304a;--mut:#6b7a96;--line:#d6e4f5;--chip:#e9f3ff;--pk:#ff4f9a;--gr:#27c25f;--gd:#ffc928;--rd:#ff4d5a;--bl:#2f8cff;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--a:#0b1a33;--b:#12284a;--c:#2a1b46;--card:#18294a;--ink:#f1f4ff;--mut:#9fb0d0;--line:#2b4572;--chip:#1f3760;color-scheme:dark}}
+:root[data-theme="dark"]{--a:#0b1a33;--b:#12284a;--c:#2a1b46;--card:#18294a;--ink:#f1f4ff;--mut:#9fb0d0;--line:#2b4572;--chip:#1f3760;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:Tahoma,"Vazirmatn",system-ui,sans-serif;line-height:1.7;background:linear-gradient(180deg,var(--a),var(--b) 55%,var(--c)) fixed}
+main{max-width:520px;margin:0 auto;padding:12px 12px 30px}
+h1{font-size:24px;margin:4px 0;text-align:center;text-shadow:0 3px 0 rgba(0,0,0,.12)}
+h3{margin:12px 0 6px;font-size:14px;color:var(--mut)}
+.mut{color:var(--mut);text-align:center;font-size:13px;margin:4px 0}
+.card{background:var(--card);border-radius:22px;padding:14px;margin:10px 0;box-shadow:0 8px 0 rgba(0,0,0,.08),0 16px 26px -8px rgba(20,40,90,.35);border:1px solid var(--line)}
+.rib{display:block;margin:-26px auto 10px;width:70%;text-align:center;background:linear-gradient(#ff7ab8,var(--pk));color:#fff;font-weight:900;border-radius:20px;padding:5px;box-shadow:0 5px 0 #c42b73,0 10px 14px rgba(0,0,0,.25)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{flex:1;min-width:60px;border:0;border-radius:14px;padding:9px 6px;font:inherit;font-weight:800;color:var(--ink);background:var(--chip);box-shadow:0 4px 0 var(--line);cursor:pointer}
+.chip.on{background:linear-gradient(#5aa9ff,var(--bl));color:#fff;box-shadow:0 4px 0 #1a63c4}
+.chip:active,.btn:active,.pt:active{transform:translateY(3px);box-shadow:none}
+input[type=text]{width:100%;font:inherit;padding:9px 12px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);margin:3px 0}
+input[type=range]{width:100%}
+.btn{display:block;width:100%;border:0;border-radius:18px;padding:13px;font:inherit;font-size:18px;font-weight:900;color:#fff;background:linear-gradient(#ff7ab8,var(--pk));box-shadow:0 6px 0 #c42b73,0 12px 16px rgba(0,0,0,.2);cursor:pointer;margin:12px 0}
+.btn.g{background:linear-gradient(#5be08a,var(--gr));box-shadow:0 6px 0 #168a40,0 12px 16px rgba(0,0,0,.2)}
+.btn.r{background:linear-gradient(#ff7a82,var(--rd));box-shadow:0 6px 0 #b82733,0 12px 16px rgba(0,0,0,.2)}
+.btn.gh{background:var(--chip);color:var(--ink);box-shadow:0 6px 0 var(--line)}
+.btn.s{font-size:15px;padding:9px}
+.nv{display:flex;gap:10px}.nv .btn{flex:1}
+.sb{display:flex;gap:7px;overflow-x:auto;padding:4px 2px 10px}
+.t{flex:1;min-width:76px;text-align:center;border-radius:14px;padding:3px 6px;background:var(--card);font-size:12px;box-shadow:0 4px 0 rgba(0,0,0,.1);border:2px solid transparent}
+.t b{display:block;font-size:20px}.t.cur{border-color:var(--pk);transform:translateY(-3px)}.t.out{opacity:.45;text-decoration:line-through}
+.bd{perspective:900px}.bd .card{transform:rotateX(5deg);transform-origin:50% 100%;padding-top:28px}
+.cr{display:flex;align-items:center;gap:6px;margin:8px 0}
+.cn{flex:1;background:var(--chip);border-radius:12px;padding:6px 10px;font-weight:800;font-size:14px;box-shadow:inset 0 2px 4px rgba(0,0,0,.12)}
+.pt{width:46px;height:46px;border-radius:50%;border:3px solid #fff;font:inherit;font-size:20px;font-weight:900;color:#fff;cursor:pointer;background:radial-gradient(circle at 32% 25%,#8af5ae,var(--gr) 70%);box-shadow:0 5px 0 #168a40,0 9px 10px rgba(0,0,0,.3)}
+.pt.gd{background:radial-gradient(circle at 32% 25%,#fff3a0,var(--gd) 70%);box-shadow:0 5px 0 #b98a00,0 9px 10px rgba(0,0,0,.3);color:#6b4a00}
+.pt:disabled{background:#c9d2e2;box-shadow:0 2px 0 #9aa6bd;color:#fff;cursor:default}
+.fl{perspective:900px;height:190px;margin:8px 0}
+.fi{position:relative;height:100%;transition:transform .7s;transform-style:preserve-3d}.fi.on{transform:rotateY(180deg)}
+.fa,.fb{position:absolute;inset:0;border-radius:22px;backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px;box-shadow:0 10px 0 rgba(0,0,0,.12),0 18px 26px -8px rgba(0,0,0,.4)}
+.fa{background:linear-gradient(135deg,#6fb8ff,#8c7bff);color:#fff;font-size:60px;font-weight:900}
+.fb{background:linear-gradient(135deg,#fff3a0,var(--gd));color:#4a3200;transform:rotateY(180deg);font-size:30px;font-weight:900;line-height:1.5}
+.tm{font-size:60px;font-weight:900;text-align:center;line-height:1.1}.warn .tm{color:var(--rd);animation:p .5s infinite alternate}
+@keyframes p{to{transform:scale(1.12)}}
+.bar{height:14px;border-radius:9px;background:var(--chip);overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.15)}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gd),var(--pk));transition:width .25s linear}
+.big{font-size:26px;font-weight:900;text-align:center;margin:14px 0}
+.st{display:flex;align-items:center;justify-content:space-between;border-radius:12px;padding:8px 12px;margin:6px 0;font-weight:800;background:var(--chip)}
+.st.cur{background:linear-gradient(90deg,#5aa9ff,var(--bl));color:#fff}.st.ok{background:linear-gradient(90deg,#5be08a,var(--gr));color:#fff}.st.x{background:linear-gradient(90deg,#ff7a82,var(--rd));color:#fff}
+.dots{display:flex;gap:6px;justify-content:center;margin:4px 0}.dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--pk)}
+table{width:100%;border-collapse:collapse}td{padding:7px;border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body><main id="app"></main>
+<script>
+const sp=s=>s.split('،');
+const CT=[['tour','🏛','گردشگری'],['sci','🔬','علمی'],['prov','📜','ضرب‌المثل'],['food','🍲','خوراکی'],['sport','🏅','ورزشی'],['fam','🌟','مشاهیر']];
+const W={tour:[sp('تخت جمشید،برج میلاد،دماوند،برج ایفل،دیوار چین،اهرام مصر،جزیرهٔ کیش،ساحل دریا'),sp('سی‌وسه‌پل،ارگ بم،کویر لوت،تاج محل،پاسارگاد،بازار تبریز،تله‌کابین،آبشار'),sp('بادگیر یزد،غار علیصدر،ماچوپیچو،کلوسئوم،دهکدهٔ ماسوله،چغازنبیل،کاروانسرا،قنات')],
+sci:[sp('ستاره،آتشفشان،دایناسور،دوربین ستاره‌شناسی،زلزله،آذرخش،آدم‌آهنی،ذره‌بین'),sp('ایستگاه فضایی،سیاه‌چاله،رنگین‌کمان،پرتو نور،موج غول‌پیکر دریا،منظومهٔ شمسی،انعکاس صدا،سیارهٔ سرخ'),sp('غذاسازی گیاه،شفق قطبی،بارش شهابی،تغییر صدای آمبولانس،فضاپیما،زمین‌لرزه‌نگار،کهکشان،گرانش')],
+prov:[sp('با یک گل بهار نمی‌شود،دوستی خاله خرسه،عجله کار شیطان است،آب از سر گذشت،دیر رسیدن بهتر از نرسیدن،سنگ بزرگ علامت نزدن است،دست به دهان،گربه را دم حجله کشتن'),sp('از این ستون به آن ستون فرج است،باد آورده را باد می‌برد،هر که بامش بیش برفش بیشتر،آب از آب تکان نخورد،سیلی نقد به از حلوای نسیه،کار از محکم‌کاری عیب نمی‌کند،کبک خود را برف می‌کند،به دریا زدن'),sp('آب در هاون کوبیدن،نوشدارو پس از مرگ سهراب،چاه کن همیشه ته چاه است،تا تنور گرم است نان را باید پخت،از کوزه همان برون تراود که در اوست،خشت اول گر نهد معمار کج،ماهی را هر وقت از آب بگیری تازه است،چو دشمن بر درت آید')],
+food:[sp('چلوکباب،آش رشته،نان بربری،بستنی،هندوانه،دوغ،نان سنگک،چای'),sp('قورمه‌سبزی،آبگوشت،حلیم،فسنجان،سمنو،گز،زولبیا بامیه،شیربرنج'),sp('دیزی سنگی،کباب ترش،سوهان،فالوده شیرازی،میرزا قاسمی،بریانی،کله‌پاچه،کشک بادمجان')],
+sport:[sp('فوتبال،والیبال،شنا،دوچرخه‌سواری،بسکتبال،کشتی،طناب‌زنی،دو استقامت'),sp('وزنه‌برداری،لغزیدن روی برف،تیراندازی،مشت‌بازی،شمشیربازی،پرش با نیزه،نرمش نمایشی،قایقرانی'),sp('دفاع شخصی،ورزش زورخانه،کوهنوردی،پرش ارتفاع،چوگان،تیروکمان،غواصی،پرواز با بادبان')],
+fam:[sp('کوروش،رستم،حافظ،فردوسی،سعدی،مولانا،خیام،شاه‌عباس'),sp('ابن سینا،خوارزمی،داریوش،رازی،کمال‌الملک،مریم میرزاخانی،ناصرالدین‌شاه،نادرشاه'),sp('ابوریحان بیرونی،دکتر حسابی،خواجه نصیر،امیرکبیر،ابن هیثم،آریوبرزن،اینشتین،نیوتن')]};
+const FIN=sp('نوشدارو پس از مرگ سهراب،خشت اول گر نهد معمار کج،از کوزه همان برون تراود که در اوست،آب در هاون کوبیدن،چاه کن همیشه ته چاه است،کار نیکو کردن از پر کردن است،تا تنور گرم است نان را باید پخت،سیلی نقد به از حلوای نسیه،ماهی را هر وقت از آب بگیری تازه است،چو دشمن بر درت آید');
+const X={tour:['بازار بزرگ تهران،پارک ملت،جزیرهٔ هرمز،زاینده‌رود،برج آزادی،پل خواجو،شهربازی،جنگل‌های شمال،ساحل خزر،چشمهٔ آب گرم','کاخ چهل‌ستون،مسجد جامع یزد،قلعهٔ رودخان،باغ فین کاشان،حمام خان،عمارت عالی‌قاپو،دریاچهٔ چورت،دشت ارژن،شهر سوخته،قلعهٔ بابک','منار جنبان،گنبد سلطانیه،تاق بستان،کاخ آپادانا،شهر زیرزمینی نوش‌آباد،غار کتله‌خور،گنبد کاووس،مسجد جامع نائین،کاخ ورسای،کوه فوجی'],
+sci:['جاذبه،ماه،آهنربا،باران،برف،قلب،مغز،کرهٔ زمین،خورشید،آتش','گردش زمین،سایهٔ زمین روی ماه،خورشیدگرفتگی،شهاب‌سنگ،فشار هوا،چرخهٔ آب،جزر و مد،بیماری واگیر،میکروب،پیل','انفجار بزرگ،سفر در زمان،تکامل،گرم شدن زمین،پخش رادیو،موج‌های جاذبه،یاختهٔ بنیادی،لایهٔ محافظ زمین،آهنربای زمین،نیروی هسته‌ای'],
+prov:['سنگ مفت گنجشک مفت،دنیا دار مکافات است،نه سیخ بسوزد نه کباب،دیوار موش دارد موش هم گوش دارد،دست بالای دست بسیار است،یک دست صدا ندارد،مرغ همسایه غاز است،هر گردی گردو نیست،حرف حساب جواب ندارد،کوه به کوه نمی‌رسد','آب رفته به جوی بازنمی‌گردد،بار کج به منزل نمی‌رسد،جواب ابلهان خاموشی است،حلوا حلوا کردن دهان شیرین نمی‌شود،سالی که نیکوست از بهارش پیداست،شنیدن کی بود مانند دیدن،قطره قطره جمع گردد وانگهی دریا شود،مرغ یک پا دارد،آشپز که دو تا شد آش یا شور است یا بی‌نمک،خواب خرگوشی دیدن','ابر و باد و مه و خورشید و فلک در کارند،اول چاه بکن بعد منار بدزد،پیراهن عثمان کردن،تو نیکی می‌کن و در دجله انداز،چراغی که به خانه رواست به مسجد حرام است،گر صبر کنی ز غوره حلوا سازم،زور که زد از کوه بکاود نخود،ز گهواره تا گور دانش بجوی،زبان سرخ سر سبز می‌دهد بر باد،به عرضه‌ات بنگر نه به کیسه‌ات'],
+food:['کباب برگ،ماست و خیار،سیب‌زمینی پخته،نان و پنیر،لواشک،نیمرو،کتلت،پشمک،شربت،شیرینی','عدس‌پلو،باقالی‌پلو،کوکوسبزی،کشک و بادمجان،دلمه،قیمه،رشته‌پلو،جوجه‌کباب،شله‌زرد،نان لواش','کباب بختیاری،آش دوغ،بامیه،کلم‌پلو شیرازی،قند و نبات،حلوا ارده،رشته‌خوشکار،ته‌چین،کاچی،کباب تابه‌ای'],
+sport:['پیاده‌روی،کبدی،دوومیدانی،طناب‌کشی،بادبادک‌بازی،ماهیگیری،سنگ‌گیری،اسب‌دوانی،چتربازی،میل‌گردانی','کشتی پهلوانی،چوب‌بازی،گوی‌بازی،تیراندازی با کمان،مشت‌زنی،صخره‌نوردی،دوچرخه‌سواری در کوه،قایق‌سواری،شیرجه،بازی در ساحل','اسب‌سواری،پرتاب دیسک،پرتاب چکش،سه‌گانه،دو با مانع،پرتاب نیزه،بدنسازی،نرمش صبحگاهی،حرکات موزون،سُر خوردن روی برف'],
+fam:['نظامی،عطار،بابا طاهر،شاه اسماعیل،کریم‌خان زند،آرش کمانگیر،سیاوش،سهراب،اسفندیار،زال','ملاصدرا،شیخ بهایی،دهخدا،صادق هدایت،سهراب سپهری،فروغ فرخزاد،پروین اعتصامی،نیما یوشیج،جمال‌الدین اسدآبادی،ایرج میرزا','ماری کوری،لئوناردو داوینچی،گالیله،ادیسون،تسلا،داروین،کریستف کلمب،ماژلان،مارکوپولو،پاستور']};
+for(const k in X)X[k].forEach((v,i)=>W[k][i]=W[k][i].concat(sp(v)));
+FIN.splice(0,FIN.length,...new Set([...FIN,...W.prov[2]]));
+const NM=sp('تخت‌جمشید،دماوند،نقش‌جهان،کویر لوت،قشم،سی‌وسه‌پل'),PT=[2,4,6];
+let S={auto:0,st:0,n:2,names:[...NM],len:12,time:45,fin:1,o:{tick:1,al:0,vol:.7,sc:1},sc:[],t:0,used:{},played:0,cur:null,iv:0,alive:[],order:[],pi:0,res:{},pass:0,ph:'main'};
+const $=id=>document.getElementById(id),app=$('app'),R=a=>a[Math.random()*a.length|0];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fa=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+// ---- جلوگیری از تکرار (حتی بین چند بازی، روی خود دستگاه)
+let U={};try{U=JSON.parse(localStorage.getItem('pm_u')||'{}')}catch(e){}
+function pick(k,arr){const u=U[k]=U[k]||[];let f=arr.map((_,i)=>i).filter(i=>!u.includes(i));if(!f.length){U[k]=[];f=arr.map((_,i)=>i)}const i=R(f);U[k].push(i);try{localStorage.setItem('pm_u',JSON.stringify(U))}catch(e){}return arr[i]}
+// ---- صدا (WebAudio؛ بدون فایل، آفلاین)
+let AC;function ac(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()}catch(e){}return AC}
+function tone(f,d,at=0,ty='square',v=.2){const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+at;o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(v*S.o.vol,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d)}
+const AL=[['🚨 آژیر',()=>{for(let i=0;i<8;i++)tone(i%2?660:880,.25,i*.3,'sawtooth',.3)}],['🔔 زنگ',()=>{for(let i=0;i<5;i++){tone(1318,.5,i*.5,'triangle',.3);tone(1976,.4,i*.5,'sine',.15)}}],['🎵 ملودی',()=>[523,659,784,659,523,392,523,784,1047].forEach((f,i)=>tone(f,.25,i*.22,'triangle',.3))]];
+const sfx={tick:()=>S.o.tick&&tone(1000,.06,0,'sine',.15),ok:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.18,i*.12,'triangle',.25)),alarm:()=>{AL[S.o.al][1]();try{navigator.vibrate&&navigator.vibrate([300,100,300])}catch(e){}},clk:()=>tone(700,.05,0,'sine',.12)};
+// ---- نمایش
+const sbar=()=>`<div class="sb">${S.names.slice(0,S.n).map((n,i)=>`<div class="t ${S.cur&&S.cur.team===i?'cur':''} ${S.ph==='gold'&&!S.alive[i]?'out':''}">${esc(n)}<b>${fa(S.sc[i]||0)}</b></div>`).join('')}</div>`;
+const ch=(on,fn,tx)=>`<button class="chip ${on?'on':''}" onclick="${fn}">${tx}</button>`;
+function wz(d){S.st=Math.max(0,Math.min(2,S.st+d));sfx.clk();if(d===1&&S.st>2){}wiz()}
+function wiz(){const s=S.st,o=S.o;let h=`<h1>🎭 پانتومیم سایروس</h1><div class="dots">${[0,1,2].map(i=>`<i class="${i===s?'on':''}"></i>`).join('')}</div><div class="card"><span class="rib">${['گروه‌ها','قوانین بازی','گزینه‌های پیشرفته'][s]}</span>`;
+ if(s===0)h+=`<h3>تعداد گروه</h3><div class="row">${[2,4,6].map(n=>ch(S.n===n,`S.n=${n};wiz()`,fa(n)+' گروه')).join('')}</div><h3>نام گروه‌ها</h3>${Array.from({length:S.n},(_,i)=>`<input type="text" value="${esc(S.names[i])}" maxlength="18" oninput="S.names[${i}]=this.value||'گروه ${fa(i+1)}'">`).join('')}`;
+ if(s===1)h+=`<h3>تعداد نوبت‌های مرحلهٔ اول (از ۱۸ خانهٔ ۲، ۴ و ۶ امتیازی)</h3><div class="row">${[6,12,18].map(n=>ch(S.len===n,`S.len=${n};wiz()`,fa(n)+' نوبت')).join('')}</div><h3>زمان پایهٔ هر نوبت</h3><div class="row">${[30,45,60,90].map(n=>ch(S.time===n,`S.time=${n};wiz()`,fa(n)+' ث')).join('')}</div><h3>مرحلهٔ طلایی (۳۰ امتیازی، ضرب‌المثل سخت)</h3><div class="row">${ch(S.fin,'S.fin=1;wiz()','✔ حذفی'  )}${ch(!S.fin,'S.fin=0;wiz()','بدون طلایی')}</div><p class="mut">در طلایی هر گروه یک ضرب‌المثل سخت می‌گیرد؛ گروه‌هایی که نتوانند حذف می‌شوند.</p>`;
+ if(s===2)h+=`<h3>صدای ثانیه‌شمار (۱۰ ثانیهٔ آخر)</h3><div class="row">${ch(o.tick,'S.o.tick=1;wiz()','🔊 روشن')}${ch(!o.tick,'S.o.tick=0;wiz()','🔇 خاموش')}</div><h3>آهنگ هشدار پایان زمان</h3><div class="row">${AL.map((a,i)=>ch(o.al===i,`S.o.al=${i};wiz();AL[${i}][1]()`,a[0])).join('')}</div><h3>بلندی صدا: ${fa(Math.round(o.vol*100))}٪</h3><input type="range" min="10" max="100" value="${o.vol*100}" oninput="S.o.vol=this.value/100" onchange="sfx.ok()"><h3>زمان بیشتر برای خانه‌های سخت‌تر</h3><div class="row">${ch(o.sc,'S.o.sc=1;wiz()','✔ ۴ امتیازی +۱۵ث · ۶ امتیازی +۳۰ث')}${ch(!o.sc,'S.o.sc=0;wiz()','زمان یکسان')}</div><p class="mut">هر نوبت امکان توقف زمان و +۱۰ ثانیه (با ۱ امتیاز کمتر) دارد.</p>`;
+ h+=`</div><div class="nv">${s>0?'<button class="btn gh" onclick="wz(-1)">▶ قبلی</button>':''}${s<2?'<button class="btn" onclick="wz(1)">بعدی ◀</button>':'<button class="btn g" onclick="start()">شروع بازی ▶</button>'}</div>`;app.innerHTML=h}
+function start(){ac();S.names=S.names.map((n,i)=>n||'گروه '+fa(i+1));S.sc=Array(S.n).fill(0);S.t=0;S.used={};S.played=0;S.ph='main';S.cur=null;board()}
+function board(){S.scr='b';const left=S.len-S.played;app.innerHTML=sbar()+`<div class="bd"><div class="card"><span class="rib">انتخاب موضوع</span><p class="mut">نوبت: <b>${esc(S.names[S.t%S.n])}</b> · خانهٔ باقی‌مانده: ${fa(left)}</p>${CT.map((c,ci)=>`<div class="cr"><div class="cn">${c[1]} ${c[2]}</div>${PT.map((p,li)=>`<button class="pt" ${S.used[ci+'.'+li]?'disabled':''} onclick="pc(${ci},${li})">${S.used[ci+'.'+li]?'✓':fa(p)}</button>`).join('')}</div>`).join('')}<div class="cr"><div class="cn">🥇 طلایی (ضرب‌المثل سخت)</div><button class="pt gd" disabled>${fa(30)}</button></div><p class="mut">سؤال‌ها تکراری نمی‌شوند ✔</p></div></div>`}
+function pc(ci,li){sfx.clk();S.used[ci+'.'+li]=1;const t=S.t%S.n,p=PT[li];S.cur={team:t,ci,li,pts:p,gold:0,time:S.time+(S.o.sc?[0,15,30][li]:0)};ready()}
+function sm(v){S.auto=v;[0,1].forEach(i=>{const e=$('m'+i);if(e)e.classList.toggle('on',S.auto===i)})}
+function ready(){const c=S.cur;S.scr='r';app.innerHTML=sbar()+`<div class="card"><p class="mut">${c.gold?'🥇 مرحلهٔ طلایی':CT[c.ci][1]+' '+CT[c.ci][2]} · ${fa(c.pts)} امتیاز · ${fa(c.time)} ثانیه</p><h1>${esc(S.names[c.team])}</h1><div class="fl"><div class="fi" id="fi"><div class="fa">؟</div><div class="fb" id="wd"></div></div></div><div id="md"><h3>شروع تایمر</h3><div class="row"><button class="chip ${S.auto?'':'on'}" id="m0" onclick="sm(0)">👁 ابتدا خودم ببینم</button><button class="chip ${S.auto?'on':''}" id="m1" onclick="sm(1)">⚡ تایمر خودکار</button></div></div><p class="mut">فقط بازیگر کلمه را ببیند · بدون صحبت 🤫</p></div><div id="bt"><button class="btn g" onclick="begin()">آغاز ▶</button>${c.gold?'':'<button class="btn gh s" onclick="back()">◀ بازگشت به انتخاب موضوع</button>'}</div>`}
+function back(){delete S.used[S.cur.ci+'.'+S.cur.li];board()}
+function np(c){return c.gold?pick('gold',FIN):pick(CT[c.ci][0]+c.li,W[CT[c.ci][0]][c.li])}
+function swh(){const c=S.cur;return`<div class="row"><button class="chip ${c.wi?'':'on'}" onclick="sw(0)">▶ کلمه نخست</button><button class="chip ${c.wi?'on':''}" onclick="sw(1)">کلمه دوم ◀</button></div><p class="mut">در هر نوبت دو کلمه؛ آزادانه بین آن‌ها جابه‌جا شوید.</p>`}
+function sw(i){const c=S.cur;if(i===1&&c.words.length<2)c.words.push(np(c));if(!c.words[i])return;c.wi=i;c.word=c.words[i];const a=$('wd'),b=$('bw'),w=$('sw');if(a)a.textContent=c.word;if(b)b.textContent=c.word;if(w)w.innerHTML=swh();sfx.clk()}
+function begin(){ac();const c=S.cur;if(c.words)return;const md=$('md');if(md)md.style.display='none';c.word=np(c);c.words=[c.word];c.wi=0;$('wd').textContent=c.word;$('fi').classList.add('on');
+ $('bt').innerHTML=S.auto?'<p class="mut">⏱ تایمر شروع می‌شود…</p>':'<div id="sw">'+swh()+'</div><button class="btn g" onclick="startT()">⏱ شروع تایمر</button>';if(S.auto)setTimeout(()=>{if(S.scr==='r')startT()},1100)}
+function startT(){const c=S.cur;if(S.scr!=='r')return;c.end=Date.now()+c.time*1000;c.total=c.time;c.lt=99;c.pa=0;c.ex=0;play()}
+function play(){S.scr='p';const c=S.cur;app.innerHTML=sbar()+`<div id="pw"><div class="card"><div class="mut">${c.gold?'🥇':CT[c.ci][1]} <b id="pp">${fa(c.pts)}</b> امتیاز</div><div class="big" id="bw">${esc(c.word)}</div><div id="sw">${swh()}</div><div class="tm" id="tm">${fa(c.time)}</div><div class="bar"><i id="br" style="width:100%"></i></div></div></div><div class="nv"><button class="btn gh s" id="pb" onclick="pz()">⏸ توقف</button>${c.gold?'':'<button class="btn gh s" id="ex" onclick="ex()">➕ ۱۰ ثانیه (−۱ امتیاز)</button>'}</div><button class="btn g" onclick="done(1)">✔ درست حدس زدند</button><button class="btn r" onclick="done(0)">✖ تسلیم</button>`;clearInterval(S.iv);S.iv=setInterval(tick,200)}
+function tick(){const c=S.cur,ms=c.end-Date.now(),l=Math.max(0,Math.ceil(ms/1000));const t=$('tm');if(!t)return;t.textContent=fa(l);$('br').style.width=Math.max(0,ms/(c.total*10))+'%';$('pw').className=l<=10?'warn':'';if(l<=10&&l>0&&l!==c.lt)sfx.tick();c.lt=l;if(l<=0)done(0,1)}
+function pz(){const c=S.cur;if(!c.pa){c.pa=Date.now();clearInterval(S.iv);$('pb').textContent='▶ ادامه'}else{c.end+=Date.now()-c.pa;c.pa=0;$('pb').textContent='⏸ توقف';clearInterval(S.iv);S.iv=setInterval(tick,200)}}
+function ex(){const c=S.cur;if(c.ex||c.pts<2)return;c.ex=1;c.end+=10000;c.total+=10;c.pts--;$('pp').textContent=fa(c.pts);$('ex').style.display='none'}
+function done(ok,to){clearInterval(S.iv);const c=S.cur;S.scr='x';if(ok){S.sc[c.team]+=c.pts;sfx.ok()}else if(to)sfx.alarm();
+ const m=ok?`🎉 آفرین! ${fa(c.pts)} امتیاز برای ${esc(S.names[c.team])}`:to?'⏰ وقت تمام شد! امتیازی گرفته نشد':'🏳 تسلیم شدید؛ امتیازی گرفته نشد';
+ if(c.gold)S.res[c.team]=ok?1:0;else S.played++;
+ app.innerHTML=sbar()+`<div class="card"><div class="big" style="color:var(--${ok?'gr':'rd'})">${m}</div><p class="mut">کلمه: ${esc(c.word)}</p></div><button class="btn" onclick="nx()">ادامه ◀</button>`}
+function nx(){if(S.ph==='main'){S.t++;if(S.played<S.len)return board();if(S.fin)return gold();return over()}
+ S.pi++;if(S.pi<S.order.length)return gready();
+ const w=S.order.filter(i=>S.res[i]===1),l=S.order.filter(i=>S.res[i]===0);if(w.length&&l.length)l.forEach(i=>S.alive[i]=0);
+ const left=S.alive.filter(x=>x).length;if(left<=1||S.pass>=4)return over();gpass()}
+function gold(){S.ph='gold';S.alive=Array(S.n).fill(1);S.pass=0;gpass()}
+function gpass(){S.pass++;S.order=S.alive.map((a,i)=>a?i:-1).filter(i=>i>=0);S.pi=0;S.res={};gready()}
+function gready(){S.scr='g';const t=S.order[S.pi];S.cur={team:t,gold:1,pts:30,time:S.time+45,word:''};
+ app.innerHTML=sbar()+`<div class="bd"><div class="card"><span class="rib">🥇 دور طلایی · حذفی</span><p class="mut">دور ${fa(S.pass)} · هر ضرب‌المثل ${fa(30)} امتیاز</p>${S.names.slice(0,S.n).map((n,i)=>{const o=!S.alive[i]||S.res[i]===0,k=i===t?'cur':o?'x':S.res[i]===1?'ok':'';return`<div class="st ${k}"><span>${esc(n)}</span><span>${fa(S.sc[i])} ${i===t?'▶':o?'✖':S.res[i]===1?'✔':'○'}</span></div>`}).join('')}</div></div><button class="btn g" onclick="ready()">شروع نوبت ${esc(S.names[t])} ▶</button>`}
+function over(){S.scr='o';S.cur=null;const o=S.names.slice(0,S.n).map((n,i)=>[n,S.sc[i]]).sort((a,b)=>b[1]-a[1]),m=o[0][1],w=o.filter(x=>x[1]===m).map(x=>esc(x[0])).join(' و ');sfx.ok();
+ app.innerHTML=`<h1>🏆 پایان بازی</h1><div class="card"><div class="big">${m>0?'برنده: '+w:'مساوی!'}</div><table>${o.map((x,i)=>`<tr><td>${fa(i+1)}</td><td>${esc(x[0])}</td><td><b>${fa(x[1])}</b></td></tr>`).join('')}</table></div><button class="btn g" onclick="start()">بازی دوباره ↻</button><button class="btn gh" onclick="S.st=0;wiz()">تنظیمات</button>`}
+wiz();
+</script>
+</body>
+</html>
