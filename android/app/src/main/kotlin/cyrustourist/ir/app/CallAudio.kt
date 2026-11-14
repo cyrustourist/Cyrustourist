@@ -123,13 +123,31 @@ class CallAudio(private val ctx: Context) {
                     data = concat(tone(520.0, 160, rate, 0.55), silence(110, rate), tone(380.0, 220, rate, 0.55))
                     loop = false
                 }
+                // زنگ مسابقه: یک ضربهٔ زنگ با پژواک (شروع و پایان بازی)
+                "gong" -> {
+                    data = bell(rate, 523.0, 1700, 3.0)
+                    loop = false
+                }
+                // زنگ هشدار: یک ضربهٔ کوتاه‌تر و تیزتر (۳۰ ثانیهٔ آخر ساعت)
+                "warn" -> {
+                    data = bell(rate, 880.0, 1000, 4.5)
+                    loop = false
+                }
                 else -> return
             }
 
-            val attrs = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .build()
+            val game = kind == "gong" || kind == "warn"
+            val attrs = if (game) {
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            } else {
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            }
             val format = AudioFormat.Builder()
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                 .setSampleRate(rate)
@@ -273,6 +291,22 @@ class CallAudio(private val ctx: Context) {
     }
 
     private fun silence(ms: Int, rate: Int): ShortArray = ShortArray(rate * ms / 1000)
+
+    /** صدای زنگ: چند هارمونیک که آرام محو می‌شوند (بدون فایل صوتی). */
+    private fun bell(rate: Int, freq: Double, ms: Int, decay: Double): ShortArray {
+        val n = rate * ms / 1000
+        val out = ShortArray(n)
+        for (i in 0 until n) {
+            val t = i.toDouble() / rate
+            val attack = if (t < 0.006) t / 0.006 else 1.0
+            val env = Math.exp(-decay * t) * attack
+            val v = (Math.sin(2 * Math.PI * freq * t) +
+                0.5 * Math.sin(2 * Math.PI * freq * 2.0 * t) +
+                0.25 * Math.sin(2 * Math.PI * freq * 3.01 * t)) / 1.75 * env
+            out[i] = (v * 0.85 * Short.MAX_VALUE).toInt().toShort()
+        }
+        return out
+    }
 
     private fun concat(vararg parts: ShortArray): ShortArray {
         var total = 0
