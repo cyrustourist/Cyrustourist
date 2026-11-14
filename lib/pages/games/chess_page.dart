@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../services/offline_mesh_service.dart';
 import '../groups/group_ui.dart';
 import 'chess_engine.dart';
+import 'chess_extras.dart';
 import 'dice_games.dart' show sharedResultCard;
 import 'game_api.dart';
 import 'game_engine.dart' show BotLevel;
@@ -23,9 +24,6 @@ import 'game_widgets.dart';
 
 enum ChMode { bot, local, nearby, online }
 
-const Color _chLight = Color(0xfff0e4c8);
-const Color _chDark = Color(0xff3f7f86);
-const int _chClockMs = 10 * 60 * 1000;
 const List<String> _chGlyph = <String>['', '\u265F\uFE0E', '\u265E\uFE0E', '\u265D\uFE0E', '\u265C\uFE0E', '\u265B\uFE0E', '\u265A\uFE0E'];
 const List<int> _chValue = <int>[0, 1, 3, 3, 5, 9, 0];
 const List<int> _chInitial = <int>[0, 8, 2, 2, 2, 1, 1];
@@ -66,51 +64,25 @@ const Map<String, Map<String, String>> _cx = {
   'fail': {'fa': 'اتصال مستقیم برقرار نشد. دوباره تلاش کنید.', 'en': 'Could not connect directly. Please try again.'},
   'retry': {'fa': 'تلاش دوباره', 'en': 'Try again'},
   'rule': {
-    'fa': 'ساعت هر بازیکن ۱۰ دقیقه است. برای حرکت، مهره را لمس کنید و بعد مقصد را. مات‌کردن شاه حریف = برد.',
-    'en': 'Each player has 10 minutes. Tap a piece, then its destination. Checkmate the opposing king to win.'
+    'fa': 'زمان هر بازیکن را از دکمهٔ ساعت بالای صفحه تنظیم کنید. برای حرکت، مهره را لمس کنید و بعد مقصد را. مات‌کردن شاه حریف = برد.',
+    'en': 'Set each player\'s time with the clock button above. Tap a piece, then its destination. Checkmate the opposing king to win.'
   },
+  'time': {'fa': 'زمان هر بازیکن', 'en': 'Time per player'},
+  'noclock': {'fa': 'بدون ساعت', 'en': 'No clock'},
+  'min': {'fa': 'دقیقه', 'en': 'min'},
+  'time_locked': {'fa': 'زمان فقط قبل از شروع بازی (و توسط میزبان) قابل تغییر است', 'en': 'Time can only be changed before the game starts (by the host)'},
+  'chat': {'fa': 'گفتگو با حریف', 'en': 'Chat with opponent'},
+  'chat_hint': {'fa': 'پیام برای حریف…', 'en': 'Message…'},
+  'rating': {'fa': 'امتیاز', 'en': 'Rating'},
+  'score_now': {'fa': 'نتیجهٔ این نشست', 'en': 'Session score'},
+  'btn_style': {'fa': 'مدل مهره و صفحه', 'en': 'Pieces & board'},
+  'btn_stats': {'fa': 'آمار و امتیاز', 'en': 'Stats & rating'},
 };
 
 String _ct(String key) {
   final m = _cx[key];
   if (m == null) return key;
   return m[GameT.fa ? 'fa' : 'en'] ?? m['en'] ?? key;
-}
-
-/// پیاده با نقاشی مستقیم: نماد متنی ♟ در اندروید به‌صورت ایموجی (همیشه سیاه) نمایش داده می‌شود،
-/// پس رنگ سفید/سیاه آن عوض نمی‌شد. نقاشی به فونت وابسته نیست.
-class _PawnPainter extends CustomPainter {
-  const _PawnPainter(this.white);
-  final bool white;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height;
-    final fill = Paint()
-      ..color = (white ? const Color(0xffffffff) : const Color(0xff17171c))
-      ..style = PaintingStyle.fill;
-    final line = Paint()
-      ..color = (white ? const Color(0xff000000) : const Color(0xaaffffff))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.05
-      ..strokeJoin = StrokeJoin.round;
-    final head = Path()..addOval(Rect.fromCircle(center: Offset(w * 0.5, h * 0.27), radius: w * 0.16));
-    final body = Path()
-      ..moveTo(w * 0.42, h * 0.40)
-      ..quadraticBezierTo(w * 0.40, h * 0.60, w * 0.27, h * 0.80)
-      ..lineTo(w * 0.73, h * 0.80)
-      ..quadraticBezierTo(w * 0.60, h * 0.60, w * 0.58, h * 0.40)
-      ..close();
-    final collar = Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.34, h * 0.37, w * 0.32, h * 0.07), Radius.circular(w * 0.03)));
-    final base = Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.22, h * 0.78, w * 0.56, h * 0.11), Radius.circular(w * 0.04)));
-    for (final path in <Path>[body, head, collar, base]) {
-      canvas.drawPath(path, fill);
-      canvas.drawPath(path, line);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_PawnPainter old) => old.white != white;
 }
 
 /// اجرای ربات در Isolate تا صفحه قفل نشود
@@ -189,7 +161,21 @@ class _ChessPageState extends State<ChessPage> {
   bool chatOn = true;
   final List<ChatLine> chat = <ChatLine>[];
   int _lastChatMs = 0;
-  List<int> clk = <int>[_chClockMs, _chClockMs];
+  List<int> clk = <int>[600000, 600000];
+  int tcMin = 10; // دقیقهٔ هر بازیکن (۰ = بدون ساعت)
+  final List<bool> _warned = <bool>[false, false];
+  final ValueNotifier<int> _chatTick = ValueNotifier<int>(0);
+  final TextEditingController _chatCtl = TextEditingController();
+  bool _chatOpen = false;
+  int unread = 0;
+  String _bubble = '';
+  bool _bubbleMine = false;
+  Timer? _bubbleTimer;
+  int sesMine = 0;
+  int sesTheirs = 0;
+  int sesDraws = 0;
+  int ratingDelta = 0;
+  bool _ready = false;
   int clkAt = 0;
   bool rmMine = false;
   bool rmPeer = false;
@@ -197,6 +183,9 @@ class _ChessPageState extends State<ChessPage> {
   bool drawIn = false;
 
   bool get _isNet => mode == ChMode.nearby || mode == ChMode.online;
+  int get _tcMs => tcMin * 60 * 1000;
+  bool get _timed => tcMin > 0;
+  int get _meIdx => mode == ChMode.bot || mode == ChMode.local ? 0 : myIdx;
   int get _turnIdx => pos.white ? 0 : 1;
   bool get _flip => mode == ChMode.local ? flipLocal : (mode == ChMode.bot ? false : myIdx == 1);
   bool get _canAct {
@@ -214,16 +203,23 @@ class _ChessPageState extends State<ChessPage> {
   @override
   void initState() {
     super.initState();
-    GameFx.load().then((_) {
-      if (mounted) setState(() {});
+    Future.wait<void>(<Future<void>>[GameFx.load(), ChessPrefs.load(), ChessStats.load()]).then((_) {
+      if (!mounted) return;
+      tcMin = mode == ChMode.online ? 10 : ChessPrefs.minutes;
+      _ready = true;
+      if (started && mvs.isEmpty && winner < 0) _applyTc();
+      setState(() {});
+      if (mode == ChMode.bot || mode == ChMode.local) ChessAlarm.start();
     });
     switch (mode) {
       case ChMode.bot:
         pnames = <String>[GameT.t('you'), GameT.t('robot')];
+        _clock = Timer.periodic(const Duration(seconds: 1), (_) => _clockTick());
         _newGame();
         break;
       case ChMode.local:
         pnames = <String>[GameT.t('player1'), GameT.t('player2')];
+        _clock = Timer.periodic(const Duration(seconds: 1), (_) => _clockTick());
         _newGame();
         break;
       case ChMode.nearby:
@@ -252,6 +248,9 @@ class _ChessPageState extends State<ChessPage> {
     _p2pTimeout?.cancel();
     _sub?.cancel();
     _mvCtl.dispose();
+    _chatCtl.dispose();
+    _chatTick.dispose();
+    _bubbleTimer?.cancel();
     if (mode == ChMode.nearby) {
       _mesh.removeListener(_onMesh);
       NearbyGameLink.instance.detach();
@@ -290,14 +289,26 @@ class _ChessPageState extends State<ChessPage> {
     rmPeer = false;
     drawSent = false;
     drawIn = false;
-    clk = <int>[_chClockMs, _chClockMs];
+    clk = <int>[_tcMs, _tcMs];
+    _warned[0] = false;
+    _warned[1] = false;
+    ratingDelta = 0;
     clkAt = _now();
     _lastRecv = _now();
     if (mounted) setState(() {});
+    if (_ready) ChessAlarm.start();
+  }
+
+  /// تغییر زمان قبل از اولین حرکت: ساعت‌ها از نو تنظیم می‌شوند.
+  void _applyTc() {
+    clk = <int>[_tcMs, _tcMs];
+    _warned[0] = false;
+    _warned[1] = false;
+    clkAt = _now();
   }
 
   int _remaining(int idx) {
-    if (!_isNet) return clk[idx];
+    if (!_timed) return 1 << 30;
     final running = started && winner < 0 && idx == _turnIdx;
     final v = clk[idx] - (running ? _now() - clkAt : 0);
     return v < 0 ? 0 : v;
@@ -312,7 +323,7 @@ class _ChessPageState extends State<ChessPage> {
   void _playMove(CMove m, {bool fromPeer = false}) {
     final san = chSan(pos, m, legal);
     final capture = pos.b[m.to] != 0 || m.ep;
-    if (_isNet && !fromPeer) clk[_turnIdx] = _remaining(_turnIdx);
+    if (_timed && !fromPeer) clk[_turnIdx] = _remaining(_turnIdx);
     pos = chApply(pos, m);
     mvs.add(m.uci);
     sans.add(san);
@@ -364,11 +375,19 @@ class _ChessPageState extends State<ChessPage> {
     if (winner >= 0) return;
     winner = w;
     endKey = k;
+    if (w == 2) {
+      sesDraws++;
+    } else if (w == _meIdx) {
+      sesMine++;
+    } else {
+      sesTheirs++;
+    }
     sel = null;
     thinking = false;
     _gen++;
     if (mounted) setState(() {});
     GameFx.win();
+    ChessAlarm.end();
     _finish();
   }
 
@@ -415,11 +434,11 @@ class _ChessPageState extends State<ChessPage> {
                 InkWell(
                   onTap: () => Navigator.of(ctx).pop(pc),
                   child: Container(
-                    width: 54,
-                    height: 54,
+                    width: 58,
+                    height: 58,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(color: _chDark, borderRadius: BorderRadius.circular(12), border: Border.all(color: gGold)),
-                    child: Text(_chGlyph[pc], style: TextStyle(fontSize: 38, height: 1, color: white ? Colors.white : const Color(0xff1b1b1b), shadows: const <Shadow>[Shadow(color: Color(0xff000000), blurRadius: 2)])),
+                    decoration: BoxDecoration(color: ChessPrefs.style.dark, borderRadius: BorderRadius.circular(12), border: Border.all(color: gGold)),
+                    child: chessPiece(pc, white, ChessPrefs.style, 46),
                   ),
                 ),
             ],
@@ -457,6 +476,10 @@ class _ChessPageState extends State<ChessPage> {
     if (reported) return;
     reported = true;
     final res = winner == 2 ? 'draw' : (winner == (mode == ChMode.bot ? 0 : myIdx) ? 'win' : 'loss');
+    final modeKey = mode == ChMode.bot ? 'bot_${widget.level.name}' : mode.name;
+    final oppName = (mode == ChMode.nearby || mode == ChMode.online) ? pnames[1 - myIdx] : '';
+    final d = await ChessStats.record(mode: modeKey, opp: oppName, result: res, moves: mvs.length);
+    if (mounted) setState(() => ratingDelta = d);
     if (mode == ChMode.online) {
       if (_onlineDone) {
         if (mounted) setState(() => resultReady = true);
@@ -527,7 +550,7 @@ class _ChessPageState extends State<ChessPage> {
   }
 
   void _sendStart() {
-    _sendNet(<String, dynamic>{'g': 'ch_st', 'names': pnames});
+    _sendNet(<String, dynamic>{'g': 'ch_st', 'names': pnames, 'tc': tcMin});
   }
 
   /// بازسازی کامل از فهرست حرکت‌ها (پیام حریف)
@@ -585,6 +608,8 @@ class _ChessPageState extends State<ChessPage> {
           final nm = m['names'];
           if (nm is List && nm.length == 2) pnames = <String>['${nm[0]}', '${nm[1]}'];
           final first = !started;
+          final tc = (m['tc'] as num?)?.toInt();
+          if (tc != null && tc >= 0 && tc <= 60) tcMin = tc;
           stage = 'play';
           if (first) {
             _newGame();
@@ -621,7 +646,11 @@ class _ChessPageState extends State<ChessPage> {
             setState(() {
               chat.add(ChatLine(pnames[1 - myIdx], txt, false));
               if (chat.length > 30) chat.removeAt(0);
+              if (!_chatOpen) unread++;
             });
+            _chatTick.value++;
+            _showBubble(txt, false);
+            GameFx.move();
           }
         }
         break;
@@ -852,10 +881,19 @@ class _ChessPageState extends State<ChessPage> {
   // ---------------------------------------------------------------- ساعت، چت، مساوی، تسلیم، بازی دوباره
 
   void _clockTick() {
-    if (!mounted || stage != 'play' || !started || !_isNet) return;
-    if (winner < 0) {
+    if (!mounted || stage != 'play' || !started) return;
+    if (winner < 0 && _timed) {
       final t = _turnIdx;
-      if (_remaining(t) <= 0) {
+      final rem = _remaining(t);
+      if (rem > 0 && rem <= 30000 && !_warned[t] && (mode == ChMode.local || t == _meIdx)) {
+        _warned[t] = true;
+        ChessAlarm.warn();
+      }
+      if (rem <= 0) {
+        if (!_isNet) {
+          _setEnd(1 - t, 'flag');
+          return;
+        }
         if (t == myIdx) {
           _sendEnd(1 - myIdx, 'flag');
           _setEnd(1 - myIdx, 'flag');
@@ -880,6 +918,183 @@ class _ChessPageState extends State<ChessPage> {
       chat.add(ChatLine(pnames[myIdx], t, true));
       if (chat.length > 30) chat.removeAt(0);
     });
+    _chatTick.value++;
+    _showBubble(t, true);
+  }
+
+  void _showBubble(String t, bool mine) {
+    _bubbleTimer?.cancel();
+    setState(() {
+      _bubble = t;
+      _bubbleMine = mine;
+    });
+    _bubbleTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _bubble = '');
+    });
+  }
+
+  List<String> _phrases() => GameT.fa
+      ? <String>['سلام 👋', 'موفق باشی 🍀', 'آفرین 👏', 'حرکت خوبی بود 👍', 'اوه نه! 😅', 'زود باش ⏳', 'کمی فکر کن 🤔', 'کیش! ♚', 'مراقب باش 😎', 'یک لحظه صبر کن', 'مساوی؟ 🤝', 'بازی دوباره؟ 🔁', 'تبریک 🎉', 'بازی خوبی بود']
+      : <String>['Hello 👋', 'Good luck 🍀', 'Well played 👏', 'Nice move 👍', 'Oh no! 😅', 'Hurry up ⏳', 'Think a bit 🤔', 'Check! ♚', 'Careful 😎', 'One moment', 'Draw? 🤝', 'Rematch? 🔁', 'Congrats 🎉', 'Good game'];
+
+  Future<void> _openChat() async {
+    setState(() {
+      _chatOpen = true;
+      unread = 0;
+    });
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: SafeArea(
+            child: AnimatedBuilder(
+              animation: _chatTick,
+              builder: (_, __) => Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(_ct('chat'), textAlign: TextAlign.center, style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                    const SizedBox(height: 10),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 190),
+                      child: ListView(
+                        reverse: true,
+                        shrinkWrap: true,
+                        children: [
+                          for (final m in chat.reversed)
+                            Align(
+                              alignment: m.mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 5),
+                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                                decoration: BoxDecoration(color: m.mine ? const Color(0xff1b4d57) : gBg, borderRadius: BorderRadius.circular(13)),
+                                child: Text(m.mine ? m.text : '${m.name}: ${m.text}', style: const TextStyle(color: Colors.white, fontSize: 13.5)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      children: [
+                        for (final p in _phrases())
+                          ActionChip(
+                            backgroundColor: gBg,
+                            side: const BorderSide(color: gLine),
+                            label: Text(p, style: const TextStyle(color: Colors.white, fontSize: 12.5)),
+                            onPressed: () => _sendChat(p),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _chatCtl,
+                            maxLength: 60,
+                            style: const TextStyle(color: Colors.white),
+                            onSubmitted: (v) {
+                              _sendChat(v);
+                              _chatCtl.clear();
+                            },
+                            decoration: InputDecoration(
+                              isDense: true,
+                              counterText: '',
+                              filled: true,
+                              fillColor: gBg,
+                              hintText: _ct('chat_hint'),
+                              hintStyle: const TextStyle(color: gMuted, fontSize: 13),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: gLine)),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            _sendChat(_chatCtl.text);
+                            _chatCtl.clear();
+                          },
+                          icon: const Icon(Icons.send_rounded, color: gGold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (mounted) setState(() => _chatOpen = false);
+  }
+
+  /// ردیف عبارت‌های آماده زیر صفحه (همیشه دیده می‌شود)
+  Widget _quickChat() {
+    final ph = _phrases();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: SizedBox(
+        height: 38,
+        child: Row(
+          children: [
+            InkWell(
+              onTap: _openChat,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(color: gGold, shape: BoxShape.circle),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Icon(Icons.chat_bubble_rounded, color: gBg, size: 20),
+                    if (unread > 0)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(color: const Color(0xffe53935), borderRadius: BorderRadius.circular(9)),
+                          child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (final p in ph)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 6),
+                      child: ActionChip(
+                        backgroundColor: gPanel,
+                        side: const BorderSide(color: gLine),
+                        visualDensity: VisualDensity.compact,
+                        label: Text(p, style: const TextStyle(color: Colors.white, fontSize: 12.5)),
+                        onPressed: () => _sendChat(p),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _offerDraw() {
@@ -920,6 +1135,26 @@ class _ChessPageState extends State<ChessPage> {
     final me = mode == ChMode.bot ? 0 : myIdx;
     if (_isNet) _sendEnd(1 - me, 'resign');
     _setEnd(1 - me, 'resign');
+  }
+
+  bool get _canPickTime {
+    if (mode == ChMode.online) return false;
+    if (mode == ChMode.nearby) return stage == 'menu' || stage == 'host';
+    return winner >= 0 || mvs.isEmpty;
+  }
+
+  Future<void> _pickTime() async {
+    if (!_canPickTime) {
+      gToast(context, _ct('time_locked'));
+      return;
+    }
+    final m = await showChessTimeSheet(context, current: tcMin);
+    if (m == null || !mounted) return;
+    await ChessPrefs.setMinutes(m);
+    setState(() {
+      tcMin = m;
+      if (started && mvs.isEmpty && winner < 0) _applyTc();
+    });
   }
 
   void _swapAndNew() {
@@ -1007,7 +1242,7 @@ class _ChessPageState extends State<ChessPage> {
   Widget _playerBar(int idx) {
     final active = winner < 0 && _turnIdx == idx && started;
     final cap = _captured(idx);
-    final showClock = _isNet;
+    final showClock = _timed;
     final low = showClock && _remaining(idx) < 30000;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -1046,16 +1281,17 @@ class _ChessPageState extends State<ChessPage> {
     }
     final kingSq = chInCheck(pos) ? chKingSq(pos.b, pos.white) : -1;
     final flip = _flip;
+    final st = ChessPrefs.style;
     Widget square(int idx) {
       final f = idx % 8, r = idx ~/ 8;
-      var col = (f + r) % 2 == 1 ? _chDark : _chLight;
+      var col = (f + r) % 2 == 1 ? st.dark : st.light;
       if (idx == lastFrom || idx == lastTo) col = Color.alphaBlend(const Color(0x77ffe066), col);
       if (idx == sel) col = Color.alphaBlend(const Color(0xaaffd36a), col);
       if (idx == kingSq) col = Color.alphaBlend(const Color(0xbbff3b3b), col);
       final piece = pos.b[idx];
       final isDest = dests.contains(idx);
       final onDark = (f + r) % 2 == 1;
-      final lblColor = onDark ? _chLight : _chDark;
+      final lblColor = onDark ? st.light : st.dark;
       final bottomRow = flip ? r == 0 : r == 7;
       final leftCol = flip ? f == 7 : f == 0;
       return GestureDetector(
@@ -1072,20 +1308,7 @@ class _ChessPageState extends State<ChessPage> {
               if (bottomRow) Positioned(bottom: 0, right: 2, child: Text('abcdefgh'[f], style: TextStyle(fontSize: sz * 0.2, color: lblColor, fontWeight: FontWeight.w800))),
               if (isDest && piece == 0) Container(width: sz * 0.3, height: sz * 0.3, decoration: const BoxDecoration(color: Color(0x66000000), shape: BoxShape.circle)),
               if (isDest && piece != 0) Container(width: sz * 0.92, height: sz * 0.92, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0x88000000), width: 3))),
-              if (piece.abs() == kPawn)
-                CustomPaint(size: Size(sz * 0.8, sz * 0.8), painter: _PawnPainter(piece > 0))
-              else if (piece != 0)
-                Text(
-                  _chGlyph[piece.abs()],
-                  style: TextStyle(
-                    fontSize: sz * 0.82,
-                    height: 1,
-                    color: piece > 0 ? Colors.white : const Color(0xff17171c),
-                    shadows: piece > 0
-                        ? const <Shadow>[Shadow(color: Color(0xff000000), blurRadius: 1.5), Shadow(color: Color(0xff000000), blurRadius: 1.5, offset: Offset(0.6, 0.6))]
-                        : const <Shadow>[Shadow(color: Color(0x88ffffff), blurRadius: 1.2)],
-                  ),
-                ),
+              if (piece != 0) chessPiece(piece.abs(), piece > 0, st, sz * 0.94),
             ],
           ),
         ),
@@ -1173,7 +1396,11 @@ class _ChessPageState extends State<ChessPage> {
       case 'menu':
         return _center(<Widget>[
           _netCard(),
-          if (_mesh.running) ...<Widget>[_big(Icons.add_circle_rounded, _ct('host'), _createNearby), _big(Icons.login_rounded, _ct('join'), _openJoin)],
+          if (_mesh.running) ...<Widget>[
+            _big(Icons.timer_rounded, '${_ct('time')}: ${tcMin == 0 ? _ct('noclock') : '$tcMin ${_ct('min')}'}', _pickTime),
+            _big(Icons.add_circle_rounded, _ct('host'), _createNearby),
+            _big(Icons.login_rounded, _ct('join'), _openJoin),
+          ],
           const SizedBox(height: 8),
           Text(_ct('note'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 12, height: 1.8)),
         ]);
@@ -1235,10 +1462,45 @@ class _ChessPageState extends State<ChessPage> {
         _playerBar(topIdx),
         const SizedBox(height: 8),
         Text(_status(), textAlign: TextAlign.center, style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 15.5)),
+        if (sesMine + sesTheirs + sesDraws > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              '${_ct('score_now')}: ${pnames[_meIdx].isEmpty ? _ct(_meIdx == 0 ? 'white' : 'black') : pnames[_meIdx]} $sesMine - $sesTheirs ${pnames[1 - _meIdx].isEmpty ? _ct(_meIdx == 0 ? 'black' : 'white') : pnames[1 - _meIdx]}${sesDraws > 0 ? ' · ${GameT.t('draw')} $sesDraws' : ''}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: gMuted, fontSize: 11.5),
+            ),
+          ),
         const SizedBox(height: 8),
-        _board(w),
+        Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            _board(w),
+            if (_bubble.isNotEmpty)
+              Positioned(
+                top: 8,
+                left: 10,
+                right: 10,
+                child: IgnorePointer(
+                  child: Align(
+                    alignment: _bubbleMine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: _bubbleMine ? const Color(0xee1b4d57) : const Color(0xeef5f5f5),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x66000000), blurRadius: 8)],
+                      ),
+                      child: Text(_bubble, style: TextStyle(color: _bubbleMine ? Colors.white : const Color(0xff111111), fontWeight: FontWeight.w800, fontSize: 14.5)),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
         const SizedBox(height: 8),
         _playerBar(bottomIdx),
+        if (_isNet && chatOn) _quickChat(),
         const SizedBox(height: 8),
         _movesRow(),
         const SizedBox(height: 8),
@@ -1264,10 +1526,18 @@ class _ChessPageState extends State<ChessPage> {
               if (_isNet) OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: gLine)), onPressed: drawSent ? null : _offerDraw, icon: const Icon(Icons.handshake_rounded, size: 18), label: Text(_ct('btn_draw'))),
             ],
           ),
-        if (_isNet && chatOn) GameChatPanel(lines: chat, onSend: _sendChat),
         if (over && resultReady) ...<Widget>[
           const SizedBox(height: 8),
           sharedResultCard(title: _status(), gained: gained, onAgain: _rematch, onBack: () => Navigator.of(context).pop()),
+          if (mode != ChMode.local)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                '${_ct('rating')}: ${ChessStats.rating}${ratingDelta == 0 ? '' : (ratingDelta > 0 ? '  (+$ratingDelta)' : '  ($ratingDelta)')}',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: ratingDelta < 0 ? const Color(0xffff6b6b) : gTeal, fontWeight: FontWeight.w900, fontSize: 13.5),
+              ),
+            ),
           if (_isNet && (rmPeer || rmMine))
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -1298,21 +1568,46 @@ class _ChessPageState extends State<ChessPage> {
           title: Text(GameT.t('chess'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
           actions: [
             gameFxAction(() => setState(() {})),
-            if (_isNet)
+            IconButton(
+              tooltip: _ct('btn_style'),
+              visualDensity: VisualDensity.compact,
+              onPressed: () => showChessStyleSheet(context, () {
+                if (mounted) setState(() {});
+              }),
+              icon: const Icon(Icons.palette_rounded, color: gGold),
+            ),
+            IconButton(
+              tooltip: _ct('btn_stats'),
+              visualDensity: VisualDensity.compact,
+              onPressed: () => showChessStatsSheet(context),
+              icon: const Icon(Icons.emoji_events_rounded, color: gGold),
+            ),
+            IconButton(
+              tooltip: _ct('time'),
+              visualDensity: VisualDensity.compact,
+              onPressed: _pickTime,
+              icon: Icon(Icons.timer_rounded, color: _canPickTime ? gGold : gMuted),
+            ),
+            if (_isNet && stage == 'play')
               IconButton(
-                tooltip: GameT.fa ? 'چت' : 'Chat',
-                onPressed: () => setState(() => chatOn = !chatOn),
-                icon: Icon(chatOn ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded, color: chatOn ? gGold : gMuted),
+                tooltip: _ct('chat'),
+                visualDensity: VisualDensity.compact,
+                onPressed: _openChat,
+                icon: Badge(
+                  isLabelVisible: unread > 0,
+                  label: Text('$unread'),
+                  child: const Icon(Icons.chat_bubble_rounded, color: gGold),
+                ),
               ),
           ],
         ),
         body: SafeArea(
           child: LayoutBuilder(
             builder: (ctx, cons) {
-              final avail = min(cons.maxWidth - 24, 480.0);
-              final w = ((avail - 6) / 8).floorToDouble() * 8;
+              final avail = min(cons.maxWidth - 8, 760.0);
+              final w = ((avail - 4) / 8).floorToDouble() * 8;
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+                padding: const EdgeInsets.fromLTRB(4, 2, 4, 20),
                 child: Center(child: SizedBox(width: avail, child: _body(w))),
               );
             },
