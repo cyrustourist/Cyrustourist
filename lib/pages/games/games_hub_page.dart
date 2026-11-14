@@ -11,6 +11,7 @@ import 'game_play_page.dart';
 import 'game_shop_sheet.dart';
 import 'game_texts.dart';
 import 'chess_page.dart';
+import 'esmfamil_nearby_page.dart';
 import 'esmfamil_page.dart';
 import 'fruit_page.dart';
 import 'hokm_page.dart';
@@ -185,6 +186,49 @@ class _GamesHubPageState extends State<GamesHubPage> {
                       _push(BackgammonPage(mode: BgMode.bot, level: l));
                     },
                   ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// اسم و فامیل: گوشی نزدیک (۲، ۳، ۴ یا ۶ نفره، بدون اینترنت) یا نمایشی روی یک گوشی.
+  void _openEsmMode() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${GameT.fa ? 'اسم و فامیل' : 'Name · Family'} · ${GameT.t('choose_mode')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 12),
+                _modeTile(
+                  Icons.wifi_tethering_rounded,
+                  GameT.t('mode_nearby'),
+                  GameT.fa ? 'بازی گروهی ۲، ۳، ۴ یا ۶ نفره، بدون اینترنت' : 'Group game for 2, 3, 4 or 6 phones, no internet',
+                  () {
+                    Navigator.of(ctx).pop();
+                    _push(const EsmFamilNearbyPage());
+                  },
+                ),
+                _modeTile(
+                  Icons.phone_android_rounded,
+                  GameT.fa ? 'نمایشی روی یک گوشی' : 'Demo on one phone',
+                  GameT.fa ? 'همهٔ بازیکن‌ها روی همین گوشی (پیش‌نمایش)' : 'All players on this phone (preview)',
+                  () {
+                    Navigator.of(ctx).pop();
+                    _push(const EsmFamilPage());
+                  },
+                ),
               ],
             ),
           ),
@@ -751,7 +795,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('⚪🔴', GameT.t('backgammon'), _openBgMode),
                     _gameCard('♠️♥️', GameT.t('hokm'), _pickHokmLevel),
                     _gameCard('🍓🍊', GameT.t('fruit'), () => _push(const FruitPage())),
-                    _gameCard('✍️', 'اسم و فامیل', () => _push(const EsmFamilPage())),
+                    _gameCard('✍️', 'اسم و فامیل', _openEsmMode),
                     _gameCard('🎭', 'پانتومیم', () => _push(const PantomimePage())),
                   ],
                 ),
