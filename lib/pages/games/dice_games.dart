@@ -331,7 +331,7 @@ Widget _diceControls({
           ),
         ),
       ),
-      const SizedBox(width: 10),
+      const SizedBox(width: 8),
       Builder(
         builder: (ctx) => InkWell(
           onTap: () => showDicePicker(ctx),
@@ -348,17 +348,24 @@ Widget _diceControls({
           ),
         ),
       ),
-      const SizedBox(width: 10),
-      FilledButton.icon(
-        style: FilledButton.styleFrom(
-          backgroundColor: gGold,
-          foregroundColor: gBg,
-          disabledBackgroundColor: gLine,
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+      const SizedBox(width: 8),
+      Flexible(
+        child: FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: gGold,
+            foregroundColor: gBg,
+            disabledBackgroundColor: gLine,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          ),
+          onPressed: enabled ? onRoll : null,
+          icon: const Icon(Icons.casino_rounded),
+          label: Text(
+            rolling ? _dt('rolling') : _dt('roll'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+          ),
         ),
-        onPressed: enabled ? onRoll : null,
-        icon: const Icon(Icons.casino_rounded),
-        label: Text(rolling ? _dt('rolling') : _dt('roll'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
       ),
     ],
   );
