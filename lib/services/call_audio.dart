@@ -35,6 +35,12 @@ class CallAudio {
   static Future<void> ringback() => _invoke<bool>('tone', {'kind': 'ringback'});
   static Future<void> connected() => _invoke<bool>('tone', {'kind': 'connected'});
   static Future<void> ended() => _invoke<bool>('tone', {'kind': 'ended'});
+
+  /// زنگ مسابقه (شطرنج): یک ضربه در شروع و پایان بازی.
+  static Future<void> gong() => _invoke<bool>('tone', {'kind': 'gong'});
+
+  /// زنگ هشدار تک‌ضربه (۳۰ ثانیهٔ آخر ساعت).
+  static Future<void> warn() => _invoke<bool>('tone', {'kind': 'warn'});
   static Future<void> stopTone() => _invoke<bool>('stopTone');
 
   static Future<void> startRing() => _invoke<bool>('startRing');
