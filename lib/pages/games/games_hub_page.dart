@@ -11,6 +11,7 @@ import 'game_play_page.dart';
 import 'game_shop_sheet.dart';
 import 'game_texts.dart';
 import 'chess_page.dart';
+import 'esmfamil_page.dart';
 import 'fruit_page.dart';
 import 'hokm_page.dart';
 import 'nearby_duel_page.dart';
@@ -749,6 +750,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('⚪🔴', GameT.t('backgammon'), _openBgMode),
                     _gameCard('♠️♥️', GameT.t('hokm'), _pickHokmLevel),
                     _gameCard('🍓🍊', GameT.t('fruit'), () => _push(const FruitPage())),
+                    _gameCard('✍️', 'اسم و فامیل', () => _push(const EsmFamilPage())),
                   ],
                 ),
                 const SizedBox(height: 14),
