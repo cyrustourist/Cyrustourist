@@ -12,6 +12,7 @@ import 'game_shop_sheet.dart';
 import 'game_texts.dart';
 import 'chess_page.dart';
 import 'dots_page.dart';
+import 'mines_page.dart';
 import 'esmfamil_nearby_page.dart';
 import 'esmfamil_page.dart';
 import 'fruit_page.dart';
@@ -187,6 +188,52 @@ class _GamesHubPageState extends State<GamesHubPage> {
                       _push(BackgammonPage(mode: BgMode.bot, level: l));
                     },
                   ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// مین‌یاب: انفرادی، ربات، گوشی نزدیک (۲، ۳، ۴ یا ۶ نفره) یا دو نفره روی یک گوشی.
+  void _openMinesMode() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: gPanel,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${GameT.fa ? 'مین‌یاب' : 'Minesweeper'} · ${GameT.t('choose_mode')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 12),
+                _modeTile(Icons.person_rounded, GameT.fa ? 'انفرادی' : 'Solo', GameT.fa ? 'رکورد زمان و امتیاز، بدون اینترنت' : 'Best time and score, no internet', () {
+                  Navigator.of(ctx).pop();
+                  _push(const MinesPage(mode: MinesMode.solo));
+                }),
+                _modeTile(Icons.smart_toy_rounded, GameT.t('mode_bot'), GameT.fa ? 'مسابقه با ربات روی یک صفحه' : 'Race a robot on the same board', () {
+                  Navigator.of(ctx).pop();
+                  _push(const MinesPage(mode: MinesMode.bot));
+                }),
+                _modeTile(
+                  Icons.wifi_tethering_rounded,
+                  GameT.t('mode_nearby'),
+                  GameT.fa ? 'رقابت ۲، ۳، ۴ یا ۶ نفره با گوشی‌های اطراف، بدون اینترنت' : 'Race 2, 3, 4 or 6 nearby phones, no internet',
+                  () {
+                    Navigator.of(ctx).pop();
+                    _push(const MinesPage(mode: MinesMode.nearby));
+                  },
+                ),
+                _modeTile(Icons.people_alt_rounded, GameT.t('mode_local'), GameT.fa ? 'نوبتی روی یک گوشی' : 'Take turns on one phone', () {
+                  Navigator.of(ctx).pop();
+                  _push(const MinesPage(mode: MinesMode.local));
+                }),
               ],
             ),
           ),
@@ -840,6 +887,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('🍓🍊', GameT.t('fruit'), () => _push(const FruitPage())),
                     _gameCard('✍️', 'اسم و فامیل', _openEsmMode),
                     _gameCard('🔷', GameT.fa ? 'نقطه‌بازی' : 'Dots & Boxes', _openDotsMode),
+                    _gameCard('💣', GameT.fa ? 'مین‌یاب' : 'Minesweeper', _openMinesMode),
                     _gameCard('🎭', 'پانتومیم', () => _push(const PantomimePage())),
                   ],
                 ),
