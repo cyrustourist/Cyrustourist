@@ -1,0 +1,558 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
+import '../../services/offline_mesh_service.dart';
+import '../groups/group_ui.dart';
+import 'game_play_page.dart' show NearbyGameLink;
+import 'game_texts.dart';
+
+/// حالت بازی مین‌یاب
+enum MinesMode { solo, bot, local, nearby }
+
+class _MsRoom {
+  _MsRoom(this.code, this.hostUid, this.hostName, this.count, this.cap, this.size, this.level, this.ts);
+  final String code;
+  final String hostUid;
+  final String hostName;
+  int count;
+  int cap;
+  int size;
+  int level;
+  int ts;
+}
+
+String _x(String fa, String en) => GameT.fa ? fa : en;
+String _sizeName(int v) => <String>[_x('کوچک', 'Small'), _x('متوسط', 'Medium'), _x('بزرگ', 'Large')][v.clamp(0, 2)];
+String _levelName(int v) => <String>[_x('آسان', 'Easy'), _x('متوسط', 'Medium'), _x('سخت', 'Hard')][v.clamp(0, 2)];
+
+/// مین‌یاب (Minesweeper). صفحهٔ بازی: assets/games/mines.html
+/// - انفرادی، ربات و دو نفره روی یک گوشی: کاملاً داخل WebView، بدون هیچ شبکه‌ای.
+/// - گوشی نزدیک (۲، ۳، ۴ یا ۶ نفر): لابی با Nearby (بدون اینترنت). میزبان فقط seed صفحه را می‌دهد
+///   (همه گوشی‌ها همان صفحهٔ مین‌دار را می‌سازند)، پیشرفت بازیکنان را جمع می‌کند و برندهٔ دور را اعلام می‌کند.
+///   پیام‌ها با کلید `ms_*`.
+class MinesPage extends StatefulWidget {
+  const MinesPage({super.key, required this.mode});
+  final MinesMode mode;
+
+  @override
+  State<MinesPage> createState() => _MinesPageState();
+}
+
+class _MinesPageState extends State<MinesPage> {
+  static const List<int> _caps = <int>[2, 3, 4, 6];
+  static const List<int> _sizes = <int>[0, 1, 2];
+  static const List<int> _levels = <int>[0, 1, 2];
+
+  final OfflineMeshService _mesh = OfflineMeshService.instance;
+  final Random _rnd = Random();
+  StreamSubscription<Map<String, dynamic>>? _sub;
+  Timer? _tick;
+  bool _starting = false;
+
+  String stage = 'menu'; // menu | host | join | play
+  bool isHost = false;
+  bool joined = false;
+  String code = '';
+  String hostUid = '';
+  int cap = 2;
+  int size = 1;
+  int level = 0;
+  final List<String> ids = <String>[];
+  final List<String> pnames = <String>[];
+  final Map<String, _MsRoom> rooms = <String, _MsRoom>{};
+
+  WebViewController? _c;
+  bool _ready = false;
+  final List<String> _queue = <String>[];
+
+  bool get _net => widget.mode == MinesMode.nearby;
+  int get me => ids.indexOf(_mesh.myUid);
+
+  @override
+  void initState() {
+    super.initState();
+    if (_net) {
+      NearbyGameLink.instance.attach();
+      _sub = NearbyGameLink.instance.events.stream.listen(_onEvent);
+      _mesh.addListener(_onMesh);
+      _tick = Timer.periodic(const Duration(seconds: 2), (_) => _onTick());
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openGame());
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_net) {
+      if (stage == 'join' && joined && code.isNotEmpty) {
+        _send(<String, dynamic>{'g': 'ms_leave', 'to': hostUid, 'code': code});
+      }
+      _tick?.cancel();
+      _sub?.cancel();
+      _mesh.removeListener(_onMesh);
+      NearbyGameLink.instance.detach();
+    }
+    super.dispose();
+  }
+
+  void _send(Map<String, dynamic> m) => NearbyGameLink.instance.send(m);
+
+  void _onMesh() {
+    if (mounted) setState(() {});
+  }
+
+  void _onTick() {
+    if (!mounted || !_mesh.running) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (stage == 'host') {
+      _send(<String, dynamic>{'g': 'ms_open', 'code': code, 'cnt': ids.length, 'cap': cap, 'sz': size, 'lv': level});
+    } else if (stage == 'join') {
+      rooms.removeWhere((k, v) => now - v.ts > 7000);
+      if (code.isNotEmpty && !joined) {
+        _send(<String, dynamic>{'g': 'ms_join', 'to': hostUid, 'code': code});
+      }
+      setState(() {});
+    } else if (stage == 'play' && isHost) {
+      // گوشی‌های قطع‌شده به داور بازی خبر داده می‌شوند (نوبتشان خودکار بازی می‌شود)
+      for (var i = 1; i < ids.length; i++) {
+        final here = _mesh.peers.values.any((p) => p.uid == ids[i]);
+        _js('window.onGone($i,${here ? 0 : 1})');
+      }
+    }
+  }
+
+  Future<void> _toggleNet() async {
+    if (_starting) return;
+    if (_mesh.running) {
+      await _mesh.stop();
+      return;
+    }
+    setState(() => _starting = true);
+    final ok = await _mesh.start();
+    if (!mounted) return;
+    setState(() => _starting = false);
+    if (!ok) gToast(context, _mesh.lastError.isEmpty ? GameT.t('nearby_perm') : '${GameT.t('nearby_perm')}\n(${_mesh.lastError.length > 70 ? _mesh.lastError.substring(0, 70) : _mesh.lastError})');
+  }
+
+  // ---------------------------------------------------------------- پیام‌های شبکه
+
+  void _onEvent(Map<String, dynamic> m) {
+    if (!mounted) return;
+    final g = '${m['g']}';
+    if (!g.startsWith('ms_')) return;
+    final from = '${m['u']}';
+    final fromName = '${m['n']}';
+    final toMe = '${m['to']}' == _mesh.myUid;
+    switch (g) {
+      case 'ms_open':
+        if (stage == 'join') {
+          final c = '${m['code']}';
+          setState(() {
+            rooms[c] = _MsRoom(c, from, fromName, (m['cnt'] as num?)?.toInt() ?? 1, (m['cap'] as num?)?.toInt() ?? 2, (m['sz'] as num?)?.toInt() ?? 1, (m['lv'] as num?)?.toInt() ?? 0, DateTime.now().millisecondsSinceEpoch);
+          });
+        }
+        break;
+      case 'ms_join':
+        if (stage == 'host' && toMe && '${m['code']}' == code) {
+          if (!ids.contains(from) && ids.length < cap) {
+            setState(() {
+              ids.add(from);
+              pnames.add(fromName);
+            });
+            _sendRoster();
+          } else if (ids.contains(from)) {
+            _sendRoster();
+          }
+        } else if (stage == 'play' && isHost && toMe && ids.contains(from)) {
+          _sendRoster(go: true); // بازیکنی که پیام شروع را از دست داده یا دوباره وصل شده
+        }
+        break;
+      case 'ms_leave':
+        if (stage == 'host' && toMe && '${m['code']}' == code && ids.contains(from) && from != _mesh.myUid) {
+          final k = ids.indexOf(from);
+          setState(() {
+            ids.removeAt(k);
+            pnames.removeAt(k);
+          });
+          _sendRoster();
+        }
+        break;
+      case 'ms_ros':
+        if (stage == 'join' && '${m['code']}' == code) {
+          final l = (m['ids'] as List<dynamic>).map((e) => '$e').toList();
+          final n = (m['names'] as List<dynamic>).map((e) => '$e').toList();
+          if (l.contains(_mesh.myUid)) {
+            setState(() {
+              ids
+                ..clear()
+                ..addAll(l);
+              pnames
+                ..clear()
+                ..addAll(n);
+              joined = true;
+              cap = (m['cap'] as num?)?.toInt() ?? cap;
+              size = (m['sz'] as num?)?.toInt() ?? size;
+              level = (m['lv'] as num?)?.toInt() ?? level;
+            });
+            if (m['go'] == true) _openGame();
+          }
+        }
+        break;
+      case 'ms_g':
+        if (stage == 'play' && '${m['code']}' == code && ids.contains(from)) {
+          final idx = ids.indexOf(from);
+          if (isHost) {
+            if (toMe) _toWeb(idx, '${m['p']}');
+          } else if (from == hostUid && '${m['to']}' == '*') {
+            _toWeb(idx, '${m['p']}');
+          }
+        }
+        break;
+    }
+  }
+
+  void _sendRoster({bool go = false}) {
+    _send(<String, dynamic>{'g': 'ms_ros', 'code': code, 'ids': ids, 'names': pnames, 'cap': cap, 'sz': size, 'lv': level, 'go': go});
+  }
+
+  // ---------------------------------------------------------------- لابی
+
+  void _createGame() {
+    if (!_mesh.running) return;
+    code = '${1000 + _rnd.nextInt(9000)}';
+    isHost = true;
+    joined = true;
+    hostUid = _mesh.myUid;
+    ids
+      ..clear()
+      ..add(_mesh.myUid);
+    pnames
+      ..clear()
+      ..add(_mesh.myName);
+    setState(() => stage = 'host');
+    _send(<String, dynamic>{'g': 'ms_open', 'code': code, 'cnt': 1, 'cap': cap, 'sz': size, 'lv': level});
+  }
+
+  void _openJoin() {
+    isHost = false;
+    joined = false;
+    code = '';
+    ids.clear();
+    pnames.clear();
+    setState(() => stage = 'join');
+  }
+
+  void _joinRoom(_MsRoom r) {
+    setState(() {
+      code = r.code;
+      hostUid = r.hostUid;
+      cap = r.cap;
+      size = r.size;
+      level = r.level;
+      joined = false;
+    });
+    _send(<String, dynamic>{'g': 'ms_join', 'to': hostUid, 'code': code});
+  }
+
+  void _hostStart() {
+    if (ids.length < 2) return;
+    _sendRoster(go: true);
+    for (final ms in <int>[500, 1500, 3000]) {
+      Future<void>.delayed(Duration(milliseconds: ms), () {
+        if (mounted && stage == 'play') _sendRoster(go: true);
+      });
+    }
+    _openGame();
+  }
+
+  // ---------------------------------------------------------------- صفحهٔ بازی
+
+  void _openGame() {
+    if (stage == 'play' || !mounted) return;
+    _ready = false;
+    _queue.clear();
+    final c = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF050D24))
+      ..addJavaScriptChannel('NetCh', onMessageReceived: (m) => _fromWeb(m.message))
+      ..setNavigationDelegate(NavigationDelegate(onPageFinished: (_) => _webReady()))
+      ..loadFlutterAsset('assets/games/mines.html');
+    setState(() {
+      _c = c;
+      stage = 'play';
+    });
+  }
+
+  void _webReady() {
+    if (_ready || !mounted) return;
+    _ready = true;
+    final init = jsonEncode(<String, dynamic>{
+      'lang': GameT.fa ? 'fa' : 'en',
+      'mode': widget.mode == MinesMode.solo ? 'solo' : (widget.mode == MinesMode.bot ? 'ai' : (widget.mode == MinesMode.local ? 'local' : 'net')),
+      'size': size,
+      'level': level,
+      'me': me < 0 ? 0 : me,
+      'host': isHost,
+      'names': pnames,
+    });
+    _c?.runJavaScript('window.msInit($init)');
+    for (final q in _queue) {
+      _c?.runJavaScript(q);
+    }
+    _queue.clear();
+  }
+
+  void _js(String s) {
+    if (stage != 'play' || _c == null) return;
+    if (!_ready) {
+      if (s.startsWith('window.onNet')) _queue.add(s);
+      return;
+    }
+    _c!.runJavaScript(s);
+  }
+
+  void _toWeb(int idx, String payload) => _js('window.onNet($idx,${jsonEncode(payload)})');
+
+  void _fromWeb(String raw) {
+    try {
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      if (m['x'] == 'exit') {
+        if (mounted) Navigator.of(context).pop();
+        return;
+      }
+      if (!_net) return;
+      final p = jsonEncode(m['p']);
+      if (p.length > 30000) return; // سقف پیام Nearby
+      if (m['to'] == '*') {
+        if (isHost) _send(<String, dynamic>{'g': 'ms_g', 'code': code, 'to': '*', 'p': p});
+      } else if (!isHost) {
+        _send(<String, dynamic>{'g': 'ms_g', 'code': code, 'to': hostUid, 'p': p});
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> _confirmExit() async {
+    final r = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: gDir,
+        child: AlertDialog(
+          backgroundColor: gPanel,
+          title: Text(_x('خروج از بازی؟', 'Leave the game?'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+          content: Text(
+            isHost ? _x('شما میزبان هستید؛ با خروج شما رقابت برای همه تمام می‌شود.', 'You are the host; leaving ends the game for everyone.') : _x('رقابت برای بقیه ادامه پیدا می‌کند.', 'The race continues for the others.'),
+            style: const TextStyle(color: Colors.white70, height: 1.7),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(_x('ادامه بازی', 'Stay'))),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(_x('خروج', 'Leave'), style: const TextStyle(color: Color(0xffff6b6b)))),
+          ],
+        ),
+      ),
+    );
+    return r == true;
+  }
+
+  // ---------------------------------------------------------------- رابط لابی
+
+  Widget _netCard() {
+    final on = _mesh.running;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(backgroundColor: on ? gPanel : gGold, foregroundColor: on ? gGold : gBg, padding: const EdgeInsets.symmetric(vertical: 14)),
+        onPressed: _toggleNet,
+        icon: _starting
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            : Icon(on ? Icons.wifi_tethering_off_rounded : Icons.wifi_tethering_rounded),
+        label: Text(on ? '${GameT.t('nearby_stop')} · ${_mesh.peers.length}' : GameT.t('nearby_start'), style: const TextStyle(fontWeight: FontWeight.w900)),
+      ),
+    );
+  }
+
+  Widget _bigButton(IconData icon, String text, VoidCallback? onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, disabledBackgroundColor: gLine, padding: const EdgeInsets.symmetric(vertical: 16)),
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(text, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+      ),
+    );
+  }
+
+  Widget _row(String name, {Widget? trailing, bool empty = false, bool crown = false}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(color: gPanel, borderRadius: BorderRadius.circular(16), border: Border.all(color: empty ? gLine.withOpacity(0.5) : gLine)),
+      child: Row(
+        children: [
+          Icon(crown ? Icons.workspace_premium_rounded : Icons.phone_android_rounded, color: empty ? gMuted : (crown ? gGold : gTeal)),
+          const SizedBox(width: 10),
+          Expanded(child: Text(name, style: TextStyle(color: empty ? gMuted : Colors.white, fontWeight: FontWeight.w800))),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _chips(String title, List<int> values, int cur, String Function(int) label, void Function(int) onPick) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 14)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final v in values)
+                ChoiceChip(
+                  label: Text(label(v), style: TextStyle(fontWeight: FontWeight.w900, color: v == cur ? gBg : Colors.white)),
+                  selected: v == cur,
+                  selectedColor: gGold,
+                  backgroundColor: gPanel,
+                  side: const BorderSide(color: gLine),
+                  onSelected: (_) => onPick(v),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        if (_mesh.running) ...[
+          _chips(_x('تعداد بازیکن', 'Players'), _caps, cap, (v) => _x('$v نفره', '$v players'), (v) => setState(() => cap = v)),
+          _chips(_x('اندازهٔ صفحه', 'Board size'), _sizes, size, (v) => _sizeName(v), (v) => setState(() => size = v)),
+          _chips(_x('سطح', 'Level'), _levels, level, (v) => _levelName(v), (v) => setState(() => level = v)),
+          _bigButton(Icons.add_circle_rounded, _x('ساخت بازی (میزبان)', 'Host a game'), _createGame),
+          _bigButton(Icons.login_rounded, _x('پیوستن به بازی', 'Join a game'), _openJoin),
+        ],
+        const SizedBox(height: 10),
+        Text(
+          _x(
+            'بدون اینترنت. همهٔ گوشی‌ها باید شبکهٔ نزدیک را روشن کنند و کنار هم باشند. ۲، ۳، ۴ یا ۶ نفره؛ همه یک صفحهٔ یکسان دارند و هر که زودتر پاک کند برنده است.',
+            'No internet needed. Everyone turns on the nearby network and stays close. 2, 3, 4 or 6 players; everyone gets the same board and the first to clear it wins.',
+          ),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: gMuted, fontSize: 12, height: 1.8),
+        ),
+      ],
+    );
+  }
+
+  Widget _hostBody() {
+    final full = ids.length >= cap;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        Text(_x('بازیکنان: ${ids.length} از $cap', 'Players: ${ids.length} of $cap'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 15)),
+        const SizedBox(height: 8),
+        for (var i = 0; i < cap; i++) i < pnames.length ? _row(pnames[i], crown: i == 0) : _row(_x('منتظر بازیکن…', 'Waiting for a player…'), empty: true),
+        const SizedBox(height: 6),
+        Text(_x('کد بازی: $code · ${_sizeName(size)} · ${_levelName(level)}', 'Game code: $code · ${_sizeName(size)} · ${_levelName(level)}'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 12)),
+        const SizedBox(height: 10),
+        _bigButton(
+          Icons.play_arrow_rounded,
+          ids.length < 2 ? _x('حداقل ۲ بازیکن لازم است', 'At least 2 players needed') : (full ? _x('شروع بازی', 'Start game') : _x('شروع با ${ids.length} نفر', 'Start with ${ids.length} players')),
+          ids.length < 2 ? null : _hostStart,
+        ),
+      ],
+    );
+  }
+
+  Widget _joinBody() {
+    final list = rooms.values.toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        if (code.isNotEmpty && joined) ...[
+          Text(_x('پیوستید. منتظر شروع بازی توسط میزبان…', 'Joined. Waiting for the host to start…'), textAlign: TextAlign.center, style: const TextStyle(color: gGold, fontWeight: FontWeight.w800, height: 1.8)),
+          const SizedBox(height: 10),
+          for (var i = 0; i < pnames.length; i++) _row(pnames[i], crown: i == 0),
+        ] else ...[
+          if (list.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(
+                _x('بازی‌ای در اطراف پیدا نشد.\nمیزبان باید «ساخت بازی» را بزند و همه نزدیک هم باشند.', 'No game found nearby.\nThe host must tap “Host a game”, and everyone must be close.'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: gMuted, height: 1.9),
+              ),
+            ),
+          for (final r in list)
+            _row(
+              r.hostName,
+              trailing: code == r.code
+                  ? Text(GameT.t('nearby_wait'), style: const TextStyle(color: gMuted, fontSize: 12))
+                  : FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, disabledBackgroundColor: gLine),
+                      onPressed: r.count >= r.cap ? null : () => _joinRoom(r),
+                      child: Text(r.count >= r.cap ? _x('پر است', 'Full') : _x('پیوستن · ${r.count} از ${r.cap}', 'Join · ${r.count}/${r.cap}'), style: const TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final playing = stage == 'play' && _c != null;
+    final guard = playing && _net;
+    return PopScope(
+      canPop: !guard,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (await _confirmExit() && mounted) Navigator.of(context).pop();
+      },
+      child: Directionality(
+        textDirection: gDir,
+        child: Scaffold(
+          backgroundColor: playing || !_net ? const Color(0xFF050D24) : gBg,
+          appBar: AppBar(
+            backgroundColor: playing || !_net ? const Color(0xFF050D24) : gBg,
+            elevation: 0,
+            centerTitle: true,
+            iconTheme: IconThemeData(color: playing || !_net ? Colors.white : gGold),
+            title: Text(
+              playing ? _x('مین‌یاب', 'Minesweeper') : '${_x('مین‌یاب', 'Minesweeper')} · ${GameT.t('nearby_title')}',
+              style: TextStyle(color: playing || !_net ? Colors.white : gGold, fontWeight: FontWeight.w900, fontSize: 16),
+            ),
+          ),
+          body: SafeArea(
+            child: playing
+                ? WebViewWidget(controller: _c!)
+                : (!_net
+                    ? const SizedBox.shrink()
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 560),
+                            child: stage == 'host' ? _hostBody() : (stage == 'join' ? _joinBody() : _menuBody()),
+                          ),
+                        ),
+                      )),
+          ),
+        ),
+      ),
+    );
+  }
+}
