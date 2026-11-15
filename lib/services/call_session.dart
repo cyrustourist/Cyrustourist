@@ -306,6 +306,10 @@ class CallSession extends ChangeNotifier {
             Future<void>.delayed(const Duration(milliseconds: 900), () {
               if (!_closed) unawaited(_applyRoute());
             });
+          } else if (statusText != 'وصل شد') {
+            // اتصال بعد از «اتصال ضعیف است…» برگشت
+            statusText = 'وصل شد';
+            notifyListeners();
           }
           break;
         case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
