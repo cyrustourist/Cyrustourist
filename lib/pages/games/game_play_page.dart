@@ -969,9 +969,15 @@ class _GamePlayPageState extends State<GamePlayPage> {
             ],
           ),
           body: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-              children: [
+            child: LayoutBuilder(
+              builder: (ctx, cons) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: cons.maxHeight - 20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                 if (waiting)
                   _searchingBox()
                 else ...[
@@ -1007,6 +1013,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
                     icon2: icon2,
                     enabled: myTurnEnabled,
                     onMove: _onTap,
+                    turn: turn,
                   ),
                   if (online && !finished && status == 'playing' && turn != myMark && turnMsLeft <= 0)
                     Padding(
@@ -1025,7 +1032,10 @@ class _GamePlayPageState extends State<GamePlayPage> {
                     ),
                   _chatBox(),
                 ],
-              ],
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
