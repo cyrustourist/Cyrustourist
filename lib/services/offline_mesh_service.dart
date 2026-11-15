@@ -228,8 +228,24 @@ class OfflineMeshService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// بعد از قطع یا شکست اتصال، اگر گوشی هنوز در دسترس است دوباره درخواست می‌دهیم
+  /// (onEndpointFound فقط یک‌بار صدا زده می‌شود و بعد از قطع دوباره نمی‌آید).
+  void _retryLater(String id) {
+    Future<void>.delayed(const Duration(seconds: 4), () {
+      if (!running || peers.containsKey(id) || _pending.contains(id)) return;
+      final name = _names[id];
+      if (name == null) return; // دیگر پیدا نمی‌شود
+      final other = name.contains('|') ? name.split('|').last : name;
+      if (myUid.compareTo(other) < 0) _request(id);
+    });
+  }
+
   void _request(String id) {
     _pending.add(id);
+    // اگر نتیجهٔ اتصال هرگز نرسید، id تا ابد «در حال اتصال» نماند
+    Future<void>.delayed(const Duration(seconds: 25), () {
+      if (_pending.remove(id) && running && !peers.containsKey(id)) _retryLater(id);
+    });
     Nearby().requestConnection(
       '$myName|$myUid',
       id,
@@ -261,6 +277,7 @@ class OfflineMeshService extends ChangeNotifier {
       peers[id] = OfflinePeer(id, uid, name);
     } else {
       peers.remove(id);
+      if (running) _retryLater(id);
     }
     notifyListeners();
   }
@@ -269,6 +286,7 @@ class OfflineMeshService extends ChangeNotifier {
     peers.remove(id);
     _pending.remove(id);
     notifyListeners();
+    if (running) _retryLater(id);
   }
 
   void _onPayload(String fromEndpoint, Payload p) {
