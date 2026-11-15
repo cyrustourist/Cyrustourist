@@ -15,6 +15,7 @@ import 'dots_page.dart';
 import 'mines_page.dart';
 import 'esmfamil_nearby_page.dart';
 import 'esmfamil_page.dart';
+import 'wifi_share_page.dart';
 import 'fruit_page.dart';
 import 'hokm_page.dart';
 import 'nearby_duel_page.dart';
@@ -308,6 +309,15 @@ class _GamesHubPageState extends State<GamesHubPage> {
                   () {
                     Navigator.of(ctx).pop();
                     _push(const EsmFamilNearbyPage());
+                  },
+                ),
+                _modeTile(
+                  Icons.qr_code_2_rounded,
+                  GameT.fa ? 'آیفون هم باشد (وای‌فای + QR)' : 'Include iPhones (Wi‑Fi + QR)',
+                  GameT.fa ? 'این گوشی وای‌فای می‌دهد و QR نشان می‌دهد؛ بدون اینترنت' : 'This phone shares Wi‑Fi and shows a QR; no internet',
+                  () {
+                    Navigator.of(ctx).pop();
+                    _push(const WifiSharePage());
                   },
                 ),
                 _modeTile(
