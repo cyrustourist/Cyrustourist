@@ -1,1 +1,674 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#031632">
+<title>بازی و سرگرمی | سایروس توریست</title>
+<meta name="description" content="بازی گروهی سایروس توریست؛ اسم و فامیل با گوشی‌های اطراف، آیفون و اندروید، با وای‌فای یا اتاق آنلاین.">
+<link rel="canonical" href="https://cyrustourist.ir/games.html">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/images/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon-180.png">
+<style>
+@font-face{font-family:"Vazirmatn";src:url("assets/Vazirmatn-Variable.woff2") format("woff2");font-weight:100 900;font-display:swap}
+:root{--line:#2fa8ff;--gold:#ffc83d;--card:rgba(6,34,82,.78);--ok:#35e08a;--bad:#ff6b6b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{background:#02132e}
+html,body{margin:0;min-height:100%}
+body{font-family:"Vazirmatn",Tahoma,system-ui,sans-serif;color:#fff;
+ background:radial-gradient(120% 50% at 50% 0%,#0a3f86 0%,rgba(10,63,134,0) 60%),linear-gradient(180deg,#04275a 0%,#02132e 70%,#010b1c 100%);min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom))}
+.bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.bar h1{font-size:20px;margin:0}
+.link{color:#9fd2ff;text-decoration:none;font-size:14px;background:none;border:0;font-family:inherit;cursor:pointer;padding:6px}
+.screen{display:none}.screen.on{display:block}
+.card{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:16px;margin-top:12px}
+.card h2{margin:0 0 6px;font-size:18px}
+.muted{color:#b8cbe8;font-size:14px;line-height:1.8}
+.btn{display:block;width:100%;margin-top:12px;padding:14px 16px;border-radius:999px;border:2.5px solid var(--line);
+ background:rgba(3,22,50,.85);color:#fff;font:inherit;font-size:17px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+.btn:active{transform:scale(.98)}
+.btn.gold{background:linear-gradient(180deg,#ffd45c,#d99a0a);color:#0a1d3c;border-color:#ffd45c}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn.small{display:inline-block;width:auto;padding:8px 16px;font-size:14px;margin:6px 0 0 6px}
+input[type=text],input[type=number],select{width:100%;padding:13px 14px;border-radius:14px;border:2px solid rgba(47,168,255,.7);
+ background:rgba(2,19,46,.9);color:#fff;font:inherit;font-size:17px;margin-top:8px}
+input:focus{outline:none;border-color:var(--gold)}
+label{display:block;margin-top:12px;font-size:14px;color:#cfe0f7}
+.ltr{direction:ltr;text-align:left}
+.plist{list-style:none;margin:8px 0 0;padding:0}
+.plist li{display:flex;justify-content:space-between;padding:10px 12px;border-radius:12px;background:rgba(47,168,255,.12);margin-top:6px}
+.tag{font-size:12px;background:var(--gold);color:#0a1d3c;border-radius:8px;padding:2px 8px;font-weight:700}
+.game{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:rgba(47,168,255,.12);margin-top:8px}
+.game .ic{width:46px;height:46px;border-radius:14px;background:#0a4fb0;display:grid;place-items:center;font-size:24px}
+.game.soon{opacity:.55}
+canvas{display:block;margin:12px auto 0;background:#fff;border-radius:12px;max-width:100%;height:auto}
+.codebox{width:100%;margin-top:8px;word-break:break-all;font-size:12px;direction:ltr;text-align:left;background:rgba(2,19,46,.9);
+ border:1px dashed rgba(47,168,255,.7);border-radius:12px;padding:8px;max-height:90px;overflow:auto}
+.letter{font-size:64px;font-weight:800;color:var(--gold);text-align:center;line-height:1.1}
+.banner{background:rgba(255,200,61,.15);border:1.5px solid var(--gold);border-radius:14px;padding:10px;margin-top:10px;text-align:center;font-weight:700}
+.res{background:rgba(47,168,255,.1);border-radius:14px;padding:10px 12px;margin-top:10px}
+.res .h{display:flex;justify-content:space-between;font-weight:800}
+.chip{display:flex;justify-content:space-between;font-size:14px;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.1)}
+.chip b.p15,.chip b.p10{color:var(--ok)}.chip b.p5{color:var(--gold)}.chip b.p0{color:var(--bad)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0a2c5e;border:2px solid var(--gold);border-radius:14px;
+ padding:10px 16px;font-size:14px;display:none;z-index:50;max-width:90%;text-align:center}
+#cam{position:fixed;inset:0;background:#000;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center}
+#cam video{width:100%;max-height:75vh;object-fit:cover}
+.steps{margin:10px 0 0;padding:0 22px 0 0;line-height:1.9;font-size:15px;color:#dbe8fb}
+.steps li{margin-top:8px}
+.steps b{color:var(--gold)}
+.note{background:rgba(255,200,61,.12);border:1.5px dashed var(--gold);border-radius:14px;padding:10px 12px;margin-top:10px;font-size:13.5px;line-height:1.9;color:#ffe9a8}
+details.card summary{cursor:pointer;font-weight:800;font-size:16px}
+.qrrow{text-align:center;margin-top:10px}
+.qrrow .muted{margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <h1>🎮 بازی و سرگرمی</h1>
+    <button class="link" id="btnExit" hidden>خروج</button>
+    <a class="link" id="btnBack" href="index.html">بازگشت به سایت</a>
+  </div>
 
+  <!-- صفحه‌ی اصلی -->
+  <section class="screen on" id="home">
+    <div class="card">
+      <h2>اسم و فامیل</h2>
+      <div class="muted">چند نفره، با گوشی‌های اطراف. آیفون و اندروید با هم بازی می‌کنند.</div>
+    </div>
+    <div class="card">
+      <div class="game soon"><div class="ic">🎲</div><div><b>منچ</b><div class="muted">به‌زودی</div></div></div>
+      <div class="game soon"><div class="ic">♟️</div><div><b>شطرنج</b><div class="muted">به‌زودی</div></div></div>
+    </div>
+    <button class="btn gold" id="goIos">🍎 آیفون: پیدا کردن وای‌فای و اتصال به بازی اندروید</button>
+    <button class="btn gold" id="goLocal">📶 بازی با وای‌فای (بدون اینترنت)</button>
+    <button class="btn" id="goWs">🌐 اتاق آنلاین / میزبان اندروید</button>
+    <p class="muted" style="margin-top:14px">برای بازی بدون اینترنت، همه باید یک بار با اینترنت این صفحه را باز کنند تا در گوشی ذخیره شود.</p>
+  </section>
+
+  <!-- آیفون: اتصال به میزبان اندروید -->
+  <section class="screen" id="iosJoin">
+    <div class="card">
+      <h2>🍎 اتصال آیفون به بازی اندروید</h2>
+      <div class="muted">سافاری به سایت‌ها اجازه نمی‌دهد وای‌فای را جستجو کند یا خودکار وصل شود؛ پس وصل‌شدن به وای‌فای را خود آیفون انجام می‌دهد و باقی کار با این صفحه است.</div>
+      <ol class="steps">
+        <li><b>وای‌فای دوست اندرویدی:</b> از او بخواهید وای‌فای بازی (هات‌اسپات) را روشن کند. روی آیفون: <b>تنظیمات ← Wi‑Fi</b> و نام همان شبکه را بزنید؛ یا QR وای‌فای را که او نشان می‌دهد با <b>دوربین آیفون</b> بخوانید و «Join» را بزنید. اگر نوشت «بدون اینترنت»، همان‌جا وصل بمانید.</li>
+        <li><b>آدرس و کد اتاق:</b> آدرسی را که روی گوشی اندروید نوشته شده وارد کنید (معمولاً همین است که پر شده).</li>
+        <li><b>باز کردن بازی:</b> دکمه‌ی پایین را بزنید. اگر iOS دربارهٔ «شبکه‌ی محلی» پرسید، «Allow» را بزنید.</li>
+      </ol>
+      <label>نام شما</label>
+      <input type="text" id="iosName" maxlength="20" placeholder="مثلاً: سارا" autocomplete="off">
+      <label>آدرس میزبان اندروید</label>
+      <input type="text" id="iosAddr" class="ltr" inputmode="url" autocomplete="off" autocapitalize="off" placeholder="192.168.43.1:8080">
+      <label>کد اتاق (اختیاری)</label>
+      <input type="text" id="iosRoom" class="ltr" maxlength="12" inputmode="numeric" placeholder="1234" autocomplete="off">
+      <button class="btn gold" id="iosGo">🎮 باز کردن بازی</button>
+      <div class="note">بدون اینترنت: همین صفحه را یک بار با اینترنت باز کنید تا در گوشی ذخیره شود؛ بعداً بدون اینترنت هم باز می‌شود. اگر آدرس درست نبود، همان‌طور که روی گوشی اندروید نوشته شده بنویسید (فقط عدد و نقطه، مثل 192.168.43.1:8080).</div>
+    </div>
+    <details class="card">
+      <summary>📷 من اندروید دارم؛ QR وای‌فای و QR بازی بساز</summary>
+      <div class="muted">نام و رمز هات‌اسپات را بنویسید؛ آیفون‌ها QR اول را با دوربین می‌خوانند و وصل می‌شوند، بعد QR دوم بازی را باز می‌کند.</div>
+      <input type="text" id="qrSsid" class="ltr" placeholder="نام وای‌فای (SSID)" autocomplete="off">
+      <input type="text" id="qrPass" class="ltr" placeholder="رمز وای‌فای (خالی = بدون رمز)" autocomplete="off">
+      <button class="btn" id="qrMake">ساخت QR</button>
+      <div id="qrOut" hidden>
+        <div class="qrrow"><canvas id="qrWifi"></canvas><div class="muted">۱) QR وای‌فای: با دوربین آیفون بخوانید</div></div>
+        <div class="qrrow"><canvas id="qrGame"></canvas><div class="muted">۲) QR بازی: بعد از وصل‌شدن به وای‌فای بخوانید</div></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- نام -->
+  <section class="screen" id="name">
+    <div class="card">
+      <h2>نام شما</h2>
+      <input type="text" id="inName" maxlength="20" placeholder="مثلاً: سارا" autocomplete="off">
+      <button class="btn gold" id="nameOk">ادامه</button>
+    </div>
+  </section>
+
+  <!-- وای‌فای: انتخاب -->
+  <section class="screen" id="localChoose">
+    <div class="card">
+      <h2>بازی با وای‌فای</h2>
+      <div class="muted">همه‌ی گوشی‌ها به یک وای‌فای (یا هات‌اسپات یکی از گوشی‌ها) وصل باشند.<br>
+      یک نفر «میزبان» می‌شود و برای هر بازیکن یک QR نشان می‌دهد؛ بازیکن‌ها QR را با <b>دوربین گوشی</b> اسکن می‌کنند.</div>
+      <button class="btn gold" id="localHost">ساخت بازی (میزبان)</button>
+    </div>
+    <div class="card">
+      <div class="muted">می‌خواهید بپیوندید؟ فقط QR میزبان را با دوربین گوشی اسکن کنید؛ نیازی به کار دیگری نیست.</div>
+    </div>
+  </section>
+
+  <!-- آنلاین / میزبان اندروید -->
+  <section class="screen" id="wsForm">
+    <div class="card">
+      <h2>اتاق بازی</h2>
+      <div class="muted" id="wsHint"></div>
+      <div id="wsSrvBox"><label>آدرس سرور</label><input type="text" id="wsUrl" class="ltr" autocomplete="off"></div>
+      <label>کد اتاق</label>
+      <input type="text" id="wsRoom" class="ltr" maxlength="12" inputmode="numeric" placeholder="1234" autocomplete="off">
+      <button class="btn gold" id="wsHost">ساخت اتاق</button>
+      <button class="btn" id="wsJoin">پیوستن به اتاق</button>
+    </div>
+  </section>
+
+  <!-- مهمان: جفت‌سازی QR -->
+  <section class="screen" id="guestPair">
+    <div class="card">
+      <h2>اتصال به بازی</h2>
+      <div class="muted" id="gpMsg">در حال آماده‌سازی…</div>
+      <div id="gpOut" hidden>
+        <div class="muted">این QR را به میزبان نشان بدهید تا با دوربین گوشی اسکن کند.</div>
+        <canvas id="gpQR"></canvas>
+        <div class="muted" style="margin-top:8px">کد متنی (برای کپی دستی):</div>
+        <div class="codebox" id="gpCode"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- تحویل پاسخ (وقتی میزبان QR مهمان را اسکن کرده) -->
+  <section class="screen" id="deliver">
+    <div class="card"><h2>✔ ارسال شد</h2>
+      <div class="muted">به صفحه‌ی بازی خود برگردید؛ اتصال چند ثانیه‌ی دیگر کامل می‌شود. این تب را می‌توانید ببندید.</div></div>
+  </section>
+
+  <!-- لابی -->
+  <section class="screen" id="lobby">
+    <div class="card">
+      <h2>بازیکنان</h2>
+      <ul class="plist" id="plist"></ul>
+      <div class="muted" id="lobbyInfo" style="margin-top:8px"></div>
+      <div id="hostCtl" hidden>
+        <label>تعداد دور</label>
+        <select id="selRounds"><option>3</option><option selected>5</option><option>8</option></select>
+        <button class="btn gold" id="btnStart" disabled>شروع بازی</button>
+      </div>
+    </div>
+    <div class="card" id="addPanel" hidden>
+      <h2>افزودن بازیکن</h2>
+      <div class="muted">«افزودن بازیکن» را بزنید، بازیکن QR را با دوربین گوشی‌اش اسکن کند. بعد QR او را اینجا اسکن کنید.</div>
+      <button class="btn" id="btnAdd">➕ افزودن بازیکن</button>
+      <div id="pairBox" hidden>
+        <canvas id="pairQR"></canvas>
+        <div class="muted" style="margin-top:8px">۱) بازیکن این QR را اسکن کند. ۲) QR که روی گوشی او آمد را اینجا اسکن کنید:</div>
+        <button class="btn" id="btnScan">📷 اسکن QR بازیکن</button>
+        <div class="muted" style="margin-top:8px">اگر اسکن در برنامه ممکن نبود، با دوربین عادی گوشی QR او را بخوانید؛ خودکار منتقل می‌شود. یا کد متنی را اینجا بچسبانید:</div>
+        <input type="text" id="pasteAns" class="ltr" placeholder="کد پاسخ" autocomplete="off">
+        <button class="btn small" id="btnPaste">ثبت کد</button>
+        <button class="btn small" id="btnCancelPair">لغو</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- دور بازی -->
+  <section class="screen" id="round">
+    <div class="card">
+      <div class="muted" id="rInfo" style="text-align:center"></div>
+      <div class="letter" id="rLetter"></div>
+      <div id="rBanner" class="banner" hidden></div>
+      <div id="rForm"></div>
+      <button class="btn gold" id="btnStop" disabled>✋ تمام شد</button>
+      <div class="muted" id="rWait" style="text-align:center;margin-top:8px"></div>
+    </div>
+  </section>
+
+  <!-- نتیجه‌ی دور -->
+  <section class="screen" id="result">
+    <div class="card">
+      <h2 id="resTitle"></h2>
+      <div id="resBody"></div>
+      <button class="btn gold" id="btnNext" hidden>دور بعد</button>
+      <div class="muted" id="resWait" style="text-align:center;margin-top:8px"></div>
+    </div>
+  </section>
+
+  <!-- پایان -->
+  <section class="screen" id="final">
+    <div class="card">
+      <h2>🏆 نتیجه‌ی نهایی</h2>
+      <div id="finBody"></div>
+      <a class="btn gold" href="games.html">بازی دوباره</a>
+    </div>
+  </section>
+</div>
+
+<div id="toast"></div>
+<div id="cam"><video id="camVid" playsinline muted></video><button class="btn small" id="camClose">بستن</button></div>
+
+<script src="js/qrcode.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   ابزارهای کوچک
+===================================================================== */
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rid = n => { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < n; i++) s += a[Math.floor(Math.random() * a.length)]; return s; };
+const store = { get(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); window.scrollTo(0, 0); $('#btnExit').hidden = (id === 'home'); }
+let toastT; function toast(t) { const e = $('#toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => e.style.display = 'none', 3500); }
+const BASE = location.href.split('#')[0];
+const S = { mode: null, name: '', hub: null, game: null, client: null };
+
+$('#btnExit').onclick = () => { location.href = location.pathname; };
+
+/* =====================================================================
+   QR
+===================================================================== */
+function drawQR(canvas, text) {
+  const q = new CyrusQR(-1, CyrusQRLevel.L);
+  q.addData(text); q.make();
+  const n = q.getModuleCount(), quiet = 4;
+  const px = Math.max(3, Math.floor(300 / (n + quiet * 2)));
+  const size = px * (n + quiet * 2);
+  canvas.width = size; canvas.height = size;
+  const g = canvas.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, size, size);
+  g.fillStyle = '#000';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect((c + quiet) * px, (r + quiet) * px, px, px);
+  canvas.style.width = Math.min(size, 320) + 'px';
+}
+
+let camStream = null, camOn = false;
+async function scanQR(onText) {
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices) { toast('این مرورگر اسکن داخل صفحه را ندارد؛ با دوربین عادی گوشی QR را بخوانید.'); return; }
+  try {
+    const det = new BarcodeDetector({ formats: ['qr_code'] });
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const v = $('#camVid'); v.srcObject = camStream; await v.play(); $('#cam').style.display = 'flex'; camOn = true;
+    const tick = async () => {
+      if (!camOn) return;
+      try { const r = await det.detect(v); if (r.length) { stopCam(); onText(r[0].rawValue); return; } } catch (e) {}
+      setTimeout(tick, 250);
+    };
+    tick();
+  } catch (e) { toast('دسترسی به دوربین ممکن نشد.'); stopCam(); }
+}
+function stopCam() { camOn = false; if (camStream) camStream.getTracks().forEach(t => t.stop()); camStream = null; $('#cam').style.display = 'none'; }
+$('#camClose').onclick = stopCam;
+
+/* =====================================================================
+   WebRTC — فشرده‌سازی SDP برای QR
+   فقط چیزهای لازم نگه داشته می‌شود: ufrag, pwd, fingerprint, setup, candidateها
+===================================================================== */
+const b64u = s => s.replace(/\+/g, '-').replace(/\//g, '_');
+const unb64u = s => s.replace(/-/g, '+').replace(/_/g, '/');
+function packSDP(sdp) {
+  const g = re => { const m = sdp.match(re); return m ? m[1].trim() : ''; };
+  const ufrag = g(/a=ice-ufrag:(\S+)/), pwd = g(/a=ice-pwd:(\S+)/);
+  const fp = g(/a=fingerprint:sha-256 (\S+)/).replace(/:/g, '');
+  const setup = g(/a=setup:(\S+)/) === 'actpass' ? 'A' : (g(/a=setup:(\S+)/) === 'active' ? 'C' : 'P');
+  const cands = [];
+  sdp.split(/\r?\n/).forEach(l => {
+    const m = l.match(/^a=candidate:(\S+) 1 udp (\d+) (\S+) (\d+) typ host/i);
+    if (m && m[3].indexOf(':') < 0) cands.push([m[1], m[2], m[3], m[4]].join('_'));
+  });
+  return [b64u(ufrag), b64u(pwd), fp, setup, cands.join(',')].join('~');
+}
+function unpackSDP(code) {
+  const [u, p, fp, st, cs] = code.split('~');
+  const fpc = fp.match(/.{2}/g).join(':');
+  const setup = st === 'A' ? 'actpass' : (st === 'C' ? 'active' : 'passive');
+  const lines = ['v=0', 'o=- 4611731400430051336 2 IN IP4 127.0.0.1', 's=-', 't=0 0', 'a=group:BUNDLE 0', 'a=msid-semantic: WMS',
+    'm=application 9 UDP/DTLS/SCTP webrtc-datachannel', 'c=IN IP4 0.0.0.0',
+    'a=ice-ufrag:' + unb64u(u), 'a=ice-pwd:' + unb64u(p), 'a=fingerprint:sha-256 ' + fpc, 'a=setup:' + setup,
+    'a=mid:0', 'a=sctp-port:5000', 'a=max-message-size:262144'];
+  (cs || '').split(',').filter(Boolean).forEach(c => { const [f, pr, ad, po] = c.split('_'); lines.push('a=candidate:' + f + ' 1 udp ' + pr + ' ' + ad + ' ' + po + ' typ host'); });
+  lines.push('a=end-of-candidates');
+  return lines.join('\r\n') + '\r\n';
+}
+function newPC() { return new RTCPeerConnection({ iceServers: [] }); }
+function gathered(pc) {
+  return new Promise(res => {
+    if (pc.iceGatheringState === 'complete') return res();
+    const f = () => { if (pc.iceGatheringState === 'complete') { pc.removeEventListener('icegatheringstatechange', f); res(); } };
+    pc.addEventListener('icegatheringstatechange', f);
+    setTimeout(res, 3500);
+  });
+}
+const hashParam = k => { const m = location.hash.slice(1).match(new RegExp('(?:^|&)' + k + '=([^&]*)')); return m ? m[1] : null; };
+const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('cyrus-games') : null;
+
+/* =====================================================================
+   Hub: سمت میزبان؛ فهرست مهمان‌ها و ارسال پیام
+===================================================================== */
+class Hub {
+  constructor() { this.peers = new Map(); }
+  open(id, sender) { this.peers.set(id, sender); this.onJoin && this.onJoin(id); }
+  close(id) { if (this.peers.delete(id)) this.onLeave && this.onLeave(id); }
+  recv(id, m) { this.onMsg && this.onMsg(id, m); }
+  send(id, m) { const s = this.peers.get(id); if (s) { try { s(m); } catch (e) {} } }
+  all(m) { for (const id of [...this.peers.keys()]) this.send(id, m); }
+}
+
+/* =====================================================================
+   بازی اسم و فامیل — منطق میزبان
+===================================================================== */
+const CATS = ['اسم', 'فامیل', 'شهر', 'کشور', 'حیوان', 'غذا', 'رنگ'];
+const LETTERS = ['ا', 'ب', 'پ', 'ت', 'ج', 'چ', 'خ', 'د', 'ر', 'ز', 'س', 'ش', 'ف', 'ک', 'گ', 'ل', 'م', 'ن', 'ه', 'ی'];
+function norm(s) {
+  return String(s || '').replace(/[ً-ٰٟ‌‍ـ\s]/g, '')
+    .replace(/[يى]/g, 'ی').replace(/[كڪ]/g, 'ک').replace(/ة/g, 'ه').replace(/[أإآ]/g, 'ا').toLowerCase();
+}
+
+class HostGame {
+  constructor(hub, rounds) {
+    this.hub = hub; this.rounds = rounds; this.n = 0; this.used = []; this.state = 'lobby'; this.answers = new Map();
+    this.players = new Map([['h', { name: S.name, total: 0, gone: false }]]);
+    hub.onJoin = id => { this.players.set(id, { name: 'بازیکن', total: 0, gone: false }); this.to(id, { t: 'you', id }); this.pushLobby(); };
+    hub.onLeave = id => {
+      if (this.state === 'lobby') this.players.delete(id); else { const p = this.players.get(id); if (p) p.gone = true; }
+      this.pushLobby(); this.check();
+    };
+    hub.onMsg = (id, m) => this.onMsg(id, m);
+  }
+  to(id, m) { if (id === 'h') setTimeout(() => S.client.handle(m), 0); else this.hub.send(id, m); }
+  all(m) { this.to('h', m); this.hub.all(m); }
+  list() { return [...this.players].filter(([, p]) => !p.gone).map(([id, p]) => ({ id, name: p.name, total: p.total })); }
+  pushLobby() { this.all({ t: 'lobby', players: this.list(), rounds: this.rounds, state: this.state }); }
+  onMsg(id, m) {
+    const p = this.players.get(id); if (!p || !m) return;
+    if (m.t === 'hello') { p.name = String(m.name || 'بازیکن').slice(0, 20); this.pushLobby(); }
+    else if (m.t === 'start' && id === 'h' && this.state === 'lobby') { this.rounds = +m.rounds || this.rounds; this.round(); }
+    else if (m.t === 'next' && id === 'h' && this.state === 'result') { this.n >= this.rounds ? this.finish() : this.round(); }
+    else if (m.t === 'stop' && this.state === 'play') this.stop(p.name);
+    else if (m.t === 'ans' && (this.state === 'play' || this.state === 'stopping') && m.n === this.n) {
+      this.answers.set(id, (Array.isArray(m.a) ? m.a : []).slice(0, CATS.length).map(x => String(x || '').slice(0, 40)));
+      this.check();
+    }
+  }
+  round() {
+    this.n++; this.state = 'play'; this.answers = new Map();
+    const pool = LETTERS.filter(l => this.used.indexOf(l) < 0);
+    this.letter = pool[Math.floor(Math.random() * pool.length)]; this.used.push(this.letter);
+    this.all({ t: 'round', n: this.n, total: this.rounds, letter: this.letter, cats: CATS });
+  }
+  stop(by) {
+    this.state = 'stopping';
+    this.all({ t: 'stopping', by, secs: 6 });
+    clearTimeout(this.ft); this.ft = setTimeout(() => this.score(), 9000);
+  }
+  check() {
+    if (this.state !== 'stopping') return;
+    const act = [...this.players].filter(([, p]) => !p.gone).map(([id]) => id);
+    if (act.every(id => this.answers.has(id))) this.score();
+  }
+  score() {
+    if (this.state !== 'stopping') return;
+    clearTimeout(this.ft); this.state = 'result';
+    const L = norm(this.letter);
+    const rows = [];
+    for (const [id, p] of this.players) {
+      if (p.gone) continue;
+      rows.push({ id, name: p.name, ans: CATS.map((_, i) => (this.answers.get(id) || [])[i] || ''), pts: [], sum: 0 });
+    }
+    CATS.forEach((_, i) => {
+      const valid = rows.map(r => { const a = norm(r.ans[i]); return a.length >= 2 && a.indexOf(L) === 0 ? a : null; });
+      const cnt = {}; valid.forEach(a => { if (a) cnt[a] = (cnt[a] || 0) + 1; });
+      const nv = valid.filter(Boolean).length;
+      rows.forEach((r, k) => { const a = valid[k]; r.pts[i] = !a ? 0 : (nv === 1 ? 15 : (cnt[a] === 1 ? 10 : 5)); });
+    });
+    rows.forEach(r => { r.sum = r.pts.reduce((x, y) => x + y, 0); this.players.get(r.id).total += r.sum; });
+    const totals = this.list().sort((a, b) => b.total - a.total);
+    this.all({ t: 'result', n: this.n, letter: this.letter, cats: CATS, rows, totals, last: this.n >= this.rounds });
+  }
+  finish() { this.state = 'final'; this.all({ t: 'final', totals: this.list().sort((a, b) => b.total - a.total) }); }
+}
+
+/* =====================================================================
+   کلاینت (همه‌ی بازیکن‌ها، از جمله میزبان)
+===================================================================== */
+class Client {
+  constructor(tx, isHost) { this.tx = tx; this.isHost = isHost; this.me = isHost ? 'h' : null; this.vals = []; this.sent = false; this.cd = null; }
+  handle(m) {
+    switch (m.t) {
+      case 'you': this.me = m.id; break;
+      case 'lobby': this.lobby(m); break;
+      case 'round': this.round(m); break;
+      case 'stopping': this.stopping(m); break;
+      case 'result': this.result(m); break;
+      case 'final': this.final(m); break;
+    }
+  }
+  lobby(m) {
+    show('lobby');
+    $('#plist').innerHTML = m.players.map(p => '<li><span>' + esc(p.name) + (p.id === this.me ? ' (شما)' : '') + '</span>' + (p.id === 'h' ? '<span class="tag">میزبان</span>' : '') + '</li>').join('');
+    this.nplayers = m.players.length;
+    $('#hostCtl').hidden = !this.isHost;
+    $('#btnStart').disabled = m.players.length < 2;
+    $('#lobbyInfo').textContent = this.isHost ? (m.players.length < 2 ? 'منتظر بازیکن دوم…' : m.players.length + ' بازیکن آماده‌اند.') : 'منتظر شروع بازی توسط میزبان…';
+  }
+  round(m) {
+    clearInterval(this.cd); this.sent = false; this.vals = m.cats.map(() => ''); this.n = m.n; this.cats = m.cats;
+    show('round');
+    $('#rInfo').textContent = 'دور ' + m.n + ' از ' + m.total + ' — حرف:';
+    $('#rLetter').textContent = m.letter;
+    $('#rBanner').hidden = true; $('#rWait').textContent = '';
+    $('#rForm').innerHTML = m.cats.map((c, i) => '<label>' + esc(c) + '</label><input type="text" data-i="' + i + '" autocomplete="off" autocapitalize="off">').join('');
+    $('#rForm').querySelectorAll('input').forEach(inp => inp.oninput = () => { this.vals[+inp.dataset.i] = inp.value; $('#btnStop').disabled = this.sent || this.vals.some(v => !v.trim()); });
+    $('#btnStop').disabled = true; $('#btnStop').hidden = false;
+    const f = $('#rForm input'); if (f) f.focus();
+  }
+  stopping(m) {
+    $('#btnStop').hidden = true;
+    let s = m.secs; const b = $('#rBanner'); b.hidden = false;
+    const upd = () => { b.textContent = m.by + ' تمام کرد! پایان تا ' + s + ' ثانیه…'; };
+    upd(); clearInterval(this.cd);
+    this.cd = setInterval(() => { s--; if (s <= 0) { clearInterval(this.cd); this.submit(); } else upd(); }, 1000);
+  }
+  submit() {
+    if (this.sent) return; this.sent = true;
+    document.querySelectorAll('#rForm input').forEach(i => { this.vals[+i.dataset.i] = i.value; i.disabled = true; });
+    this.tx({ t: 'ans', n: this.n, a: this.vals });
+    $('#rBanner').textContent = 'پاسخ‌ها ارسال شد؛ منتظر دیگران…';
+  }
+  result(m) {
+    clearInterval(this.cd); show('result');
+    $('#resTitle').textContent = 'نتیجه‌ی دور ' + m.n + ' — حرف «' + m.letter + '»';
+    const tot = '<div class="res"><div class="h"><span>جدول امتیاز</span><span></span></div>' + m.totals.map((p, i) => '<div class="chip"><span>' + (i + 1) + '. ' + esc(p.name) + '</span><b>' + p.total + '</b></div>').join('') + '</div>';
+    const det = m.rows.map(r => '<div class="res"><div class="h"><span>' + esc(r.name) + '</span><span>+' + r.sum + '</span></div>' +
+      m.cats.map((c, i) => '<div class="chip"><span>' + esc(c) + ': ' + (r.ans[i] ? esc(r.ans[i]) : '—') + '</span><b class="p' + r.pts[i] + '">' + r.pts[i] + '</b></div>').join('') + '</div>').join('');
+    $('#resBody').innerHTML = tot + det;
+    $('#btnNext').hidden = !this.isHost; $('#btnNext').textContent = m.last ? 'نتیجه‌ی نهایی' : 'دور بعد';
+    $('#resWait').textContent = this.isHost ? '' : 'منتظر میزبان…';
+  }
+  final(m) {
+    show('final');
+    $('#finBody').innerHTML = m.totals.map((p, i) => '<div class="res"><div class="h"><span>' + ['🥇', '🥈', '🥉'][i] + ' ' + (i + 1) + '. ' + esc(p.name) + '</span><span>' + p.total + '</span></div></div>').join('');
+  }
+}
+$('#btnStop').onclick = () => { if (!$('#btnStop').disabled) { $('#btnStop').disabled = true; S.client.tx({ t: 'stop' }); } };
+$('#btnNext').onclick = () => S.client.tx({ t: 'next' });
+$('#btnStart').onclick = () => S.client.tx({ t: 'start', rounds: +$('#selRounds').value });
+
+function startAsHost(hub) {
+  S.hub = hub;
+  S.client = new Client(m => S.game.onMsg('h', m), true);
+  S.game = new HostGame(hub, 5);
+  S.game.pushLobby();
+}
+
+/* =====================================================================
+   حالت ۱: وای‌فای محلی با WebRTC + QR
+===================================================================== */
+const pending = new Map(); let pairSeq = 0;
+function startLocalHost() {
+  S.mode = 'local'; startAsHost(new Hub()); $('#addPanel').hidden = false;
+}
+async function addPlayer() {
+  $('#btnAdd').disabled = true;
+  const pair = rid(5), id = 'g' + (++pairSeq);
+  const pc = newPC(), dc = pc.createDataChannel('g');
+  pending.set(pair, { pc, dc, id, done: false });
+  dc.onopen = () => {
+    const p = pending.get(pair); if (!p) return; p.done = true;
+    S.hub.open(id, m => dc.send(JSON.stringify(m)));
+    $('#pairBox').hidden = true; $('#btnAdd').disabled = false; toast('✔ بازیکن جدید متصل شد');
+  };
+  dc.onmessage = e => { try { S.hub.recv(id, JSON.parse(e.data)); } catch (err) {} };
+  dc.onclose = () => S.hub.close(id);
+  pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') toast('اتصال برقرار نشد؛ وای‌فای هر دو گوشی را بررسی کنید.'); };
+  await pc.setLocalDescription(await pc.createOffer());
+  await gathered(pc);
+  const code = packSDP(pc.localDescription.sdp);
+  $('#pairBox').hidden = false; $('#pairBox').dataset.pair = pair;
+  drawQR($('#pairQR'), BASE + '#j=' + code + '&p=' + pair);
+}
+function takeAnswer(pair, code) {
+  const p = pending.get(pair); if (!p || p.done) return;
+  p.pc.setRemoteDescription({ type: 'answer', sdp: unpackSDP(code) }).catch(() => toast('کد پاسخ معتبر نیست.'));
+}
+$('#btnAdd').onclick = addPlayer;
+$('#btnCancelPair').onclick = () => { const pr = $('#pairBox').dataset.pair; const p = pending.get(pr); if (p && !p.done) { try { p.pc.close(); } catch (e) {} pending.delete(pr); } $('#pairBox').hidden = true; $('#btnAdd').disabled = false; };
+function handleScanned(txt) {
+  const a = (txt.match(/[#&]a=([^&]*)/) || [])[1], p = (txt.match(/[#&]p=([^&]*)/) || [])[1];
+  if (a && p) takeAnswer(p, a); else toast('این QR مربوط به بازی نیست.');
+}
+$('#btnScan').onclick = () => scanQR(handleScanned);
+$('#btnPaste').onclick = () => { const pr = $('#pairBox').dataset.pair; const v = $('#pasteAns').value.trim(); if (v) takeAnswer(pr, v.replace(/^.*[#&]a=/, '').replace(/&p=.*$/, '')); };
+if (bc) bc.onmessage = e => { const d = e.data; if (d && d.k === 'ans') takeAnswer(d.p, d.code); };
+
+/* مهمان: صفحه از روی QR میزبان باز شده */
+function guestFromOffer(offerCode, pair) {
+  show('guestPair');
+  (async () => {
+    try {
+      if (!window.RTCPeerConnection) throw new Error('no-rtc');
+      const name = S.name || store.get('cyrusGameName', '') || 'بازیکن';
+      S.name = name; S.mode = 'local';
+      const pc = newPC();
+      pc.ondatachannel = e => {
+        const dc = e.channel;
+        dc.onopen = () => { S.client = new Client(m => dc.send(JSON.stringify(m)), false); S.client.tx({ t: 'hello', name: S.name }); toast('✔ به بازی وصل شدید'); };
+        dc.onmessage = ev => { try { S.client && S.client.handle(JSON.parse(ev.data)); } catch (err) {} };
+        dc.onclose = () => { toast('اتصال با میزبان قطع شد'); setTimeout(() => location.href = location.pathname, 1500); };
+      };
+      await pc.setRemoteDescription({ type: 'offer', sdp: unpackSDP(offerCode) });
+      await pc.setLocalDescription(await pc.createAnswer());
+      await gathered(pc);
+      const code = packSDP(pc.localDescription.sdp);
+      $('#gpMsg').textContent = 'نام شما: ' + name;
+      $('#gpOut').hidden = false; $('#gpCode').textContent = code;
+      drawQR($('#gpQR'), BASE + '#a=' + code + '&p=' + pair);
+    } catch (err) { $('#gpMsg').textContent = 'این مرورگر از اتصال مستقیم پشتیبانی نمی‌کند یا کد خراب است.'; }
+  })();
+}
+
+/* =====================================================================
+   حالت ۲: WebSocket (اتاق آنلاین یا میزبان اندروید)
+===================================================================== */
+const SAME_ORIGIN_WS = (location.protocol === 'http:') ? 'ws://' + location.host + '/ws' : null;
+function setupWsForm() {
+  if (SAME_ORIGIN_WS) { $('#wsSrvBox').hidden = true; $('#wsHint').textContent = 'شما به میزبان وای‌فای وصل هستید. یک کد اتاق بنویسید؛ یک نفر «ساخت اتاق» و بقیه «پیوستن» را بزنند.'; }
+  else { $('#wsUrl').value = store.get('cyrusWsUrl', 'wss://games.cyrustourist.ir/ws'); $('#wsHint').textContent = 'یک نفر «ساخت اتاق» را بزند و کد را به بقیه بدهد؛ بقیه همان کد را وارد کنند.'; }
+}
+function wsConnect(role) {
+  const room = $('#wsRoom').value.trim(); if (!room) return toast('کد اتاق را بنویسید.');
+  const url = SAME_ORIGIN_WS || $('#wsUrl').value.trim(); if (!url) return toast('آدرس سرور را بنویسید.');
+  if (!SAME_ORIGIN_WS) store.set('cyrusWsUrl', url);
+  let ws; try { ws = new WebSocket(url); } catch (e) { return toast('آدرس سرور معتبر نیست.'); }
+  S.mode = 'ws'; let ok = false, hub = null;
+  const send = o => { try { ws.send(JSON.stringify(o)); } catch (e) {} };
+  ws.onopen = () => send({ r: room, role });
+  ws.onerror = () => { if (!ok) toast('اتصال به سرور ممکن نشد.'); };
+  ws.onclose = () => { if (ok) { toast('اتصال قطع شد'); setTimeout(() => location.href = location.pathname, 1500); } };
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m._ === 'err') { toast(m.e === 'room-exists' ? 'این کد اتاق قبلاً ساخته شده.' : (m.e === 'no-room' ? 'اتاقی با این کد پیدا نشد.' : 'خطا در اتصال.')); return; }
+    if (m._ === 'ok') {
+      ok = true;
+      if (role === 'host') { hub = new Hub(); startAsHost(hub); }
+      else { S.client = new Client(o => send({ _: 'm', m: o }), false); S.client.me = m.id; S.client.tx({ t: 'hello', name: S.name }); }
+      return;
+    }
+    if (role === 'host' && hub) {
+      if (m._ === 'join') hub.open(m.id, o => send({ _: 'to', id: m.id, m: o }));
+      else if (m._ === 'leave') hub.close(m.id);
+      else if (m._ === 'm') hub.recv(m.id, m.m);
+    } else if (role === 'guest') {
+      if (m._ === 'm' && S.client) S.client.handle(m.m);
+      else if (m._ === 'host-left') { toast('میزبان بازی را ترک کرد'); setTimeout(() => location.href = location.pathname, 1500); }
+    }
+  };
+}
+$('#wsHost').onclick = () => wsConnect('host');
+$('#wsJoin').onclick = () => wsConnect('guest');
+
+/* =====================================================================
+   مسیریابی صفحه‌ها
+===================================================================== */
+let afterName = null;
+$('#goLocal').onclick = () => { afterName = () => show('localChoose'); toName(); };
+$('#goWs').onclick = () => { afterName = () => { setupWsForm(); show('wsForm'); }; toName(); };
+function toName() { $('#inName').value = store.get('cyrusGameName', ''); show('name'); $('#inName').focus(); }
+$('#nameOk').onclick = () => {
+  const v = $('#inName').value.trim(); if (!v) return toast('نام را بنویسید.');
+  S.name = v; store.set('cyrusGameName', v); afterName && afterName();
+};
+$('#localHost').onclick = () => { if (!window.RTCPeerConnection) return toast('این مرورگر از اتصال مستقیم پشتیبانی نمی‌کند.'); startLocalHost(); };
+
+/* =====================================================================
+   آیفون ← میزبان اندروید (صفحه از روی HTTP همان گوشی باز می‌شود)
+   سافاری فقط «رفتن به آدرس» را اجازه می‌دهد؛ fetch و ws:// از صفحه‌ی HTTPS مسدود است.
+===================================================================== */
+const DEF_ADDR = '192.168.43.1:8080';
+function cleanAddr(v) { return String(v || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, ''); }
+function validAddr(a) { return /^[A-Za-z0-9.\-]+(:\d{1,5})?$/.test(a); }
+function gameLink(addr, room, name) {
+  let h = '';
+  if (room) h += 'room=' + encodeURIComponent(room);
+  if (name) h += (h ? '&' : '') + 'n=' + encodeURIComponent(name);
+  return 'http://' + addr + '/games.html' + (h ? '#' + h : '');
+}
+function openIos() {
+  $('#iosName').value = store.get('cyrusGameName', '');
+  $('#iosAddr').value = store.get('cyrusAddr', DEF_ADDR);
+  $('#iosRoom').value = store.get('cyrusRoom', '');
+  show('iosJoin');
+}
+$('#goIos').onclick = openIos;
+$('#iosGo').onclick = () => {
+  const name = $('#iosName').value.trim(), addr = cleanAddr($('#iosAddr').value), room = $('#iosRoom').value.trim();
+  if (!name) return toast('نام را بنویسید.');
+  if (!validAddr(addr)) return toast('آدرس درست نیست؛ مثل 192.168.43.1:8080 بنویسید.');
+  store.set('cyrusGameName', name); store.set('cyrusAddr', addr); store.set('cyrusRoom', room);
+  toast('در حال رفتن به بازی… اگر باز نشد، وای‌فای آیفون را بررسی کنید.');
+  setTimeout(() => { location.href = gameLink(addr, room, name); }, 400);
+};
+const wifiEsc = v => String(v).replace(/([\\;,:"])/g, '\\$1');
+$('#qrMake').onclick = () => {
+  const ssid = $('#qrSsid').value.trim(), pass = $('#qrPass').value;
+  if (!ssid) return toast('نام وای‌فای را بنویسید.');
+  const addr = cleanAddr($('#iosAddr').value) || DEF_ADDR, room = $('#iosRoom').value.trim();
+  const w = pass ? 'WIFI:T:WPA;S:' + wifiEsc(ssid) + ';P:' + wifiEsc(pass) + ';;' : 'WIFI:T:nopass;S:' + wifiEsc(ssid) + ';;';
+  drawQR($('#qrWifi'), w); drawQR($('#qrGame'), gameLink(addr, room, ''));
+  $('#qrOut').hidden = false;
+};
+if (location.protocol === 'http:') $('#goIos').hidden = true; // روی خود میزبان اندروید لازم نیست
+
+/* ورود از روی لینک QR */
+(function boot() {
+  const a = hashParam('a'), j = hashParam('j'), p = hashParam('p'), room = hashParam('room');
+  if (room !== null && location.protocol === 'http:') { // صفحه از میزبان اندروید باز شده
+    const dec = v => { try { return decodeURIComponent(v || ''); } catch (e) { return ''; } };
+    S.name = dec(hashParam('n')) || store.get('cyrusGameName', '');
+    afterName = () => { setupWsForm(); $('#wsRoom').value = dec(room); show('wsForm'); };
+    if (S.name) afterName(); else toName();
+  } else if (a && p) { // میزبان QR مهمان را با دوربین عادی اسکن کرده
+    if (bc) bc.postMessage({ k: 'ans', p, code: a });
+    show('deliver'); setTimeout(() => { try { window.close(); } catch (e) {} }, 800);
+  } else if (j && p) {
+    S.name = store.get('cyrusGameName', '');
+    if (!S.name) { afterName = () => guestFromOffer(j, p); toName(); } else guestFromOffer(j, p);
+  }
+})();
+
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
