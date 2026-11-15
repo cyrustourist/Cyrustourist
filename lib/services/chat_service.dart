@@ -81,6 +81,8 @@ class ChatSendResult {
   final String message;
 }
 
+String _s(dynamic v) => v == null ? '' : '$v';
+
 class CompanionPost {
   const CompanionPost({
     required this.id,
@@ -112,10 +114,10 @@ class CompanionPost {
         id: int.tryParse('${j['id']}') ?? 0,
         uid: '${j['uid'] ?? ''}',
         title: '${j['title'] ?? ''}',
-        origin: '${j['origin'] ?? ''}'.replaceAll('null', ''),
-        destination: '${j['destination'] ?? ''}'.replaceAll('null', ''),
-        details: '${j['details'] ?? ''}'.replaceAll('null', ''),
-        travelDate: '${j['travel_date'] ?? ''}'.replaceAll('null', ''),
+        origin: _s(j['origin']),
+        destination: _s(j['destination']),
+        details: _s(j['details']),
+        travelDate: _s(j['travel_date']),
         seats: int.tryParse('${j['seats_left']}') ?? 1,
         name: '${j['name'] ?? 'کاربر'}',
         mine: j['mine'] == true,
