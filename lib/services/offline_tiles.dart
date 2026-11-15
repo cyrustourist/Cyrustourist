@@ -51,6 +51,12 @@ class OfflineTiles {
     return File('${r.path}/$z/${x}_$y.t');
   }
 
+  /// مثل fileFor، ولی اگر پوشه هنوز آماده نیست صبر می‌کند (برای نمایش فوری نقشهٔ آفلاین)
+  static Future<File?> fileForAsync(int z, int x, int y) async {
+    await init();
+    return fileFor(z, x, y);
+  }
+
   static final ValueNotifier<OfflineProgress?> progress = ValueNotifier<OfflineProgress?>(null);
   static bool _cancel = false;
   static bool get running => progress.value != null && !(progress.value!.finished || progress.value!.failed);
