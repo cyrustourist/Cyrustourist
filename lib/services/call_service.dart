@@ -72,6 +72,7 @@ class CallService with WidgetsBindingObserver {
 
   bool _inited = false;
   bool _pageOpen = false;
+  bool _starting = false; // بین لمس دکمهٔ تماس و باز شدن صفحهٔ تماس
   String? _registeredToken;
   DateTime? _registeredAt;
   Timer? _registerRetry;
@@ -497,9 +498,25 @@ class CallService with WidgetsBindingObserver {
     bool hasPhoto = true,
     bool video = false,
   }) async {
-    if (_pageOpen) return;
+    if (_pageOpen || _starting) return;
     final nav = navigatorKey.currentState;
     if (nav == null) return;
+    _starting = true;
+    try {
+      await _startOutgoingInner(nav, toUid: toUid, name: name, isFriend: isFriend, hasPhoto: hasPhoto, video: video);
+    } finally {
+      _starting = false;
+    }
+  }
+
+  Future<void> _startOutgoingInner(
+    NavigatorState nav, {
+    required String toUid,
+    required String name,
+    required bool isFriend,
+    required bool hasPhoto,
+    required bool video,
+  }) async {
     // اگر تماس صوتی از پنل مدیریت خاموش است، همین‌جا (قبل از باز شدن صفحهٔ تماس و درخواست میکروفن) پیام را نشان بده
     final off = await _disabledMessage(video: video);
     if (off != null) {
