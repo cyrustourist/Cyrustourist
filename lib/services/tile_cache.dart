@@ -7,7 +7,9 @@
 //      اگر سرور 304 بدهد فقط تاریخ کش تمدید می‌شود (بدون دانلود دوباره)،
 //      اگر 200 بدهد کاشی جدید جایگزین می‌شود و دفعهٔ بعد تازه دیده می‌شود
 //   ۳) اگر در کش نبود، از اینترنت گرفته، ذخیره و نمایش داده می‌شود
-// پوشهٔ کش همان پوشهٔ cache اپ است؛ سقف حجم حدود ۴۰۰ مگابایت و قدیمی‌ترین‌ها حذف می‌شوند.
+// کش در پوشهٔ دائمی داده‌های اپ است (نه پوشهٔ cache که اندروید یا «پاک کردن کش» حذفش کند)؛
+// سقف حجم حدود ۴۰۰ مگابایت و فقط قدیمی‌ترین‌ها حذف می‌شوند.
+// وقتی اینترنت قطع است، به‌جای منتظر ماندن برای هر کاشی، چند ثانیه حالت «آفلاین» فعال می‌شود.
 
 import 'dart:async';
 import 'dart:io';
@@ -17,6 +19,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'offline_tiles.dart';
 
@@ -32,8 +35,46 @@ class TileDiskCache {
     ..idleTimeout = const Duration(seconds: 30)
     ..maxConnectionsPerHost = 8;
 
-  static Directory dirFor(String layerId) =>
-      Directory('${Directory.systemTemp.path}/tilecache/$layerId');
+  // ---------- پوشهٔ دائمی ----------
+  static Directory? _root;
+  static Future<void>? _initF;
+
+  static Future<void> init() => _initF ??= _doInit();
+
+  static Future<void> _doInit() async {
+    try {
+      final d = await getApplicationSupportDirectory();
+      final r = Directory('${d.path}/tilecache');
+      await r.create(recursive: true);
+      _root = r;
+    } catch (_) {
+      _root = Directory('${Directory.systemTemp.path}/tilecache');
+    }
+  }
+
+  static Future<File> fileFor(String layerId, int z, int x, int y) async {
+    await init();
+    return File('${_root!.path}/$layerId/${z}_${x}_$y.t');
+  }
+
+  // ---------- حالت آفلاین سریع ----------
+  // چند خطای شبکه‌ی پیاپی = اینترنت نیست؛ ۲۰ ثانیه درخواست شبکه نمی‌فرستیم
+  // تا کاشی‌های ذخیره‌شده بدون معطلی (۵ تا ۸ ثانیه برای هر کاشی) نمایش داده شوند.
+  static int _fails = 0;
+  static DateTime _downUntil = DateTime.fromMillisecondsSinceEpoch(0);
+  static bool get isDown => DateTime.now().isBefore(_downUntil);
+
+  static void _netOk() {
+    _fails = 0;
+    _downUntil = DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  static void _netBad() {
+    if (++_fails >= 6) {
+      _fails = 0;
+      _downUntil = DateTime.now().add(const Duration(seconds: 20));
+    }
+  }
 
   /// دانلود یک کاشی؛ در صورت هر مشکلی null (هیچ‌وقت صفحهٔ خطا در کش ذخیره نمی‌شود)
   static File _etagFile(File file) => File('${file.path}.etag');
@@ -53,6 +94,7 @@ class TileDiskCache {
   static Future<Uint8List?> download(
       String url, Map<String, String> headers, File file,
       {String? etag}) async {
+    if (isDown) return null;
     try {
       final req = await _client.getUrl(Uri.parse(url));
       headers.forEach(req.headers.set);
@@ -60,6 +102,7 @@ class TileDiskCache {
         req.headers.set(HttpHeaders.ifNoneMatchHeader, etag);
       }
       final res = await req.close().timeout(const Duration(seconds: 8));
+      _netOk(); // سرور جواب داد = اینترنت هست
       if (res.statusCode == 304) {
         await res.drain<void>();
         try {
@@ -97,6 +140,7 @@ class TileDiskCache {
       } catch (_) {}
       return bytes;
     } catch (_) {
+      _netBad();
       return null;
     }
   }
@@ -107,7 +151,8 @@ class TileDiskCache {
     _trimScheduled = true;
     Timer(const Duration(seconds: 25), () async {
       try {
-        final root = Directory('${Directory.systemTemp.path}/tilecache');
+        await init();
+        final root = _root!;
         if (!await root.exists()) return;
         final files = <File>[];
         var total = 0;
@@ -144,6 +189,7 @@ class CachedTileProvider extends TileProvider {
   }) : super(headers: {'User-Agent': userAgent}) {
     TileDiskCache.scheduleTrim();
     OfflineTiles.init();
+    TileDiskCache.init();
   }
 
   final String layerId;
@@ -152,22 +198,17 @@ class CachedTileProvider extends TileProvider {
   @override
   ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
     final url = getTileUrl(coordinates, options);
-    final file = File(
-        '${TileDiskCache.dirFor(layerId).path}/${coordinates.z}_${coordinates.x}_${coordinates.y}.t');
-    // نقشهٔ دانلودشدهٔ آفلاین فقط برای لایه‌های استاندارد (OSM/CARTO) استفاده می‌شود
-    final offline = (layerId == 'osm' || layerId == 'carto')
-        ? OfflineTiles.fileFor(coordinates.z, coordinates.x, coordinates.y)
-        : null;
-    return _CachedTileImage(url, file, Map<String, String>.of(headers), maxAge, offline);
+    return _CachedTileImage(url, layerId, coordinates.z, coordinates.x, coordinates.y,
+        Map<String, String>.of(headers), maxAge);
   }
 }
 
 class _CachedTileImage extends ImageProvider<_CachedTileImage> {
-  const _CachedTileImage(this.url, this.file, this.headers, this.maxAge, this.offline);
+  const _CachedTileImage(this.url, this.layerId, this.z, this.x, this.y, this.headers, this.maxAge);
 
-  final File? offline;
   final String url;
-  final File file;
+  final String layerId;
+  final int z, x, y;
   final Map<String, String> headers;
   final Duration maxAge;
 
@@ -186,13 +227,12 @@ class _CachedTileImage extends ImageProvider<_CachedTileImage> {
   }
 
   Future<ui.Codec> _load(_CachedTileImage key, ImageDecoderCallback decode) async {
-    Uint8List? bytes;
-    var stale = false;
-    // ۱) نقشهٔ آفلاینِ دانلودشده (بدون اینترنت، بدون صفحهٔ سفید)
-    final off = key.offline;
-    if (off != null) {
+    // ۱) نقشهٔ آفلاینِ دانلودشده (بدون اینترنت، بدون صفحهٔ سفید).
+    //    قبلاً اگر پوشه هنوز آماده نشده بود این مرحله رد می‌شد؛ حالا صبر می‌کنیم تا آماده شود.
+    if (key.layerId == 'osm' || key.layerId == 'carto') {
       try {
-        if (await off.exists()) {
+        final off = await OfflineTiles.fileForAsync(key.z, key.x, key.y);
+        if (off != null && await off.exists()) {
           final ob = await off.readAsBytes();
           if (ob.isNotEmpty) {
             return await decode(await ui.ImmutableBuffer.fromUint8List(ob));
@@ -200,33 +240,55 @@ class _CachedTileImage extends ImageProvider<_CachedTileImage> {
         }
       } catch (_) {}
     }
+
+    // ۲) کش دائمی (کاشی‌هایی که قبلاً دیده شده‌اند؛ برای همهٔ لایه‌ها)
+    final file = await TileDiskCache.fileFor(key.layerId, key.z, key.x, key.y);
+    Uint8List? bytes;
+    var stale = false;
     try {
-      if (await key.file.exists()) {
-        bytes = await key.file.readAsBytes();
-        final age = DateTime.now().difference(await key.file.lastModified());
+      if (await file.exists()) {
+        bytes = await file.readAsBytes();
+        final age = DateTime.now().difference(await file.lastModified());
         stale = age > key.maxAge;
       }
     } catch (_) {
       bytes = null;
     }
 
+    // اگر کش همین لایه خالی بود، کش لایهٔ هم‌خانواده (osm ↔ carto) را امتحان می‌کنیم؛
+    // وقتی اینترنت قطع است و برنامه از OSM به CARTO سوئیچ کرده، کاشی‌های قبلاً دیده‌شده خالی نمانند.
+    if ((bytes == null || bytes.isEmpty) && TileDiskCache.isDown &&
+        (key.layerId == 'osm' || key.layerId == 'carto')) {
+      try {
+        final other = key.layerId == 'osm' ? 'carto' : 'osm';
+        final of = await TileDiskCache.fileFor(other, key.z, key.x, key.y);
+        if (await of.exists()) {
+          final ob = await of.readAsBytes();
+          if (ob.isNotEmpty) {
+            return await decode(await ui.ImmutableBuffer.fromUint8List(ob));
+          }
+        }
+      } catch (_) {}
+    }
+
     if (bytes != null && bytes.isNotEmpty) {
       try {
         final codec = await decode(await ui.ImmutableBuffer.fromUint8List(bytes));
-        if (stale) {
+        if (stale && !TileDiskCache.isDown) {
           // نمایش فوری نسخهٔ قبلی؛ نسخهٔ تازه در پس‌زمینه جایگزین می‌شود
-          final et = await TileDiskCache.readEtag(key.file);
-          unawaited(TileDiskCache.download(key.url, key.headers, key.file, etag: et));
+          final et = await TileDiskCache.readEtag(file);
+          unawaited(TileDiskCache.download(key.url, key.headers, file, etag: et));
         }
         return codec;
       } catch (_) {
         try {
-          await key.file.delete();
+          await file.delete();
         } catch (_) {}
       }
     }
 
-    final fresh = await TileDiskCache.download(key.url, key.headers, key.file);
+    // ۳) اینترنت
+    final fresh = await TileDiskCache.download(key.url, key.headers, file);
     if (fresh == null) {
       throw StateError('tile unavailable: ${key.url}');
     }
