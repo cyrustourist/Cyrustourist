@@ -205,6 +205,9 @@ class MainActivity : FlutterActivity() {
 
         val messenger = flutterEngine.dartExecutor.binaryMessenger
 
+        // وای‌فای محلی بازی (QR برای آیفون)
+        HotspotBridge(applicationContext).register(messenger)
+
         // تماس زنده آفلاین (آزمایشی): ضبط/پخش صدا؛ بسته‌ها از طریق Dart روی Nearby جابه‌جا می‌شوند
         val live = LiveCall(applicationContext)
         val cam = LiveCam(applicationContext)
