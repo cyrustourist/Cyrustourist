@@ -403,6 +403,8 @@ class _ResilientTileLayerState extends State<ResilientTileLayer> {
 
   void _onError(int step) {
     if (!mounted || step != _step) return;
+    // وقتی کل اینترنت قطع است، عوض کردن سرویس بی‌فایده است
+    if (TileDiskCache.isDown) return;
     _errors++;
     if (_errors >= 4 && _switches < _steps - 1) {
       _switches++;
