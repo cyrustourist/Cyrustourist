@@ -8,11 +8,14 @@ import '../groups/group_ui.dart';
 import 'dice_games.dart' show sharedDie, sharedDiceChip, sharedResultCard;
 import 'game_api.dart';
 import 'game_engine.dart' show BotLevel;
-import 'game_fx.dart';
 import 'game_p2p.dart';
 import 'game_play_page.dart' show NearbyGameLink;
 import 'game_texts.dart';
 import 'game_widgets.dart';
+import 'bg_score.dart';
+import 'bg_settings.dart';
+import 'bg_sfx.dart';
+import 'bg_theme.dart';
 
 /// تخته‌نرد دو نفره: با ربات، دو نفره روی یک گوشی، گوشی‌های نزدیک (بدون اینترنت) و آنلاین (اتصال مستقیم).
 /// قوانین کامل: میله، زدن مهره، خروج مهره، جفت‌ها (۴ حرکت) و «استفاده از بیشترین تعداد تاس».
@@ -20,12 +23,6 @@ import 'game_widgets.dart';
 
 enum BgMode { bot, local, nearby, online }
 
-const Color _bgFrame = Color(0xff5a3a28);
-const Color _bgBoard = Color(0xff0f2a33);
-const Color _bgPtA = Color(0xffd9b26f);
-const Color _bgPtB = Color(0xff2a8a8d);
-const Color _bgCheckerA = Color(0xfff4ead2);
-const Color _bgCheckerB = Color(0xffc0392b);
 
 const Map<String, Map<String, String>> _btx = {
   'roll': {'fa': 'تاس بینداز', 'en': 'Roll the dice'},
@@ -317,42 +314,14 @@ class _BgGeo {
 }
 
 class _BgPainter extends CustomPainter {
-  const _BgPainter({required this.s, required this.sel, required this.dests, required this.srcs});
+  const _BgPainter({required this.s, required this.sel, required this.dests, required this.srcs, required this.theme});
+  final BgTheme theme;
   final _BgState s;
   final int? sel;
   final Set<int> dests;
   final Set<int> srcs;
 
-  void _checker(Canvas canvas, Offset c, double r, int pl) {
-    final base = pl == 0 ? _bgCheckerA : _bgCheckerB;
-    canvas.drawCircle(c + Offset(0, r * 0.12), r, Paint()..color = const Color(0x55000000));
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.35, -0.35),
-          colors: <Color>[Color.lerp(base, Colors.white, 0.45) ?? base, base, Color.lerp(base, Colors.black, 0.25) ?? base],
-          stops: const <double>[0, 0.6, 1],
-        ).createShader(Rect.fromCircle(center: c, radius: r)),
-    );
-    canvas.drawCircle(
-      c,
-      r * 0.62,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = max(1, r * 0.08)
-        ..color = const Color(0x33000000),
-    );
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = max(1, r * 0.07)
-        ..color = pl == 0 ? const Color(0xffb89b5e) : const Color(0xff7a1d16),
-    );
-  }
+  void _checker(Canvas canvas, Offset c, double r, int pl) => paintBgChecker(canvas, c, r, pl, theme);
 
   void _ring(Canvas canvas, Offset c, double r, bool strong) {
     canvas.drawCircle(
@@ -368,18 +337,14 @@ class _BgPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final g = _BgGeo(size);
-    canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(size.width * 0.045)), Paint()..color = _bgFrame);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(g.pad * 0.55, g.pad * 0.55, size.width - g.pad * 1.1, size.height - g.pad * 1.1), Radius.circular(size.width * 0.03)),
-      Paint()..color = _bgBoard,
-    );
+    paintBgBoard(canvas, size, theme, pad: g.pad);
 
     // مثلث‌ها
     for (var i = 0; i < 24; i++) {
       final rect = g.pointRect(i);
       final left = i < 12;
       final row = left ? 11 - i : i - 12;
-      final col = (row + (left ? 0 : 1)).isEven ? _bgPtA : _bgPtB;
+      final col = (row + (left ? 0 : 1)).isEven ? theme.ptA : theme.ptB;
       final cy = rect.center.dy;
       final path = Path();
       if (left) {
@@ -396,6 +361,15 @@ class _BgPainter extends CustomPainter {
           ..close();
       }
       canvas.drawPath(path, Paint()..color = col);
+      if (theme.ptLine.alpha > 0) {
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2
+            ..color = theme.ptLine,
+        );
+      }
       if (dests.contains(i)) {
         canvas.drawPath(path, Paint()..color = const Color(0x66ffd23f));
         canvas.drawPath(
@@ -409,7 +383,8 @@ class _BgPainter extends CustomPainter {
     }
 
     // میله
-    canvas.drawRect(g.barRect, Paint()..color = _bgFrame);
+    canvas.drawRect(g.barRect, Paint()..color = theme.bar);
+    canvas.drawRect(g.barRect, Paint()..style = PaintingStyle.stroke..strokeWidth = 1.5..color = Colors.black38);
 
     // مهره‌های روی خانه‌ها
     final r = g.d / 2;
@@ -535,6 +510,20 @@ class _BackgammonPageState extends State<BackgammonPage> {
   bool rmMine = false;
   bool rmPeer = false;
 
+  // امتیاز مسابقه
+  final BgMatch _match = BgMatch();
+  BgGameResult? lastResult;
+
+  int get _me => mode == BgMode.bot || mode == BgMode.local ? 0 : myIdx;
+
+  void _endSound(int w) {
+    if (mode == BgMode.local || w == _me) {
+      BgSfx.win();
+    } else {
+      BgSfx.lose();
+    }
+  }
+
   bool get _isNet => mode == BgMode.nearby || mode == BgMode.online;
   bool get _autoTurn => (mode == BgMode.bot && s.turn == 1) || (_isAuth && _isNet && (_forceAuto || (_timeouts[s.turn] ?? 0) >= 2));
 
@@ -544,6 +533,12 @@ class _BackgammonPageState extends State<BackgammonPage> {
   @override
   void initState() {
     super.initState();
+    BgStats.instance.load();
+    BgPrefs.instance.load().then((_) {
+      if (!mounted) return;
+      _match.to = BgPrefs.instance.matchTo;
+      setState(() {});
+    });
     switch (mode) {
       case BgMode.bot:
         pnames = <String>[GameT.t('you'), GameT.t('robot')];
@@ -593,6 +588,9 @@ class _BackgammonPageState extends State<BackgammonPage> {
 
   void _resetState() {
     _gen++;
+    if (_match.over) _match.reset();
+    _match.to = BgPrefs.instance.matchTo;
+    lastResult = null;
     s = _BgState()..turn = _rnd.nextInt(2);
     rolled = <int>[];
     ph = 'roll';
@@ -678,6 +676,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
     busy = true;
     rolling = true;
     msgKey = '';
+    BgSfx.diceRoll();
     _sync();
     await Future<void>.delayed(const Duration(milliseconds: 650));
     if (!mounted || gen != _gen) return;
@@ -686,7 +685,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
     rolled = a == b ? <int>[a, a, a, a] : <int>[a, b];
     s.dice = List<int>.from(rolled);
     rolling = false;
-    GameFx.roll();
+    BgSfx.diceLand();
     legal = _Bg.legal(s);
     if (legal.isEmpty) {
       msgKey = 'no_moves';
@@ -725,12 +724,12 @@ class _BackgammonPageState extends State<BackgammonPage> {
     sel = null;
     msgKey = hit ? 'hit' : '';
     if (hit) {
-      GameFx.hit();
+      BgSfx.hit();
     } else {
-      GameFx.move();
+      BgSfx.move();
     }
     if (s.off[p] == 15) {
-      GameFx.win();
+      _endSound(p);
       winner = p;
       ph = 'over';
       legal = <_Mv>[];
@@ -820,6 +819,13 @@ class _BackgammonPageState extends State<BackgammonPage> {
   Future<void> _finish() async {
     if (reported) return;
     reported = true;
+    final res = BgScoring.score(s.pts, s.bar, s.off, winner);
+    lastResult = res;
+    _match.add(res);
+    if (mode != BgMode.local) {
+      BgStats.instance.record(res, _me);
+      if (_match.over) BgStats.instance.recordMatch(_match.winner == _me);
+    }
     if (mode == BgMode.online) {
       if (_onlineDone) {
         if (mounted) setState(() => resultReady = true);
@@ -893,6 +899,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
               chat.add(ChatLine(pnames[1 - myIdx], txt, false));
               if (chat.length > 30) chat.removeAt(0);
             });
+            BgSfx.chat();
           }
         }
         break;
@@ -947,6 +954,9 @@ class _BackgammonPageState extends State<BackgammonPage> {
       if (!(sel != null && legal.any((x) => x.from == sel))) sel = null;
       if (sel == null && _canAct && ph == 'move') _autoSel();
       if (winner < 0) {
+        if (_match.over) _match.reset();
+        _match.to = BgPrefs.instance.matchTo;
+        lastResult = null;
         reported = false;
         resultReady = false;
         gained = 0;
@@ -955,14 +965,14 @@ class _BackgammonPageState extends State<BackgammonPage> {
       }
     });
     if (msgKey == 'hit' && prevMsg != 'hit') {
-      GameFx.hit();
+      BgSfx.hit();
     } else if (rolling) {
-      GameFx.roll();
+      BgSfx.diceRoll();
     } else {
-      GameFx.move();
+      BgSfx.move();
     }
     if (winner >= 0) {
-      GameFx.win();
+      _endSound(winner);
       _finish();
     }
   }
@@ -1229,6 +1239,22 @@ class _BackgammonPageState extends State<BackgammonPage> {
       chat.add(ChatLine(pnames[myIdx], t, true));
       if (chat.length > 30) chat.removeAt(0);
     });
+    BgSfx.click();
+    if (mode == BgMode.bot) _botReply();
+  }
+
+  static const List<String> _botLines = <String>['😄 دست خوبی بود', '🤔 بذار فکر کنم', '🔥 حالا نوبت منه', '😅 شانس آوردی', '👏 آفرین', '🎲 تاس‌ها با منه!'];
+
+  void _botReply() {
+    final gen = _gen;
+    Future<void>.delayed(Duration(milliseconds: 900 + _rnd.nextInt(1200)), () {
+      if (!mounted || gen != _gen || !chatOn) return;
+      setState(() {
+        chat.add(ChatLine(pnames[1], _botLines[_rnd.nextInt(_botLines.length)], false));
+        if (chat.length > 30) chat.removeAt(0);
+      });
+      BgSfx.chat();
+    });
   }
 
   /// «بازی دوباره» با همان حریف؛ فقط از طریق اتصال مستقیم بین دو گوشی
@@ -1376,11 +1402,12 @@ class _BackgammonPageState extends State<BackgammonPage> {
     return Column(
       children: [
         Row(children: [
-          sharedDiceChip(names[0], _bgCheckerA, '${s.off[0]}/15', winner < 0 && s.turn == 0),
+          sharedDiceChip(names[0], BgPrefs.instance.theme.checkerA, '${s.off[0]}/15', winner < 0 && s.turn == 0),
           const SizedBox(width: 10),
-          sharedDiceChip(names[1], _bgCheckerB, '${s.off[1]}/15', winner < 0 && s.turn == 1),
+          sharedDiceChip(names[1], BgPrefs.instance.theme.checkerB, '${s.off[1]}/15', winner < 0 && s.turn == 1),
         ]),
         const SizedBox(height: 10),
+        BgScoreStrip(match: _match, names: names, pipA: BgScoring.pips(s.pts, s.bar, 0), pipB: BgScoring.pips(s.pts, s.bar, 1), showPip: BgPrefs.instance.showPip, turn: winner < 0 ? s.turn : -1),
         Text(_status(), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
         SizedBox(height: 20, child: Text(_hint(), style: const TextStyle(color: gSky, fontSize: 12.5, fontWeight: FontWeight.w700))),
         const SizedBox(height: 4),
@@ -1390,7 +1417,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapUp: (d) => _onTapBoard(d.localPosition, _BgGeo(geo)),
-            child: CustomPaint(painter: _BgPainter(s: s, sel: sel, dests: dests, srcs: srcs)),
+            child: CustomPaint(painter: _BgPainter(s: s, sel: sel, dests: dests, srcs: srcs, theme: BgPrefs.instance.theme)),
           ),
         ),
         if (_isNet && winner < 0 && (ph == 'roll' || ph == 'move') && _secsLeft() > 0) GameTimerBar(left: _secsLeft(), total: ph == 'move' ? 40 : 25),
@@ -1419,8 +1446,9 @@ class _BackgammonPageState extends State<BackgammonPage> {
             ),
           ],
         ),
-        if (_isNet && chatOn) GameChatPanel(lines: chat, onSend: _sendChat),
+        if ((_isNet || mode == BgMode.bot) && chatOn) GameChatPanel(lines: chat, onSend: _sendChat, phrases: kBgChatPhrases),
         if (winner >= 0 && resultReady) ...<Widget>[
+          if (lastResult != null) BgResultCard(result: lastResult!, match: _match, names: pnames),
           sharedResultCard(title: _status(), gained: gained, onAgain: _rematch, onBack: () => Navigator.of(context).pop()),
           if (_isNet && (rmPeer || rmMine))
             Padding(
@@ -1451,8 +1479,16 @@ class _BackgammonPageState extends State<BackgammonPage> {
           iconTheme: const IconThemeData(color: gGold),
           title: Text(GameT.t('backgammon'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
           actions: [
+            IconButton(
+              tooltip: 'تنظیمات',
+              onPressed: () => showBgSettings(context, onChanged: () {
+                _match.to = BgPrefs.instance.matchTo;
+                if (mounted) setState(() {});
+              }),
+              icon: const Icon(Icons.settings_rounded, color: gGold),
+            ),
             gameFxAction(() => setState(() {})),
-            if (_isNet)
+            if (_isNet || mode == BgMode.bot)
               IconButton(
                 tooltip: GameT.fa ? 'چت' : 'Chat',
                 onPressed: () => setState(() => chatOn = !chatOn),
