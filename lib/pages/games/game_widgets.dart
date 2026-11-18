@@ -56,7 +56,8 @@ class GameTimerBar extends StatelessWidget {
 
 /// چت بین بازیکنان: عبارت‌های آماده + پیام آزاد (فقط روی اتصال مستقیم بین گوشی‌ها؛ هیچ درخواستی به ورکر نمی‌رود)
 class GameChatPanel extends StatefulWidget {
-  const GameChatPanel({super.key, required this.lines, required this.onSend});
+  const GameChatPanel({super.key, required this.lines, required this.onSend, this.phrases});
+  final List<String>? phrases;
   final List<ChatLine> lines;
   final void Function(String text) onSend;
 
@@ -80,9 +81,9 @@ class _GameChatPanelState extends State<GameChatPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final phrases = GameT.fa
+    final phrases = widget.phrases ?? (GameT.fa
         ? <String>['👍 آفرین', '😅 اوه نه!', '⏳ زود باش', '🔥 بزن!', '🤝 بازی خوبی بود']
-        : <String>['👍 Nice', '😅 Oh no!', '⏳ Hurry up', '🔥 Go!', '🤝 Good game'];
+        : <String>['👍 Nice', '😅 Oh no!', '⏳ Hurry up', '🔥 Go!', '🤝 Good game']);
     final l = widget.lines;
     final last = l.length > 4 ? l.sublist(l.length - 4) : l;
     return Container(
@@ -148,3 +149,17 @@ class _GameChatPanelState extends State<GameChatPanel> {
     );
   }
 }
+
+/// جمله‌های آماده‌ی چت تخته‌نرد
+const List<String> kBgChatPhrases = <String>[
+  '👍 آفرین',
+  '🎲 تاس خوبی آمد!',
+  '😅 اوه نه، زدی!',
+  '🔥 مهره‌ات را می‌زنم',
+  '⏳ زود باش',
+  '🤔 دارم فکر می‌کنم',
+  '😂 شانس آوردی',
+  '👏 حرکت قشنگی بود',
+  '🤝 بازی خوبی بود',
+  '🔁 یک دست دیگر؟',
+];
