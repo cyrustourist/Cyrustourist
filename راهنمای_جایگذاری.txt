@@ -1,0 +1,32 @@
+حکم چهارنفره، نسخه‌ی اندروید (Flutter) برای پروژه‌ی سایروس توریست
+=================================================================
+این zip را روی پوشه‌ی پروژه (Cyrustourist-main) باز کنید تا فایل‌ها در همین مسیرها بنشینند.
+
+فایل‌های جدید (۹ فایل):
+  lib/pages/games/hokm_match.dart       موتور بازی (قوانین، حاکم، حکم، نرس، سرس، تک نرس، ۷ یار، امتیاز، ربات)
+  lib/pages/games/hokm_prefs.dart       تنظیمات (زمینه، طرح کارت، صدا، سکوت، لرزش، نام، عکس) + ساخت صدا
+  lib/pages/games/hokm_widgets.dart     کارت، پشت کارت، زمینه‌ها، آواتار، دکمه‌ی طلایی، لوگو
+  lib/pages/games/hokm_settings.dart    برگه‌ی تنظیمات و قوانین
+  lib/pages/games/hokm_net.dart         اتصال چهار گوشی با Nearby (همان شبکه‌ی چت آفلاین)
+  lib/pages/games/hokm_menu.dart        منوی اصلی و صفحه‌ی ساخت اتاق / پیوستن با کد
+  lib/pages/games/hokm_table_page.dart  میز بازی، چت، آخرین دست
+  test/hokm_match_test.dart             تست موتور: flutter test test/hokm_match_test.dart
+
+دو فایل موجود که تغییر کرده‌اند (اگر خودتان بعد از ارسال zip تغییرشان داده‌اید، فقط همین تغییرها را دستی بزنید):
+  pubspec.yaml
+      زیر خط  image_picker: ^1.1.2  این را اضافه کنید:
+          audioplayers: ^6.1.0
+      سپس: flutter pub get
+  lib/pages/games/games_hub_page.dart
+      ۱) import 'hokm_page.dart';  را به  import 'hokm_menu.dart';  عوض کنید.
+      ۲) داخل تابع _pickHokmLevel همه‌ی بدنه (پنجره‌ی انتخاب سطح) را حذف کنید و فقط بنویسید:
+             _push(const HokmMenuPage());
+
+فایل‌های قدیمی hokm_engine.dart و hokm_page.dart دست نخورده‌اند (hokm_match.dart از HCard همان hokm_engine.dart استفاده می‌کند).
+لوگوی بالا سمت چپ از assets/images/logo-new.jpg می‌خواند که از قبل در pubspec هست.
+
+نکته‌ها
+  - این کد را کامپایل و اجرا نکرده‌ام (روی سیستم من Flutter نبود). اگر هنگام flutter analyze یا اجرا خطایی آمد، متنش را بفرستید تا درست کنم.
+  - بازی آنلاین هنوز سرور ندارد و در منو غیرفعال است.
+  - بازی چهار گوشی به اتصال مستقیم همه‌ی گوشی‌ها در شبکه‌ی Nearby نیاز دارد (پیام‌های بازی relay نمی‌شوند).
+  - سه حالت نرس، تک نرس، سرس و ۷ یار در hokm_match.dart (تابع act) هستند و توضیح‌شان در تنظیمات، تب «قوانین»، آمده است.
