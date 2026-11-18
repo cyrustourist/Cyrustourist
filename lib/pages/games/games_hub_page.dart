@@ -17,7 +17,7 @@ import 'esmfamil_nearby_page.dart';
 import 'esmfamil_page.dart';
 import 'wifi_share_page.dart';
 import 'fruit_page.dart';
-import 'hokm_page.dart';
+import 'hokm_menu.dart';
 import 'nearby_duel_page.dart';
 import 'pantomime_page.dart';
 
@@ -559,44 +559,9 @@ class _GamesHubPageState extends State<GamesHubPage> {
     );
   }
 
-  /// حکم: فقط با ربات (شما + ربات هم‌تیمی در برابر دو ربات حریف)، بدون اینترنت.
+  /// حکم: منوی کامل (آفلاین با ربات، بازی بین چهار گوشی، تنظیمات و قوانین).
   void _pickHokmLevel() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: gPanel,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Directionality(
-        textDirection: gDir,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${GameT.t('hokm')} · ${GameT.t('choose_mode')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text(
-                  GameT.fa ? 'شما و یک ربات هم‌تیمی در برابر دو ربات حریف؛ بدون اینترنت' : 'You and a robot partner vs two robots; no internet',
-                  style: const TextStyle(color: gMuted, fontSize: 12),
-                ),
-                const SizedBox(height: 12),
-                for (final l in BotLevel.values)
-                  _modeTile(
-                    l == BotLevel.easy ? Icons.sentiment_satisfied_rounded : (l == BotLevel.normal ? Icons.sentiment_neutral_rounded : Icons.local_fire_department_rounded),
-                    GameT.t('lvl_${l.name}'),
-                    '',
-                    () {
-                      Navigator.of(ctx).pop();
-                      _push(HokmPage(level: l));
-                    },
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    _push(const HokmMenuPage());
   }
 
   Future<void> _push(Widget page) async {
