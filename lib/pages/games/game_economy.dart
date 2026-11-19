@@ -20,6 +20,9 @@ class GameEconomy {
   /// جایزه‌ی برد بر اساس سختی؛ بازی روی یک گوشی (local) سکه ندارد
   static const Map<String, int> winCoins = <String, int>{'easy': 50, 'normal': 50, 'hard': 50, 'nearby': 50, 'online': 50, 'local': 0};
   static const int drawCoins = 2;
+
+  /// جایزه‌ی برد منچ (جدا از بقیه‌ی بازی‌ها) — اینجا عوض کنید
+  static const int ludoWinCoins = 200;
   static const int dailyCap = 1000;
 
   static const String _k = 'cyrus_econ_v1';
@@ -108,11 +111,12 @@ class GameEconomy {
   }
 
   /// جایزه‌ی پایان بازی (برای همه‌ی بازی‌ها از GameWallet.reportOffline صدا زده می‌شود). خروجی: سکه‌ی گرفته‌شده.
-  static Future<int> winBonus(String result, String level) async {
+  static Future<int> winBonus(String result, String level, {String game = ''}) async {
     await load();
     var n = 0;
     if (result == 'win') {
       n = winCoins[level] ?? 50;
+      if (game == 'ludo' && n > 0) n = ludoWinCoins;
     } else if (result == 'draw' && level != 'local') {
       n = drawCoins;
     }
