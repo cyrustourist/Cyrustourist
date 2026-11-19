@@ -64,6 +64,9 @@ String _lt(String fa, String en, String ar) {
 const Duration _kStdAge = Duration(days: 8); // سیاست OSM: حداقل ۷ روز نگه‌داری
 const Duration _kSatAge = Duration(days: 90);
 
+/// برای هر لایه فقط یک TileProvider ساخته می‌شود؛ با هر بازسازی ویجت، کاشی‌ها از نو بارگذاری نشوند
+final Map<String, CachedTileProvider> _providers = <String, CachedTileProvider>{};
+
 TileLayer _cachedLayer({
   required String id,
   required String url,
@@ -75,12 +78,13 @@ TileLayer _cachedLayer({
   return TileLayer(
     key: ValueKey('tile-$id'),
     urlTemplate: url,
-    tileProvider: CachedTileProvider(layerId: id, maxAge: age),
+    tileProvider: _providers.putIfAbsent(id, () => CachedTileProvider(layerId: id, maxAge: age)),
     maxNativeZoom: nativeZoom,
     maxZoom: maxZoom,
     // سرعت هنگام زوم/جابه‌جایی: کاشی‌های بیشتری آماده نگه داشته و پیش‌بارگذاری می‌شود
-    keepBuffer: 4,
-    panBuffer: 2,
+    // پیش‌بارگذاری کمتر = باز شدن اولیه و اسکرول سریع‌تر (هر حلقه‌ی اضافه چندین برابر کاشی می‌خواست)
+    keepBuffer: 3,
+    panBuffer: 1,
     // بدون محو شدن؛ لایه آفلاین زیر آن است و صفحه سفید دیده نمی‌شود
     tileDisplay: const TileDisplay.instantaneous(),
     // کاشی‌ای که خطا داد، با جابه‌جایی بعدی دوباره تلاش می‌شود (به‌جای ماندن خالی)
