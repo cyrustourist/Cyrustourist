@@ -10,6 +10,7 @@ import 'chess_engine.dart';
 import 'chess_extras.dart';
 import 'dice_games.dart' show sharedResultCard;
 import 'game_api.dart';
+import 'game_economy.dart';
 import 'game_engine.dart' show BotLevel;
 import 'game_fx.dart';
 import 'game_p2p.dart';
@@ -120,6 +121,8 @@ class _ChessPageState extends State<ChessPage> {
   List<CMove> legal = <CMove>[];
   int? sel;
   int lastFrom = -1;
+  int hintFrom = -1;
+  int hintTo = -1;
   int lastTo = -1;
   int winner = -1; // ۰ سفید، ۱ سیاه، ۲ مساوی
   String endKey = '';
@@ -277,6 +280,8 @@ class _ChessPageState extends State<ChessPage> {
     sel = null;
     lastFrom = -1;
     lastTo = -1;
+    hintFrom = -1;
+    hintTo = -1;
     winner = -1;
     endKey = '';
     started = true;
@@ -330,6 +335,8 @@ class _ChessPageState extends State<ChessPage> {
     keys.add(pos.key);
     lastFrom = m.from;
     lastTo = m.to;
+    hintFrom = -1;
+    hintTo = -1;
     sel = null;
     clkAt = _now();
     drawIn = false;
@@ -389,6 +396,56 @@ class _ChessPageState extends State<ChessPage> {
     GameFx.win();
     ChessAlarm.end();
     _finish();
+  }
+
+  // ---------------------------------------------------------------- راهنما و بازگشت (با سکه)
+
+  bool get _helpMode => mode == ChMode.bot || mode == ChMode.local;
+
+  Future<void> _useHint() async {
+    if (!_helpMode || !_canAct || winner >= 0) return;
+    if (!await GameEconomy.pay(context, GameEconomy.hintCost, 'راهنمای بهترین حرکت')) return;
+    final list = List<String>.of(mvs);
+    String? u;
+    try {
+      u = await _runBot(list, 2, _rnd.nextInt(1 << 30));
+    } catch (_) {
+      u = chessBotPick(list, 2, _rnd.nextInt(1 << 30));
+    }
+    if (!mounted || u == null || list.length != mvs.length) return;
+    final m = chFind(pos, u);
+    if (m == null) return;
+    setState(() {
+      hintFrom = m.from;
+      hintTo = m.to;
+      sel = m.from;
+    });
+  }
+
+  bool get _canUndo => _helpMode && winner < 0 && !thinking && mvs.length >= (mode == ChMode.bot ? 2 : 1);
+
+  Future<void> _useUndo() async {
+    if (!_canUndo) return;
+    if (!await GameEconomy.pay(context, GameEconomy.undoCost, 'بازگشت به حرکت قبل')) return;
+    if (!mounted || !_canUndo) return;
+    final n = mode == ChMode.bot ? 2 : 1;
+    final nm = List<String>.of(mvs)..removeRange(mvs.length - n, mvs.length);
+    final np = chReplay(nm);
+    if (np == null) return;
+    setState(() {
+      _gen++;
+      mvs = nm;
+      sans = List<String>.of(sans)..removeRange(sans.length - n, sans.length);
+      keys = List<String>.of(keys)..removeRange(keys.length - n, keys.length);
+      pos = np;
+      legal = chLegal(pos);
+      sel = null;
+      lastFrom = -1;
+      lastTo = -1;
+      hintFrom = -1;
+      hintTo = -1;
+      clkAt = _now();
+    });
   }
 
   Future<void> _botMove() async {
@@ -1286,6 +1343,7 @@ class _ChessPageState extends State<ChessPage> {
       final f = idx % 8, r = idx ~/ 8;
       var col = (f + r) % 2 == 1 ? st.dark : st.light;
       if (idx == lastFrom || idx == lastTo) col = Color.alphaBlend(const Color(0x77ffe066), col);
+      if (idx == hintFrom || idx == hintTo) col = Color.alphaBlend(const Color(0xaa00e676), col);
       if (idx == sel) col = Color.alphaBlend(const Color(0xaaffd36a), col);
       if (idx == kingSq) col = Color.alphaBlend(const Color(0xbbff3b3b), col);
       final piece = pos.b[idx];
@@ -1526,6 +1584,11 @@ class _ChessPageState extends State<ChessPage> {
               if (_isNet) OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: gLine)), onPressed: drawSent ? null : _offerDraw, icon: const Icon(Icons.handshake_rounded, size: 18), label: Text(_ct('btn_draw'))),
             ],
           ),
+        if (!over && _helpMode)
+          gameHelpRow(<Widget>[
+            gameHelpButton(icon: Icons.lightbulb_rounded, label: 'راهنما', cost: GameEconomy.hintCost, onTap: _canAct ? _useHint : null),
+            gameHelpButton(icon: Icons.undo_rounded, label: 'بازگشت', cost: GameEconomy.undoCost, onTap: _canUndo ? _useUndo : null),
+          ]),
         if (over && resultReady) ...<Widget>[
           const SizedBox(height: 8),
           sharedResultCard(title: _status(), gained: gained, onAgain: _rematch, onBack: () => Navigator.of(context).pop()),
