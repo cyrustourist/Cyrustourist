@@ -5,6 +5,8 @@ import 'backgammon_page.dart';
 import 'dice_games.dart';
 import 'dice_skins.dart';
 import 'game_fx.dart';
+import 'game_wheel.dart';
+import 'game_invite.dart';
 import 'game_api.dart';
 import 'game_engine.dart';
 import 'game_play_page.dart';
@@ -37,6 +39,8 @@ class _GamesHubPageState extends State<GamesHubPage> {
   void initState() {
     super.initState();
     _w.addListener(_onChange);
+    WheelStore.instance.addListener(_onChange);
+    WheelStore.instance.load();
     DiceSkins.load();
     GameFx.load();
     _boot();
@@ -45,6 +49,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
   @override
   void dispose() {
     _w.removeListener(_onChange);
+    WheelStore.instance.removeListener(_onChange);
     super.dispose();
   }
 
@@ -363,16 +368,15 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _pickLudoPlayers(bot: true);
                   }
                 }),
-                if (!snakes)
-                  _modeTile(
-                    Icons.wifi_tethering_rounded,
-                    GameT.t('mode_nearby'),
-                    GameT.fa ? 'بازی گروهی تا ۴ گوشی نزدیک، بدون اینترنت' : 'Group game with up to 4 nearby phones, no internet',
-                    () {
-                      Navigator.of(ctx).pop();
-                      _push(const LudoNearbyPage());
-                    },
-                  ),
+                _modeTile(
+                  Icons.wifi_tethering_rounded,
+                  GameT.t('mode_nearby'),
+                  snakes ? (GameT.fa ? 'دو نفره با گوشی نزدیک، بدون اینترنت' : 'Two phones nearby, no internet') : (GameT.fa ? 'بازی گروهی تا ۴ گوشی نزدیک، بدون اینترنت' : 'Group game with up to 4 nearby phones, no internet'),
+                  () {
+                    Navigator.of(ctx).pop();
+                    _push(snakes ? const SnakesNearbyPage() : const LudoNearbyPage());
+                  },
+                ),
                 _modeTile(Icons.people_alt_rounded, GameT.t('mode_local'), GameT.t('mode_local_sub'), () {
                   Navigator.of(ctx).pop();
                   if (snakes) {
@@ -660,6 +664,11 @@ class _GamesHubPageState extends State<GamesHubPage> {
 
   // ------------------------------------------------------------ بخش‌ها
 
+  int _totalCoins() {
+    final v = _w.coins + WheelStore.instance.net;
+    return v < 0 ? 0 : v;
+  }
+
   Widget _walletCard() {
     final err = _errText();
     return Container(
@@ -674,7 +683,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
         children: [
           Row(
             children: [
-              Text('🪙 ${_w.coins}', style: const TextStyle(color: gGold, fontSize: 30, fontWeight: FontWeight.w900)),
+              Text('🪙 ${_totalCoins()}', style: const TextStyle(color: gGold, fontSize: 30, fontWeight: FontWeight.w900)),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -692,7 +701,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
             child: LinearProgressIndicator(value: _w.levelProgress, minHeight: 8, backgroundColor: gBg, color: gTeal),
           ),
           const SizedBox(height: 4),
-          Text(_w.nextXp == null ? '${_w.xp} XP' : '${_w.xp} / ${_w.nextXp} XP', style: const TextStyle(color: gMuted, fontSize: 11.5)),
+          Text(_w.nextXp == null ? '${_w.xp + WheelStore.instance.xp} XP' : '${_w.xp + WheelStore.instance.xp} / ${_w.nextXp} XP', style: const TextStyle(color: gMuted, fontSize: 11.5)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -840,6 +849,10 @@ class _GamesHubPageState extends State<GamesHubPage> {
                 const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator(color: gGold)))
               else ...[
                 _walletCard(),
+                WheelEntryCard(walletCoins: _totalCoins()),
+                const SizedBox(height: 12),
+                const InviteEntryCard(),
+                const SizedBox(height: 12),
                 _goalsCard(),
                 const SizedBox(height: 18),
                 Text(GameT.t('games'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
