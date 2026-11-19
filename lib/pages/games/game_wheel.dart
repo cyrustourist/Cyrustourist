@@ -31,7 +31,7 @@ const List<WheelPrize> kWheelPrizes = <WheelPrize>[
   WheelPrize('⭐ ۳۰', 'x', 30, 14, Color(0xff2a6fd0)),
   WheelPrize('۵۰', 'c', 50, 9, Color(0xffc0392b)),
   WheelPrize('۱۵', 'c', 15, 20, Color(0xff2a9d5c)),
-  WheelPrize('دوباره', 's', 1, 6, Color(0xffc76a1a)),
+  WheelPrize('🔁', 's', 1, 6, Color(0xffc76a1a)),
   WheelPrize('۳۰', 'c', 30, 12, Color(0xff8a3fb0)),
   WheelPrize('۱۰۰ 👑', 'c', 100, 2.5, Color(0xffd4a017)),
 ];
@@ -325,10 +325,7 @@ class _WheelPageState extends State<WheelPage> with SingleTickerProviderStateMix
 
   Future<void> _spin() async {
     if (_spinning) return;
-    if (!st.canSpin) {
-      if (_canPay < kWheelExtraCost) return;
-      await st.buyExtra();
-    }
+    if (!st.canSpin) return; // بعد از چرخش روزانه قفل است
     final ok = await st.consume();
     if (!ok || !mounted) return;
     final idx = pickWheelPrize(_rnd);
@@ -377,17 +374,21 @@ class _WheelPageState extends State<WheelPage> with SingleTickerProviderStateMix
       text = 'چرخش اضافه (${wFa(st.extra)})';
       on = true;
     } else {
-      text = 'چرخش اضافه (${wFa(kWheelExtraCost)} سکه)';
-      on = _canPay >= kWheelExtraCost;
+      text = '🔒 امروز چرخیدی؛ فردا دوباره';
+      on = false;
     }
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
-          child: FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, disabledBackgroundColor: gLine, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-            onPressed: on ? _spin : null,
-            child: Text(text, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 300),
+            opacity: on || _spinning ? 1 : .4,
+            child: FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, disabledBackgroundColor: gGold.withOpacity(.55), disabledForegroundColor: gBg, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              onPressed: on ? _spin : null,
+              child: Text(text, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+            ),
           ),
         ),
         if (!st.freeReady && !_spinning)
@@ -468,7 +469,7 @@ class _WheelPageState extends State<WheelPage> with SingleTickerProviderStateMix
                                   border: Border.all(color: Colors.white38, width: 3),
                                   boxShadow: const <BoxShadow>[BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 3))],
                                 ),
-                                child: Text(_spinning ? '…' : 'بچرخان', style: const TextStyle(color: Color(0xff4a2a00), fontWeight: FontWeight.w900, fontSize: 12)),
+                                child: Text(_spinning ? '…' : (st.canSpin ? 'بچرخان' : '🔒'), style: const TextStyle(color: Color(0xff4a2a00), fontWeight: FontWeight.w900, fontSize: 12)),
                               ),
                             ),
                           ),
