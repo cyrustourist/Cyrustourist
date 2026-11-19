@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'bg_symbols.dart';
 import 'game_texts.dart';
 
 /// طرح‌های صفحه‌ی تخته‌نرد (رنگ تخته، مثلث‌ها، مهره‌ها و نقش وسط) و تنظیمات ذخیره‌شده‌ی آن.
@@ -131,7 +132,7 @@ const List<BgTheme> kBgThemes = <BgTheme>[
     ringA: Color(0xffb8a878),
     ringB: Color(0xff5c5a56),
     motif: 3,
-    motifColor: Color(0x662a1a10),
+    motifColor: Color(0x802a1a10),
     grain: .45,
     grooves: 1,
   ),
@@ -189,7 +190,7 @@ const List<BgTheme> kBgThemes = <BgTheme>[
     ringA: Color(0xff9a9486),
     ringB: Color(0xff5b5955),
     motif: 5,
-    motifColor: Color(0xcc2a160a),
+    motifColor: Color(0x992a160a),
     grain: .25,
     grooves: 1,
   ),
@@ -209,7 +210,7 @@ const List<BgTheme> kBgThemes = <BgTheme>[
     ringA: Color(0xffb8a878),
     ringB: Color(0xff5c5a56),
     motif: 6,
-    motifColor: Color(0xdd1a0f08),
+    motifColor: Color(0xaa1a0f08),
     grain: .5,
     grooves: 2,
   ),
@@ -358,20 +359,8 @@ void _motif(Canvas c, Offset o, double r, BgTheme t, [int lane = 0]) {
       }
       c.drawCircle(o, r * 0.16, Paint()..color = const Color(0xffb02a2a));
       break;
-    case 3: // فروهر ساده‌شده: دایره، بال‌ها و دم
-      c.drawCircle(o + Offset(0, -r * 0.1), r * 0.16, st);
-      c.drawCircle(o + Offset(0, -r * 0.1), r * 0.07, p);
-      for (final s in <double>[-1, 1]) {
-        for (var i = 0; i < 4; i++) {
-          final y = o.dy - r * 0.2 + i * r * 0.1;
-          c.drawLine(Offset(o.dx + s * r * 0.2, y), Offset(o.dx + s * r * (0.95 - i * 0.12), y - r * 0.18 + i * r * 0.05), st);
-        }
-      }
-      c.drawLine(o + Offset(0, r * 0.05), o + Offset(0, r * 0.55), st);
-      c.drawLine(o + Offset(0, r * 0.45), o + Offset(-r * 0.3, r * 0.8), st);
-      c.drawLine(o + Offset(0, r * 0.45), o + Offset(r * 0.3, r * 0.8), st);
-      c.drawLine(o + Offset(0, r * 0.55), o + Offset(-r * 0.18, r * 0.95), st);
-      c.drawLine(o + Offset(0, r * 0.55), o + Offset(r * 0.18, r * 0.95), st);
+    case 3: // فروهر
+      paintBgSymbol(c, BgSymbol.faravahar, o, r * 1.9, t.motifColor);
       break;
     case 4: // گل و ترنج
       for (var i = 0; i < 8; i++) {
@@ -384,152 +373,17 @@ void _motif(Canvas c, Offset o, double r, BgTheme t, [int lane = 0]) {
       break;
     case 5: // نیمه‌ی چپ: آدم بال‌دار هخامنشی، نیمه‌ی راست: فروهر
       if (lane == 0) {
-        _wingedMan(c, o, r * 1.25, t.motifColor);
+        paintBgSymbol(c, BgSymbol.wingedMan, o, r * 3.5, t.motifColor);
       } else {
-        _faravahar(c, o, r * 1.25, t.motifColor);
+        paintBgSymbol(c, BgSymbol.faravahar, o, r * 1.95, t.motifColor);
       }
       break;
     case 6: // فروهر بزرگ و کامل در هر دو نیمه
-      _faravahar(c, o, r * 1.35, t.motifColor);
+      paintBgSymbol(c, BgSymbol.faravahar, o, r * 2.05, t.motifColor);
       break;
     default:
       break;
   }
-}
-
-/// پرهای کوچک (خط‌های عمود) در امتداد یک منحنی؛ [dir] = ۱ یا ‎-۱ برای سمت پرها
-void _feathers(Canvas c, Path path, double len, Paint st, int n, double dir) {
-  for (final m in path.computeMetrics()) {
-    for (var i = 1; i <= n; i++) {
-      final tg = m.getTangentForOffset(m.length * i / (n + 1));
-      if (tg == null) continue;
-      final v = tg.vector;
-      final nrm = Offset(-v.dy, v.dx) * dir;
-      c.drawLine(tg.position, tg.position + nrm * len, st);
-    }
-  }
-}
-
-/// فروهر: حلقه، نیم‌تنه‌ی انسان، بال‌های سه‌ردیفه، دم سه‌شاخه و دو نوار پیچ‌خورده
-void _faravahar(Canvas c, Offset o, double r, Color col) {
-  final p = Paint()..color = col;
-  final st = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = max(1.1, r * 0.03)
-    ..strokeCap = StrokeCap.round
-    ..color = col;
-  final thin = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = max(0.8, r * 0.018)
-    ..strokeCap = StrokeCap.round
-    ..color = col;
-  final ring = o + Offset(0, r * 0.02);
-  // حلقه‌ی میانی
-  c.drawCircle(ring, r * 0.17, st);
-  c.drawCircle(ring, r * 0.12, thin);
-  // نیم‌تنه‌ی انسان در حلقه
-  c.drawCircle(ring + Offset(0, -r * 0.045), r * 0.045, p);
-  c.drawPath(
-    Path()
-      ..moveTo(ring.dx - r * 0.07, ring.dy + r * 0.1)
-      ..quadraticBezierTo(ring.dx, ring.dy - r * 0.04, ring.dx + r * 0.07, ring.dy + r * 0.1)
-      ..close(),
-    p,
-  );
-  // بال‌ها (سه ردیف در هر سمت)
-  for (final s in <double>[-1, 1]) {
-    for (var tier = 0; tier < 3; tier++) {
-      final y = ring.dy - r * 0.07 + tier * r * 0.085;
-      final x0 = ring.dx + s * r * 0.17;
-      final reach = r * (1.0 - tier * 0.13);
-      final path = Path()
-        ..moveTo(x0, y)
-        ..quadraticBezierTo(ring.dx + s * reach * 0.55, y - r * 0.22, ring.dx + s * reach, y - r * 0.12 + tier * r * 0.03);
-      c.drawPath(path, st);
-      _feathers(c, path, r * (0.16 - tier * 0.02), thin, 9 - tier, s);
-    }
-  }
-  // بدنه و دم
-  c.drawLine(ring + Offset(0, r * 0.17), ring + Offset(0, r * 0.5), st);
-  for (final s in <double>[-1, 1]) {
-    for (var i = 0; i < 3; i++) {
-      c.drawLine(ring + Offset(s * r * 0.015 * i, r * 0.3), ring + Offset(s * r * (0.14 + i * 0.1), r * (0.62 + i * 0.09)), thin);
-    }
-    // نوار پیچ‌خورده‌ی کنار حلقه
-    final rib = Path()
-      ..moveTo(ring.dx + s * r * 0.15, ring.dy + r * 0.12)
-      ..cubicTo(ring.dx + s * r * 0.45, ring.dy + r * 0.2, ring.dx + s * r * 0.55, ring.dy + r * 0.45, ring.dx + s * r * 0.4, ring.dy + r * 0.55);
-    c.drawPath(rib, st);
-    c.drawCircle(ring + Offset(s * r * 0.36, r * 0.55), r * 0.045, st);
-  }
-  c.drawLine(ring + Offset(0, r * 0.5), ring + Offset(0, r * 0.92), st);
-  c.drawLine(ring + Offset(0, r * 0.5), ring + Offset(-r * 0.12, r * 0.9), thin);
-  c.drawLine(ring + Offset(0, r * 0.5), ring + Offset(r * 0.12, r * 0.9), thin);
-}
-
-/// آدم بال‌دار هخامنشی: تاج پردار، جامه‌ی بلند، دست با گل و دو بال برافراشته
-void _wingedMan(Canvas c, Offset o, double r, Color col) {
-  final p = Paint()..color = col;
-  final fill = Paint()..color = col.withOpacity(col.opacity * 0.35);
-  final st = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = max(1.1, r * 0.03)
-    ..strokeCap = StrokeCap.round
-    ..color = col;
-  final thin = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = max(0.8, r * 0.018)
-    ..strokeCap = StrokeCap.round
-    ..color = col;
-  final head = o + Offset(0, -r * 0.55);
-  // بال‌ها: دو ردیف رو به بالا و بیرون، یک ردیف رو به پایین
-  for (final s in <double>[-1, 1]) {
-    for (var tier = 0; tier < 3; tier++) {
-      final y = o.dy - r * 0.42 + tier * r * 0.1;
-      final path = Path()
-        ..moveTo(o.dx + s * r * 0.12, y)
-        ..quadraticBezierTo(o.dx + s * r * (0.55 - tier * 0.05), y - r * 0.34, o.dx + s * r * (0.92 - tier * 0.1), y - r * (0.5 - tier * 0.12));
-      c.drawPath(path, st);
-      _feathers(c, path, r * 0.17, thin, 8 - tier, -s);
-    }
-    final low = Path()
-      ..moveTo(o.dx + s * r * 0.14, o.dy - r * 0.1)
-      ..quadraticBezierTo(o.dx + s * r * 0.6, o.dy - r * 0.05, o.dx + s * r * 0.7, o.dy + r * 0.4);
-    c.drawPath(low, st);
-    _feathers(c, low, r * 0.15, thin, 7, s);
-    // دست برافراشته با گل
-    c.drawLine(o + Offset(s * r * 0.13, -r * 0.4), o + Offset(s * r * 0.3, -r * 0.18), st);
-    c.drawCircle(o + Offset(s * r * 0.33, -r * 0.2), r * 0.045, st);
-  }
-  // جامه‌ی بلند
-  final robe = Path()
-    ..moveTo(o.dx - r * 0.13, o.dy - r * 0.44)
-    ..lineTo(o.dx + r * 0.13, o.dy - r * 0.44)
-    ..lineTo(o.dx + r * 0.22, o.dy + r * 0.78)
-    ..lineTo(o.dx - r * 0.22, o.dy + r * 0.78)
-    ..close();
-  c.drawPath(robe, fill);
-  c.drawPath(robe, st);
-  for (var i = 0; i < 3; i++) {
-    final y = o.dy + r * (0.52 + i * 0.09);
-    c.drawLine(Offset(o.dx - r * 0.2, y), Offset(o.dx + r * 0.2, y), thin);
-  }
-  c.drawLine(o + Offset(0, -r * 0.3), o + Offset(0, r * 0.5), thin);
-  // سر و تاج پردار
-  c.drawCircle(head, r * 0.085, p);
-  final crown = Path()
-    ..moveTo(head.dx - r * 0.1, head.dy - r * 0.07)
-    ..lineTo(head.dx - r * 0.13, head.dy - r * 0.2)
-    ..lineTo(head.dx + r * 0.13, head.dy - r * 0.2)
-    ..lineTo(head.dx + r * 0.1, head.dy - r * 0.07)
-    ..close();
-  c.drawPath(crown, st);
-  for (var i = -2; i <= 2; i++) {
-    c.drawLine(head + Offset(i * r * 0.05, -r * 0.2), head + Offset(i * r * 0.065, -r * 0.29), thin);
-  }
-  // پاها
-  c.drawLine(o + Offset(-r * 0.1, r * 0.78), o + Offset(-r * 0.1, r * 0.9), st);
-  c.drawLine(o + Offset(r * 0.1, r * 0.78), o + Offset(r * 0.1, r * 0.9), st);
 }
 
 /// مهره با شیار و سایه؛ [pl] ۰ یا ۱
