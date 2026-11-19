@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../groups/group_ui.dart';
 import 'game_fx.dart';
+import 'game_sound_sheet.dart';
 import 'game_texts.dart';
 
 /// یک خط گفتگو بین بازیکنان
@@ -14,13 +15,12 @@ class ChatLine {
 
 /// دکمهٔ صدا/لرزش برای نوار بالای بازی
 Widget gameFxAction(VoidCallback onChanged) {
-  return IconButton(
-    tooltip: GameT.fa ? 'صدا و لرزش' : 'Sound & vibration',
-    onPressed: () async {
-      await GameFx.toggle();
-      onChanged();
-    },
-    icon: Icon(GameFx.on ? Icons.volume_up_rounded : Icons.volume_off_rounded, color: GameFx.on ? gGold : gMuted),
+  return Builder(
+    builder: (context) => IconButton(
+      tooltip: GameT.fa ? 'صدا و لرزش' : 'Sound & vibration',
+      onPressed: () => showGameSoundSheet(context, onChanged: onChanged),
+      icon: Icon(GameFx.on ? Icons.volume_up_rounded : Icons.volume_off_rounded, color: GameFx.on ? gGold : gMuted),
+    ),
   );
 }
 
