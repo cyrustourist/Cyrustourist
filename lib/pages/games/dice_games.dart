@@ -13,6 +13,7 @@ import 'dice_skins.dart';
 import 'game_fx.dart';
 import 'game_widgets.dart';
 import 'game_texts.dart';
+import 'game_skins.dart';
 
 /// بازی‌های تاسی: «مار و پله» و «منچ» (با ربات یا دو نفره روی یک گوشی).
 /// بدون اینترنت کار می‌کنند و نتیجه مثل بازی‌های آفلاین دیگر با [GameWallet.reportOffline] سکه می‌دهد.
@@ -430,6 +431,14 @@ class _SnakesPageState extends State<SnakesPage> {
   bool resultReady = false;
   int _gen = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    SkinStore.load().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   bool get isBot => widget.mode == DiceMode.bot;
   bool get finished => winner >= 0;
   bool get humanTurn => !finished && !(isBot && turn == 1);
@@ -614,14 +623,14 @@ class _SnakesPageState extends State<SnakesPage> {
           centerTitle: true,
           iconTheme: const IconThemeData(color: gGold),
           title: Text(GameT.t('snakes'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
-          actions: [gameFxAction(() => setState(() {}))],
+          actions: [skinAction(() => showSkinSheet(context, game: 'snakes', title: 'طرح صفحه مار و پله', names: <String>[for (final k in kSnakesSkins) k.name], prices: <int>[for (final k in kSnakesSkins) k.price], preview: snakesPreview, onChanged: () => setState(() {}))), gameFxAction(() => setState(() {}))],
         ),
         body: SafeArea(
           child: LayoutBuilder(
             builder: (ctx, cons) {
-              final w = min(cons.maxWidth - 24, 520.0);
+              final w = min(cons.maxWidth - 8, 600.0);
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 20),
                 child: Center(
                   child: SizedBox(
                     width: w,
@@ -644,6 +653,7 @@ class _SnakesPageState extends State<SnakesPage> {
                         _board(w),
                         const SizedBox(height: 14),
                         _diceControls(die: die, rolling: rolling, enabled: humanTurn && !busy, onRoll: _roll),
+                        if (isBot) BotChatBox(botName: GameT.t('robot')),
                         if (finished && resultReady)
                           _diceResultCard(
                             title: _statusText(),
@@ -667,34 +677,37 @@ class _SnakesPageState extends State<SnakesPage> {
 }
 
 class _SnakesPainter extends CustomPainter {
-  const _SnakesPainter(this.startLabel);
+  _SnakesPainter(this.startLabel) : skin = kSnakesSkins[SkinStore.idx('snakes', kSnakesSkins.length)];
   final String startLabel;
-
-  static const List<Color> _snakeColors = <Color>[
-    Color(0xff2ecc71),
-    Color(0xffe74c3c),
-    Color(0xffb36bdc),
-    Color(0xfff39c12),
-    Color(0xff1abc9c),
-    Color(0xffff6fa5),
-  ];
+  final SnakesSkin skin;
 
   @override
   void paint(Canvas canvas, Size size) {
     final u = size.width / 10;
+    final bgRect = Offset.zero & Size(size.width, size.height);
+    canvas.drawRRect(RRect.fromRectAndRadius(bgRect, Radius.circular(u * 0.25)), Paint()..shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[skin.frameA, skin.frameB]).createShader(bgRect));
     final cell = Paint();
     for (var n = 1; n <= 100; n++) {
       final c = _snakeCellCenter(n, u);
       final r = (n - 1) ~/ 10;
       final i = (n - 1) % 10;
       final col = r.isEven ? i : 9 - i;
-      cell.color = n == 100
-          ? const Color(0xff8a6d1a)
-          : ((r + col).isEven ? const Color(0xff12394f) : const Color(0xff0d2a3b));
+      cell.color = n == 100 ? skin.finish : ((r + col).isEven ? skin.cellA : skin.cellB);
       final rect = Rect.fromCenter(center: c, width: u, height: u);
       canvas.drawRect(rect, cell);
+      if (skin.motif == 1 && n != 100) {
+        final d = Path()
+          ..moveTo(c.dx, c.dy - u * 0.2)
+          ..lineTo(c.dx + u * 0.14, c.dy)
+          ..lineTo(c.dx, c.dy + u * 0.2)
+          ..lineTo(c.dx - u * 0.14, c.dy)
+          ..close();
+        canvas.drawPath(d, Paint()..color = const Color(0x22ffffff));
+      } else if (skin.motif == 2 && n != 100) {
+        canvas.drawCircle(c + Offset(u * 0.18, u * 0.18), u * 0.07, Paint()..color = const Color(0x33ffffff));
+      }
       final tp = TextPainter(
-        text: TextSpan(text: n == 100 ? '🏁 100' : '$n', style: TextStyle(color: const Color(0x88ffffff), fontSize: u * 0.26)),
+        text: TextSpan(text: n == 100 ? '🏁 100' : '$n', style: TextStyle(color: skin.num, fontSize: u * 0.26)),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, rect.topLeft + Offset(u * 0.08, u * 0.04));
@@ -709,7 +722,7 @@ class _SnakesPainter extends CustomPainter {
 
     // نوار شروع
     final strip = RRect.fromRectAndRadius(Rect.fromLTWH(0, u * 10 + u * 0.08, u * 10, u * 0.8), Radius.circular(u * 0.25));
-    canvas.drawRRect(strip, Paint()..color = const Color(0xff0f2f42));
+    canvas.drawRRect(strip, Paint()..color = skin.frameA);
     final st = TextPainter(
       text: TextSpan(text: startLabel, style: TextStyle(color: gMuted, fontSize: u * 0.3, fontWeight: FontWeight.w800)),
       textDirection: TextDirection.ltr,
@@ -724,7 +737,7 @@ class _SnakesPainter extends CustomPainter {
       if (to > from) {
         _ladder(canvas, a, b, u);
       } else {
-        _snake(canvas, a, b, u, _snakeColors[si % _snakeColors.length]);
+        _snake(canvas, a, b, u, skin.snakes[si % skin.snakes.length]);
         si++;
       }
     });
@@ -739,11 +752,11 @@ class _SnakesPainter extends CustomPainter {
     final ny = dx / len;
     final w = u * 0.13;
     final rail = Paint()
-      ..color = const Color(0xffd9a441)
+      ..color = skin.rail
       ..strokeWidth = u * 0.07
       ..strokeCap = StrokeCap.round;
     final rung = Paint()
-      ..color = const Color(0xffb8842c)
+      ..color = skin.rung
       ..strokeWidth = u * 0.055
       ..strokeCap = StrokeCap.round;
     final off = Offset(nx * w, ny * w);
@@ -804,7 +817,7 @@ class _SnakesPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SnakesPainter old) => old.startLabel != startLabel;
+  bool shouldRepaint(covariant _SnakesPainter old) => old.startLabel != startLabel || old.skin != skin;
 }
 
 // ================================================================= منچ
@@ -1157,6 +1170,14 @@ class _LudoPageState extends State<LudoPage> {
 
   bool get isBot => widget.mode == DiceMode.bot;
   bool get finished => winner >= 0;
+  @override
+  void initState() {
+    super.initState();
+    SkinStore.load().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   bool isBotSeat(int pl) => isBot && pl != 0;
   bool get humanTurn => !finished && !isBotSeat(turn);
 
@@ -1354,7 +1375,7 @@ class _LudoPageState extends State<LudoPage> {
           centerTitle: true,
           iconTheme: const IconThemeData(color: gGold),
           title: Text(GameT.t('ludo'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
-          actions: [gameFxAction(() => setState(() {}))],
+          actions: [skinAction(() => showSkinSheet(context, game: 'ludo', title: 'طرح صفحه منچ', names: <String>[for (final k in kLudoSkins) k.name], prices: <int>[for (final k in kLudoSkins) k.price], preview: ludoPreview, onChanged: () => setState(() {}))), gameFxAction(() => setState(() {}))],
         ),
         body: SafeArea(
           child: LayoutBuilder(
@@ -1378,6 +1399,7 @@ class _LudoPageState extends State<LudoPage> {
                         _buildLudoBoard(w: w, seats: seats, toks: toks, turn: turn, movable: awaiting ? movable : const <int>[], onTap: _onTokenTap),
                         const SizedBox(height: 14),
                         _diceControls(die: die, rolling: rolling, enabled: humanTurn && !busy && !awaiting, onRoll: _roll),
+                        if (isBot) BotChatBox(botName: GameT.t('robot')),
                         if (finished && resultReady)
                           _diceResultCard(
                             title: _statusText(),
@@ -1401,13 +1423,15 @@ class _LudoPageState extends State<LudoPage> {
 }
 
 class _LudoPainter extends CustomPainter {
-  const _LudoPainter({required this.activeSeat});
+  _LudoPainter({required this.activeSeat}) : skin = kLudoSkins[SkinStore.idx('ludo', kLudoSkins.length)];
   final int activeSeat;
+  final LudoSkin skin;
 
   Color _mix(Color a, Color b, double t) => Color.lerp(a, b, t) ?? a;
 
   /// یک «حفره» روی تخته (مثل تختهٔ چوبی کنده‌کاری‌شده)
-  void _hole(Canvas canvas, Offset o, double r, {Color? ring, Color tint = const Color(0xffc27a52), bool star = false}) {
+  void _hole(Canvas canvas, Offset o, double r, {Color? ring, Color? tint, bool star = false}) {
+    final tn = tint ?? skin.hole;
     canvas.drawCircle(o + Offset(0, r * 0.14), r * 1.05, Paint()..color = const Color(0x66ffffff));
     final rect = Rect.fromCircle(center: o, radius: r);
     canvas.drawCircle(
@@ -1416,7 +1440,7 @@ class _LudoPainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           center: const Alignment(-0.3, -0.45),
-          colors: <Color>[_mix(tint, Colors.white, 0.16), _mix(tint, Colors.black, 0.34)],
+          colors: <Color>[_mix(tn, Colors.white, 0.16), _mix(tn, Colors.black, 0.34)],
         ).createShader(rect),
     );
     if (ring != null) {
@@ -1455,10 +1479,10 @@ class _LudoPainter extends CustomPainter {
     canvas.drawRRect(
       RRect.fromRectAndRadius(full, Radius.circular(u * 0.6)),
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[Color(0xff8a4c2d), Color(0xff3b1d12)],
+          colors: <Color>[skin.frameA, skin.frameB],
         ).createShader(full),
     );
     canvas.drawRRect(
@@ -1466,7 +1490,7 @@ class _LudoPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = u * 0.07
-        ..color = const Color(0xccf0c36a),
+        ..color = skin.rim.withAlpha(204),
     );
 
     // چهار خانهٔ رنگی گوشه‌ها
@@ -1521,10 +1545,10 @@ class _LudoPainter extends CustomPainter {
     canvas.drawPath(
       plate,
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[Color(0xfff7e6bd), Color(0xffdcb47a)],
+          colors: <Color>[skin.plateA, skin.plateB],
         ).createShader(full),
     );
 
@@ -1535,7 +1559,7 @@ class _LudoPainter extends CustomPainter {
       final o = Offset((cell[1] + 0.5) * u, (cell[0] + 0.5) * u);
       final startOwner = i % 13 == 0 ? i ~/ 13 : -1;
       if (startOwner >= 0) {
-        _hole(canvas, o, hr, ring: _ludoSeatColors[startOwner], tint: _mix(_ludoSeatColors[startOwner], const Color(0xffc27a52), 0.55));
+        _hole(canvas, o, hr, ring: _ludoSeatColors[startOwner], tint: _mix(_ludoSeatColors[startOwner], skin.hole, 0.55));
       } else {
         _hole(canvas, o, hr, star: _Ludo.safe.contains(i));
       }
@@ -1595,7 +1619,7 @@ class _LudoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _LudoPainter old) => old.activeSeat != activeSeat;
+  bool shouldRepaint(covariant _LudoPainter old) => old.activeSeat != activeSeat || old.skin != skin;
 }
 
 // ================================================================= منچ جمعی (گوشی‌های نزدیک، بدون اینترنت)
@@ -2457,4 +2481,543 @@ Widget sharedResultCard({
 /// پیش‌نمایش یک تاس با ظاهر مشخص (فروشگاه)
 Widget sharedDieSkin(String code, {double size = 40, int v = 5}) {
   return SizedBox(width: size, height: size, child: CustomPaint(painter: _DiePainter(v, DiceSkins.byCode(code))));
+}
+
+// ================================================================= مار و پله با گوشی‌های نزدیک (۲ نفره، بدون اینترنت)
+
+class _SnRoom {
+  _SnRoom(this.code, this.hostUid, this.hostName, this.ts);
+  final String code;
+  final String hostUid;
+  final String hostName;
+  int ts;
+}
+
+/// گوشی میزبان تاس و قوانین را اجرا می‌کند و وضعیت را برای حریف می‌فرستد (مثل تخته‌نرد نزدیک).
+class SnakesNearbyPage extends StatefulWidget {
+  const SnakesNearbyPage({super.key});
+
+  @override
+  State<SnakesNearbyPage> createState() => _SnakesNearbyPageState();
+}
+
+class _SnakesNearbyPageState extends State<SnakesNearbyPage> {
+  final GameWallet _w = GameWallet.instance;
+  final OfflineMeshService _mesh = OfflineMeshService.instance;
+  final Random _rnd = Random();
+  StreamSubscription<Map<String, dynamic>>? _sub;
+  Timer? _tick;
+
+  String stage = 'menu'; // menu | host | join | play
+  String code = '';
+  String peerUid = '';
+  bool isHost = true;
+  bool started = false;
+  bool lost = false;
+  bool _starting = false;
+  final Map<String, _SnRoom> rooms = <String, _SnRoom>{};
+  List<String> pnames = <String>['', ''];
+
+  final List<int> pos = <int>[0, 0];
+  int turn = 0;
+  int die = 1;
+  bool rolling = false;
+  bool busy = false;
+  int winner = -1;
+  String msg = '';
+  int gained = 0;
+  bool resultReady = false;
+  bool reported = false;
+  int _gen = 0;
+  int _lastSnap = 0;
+  int seq = 0;
+  bool rmMine = false;
+  bool rmPeer = false;
+  bool chatOn = true;
+  final List<ChatLine> chat = <ChatLine>[];
+  int _lastChat = 0;
+
+  int get myIdx => isHost ? 0 : 1;
+  bool get myTurn => started && !lost && winner < 0 && turn == myIdx && !busy;
+
+  @override
+  void initState() {
+    super.initState();
+    SkinStore.load().then((_) {
+      if (mounted) setState(() {});
+    });
+    NearbyGameLink.instance.attach();
+    _sub = NearbyGameLink.instance.events.stream.listen(_onEvent);
+    _mesh.addListener(_onMesh);
+    _tick = Timer.periodic(const Duration(seconds: 2), (_) => _onTick());
+  }
+
+  @override
+  void dispose() {
+    _gen++;
+    _tick?.cancel();
+    _sub?.cancel();
+    _mesh.removeListener(_onMesh);
+    NearbyGameLink.instance.detach();
+    super.dispose();
+  }
+
+  void _onMesh() {
+    if (mounted) setState(() {});
+  }
+
+  void _send(Map<String, dynamic> m) => NearbyGameLink.instance.send(<String, dynamic>{...m, 'to': peerUid, 'code': code});
+
+  Map<String, dynamic> _snap() => <String, dynamic>{'g': 'sn_s', 'pos': pos, 'turn': turn, 'die': die, 'rolling': rolling, 'busy': busy, 'win': winner, 'msg': msg, 'seq': seq, 'names': pnames};
+
+  void _sync() {
+    if (!mounted) return;
+    if (isHost && started) {
+      seq++;
+      _send(_snap());
+    }
+    setState(() {});
+  }
+
+  // ---------------------------------------------------------------- منطق (روی گوشی میزبان)
+
+  void _newGame() {
+    _gen++;
+    pos[0] = 0;
+    pos[1] = 0;
+    turn = _rnd.nextInt(2);
+    die = 1;
+    rolling = false;
+    busy = false;
+    winner = -1;
+    msg = '';
+    gained = 0;
+    resultReady = false;
+    reported = false;
+    rmMine = false;
+    rmPeer = false;
+    started = true;
+    lost = false;
+    _sync();
+  }
+
+  Future<void> _hostRoll(int who) async {
+    if (!isHost || busy || winner >= 0 || turn != who || !started) return;
+    final gen = _gen;
+    busy = true;
+    rolling = true;
+    msg = '';
+    _sync();
+    await Future<void>.delayed(const Duration(milliseconds: 650));
+    if (!mounted || gen != _gen) return;
+    final r = _rnd.nextInt(6) + 1;
+    die = r;
+    rolling = false;
+    GameFx.roll();
+    _sync();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted || gen != _gen) return;
+    await _hostMove(who, r, gen);
+  }
+
+  Future<void> _hostMove(int who, int r, int gen) async {
+    var note = '';
+    final target = pos[who] + r;
+    if (target > 100) {
+      note = _dt('exact');
+    } else {
+      GameFx.move();
+      pos[who] = target;
+      _sync();
+      await Future<void>.delayed(const Duration(milliseconds: 550));
+      if (!mounted || gen != _gen) return;
+      final j = _kJumps[target];
+      if (j != null) {
+        note = j > target ? _dt('ladder') : _dt('snake');
+        if (j > target) {
+          GameFx.move();
+        } else {
+          GameFx.hit();
+        }
+        pos[who] = j;
+        msg = note;
+        _sync();
+        await Future<void>.delayed(const Duration(milliseconds: 650));
+        if (!mounted || gen != _gen) return;
+      }
+      if (pos[who] == 100) {
+        GameFx.win();
+        winner = who;
+        busy = false;
+        _sync();
+        _finish();
+        return;
+      }
+    }
+    final again = r == 6;
+    if (again) note = note.isEmpty ? _dt('extra') : '$note · ${_dt('extra')}';
+    msg = note;
+    if (!again) turn = 1 - turn;
+    busy = false;
+    _sync();
+  }
+
+  Future<void> _finish() async {
+    if (reported) return;
+    reported = true;
+    final g = await _w.reportOffline(winner == myIdx ? 'win' : 'loss', 'nearby');
+    if (!mounted) return;
+    setState(() {
+      gained = g;
+      resultReady = true;
+    });
+  }
+
+  void _myRoll() {
+    if (!myTurn) return;
+    if (isHost) {
+      _hostRoll(0);
+    } else {
+      _send(<String, dynamic>{'g': 'sn_roll'});
+    }
+  }
+
+  // ---------------------------------------------------------------- شبکه
+
+  void _onTick() {
+    if (!mounted || !_mesh.running) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (stage == 'host') {
+      NearbyGameLink.instance.send(<String, dynamic>{'g': 'sn_open', 'code': code});
+    } else if (stage == 'join') {
+      rooms.removeWhere((k, v) => now - v.ts > 7000);
+      if (code.isNotEmpty && !started) NearbyGameLink.instance.send(<String, dynamic>{'g': 'sn_join', 'to': peerUid, 'code': code});
+      setState(() {});
+    } else if (stage == 'play' && started) {
+      if (isHost) {
+        _send(_snap());
+        if (!lost && peerUid.isNotEmpty && !_mesh.peers.values.any((p) => p.uid == peerUid) && winner < 0) setState(() => lost = true);
+      } else if (!lost && now - _lastSnap > 20000 && winner < 0) {
+        setState(() => lost = true);
+      }
+    }
+  }
+
+  void _onEvent(Map<String, dynamic> m) {
+    if (!mounted) return;
+    final g = '${m['g']}';
+    if (!g.startsWith('sn_')) return;
+    final from = '${m['u']}';
+    final toMe = '${m['to']}' == _mesh.myUid;
+    switch (g) {
+      case 'sn_open':
+        if (stage == 'join') {
+          final c = '${m['code']}';
+          setState(() => rooms[c] = _SnRoom(c, from, '${m['n']}', DateTime.now().millisecondsSinceEpoch));
+        }
+        break;
+      case 'sn_join':
+        if (stage == 'host' && toMe && '${m['code']}' == code) {
+          peerUid = from;
+          pnames = <String>[_mesh.myName, '${m['n']}'];
+          stage = 'play';
+          _newGame();
+        }
+        break;
+      default:
+        if (!(toMe && '${m['code']}' == code && from == peerUid && stage != 'menu')) return;
+        switch (g) {
+          case 'sn_s':
+            if (isHost) return;
+            final sq = (m['seq'] as num?)?.toInt() ?? 0;
+            if (started && sq <= seq) return;
+            final p = m['pos'];
+            if (p is! List || p.length != 2) return;
+            final prevRolling = rolling;
+            setState(() {
+              seq = sq;
+              started = true;
+              stage = 'play';
+              lost = false;
+              _lastSnap = DateTime.now().millisecondsSinceEpoch;
+              pos[0] = (p[0] as num).toInt();
+              pos[1] = (p[1] as num).toInt();
+              turn = (m['turn'] as num).toInt();
+              die = (m['die'] as num).toInt();
+              rolling = m['rolling'] == true;
+              busy = m['busy'] == true;
+              winner = (m['win'] as num).toInt();
+              msg = '${m['msg']}';
+              final nm = m['names'];
+              if (nm is List && nm.length == 2) pnames = <String>['${nm[0]}', '${nm[1]}'];
+              if (winner < 0) {
+                reported = false;
+                resultReady = false;
+                gained = 0;
+                rmMine = false;
+                rmPeer = false;
+              }
+            });
+            if (rolling && !prevRolling) GameFx.roll();
+            if (winner >= 0) {
+              GameFx.win();
+              _finish();
+            }
+            break;
+          case 'sn_roll':
+            if (isHost && turn == 1) _hostRoll(1);
+            break;
+          case 'sn_chat':
+            final t = '${m['t']}';
+            if (chatOn && t.isNotEmpty && t.length <= 80) {
+              setState(() {
+                chat.add(ChatLine(pnames[1 - myIdx], t, false));
+                if (chat.length > 30) chat.removeAt(0);
+              });
+            }
+            break;
+          case 'sn_rm':
+            rmPeer = true;
+            if (isHost && rmMine && winner >= 0) {
+              _newGame();
+            } else {
+              setState(() {});
+            }
+            break;
+        }
+    }
+  }
+
+  Future<void> _toggleNet() async {
+    if (_starting) return;
+    if (_mesh.running) {
+      await _mesh.stop();
+      return;
+    }
+    setState(() => _starting = true);
+    final ok = await _mesh.start();
+    if (!mounted) return;
+    setState(() => _starting = false);
+    if (!ok) gToast(context, _mesh.lastError.isEmpty ? GameT.t('nearby_perm') : '${GameT.t('nearby_perm')}\n(${_mesh.lastError.length > 70 ? _mesh.lastError.substring(0, 70) : _mesh.lastError})');
+  }
+
+  void _createRoom() {
+    if (!_mesh.running) return;
+    code = '${1000 + _rnd.nextInt(9000)}';
+    isHost = true;
+    started = false;
+    setState(() => stage = 'host');
+    NearbyGameLink.instance.send(<String, dynamic>{'g': 'sn_open', 'code': code});
+  }
+
+  void _openJoin() {
+    isHost = false;
+    started = false;
+    code = '';
+    setState(() => stage = 'join');
+  }
+
+  void _joinRoom(_SnRoom r) {
+    setState(() {
+      code = r.code;
+      peerUid = r.hostUid;
+    });
+    NearbyGameLink.instance.send(<String, dynamic>{'g': 'sn_join', 'to': peerUid, 'code': code});
+  }
+
+  void _sendChat(String raw) {
+    final t = raw.trim();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (!chatOn || t.isEmpty || t.length > 60 || now - _lastChat < 1000) return;
+    _lastChat = now;
+    _send(<String, dynamic>{'g': 'sn_chat', 't': t});
+    setState(() {
+      chat.add(ChatLine(pnames[myIdx], t, true));
+      if (chat.length > 30) chat.removeAt(0);
+    });
+  }
+
+  void _rematch() {
+    if (rmMine) return;
+    rmMine = true;
+    _send(<String, dynamic>{'g': 'sn_rm'});
+    if (isHost && rmPeer) {
+      _newGame();
+      return;
+    }
+    setState(() {});
+  }
+
+  // ---------------------------------------------------------------- رابط
+
+  String _status() {
+    if (winner >= 0) return winner == myIdx ? GameT.t('you_win') : GameT.t('you_lose');
+    if (lost) return _dt('lu_lost');
+    return turn == myIdx ? GameT.t('your_turn') : GameT.t('turn_of', <String, String>{'n': pnames[turn]});
+  }
+
+  Widget _netCard() {
+    final on = _mesh.running;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(backgroundColor: on ? gPanel : gGold, foregroundColor: on ? gGold : gBg, padding: const EdgeInsets.symmetric(vertical: 14)),
+        onPressed: _toggleNet,
+        icon: _starting ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Icon(on ? Icons.wifi_tethering_off_rounded : Icons.wifi_tethering_rounded),
+        label: Text(on ? '${GameT.t('nearby_stop')} · ${_mesh.peers.length}' : GameT.t('nearby_start'), style: const TextStyle(fontWeight: FontWeight.w900)),
+      ),
+    );
+  }
+
+  Widget _big(IconData icon, String text, VoidCallback? onTap) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: FilledButton.icon(
+          style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, disabledBackgroundColor: gLine, padding: const EdgeInsets.symmetric(vertical: 16)),
+          onPressed: onTap,
+          icon: Icon(icon),
+          label: Text(text, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+        ),
+      );
+
+  Widget _token(int p, double u) {
+    final n = pos[p];
+    final dx = (p == 0 ? -0.17 : 0.17) * u;
+    final Offset c;
+    if (n <= 0) {
+      c = Offset((0.7 + p * 0.7) * u, 10 * u + 0.45 * u);
+    } else {
+      final base = _snakeCellCenter(n, u);
+      c = Offset(base.dx + dx, base.dy);
+    }
+    final d = u * 0.46;
+    return AnimatedPositioned(
+      key: ValueKey<int>(p),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOut,
+      left: c.dx - d / 2,
+      top: c.dy - d / 2,
+      width: d,
+      height: d,
+      child: _tokenDot(_snakePlayerColors[p], d, glow: winner < 0 && turn == p),
+    );
+  }
+
+  Widget _board(double w) {
+    final u = w / 10;
+    return SizedBox(
+      width: w,
+      height: w + u * 0.9,
+      child: Stack(children: [Positioned.fill(child: RepaintBoundary(child: CustomPaint(painter: _SnakesPainter(_dt('start'))))), _token(0, u), _token(1, u)]),
+    );
+  }
+
+  Widget _playBody(double w) {
+    if (!started) return Padding(padding: const EdgeInsets.only(top: 40), child: Column(children: [const CircularProgressIndicator(color: gGold), const SizedBox(height: 16), Text(GameT.t('connecting'), style: const TextStyle(color: gGold))]));
+    return Column(
+      children: [
+        Row(children: [
+          _diceChip(pnames[0], _snakePlayerColors[0], pos[0] == 0 ? '' : _dt('cell', <String, String>{'n': '${pos[0]}'}), winner < 0 && turn == 0),
+          const SizedBox(width: 10),
+          _diceChip(pnames[1], _snakePlayerColors[1], pos[1] == 0 ? '' : _dt('cell', <String, String>{'n': '${pos[1]}'}), winner < 0 && turn == 1),
+        ]),
+        const SizedBox(height: 10),
+        Text(_status(), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+        SizedBox(height: 20, child: Text(msg, style: const TextStyle(color: gSky, fontSize: 12.5, fontWeight: FontWeight.w700))),
+        const SizedBox(height: 4),
+        _board(w),
+        const SizedBox(height: 14),
+        _diceControls(die: die, rolling: rolling, enabled: myTurn, onRoll: _myRoll),
+        if (chatOn) GameChatPanel(lines: chat, onSend: _sendChat),
+        if (winner >= 0 && resultReady) ...<Widget>[
+          _diceResultCard(title: _status(), gained: gained, onAgain: _rematch, onBack: () => Navigator.of(context).pop()),
+          if (rmPeer || rmMine)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(rmMine ? 'درخواست بازی دوباره ارسال شد؛ منتظر حریف…' : 'حریف بازی دوباره می‌خواهد', textAlign: TextAlign.center, style: const TextStyle(color: gSky, fontSize: 12.5)),
+            ),
+        ],
+        const SizedBox(height: 14),
+        Text(_dt('snakes_rule'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 11.5, height: 1.7)),
+      ],
+    );
+  }
+
+  Widget _menuBody() {
+    switch (stage) {
+      case 'host':
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _netCard(),
+          const SizedBox(height: 20),
+          const Center(child: CircularProgressIndicator(color: gGold)),
+          const SizedBox(height: 16),
+          const Text('منتظر پیوستن حریف…\nحریف باید «پیوستن به بازی» را بزند.', textAlign: TextAlign.center, style: TextStyle(color: gGold, fontWeight: FontWeight.w800, height: 1.9)),
+        ]);
+      case 'join':
+        final list = rooms.values.toList();
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _netCard(),
+          if (code.isNotEmpty)
+            const Text('پیوستید. منتظر شروع بازی…', textAlign: TextAlign.center, style: TextStyle(color: gGold, fontWeight: FontWeight.w800, height: 1.8))
+          else if (list.isEmpty)
+            Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: Text('بازی‌ای در اطراف پیدا نشد.\nمیزبان باید «ساخت بازی» را بزند و کنار هم باشید.', textAlign: TextAlign.center, style: const TextStyle(color: gMuted, height: 1.9)))
+          else
+            for (final r in list)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(color: gPanel, borderRadius: BorderRadius.circular(16), border: Border.all(color: gLine)),
+                child: Row(children: [
+                  const Icon(Icons.phone_android_rounded, color: gTeal),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(r.hostName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+                  FilledButton(style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg), onPressed: () => _joinRoom(r), child: const Text('پیوستن', style: TextStyle(fontWeight: FontWeight.w900))),
+                ]),
+              ),
+        ]);
+      default:
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _netCard(),
+          if (_mesh.running) ...<Widget>[_big(Icons.add_circle_rounded, 'ساخت بازی (میزبان)', _createRoom), _big(Icons.login_rounded, 'پیوستن به بازی', _openJoin)],
+          const SizedBox(height: 8),
+          const Text('بدون اینترنت. هر دو گوشی باید شبکهٔ آفلاین را روشن کنند و نزدیک هم باشند.', textAlign: TextAlign.center, style: TextStyle(color: gMuted, fontSize: 12, height: 1.8)),
+        ]);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: gDir,
+      child: Scaffold(
+        backgroundColor: gBg,
+        appBar: AppBar(
+          backgroundColor: gBg,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: gGold),
+          title: Text('${GameT.t('snakes')} · ${GameT.t('nearby_title')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+          actions: [
+            skinAction(() => showSkinSheet(context, game: 'snakes', title: 'طرح صفحه مار و پله', names: <String>[for (final s in kSnakesSkins) s.name], prices: <int>[for (final s in kSnakesSkins) s.price], preview: snakesPreview, onChanged: () => setState(() {}))),
+            gameFxAction(() => setState(() {})),
+            IconButton(
+              tooltip: 'چت',
+              onPressed: () => setState(() => chatOn = !chatOn),
+              icon: Icon(chatOn ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded, color: chatOn ? gGold : gMuted),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (ctx, cons) {
+              final w = min(cons.maxWidth - 8, 600.0);
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
+                child: Center(child: SizedBox(width: w, child: stage == 'play' ? _playBody(w) : _menuBody())),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
 }
