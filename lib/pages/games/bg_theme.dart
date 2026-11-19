@@ -52,7 +52,7 @@ class BgTheme {
   final Color ringB;
 
   /// نقش وسط هر نیمه: ۰ ندارد، ۱ لوزی، ۲ ستاره، ۳ فروهر ساده، ۴ گل،
-  /// ۵ آدم بال‌دار (نیمه‌ی چپ) + فروهر (نیمه‌ی راست)، ۶ فروهر بزرگ و کامل در هر دو نیمه
+  /// ۵ آدم بال‌دار (نیمه‌ی بالا) + فروهر (نیمه‌ی پایین)، ۶ فروهر بزرگ و کامل در هر دو نیمه
   final int motif;
   final Color motifColor;
 
@@ -299,12 +299,12 @@ void paintBgBoard(Canvas canvas, Size size, BgTheme t, {required double pad}) {
     }
     canvas.restore();
   }
-  // نقش وسط هر نیمه
+  // نقش وسط نیمه‌ی بالا و نیمه‌ی پایین (وسط عرض تخته، نه روی میله‌ی میانی)
   if (t.motif != 0) {
     final laneW = (size.width - 2 * pad) / 2;
     for (var k = 0; k < 2; k++) {
-      final c = Offset(pad + laneW * (k + 0.5), size.height / 2);
-      _motif(canvas, c, laneW * 0.46, t, k);
+      final c = Offset(size.width / 2, size.height * (k == 0 ? 0.25 : 0.75));
+      _motif(canvas, c, laneW * 0.46, t, k, size);
     }
   }
   // لبه‌ی داخلی
@@ -317,7 +317,7 @@ void paintBgBoard(Canvas canvas, Size size, BgTheme t, {required double pad}) {
   );
 }
 
-void _motif(Canvas c, Offset o, double r, BgTheme t, [int lane = 0]) {
+void _motif(Canvas c, Offset o, double r, BgTheme t, int lane, Size board) {
   final p = Paint()..color = t.motifColor;
   final st = Paint()
     ..style = PaintingStyle.stroke
@@ -360,7 +360,7 @@ void _motif(Canvas c, Offset o, double r, BgTheme t, [int lane = 0]) {
       c.drawCircle(o, r * 0.16, Paint()..color = const Color(0xffb02a2a));
       break;
     case 3: // فروهر
-      paintBgSymbol(c, BgSymbol.faravahar, o, r * 1.9, t.motifColor);
+      paintBgSymbol(c, BgSymbol.faravahar, o, board.width * 0.8, t.motifColor);
       break;
     case 4: // گل و ترنج
       for (var i = 0; i < 8; i++) {
@@ -371,15 +371,15 @@ void _motif(Canvas c, Offset o, double r, BgTheme t, [int lane = 0]) {
       c.drawCircle(o, r * 0.1, p);
       c.drawCircle(o, r * 0.95, st);
       break;
-    case 5: // نیمه‌ی چپ: آدم بال‌دار هخامنشی، نیمه‌ی راست: فروهر
+    case 5: // نیمه‌ی بالا: آدم بال‌دار هخامنشی، نیمه‌ی پایین: فروهر
       if (lane == 0) {
-        paintBgSymbol(c, BgSymbol.wingedMan, o, r * 3.5, t.motifColor);
+        paintBgSymbol(c, BgSymbol.wingedMan, o, board.height * 0.38, t.motifColor);
       } else {
-        paintBgSymbol(c, BgSymbol.faravahar, o, r * 1.95, t.motifColor);
+        paintBgSymbol(c, BgSymbol.faravahar, o, board.width * 0.8, t.motifColor);
       }
       break;
     case 6: // فروهر بزرگ و کامل در هر دو نیمه
-      paintBgSymbol(c, BgSymbol.faravahar, o, r * 2.05, t.motifColor);
+      paintBgSymbol(c, BgSymbol.faravahar, o, board.width * 0.84, t.motifColor);
       break;
     default:
       break;
