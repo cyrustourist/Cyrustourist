@@ -367,6 +367,25 @@ jobs:
           echo ""
           echo "======================================"
 
+      - name: Gradle init script (Maven Central fallback for plugin resolution)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # خطای kotlin-stdlib:2.2.21 به‌خاطر این بود که build داخلی Flutter (flutter_tools/gradle)
+          # فقط از plugins.gradle.org پلاگین می‌گیرد و آن آینه گاهی آرتیفکت‌های جدید Kotlin را ندارد.
+          # این init-script مخزن‌های Maven Central و Google را به همه‌ی buildها (حتی includeBuild) اضافه می‌کند.
+          mkdir -p "$HOME/.gradle/init.d"
+          cat > "$HOME/.gradle/init.d/repos.init.gradle" <<'EOF_INIT'
+          beforeSettings { settings ->
+            settings.pluginManagement.repositories {
+              mavenCentral()
+              google()
+              gradlePluginPortal()
+            }
+          }
+          EOF_INIT
+          cat "$HOME/.gradle/init.d/repos.init.gradle"
+
       - name: Build signed APKs (64-bit + 32-bit)
         shell: bash
         env:
@@ -402,15 +421,22 @@ jobs:
 
             rm -rf build/app/outputs/flutter-apk
 
+            # تا ۳ بار تلاش (برای خطاهای گذرای شبکه / مخزن Gradle)
             set +e
-            flutter build apk \
-              --release \
-              --target-platform "$PLATFORM" \
-              --android-skip-build-dependency-validation \
-              --split-debug-info="$RUNNER_TEMP/debug-symbols/$SYM" \
-              --obfuscate \
-              2>&1 | tee "$LOG_FILE"
-            BUILD_EXIT=${PIPESTATUS[0]}
+            BUILD_EXIT=1
+            for ATTEMPT in 1 2 3; do
+              echo "--- build attempt $ATTEMPT/3 ---"
+              flutter build apk \
+                --release \
+                --target-platform "$PLATFORM" \
+                --android-skip-build-dependency-validation \
+                --split-debug-info="$RUNNER_TEMP/debug-symbols/$SYM" \
+                --obfuscate \
+                2>&1 | tee "$LOG_FILE"
+              BUILD_EXIT=${PIPESTATUS[0]}
+              [ "$BUILD_EXIT" -eq 0 ] && break
+              sleep 15
+            done
             set -e
 
             if [ "$BUILD_EXIT" -ne 0 ]; then
