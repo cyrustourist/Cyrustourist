@@ -1343,7 +1343,7 @@ class _LudoPageState extends State<LudoPage> {
       result = 'win';
       level = 'local';
     }
-    final g = await _w.reportOffline(result, level);
+    final g = await _w.reportOffline(result, level, game: 'ludo');
     if (!mounted) return;
     setState(() {
       gained = g;
@@ -2198,7 +2198,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
   Future<void> _report() async {
     if (reported) return;
     reported = true;
-    final g = await _w.reportOffline(winner == me ? 'win' : 'loss', 'nearby');
+    final g = await _w.reportOffline(winner == me ? 'win' : 'loss', 'nearby', game: 'ludo');
     if (!mounted) return;
     setState(() {
       gained = g;
