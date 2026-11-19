@@ -5,6 +5,7 @@ import 'bg_score.dart';
 import 'game_economy.dart';
 import 'bg_sfx.dart';
 import 'bg_theme.dart';
+import 'game_texts.dart';
 
 /// متن «آموزش بازی» تخته‌نرد (در تنظیمات، زبانه‌ی آموزش)
 const List<List<String>> kBgGuide = <List<String>>[
@@ -58,6 +59,13 @@ class _BgSettingsSheetState extends State<_BgSettingsSheet> {
     p.save();
     widget.onChanged?.call();
     setState(() {});
+  }
+
+  /// ذخیره‌ی تنظیمات و بستن برگه (تیک ذخیره و دکمه‌ی برگشت)
+  Future<void> _saveAndClose() async {
+    await p.save();
+    widget.onChanged?.call();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Widget _title(String t) => Padding(padding: const EdgeInsets.only(top: 14, bottom: 8), child: Text(t, style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 15)));
@@ -268,7 +276,24 @@ class _BgSettingsSheetState extends State<_BgSettingsSheet> {
             children: [
               const SizedBox(height: 8),
               Container(width: 44, height: 5, decoration: BoxDecoration(color: gLine, borderRadius: BorderRadius.circular(3))),
-              const Padding(padding: EdgeInsets.only(top: 10), child: Text('تنظیمات تخته‌نرد', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18))),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 4, 6, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: GameT.fa ? 'برگشت' : 'Back',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    ),
+                    Expanded(child: Text(GameT.fa ? 'تنظیمات تخته‌نرد' : 'Backgammon settings', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18))),
+                    IconButton(
+                      tooltip: GameT.fa ? 'ذخیره' : 'Save',
+                      onPressed: _saveAndClose,
+                      icon: const Icon(Icons.check_circle_rounded, color: gGold, size: 30),
+                    ),
+                  ],
+                ),
+              ),
               const TabBar(
                 isScrollable: true,
                 indicatorColor: gGold,
@@ -282,6 +307,21 @@ class _BgSettingsSheetState extends State<_BgSettingsSheet> {
                   children: <Widget>[
                     for (final w in <Widget>[_boards(), _sound(), _score(), _guide()]) SingleChildScrollView(padding: const EdgeInsets.fromLTRB(16, 10, 16, 28), child: w),
                   ],
+                ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, padding: const EdgeInsets.symmetric(vertical: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                      onPressed: _saveAndClose,
+                      icon: const Icon(Icons.check_rounded),
+                      label: Text(GameT.fa ? 'ذخیره و بازگشت به بازی' : 'Save & back to game', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                    ),
+                  ),
                 ),
               ),
             ],
