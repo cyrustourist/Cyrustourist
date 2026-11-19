@@ -135,12 +135,11 @@ class _InvitePageState extends State<InvitePage> {
   }
 
   Future<void> _share() async {
-    var sent = true;
     try {
-      final r = await Share.shareWithResult(st.shareText, subject: 'سایروس توریست');
-      sent = r.status != ShareResultStatus.dismissed;
-    } catch (_) {}
-    if (!sent) return;
+      await Share.share(st.shareText, subject: 'سایروس توریست');
+    } catch (_) {
+      return;
+    }
     final gift = await st.shared();
     if (!mounted) return;
     gToast(context, gift ? '🎁 ${wFa(InviteStore.rewardCoins)} سکه به امتیازهایت اضافه شد' : 'سقف پاداش امروز پر شد؛ فردا دوباره');
