@@ -181,9 +181,9 @@ class GameWallet extends ChangeNotifier {
 
   /// ثبت نتیجه‌ی بازی آفلاین. result: win | draw | loss ؛ level: easy | normal | hard | local | nearby
   /// خروجی: سکه‌ی گرفته‌شده (۰ اگر در صف ماند یا سقف روزانه پر بود).
-  Future<int> reportOffline(String result, String level) async {
+  Future<int> reportOffline(String result, String level, {String game = ''}) async {
     // جایزه‌ی محلی برد (برای همه‌ی بازی‌ها) + سکه‌ی سرور
-    final bonus = await GameEconomy.winBonus(result, level);
+    final bonus = await GameEconomy.winBonus(result, level, game: game);
     final g = await _reportOfflineServer(result, level);
     notifyListeners();
     return g + bonus;
