@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/badge_service.dart';
 import '../../services/public_link_service.dart';
 import '../groups/group_ui.dart';
+import 'game_texts.dart';
 import 'game_wheel.dart';
 
 /// معرفی به دوستان: لینک بازارِ سایروس توریست با کد معرف شخصی (ساخته‌شده از شناسه‌ی کاربر).
@@ -25,8 +26,9 @@ class InviteStore extends ChangeNotifier {
   int earned = 0; // مجموع سکه‌ی گرفته‌شده از معرفی
 
   /// پاداش هر بار ارسال لینک و سقف روزانه (برای جلوگیری از سوءاستفاده)
-  static const int rewardCoins = 20;
+  static const int rewardCoins = 100;
   static const int dailyCap = 5;
+  static String get coinsText => GameT.fa ? wFa(rewardCoins) : '$rewardCoins';
   String friendCode = '';
 
   /// لینک بازار با کد معرف (همان لینک بازار برنامه، با شناسه‌ی کاربر)
@@ -142,7 +144,7 @@ class _InvitePageState extends State<InvitePage> {
     }
     final gift = await st.shared();
     if (!mounted) return;
-    gToast(context, gift ? '🎁 ${wFa(InviteStore.rewardCoins)} سکه به امتیازهایت اضافه شد' : 'سقف پاداش امروز پر شد؛ فردا دوباره');
+    gToast(context, gift ? GameT.t('inv_gift', {'c': InviteStore.coinsText}) : GameT.t('inv_cap'));
   }
 
   void _qr() {
@@ -234,9 +236,9 @@ class _InvitePageState extends State<InvitePage> {
                         children: [
                           const Text('👥', style: TextStyle(fontSize: 46)),
                           const SizedBox(height: 6),
-                          const Text('دوستانت را به سایروس توریست دعوت کن', textAlign: TextAlign.center, style: TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 18)),
+                          Text(GameT.t('inv_title'), textAlign: TextAlign.center, style: TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 18)),
                           const SizedBox(height: 6),
-                          Text('لینک نصب از بازار با کد معرف مخصوص خودت ساخته شده است.\nهر بار لینک را برای دوستی بفرستی ${InviteStore.rewardCoins} سکه می‌گیری (تا ${InviteStore.dailyCap} بار در روز).', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(.8), fontSize: 13, height: 1.8)),
+                          Text(GameT.t('inv_desc', {'c': InviteStore.coinsText, 'n': GameT.fa ? wFa(InviteStore.dailyCap) : '${InviteStore.dailyCap}'}), textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(.8), fontSize: 13, height: 1.8)),
                         ],
                       ),
                     ),
@@ -248,7 +250,7 @@ class _InvitePageState extends State<InvitePage> {
                       style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                       onPressed: st.loaded ? _share : null,
                       icon: const Icon(Icons.share_rounded),
-                      label: Text(st.rewardReady ? 'ارسال برای دوستان  🎁 +${wFa(InviteStore.rewardCoins)} سکه' : 'ارسال برای دوستان', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                      label: Text(st.rewardReady ? GameT.t('inv_btn_reward', {'c': InviteStore.coinsText}) : GameT.t('inv_btn'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
