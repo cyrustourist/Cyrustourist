@@ -16,6 +16,7 @@ import 'bg_score.dart';
 import 'bg_settings.dart';
 import 'bg_sfx.dart';
 import 'bg_theme.dart';
+import 'game_economy.dart';
 
 /// تخته‌نرد دو نفره: با ربات، دو نفره روی یک گوشی، گوشی‌های نزدیک (بدون اینترنت) و آنلاین (اتصال مستقیم).
 /// قوانین کامل: میله، زدن مهره، خروج مهره، جفت‌ها (۴ حرکت) و «استفاده از بیشترین تعداد تاس».
@@ -314,7 +315,8 @@ class _BgGeo {
 }
 
 class _BgPainter extends CustomPainter {
-  const _BgPainter({required this.s, required this.sel, required this.dests, required this.srcs, required this.theme});
+  const _BgPainter({required this.s, required this.sel, required this.dests, required this.srcs, required this.theme, this.hintTo});
+  final int? hintTo;
   final BgTheme theme;
   final _BgState s;
   final int? sel;
@@ -369,6 +371,9 @@ class _BgPainter extends CustomPainter {
             ..strokeWidth = 1.2
             ..color = theme.ptLine,
         );
+      }
+      if (hintTo == i) {
+        canvas.drawPath(path, Paint()..color = const Color(0xaa00e676));
       }
       if (dests.contains(i)) {
         canvas.drawPath(path, Paint()..color = const Color(0x66ffd23f));
@@ -510,6 +515,12 @@ class _BackgammonPageState extends State<BackgammonPage> {
   bool rmMine = false;
   bool rmPeer = false;
 
+  // کمک‌ها با سکه: راهنما و بازگشت به مرحله‌ی قبل
+  _Mv? hintMv;
+  final List<_BgState> _undo = <_BgState>[];
+
+  bool get _helpMode => mode == BgMode.bot || mode == BgMode.local;
+
   // امتیاز مسابقه
   final BgMatch _match = BgMatch();
   BgGameResult? lastResult;
@@ -588,6 +599,8 @@ class _BackgammonPageState extends State<BackgammonPage> {
 
   void _resetState() {
     _gen++;
+    _undo.clear();
+    hintMv = null;
     if (_match.over) _match.reset();
     _match.to = BgPrefs.instance.matchTo;
     lastResult = null;
@@ -704,6 +717,8 @@ class _BackgammonPageState extends State<BackgammonPage> {
   }
 
   void _endTurn() {
+    _undo.clear();
+    hintMv = null;
     _forceAuto = false;
     s.dice = <int>[];
     s.turn = 1 - s.turn;
@@ -718,6 +733,8 @@ class _BackgammonPageState extends State<BackgammonPage> {
 
   void _applyMoveLocal(_Mv m) {
     final p = s.turn;
+    if (_helpMode && (mode == BgMode.local || p == 0)) _undo.add(s.clone());
+    hintMv = null;
     final hit = _Bg.hits(s, p, m);
     _Bg.apply(s, p, m);
     s.dice.remove(m.die);
@@ -805,6 +822,61 @@ class _BackgammonPageState extends State<BackgammonPage> {
       return;
     }
     setState(() => sel = null);
+  }
+
+  // ---------------------------------------------------------------- راهنما و بازگشت (با سکه)
+
+  int _scoreMv(_Mv m) {
+    final p = s.turn;
+    final c = s.clone();
+    final hit = _Bg.hits(s, p, m);
+    _Bg.apply(c, p, m);
+    var v = m.die;
+    if (hit) v += 40;
+    if (m.to == -2) v += 25;
+    if (m.from == -1) v += 20;
+    if (m.to >= 0) {
+      final here = _Bg.mine(c, p, m.to);
+      if (here >= 2) v += 12;
+      if (here == 1) v -= 10;
+    }
+    if (m.from >= 0 && _Bg.mine(c, p, m.from) == 1) v -= 8;
+    return v;
+  }
+
+  Future<void> _useHint() async {
+    if (!_canAct || ph != 'move' || busy || legal.isEmpty) return;
+    if (!await GameEconomy.pay(context, GameEconomy.hintCost, 'راهنمای بهترین حرکت')) return;
+    if (!mounted || ph != 'move' || legal.isEmpty) return;
+    var best = legal.first;
+    var bv = -1 << 30;
+    for (final m in legal) {
+      final v = _scoreMv(m);
+      if (v > bv) {
+        bv = v;
+        best = m;
+      }
+    }
+    setState(() {
+      hintMv = best;
+      sel = best.from;
+    });
+    if (best.to == -2) gToast(context, '💡 این مهره را بیرون ببر');
+  }
+
+  Future<void> _useUndo() async {
+    if (!_helpMode || _undo.isEmpty || !_canAct || ph != 'move' || busy || winner >= 0) return;
+    if (!await GameEconomy.pay(context, GameEconomy.undoCost, 'بازگشت به حرکت قبل')) return;
+    if (!mounted || _undo.isEmpty) return;
+    final snap = _undo.removeLast();
+    s = snap;
+    legal = _Bg.legal(s);
+    ph = 'move';
+    msgKey = '';
+    hintMv = null;
+    sel = null;
+    _autoSel();
+    _sync();
   }
 
   void _bearOff() {
@@ -1417,7 +1489,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapUp: (d) => _onTapBoard(d.localPosition, _BgGeo(geo)),
-            child: CustomPaint(painter: _BgPainter(s: s, sel: sel, dests: dests, srcs: srcs, theme: BgPrefs.instance.theme)),
+            child: CustomPaint(painter: _BgPainter(s: s, sel: sel, dests: dests, srcs: srcs, theme: BgPrefs.instance.theme, hintTo: hintMv?.to)),
           ),
         ),
         if (_isNet && winner < 0 && (ph == 'roll' || ph == 'move') && _secsLeft() > 0) GameTimerBar(left: _secsLeft(), total: ph == 'move' ? 40 : 25),
@@ -1446,6 +1518,11 @@ class _BackgammonPageState extends State<BackgammonPage> {
             ),
           ],
         ),
+        if (_helpMode && winner < 0)
+          gameHelpRow(<Widget>[
+            gameHelpButton(icon: Icons.lightbulb_rounded, label: 'راهنما', cost: GameEconomy.hintCost, onTap: _canAct && ph == 'move' && !busy ? _useHint : null),
+            gameHelpButton(icon: Icons.undo_rounded, label: 'بازگشت', cost: GameEconomy.undoCost, onTap: _undo.isNotEmpty && _canAct && ph == 'move' && !busy ? _useUndo : null),
+          ]),
         if ((_isNet || mode == BgMode.bot) && chatOn) GameChatPanel(lines: chat, onSend: _sendChat, phrases: kBgChatPhrases),
         if (winner >= 0 && resultReady) ...<Widget>[
           if (lastResult != null) BgResultCard(result: lastResult!, match: _match, names: pnames),
