@@ -10,14 +10,13 @@ import 'game_api.dart';
 import 'game_fx.dart';
 import 'game_texts.dart';
 import 'game_widgets.dart';
+import 'game_skins.dart';
 
 /// «میوه‌چین سایروس»: دو میوهٔ کنار هم را جابه‌جا کنید (بکشید یا دو بار لمس کنید)، ۳ تا ۵ میوهٔ هم‌شکل حذف می‌شوند.
 /// میوهٔ ویژه (↔ ↕ بمب رنگی)، ترکیب ویژه‌ها، یخ، چکش و +۳ حرکت، راهنما و هدیهٔ روزانه.
 /// بدون اینترنت کار می‌کند؛ مرحله و موجودی روی گوشی ذخیره می‌شود و اولین عبور از هر مرحله سکهٔ آفلاین می‌دهد.
 
 const List<String> _fruits = <String>['🍎', '🍊', '🍌', '🍇', '🍓', '🍏'];
-const Color _tileA = Color(0xff2b7fc0);
-const Color _tileB = Color(0xff2370ad);
 
 const Map<String, Map<String, String>> _ftx = {
   'title': {'fa': 'میوه‌چین سایروس', 'en': 'Cyrus Fruit Match'},
@@ -98,6 +97,9 @@ class _FruitPageState extends State<FruitPage> {
   void initState() {
     super.initState();
     GameFx.load().then((_) {
+      if (mounted) setState(() {});
+    });
+    SkinStore.load().then((_) {
       if (mounted) setState(() {});
     });
     _load();
@@ -407,7 +409,8 @@ class _FruitPageState extends State<FruitPage> {
 
   Widget _tile(int i, double sz) {
     final r = i ~/ kFruitN, c = i % kFruitN;
-    final base = (r + c) % 2 == 0 ? _tileA : _tileB;
+    final fs = kFruitSkins[SkinStore.idx('fruit', kFruitSkins.length)];
+    final base = (r + c) % 2 == 0 ? fs.a : fs.b;
     final v = e.t[i];
     final sp = e.sp[i];
     final isPop = pop.contains(i);
@@ -503,7 +506,7 @@ class _FruitPageState extends State<FruitPage> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: Container(
-            decoration: BoxDecoration(border: Border.all(color: gLine, width: 3), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(border: Border.all(color: kFruitSkins[SkinStore.idx('fruit', kFruitSkins.length)].border, width: 3), borderRadius: BorderRadius.circular(14)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -528,7 +531,10 @@ class _FruitPageState extends State<FruitPage> {
           centerTitle: true,
           iconTheme: const IconThemeData(color: gGold),
           title: Text(_ft('title'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
-          actions: [gameFxAction(() => setState(() {}))],
+          actions: [
+            skinAction(() => showSkinSheet(context, game: 'fruit', title: 'طرح صفحه میوه‌چین', names: <String>[for (final k in kFruitSkins) k.name], prices: <int>[for (final k in kFruitSkins) k.price], preview: fruitPreview, onChanged: () => setState(() {}))),
+            gameFxAction(() => setState(() {})),
+          ],
         ),
         body: SafeArea(
           child: !_ready
