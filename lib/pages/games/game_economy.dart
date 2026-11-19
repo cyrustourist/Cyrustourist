@@ -18,9 +18,9 @@ class GameEconomy {
   static const int extraTimeCost = 10;
 
   /// جایزه‌ی برد بر اساس سختی؛ بازی روی یک گوشی (local) سکه ندارد
-  static const Map<String, int> winCoins = <String, int>{'easy': 5, 'normal': 10, 'hard': 20, 'nearby': 15, 'local': 0};
+  static const Map<String, int> winCoins = <String, int>{'easy': 50, 'normal': 50, 'hard': 50, 'nearby': 50, 'online': 50, 'local': 0};
   static const int drawCoins = 2;
-  static const int dailyCap = 200;
+  static const int dailyCap = 1000;
 
   static const String _k = 'cyrus_econ_v1';
   static bool _loaded = false;
@@ -112,7 +112,7 @@ class GameEconomy {
     await load();
     var n = 0;
     if (result == 'win') {
-      n = winCoins[level] ?? 5;
+      n = winCoins[level] ?? 50;
     } else if (result == 'draw' && level != 'local') {
       n = drawCoins;
     }
