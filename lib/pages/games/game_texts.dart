@@ -139,5 +139,16 @@ class GameT {
     'ph_hurry': {'fa': 'زودتر!', 'en': 'Hurry up!'},
     'ph_thanks': {'fa': 'ممنون', 'en': 'Thanks'},
     'ph_nice': {'fa': 'آفرین', 'en': 'Nice'},
+    'inv_title': {'fa': 'دوستانت را به سایروس توریست دعوت کن', 'en': 'Invite your friends to Cyrus Tourist'},
+    'inv_desc': {
+      'fa': 'لینک نصب از بازار با کد معرف مخصوص خودت ساخته شده است.\nهر بار لینک را برای دوستی بفرستی {c} سکه می‌گیری (تا {n} بار در روز).',
+      'en': 'Your install link includes your personal referral code.\nEvery time you send it to a friend you get {c} coins (up to {n} times a day).',
+    },
+    'inv_btn_reward': {'fa': 'ارسال برای دوستان  🎁 +{c} سکه', 'en': 'Send to friends  🎁 +{c} coins'},
+    'inv_btn': {'fa': 'ارسال برای دوستان', 'en': 'Send to friends'},
+    'inv_gift': {'fa': '🎁 {c} سکه به امتیازهایت اضافه شد', 'en': '🎁 {c} coins added to your balance'},
+    'inv_cap': {'fa': 'سقف پاداش امروز پر شد؛ فردا دوباره', 'en': "Today's reward limit reached; try again tomorrow"},
+    'bgt_snake_faravahar': {'fa': 'چرم مارپوش، فروهر و آدم بال‌دار', 'en': 'Snakeskin leather, Faravahar & winged man'},
+    'bgt_faravahar_big': {'fa': 'گردوی منبت فروهر', 'en': 'Carved walnut Faravahar'},
   };
 }
