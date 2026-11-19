@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../groups/group_ui.dart';
 import 'bg_score.dart';
+import 'game_economy.dart';
 import 'bg_sfx.dart';
 import 'bg_theme.dart';
 
@@ -45,6 +46,14 @@ class _BgSettingsSheet extends StatefulWidget {
 
 class _BgSettingsSheetState extends State<_BgSettingsSheet> {
   final BgPrefs p = BgPrefs.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    GameEconomy.load().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
   void _chg() {
     p.save();
     widget.onChanged?.call();
@@ -65,6 +74,13 @@ class _BgSettingsSheetState extends State<_BgSettingsSheet> {
       );
 
   Widget _boards() {
+    return Column(children: [
+      Padding(padding: const EdgeInsets.only(bottom: 10), child: Text('موجودی تو: ${bgFa(GameEconomy.balance)} 🪙 · صفحه‌های قفل را با سکه باز کن', style: const TextStyle(color: gMuted, fontSize: 12.5))),
+      _boardGrid(),
+    ]);
+  }
+
+  Widget _boardGrid() {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -73,7 +89,12 @@ class _BgSettingsSheetState extends State<_BgSettingsSheet> {
       itemBuilder: (_, i) {
         final sel = p.board == i;
         return GestureDetector(
-          onTap: () {
+          onTap: () async {
+            final price = kBgThemePrice[i];
+            if (price > 0 && !GameEconomy.isOwned('bg_board_$i') && p.board != i) {
+              final ok = await GameEconomy.buy(context, 'bg_board_$i', price, 'صفحه «${kBgThemes[i].name}»');
+              if (!ok) return;
+            }
             p.board = i;
             BgSfx.click();
             _chg();
@@ -92,7 +113,12 @@ class _BgSettingsSheetState extends State<_BgSettingsSheet> {
                 Expanded(child: Center(child: BgBoardPreview(theme: kBgThemes[i], width: 118))),
                 const SizedBox(height: 6),
                 Text(kBgThemes[i].name, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: sel ? gGold : Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5)),
-                if (sel) const Icon(Icons.check_circle, color: gGold, size: 18),
+                if (sel)
+                  const Icon(Icons.check_circle, color: gGold, size: 18)
+                else if (kBgThemePrice[i] > 0 && !GameEconomy.isOwned('bg_board_$i'))
+                  Text('🔒 ${bgFa(kBgThemePrice[i])} 🪙', style: const TextStyle(color: gGold, fontWeight: FontWeight.w800, fontSize: 12.5))
+                else
+                  const Icon(Icons.lock_open_rounded, color: gMuted, size: 16),
               ],
             ),
           ),
