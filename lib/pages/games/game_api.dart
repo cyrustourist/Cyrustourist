@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/badge_service.dart';
+import 'game_economy.dart';
 
 /// فراخوانی‌های /api/game/* (از همان مسیر امن BadgeService با X-Cyrus-Token).
 class GameApi {
@@ -181,6 +182,14 @@ class GameWallet extends ChangeNotifier {
   /// ثبت نتیجه‌ی بازی آفلاین. result: win | draw | loss ؛ level: easy | normal | hard | local | nearby
   /// خروجی: سکه‌ی گرفته‌شده (۰ اگر در صف ماند یا سقف روزانه پر بود).
   Future<int> reportOffline(String result, String level) async {
+    // جایزه‌ی محلی برد (برای همه‌ی بازی‌ها) + سکه‌ی سرور
+    final bonus = await GameEconomy.winBonus(result, level);
+    final g = await _reportOfflineServer(result, level);
+    notifyListeners();
+    return g + bonus;
+  }
+
+  Future<int> _reportOfflineServer(String result, String level) async {
     final j = await GameApi.post('/api/game/offline', {'result': result, 'level': level});
     if (j == null) {
       if (_queue.length < 40) {
