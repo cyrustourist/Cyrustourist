@@ -92,7 +92,7 @@ class _BgSettingsSheetState extends State<_BgSettingsSheet> {
           onTap: () async {
             final price = kBgThemePrice[i];
             if (price > 0 && !GameEconomy.isOwned('bg_board_$i') && p.board != i) {
-              final ok = await GameEconomy.buy(context, 'bg_board_$i', price, 'صفحه «${kBgThemes[i].name}»');
+              final ok = await GameEconomy.buy(context, 'bg_board_$i', price, 'صفحه «${kBgThemes[i].label}»');
               if (!ok) return;
             }
             p.board = i;
@@ -112,7 +112,7 @@ class _BgSettingsSheetState extends State<_BgSettingsSheet> {
               children: [
                 Expanded(child: Center(child: BgBoardPreview(theme: kBgThemes[i], width: 118))),
                 const SizedBox(height: 6),
-                Text(kBgThemes[i].name, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: sel ? gGold : Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5)),
+                Text(kBgThemes[i].label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: sel ? gGold : Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5)),
                 if (sel)
                   const Icon(Icons.check_circle, color: gGold, size: 18)
                 else if (kBgThemePrice[i] > 0 && !GameEconomy.isOwned('bg_board_$i'))
