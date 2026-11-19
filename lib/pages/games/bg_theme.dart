@@ -165,6 +165,9 @@ const List<BgTheme> kBgThemes = <BgTheme>[
   ),
 ];
 
+/// قیمت هر طرح صفحه (سکه)؛ ۰ = رایگان
+const List<int> kBgThemePrice = <int>[0, 0, 150, 150, 200, 250];
+
 /// تنظیمات تخته‌نرد: طرح صفحه، صدا، لرزش و طول مسابقه.
 class BgPrefs extends ChangeNotifier {
   BgPrefs._();
