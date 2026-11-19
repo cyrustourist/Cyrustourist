@@ -13,6 +13,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -31,7 +32,7 @@ class TileDiskCache {
   static bool _trimScheduled = false;
 
   static final HttpClient _client = HttpClient()
-    ..connectionTimeout = const Duration(seconds: 5)
+    ..connectionTimeout = const Duration(seconds: 3)
     ..idleTimeout = const Duration(seconds: 30)
     ..maxConnectionsPerHost = 8;
 
@@ -52,13 +53,30 @@ class TileDiskCache {
     }
   }
 
+  /// مسیر کاشی بدون انتظار (اگر پوشه آماده باشد)؛ بعد از اولین بار همیشه آماده است
+  static File? fileForSync(String layerId, int z, int x, int y) {
+    final r = _root;
+    return r == null ? null : File('${r.path}/$layerId/${z}_${x}_$y.t');
+  }
+
+  /// خواندن سریع یک فایل کوچک (کاشی ~۲۰ کیلوبایت). خواندن هم‌زمان برای فایل‌های کوچک
+  /// از چند رفت‌وبرگشت async سریع‌تر است؛ فایل نبود یعنی null (بدون exists جداگانه).
+  static Uint8List? readSync(File f) {
+    try {
+      final b = f.readAsBytesSync();
+      return b.isEmpty ? null : b;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<File> fileFor(String layerId, int z, int x, int y) async {
     await init();
     return File('${_root!.path}/$layerId/${z}_${x}_$y.t');
   }
 
   // ---------- حالت آفلاین سریع ----------
-  // چند خطای شبکه‌ی پیاپی = اینترنت نیست؛ ۲۰ ثانیه درخواست شبکه نمی‌فرستیم
+  // سه خطای شبکه‌ی پیاپی = اینترنت نیست؛ ۳۰ ثانیه درخواست شبکه نمی‌فرستیم
   // تا کاشی‌های ذخیره‌شده بدون معطلی (۵ تا ۸ ثانیه برای هر کاشی) نمایش داده شوند.
   static int _fails = 0;
   static DateTime _downUntil = DateTime.fromMillisecondsSinceEpoch(0);
@@ -70,9 +88,9 @@ class TileDiskCache {
   }
 
   static void _netBad() {
-    if (++_fails >= 6) {
+    if (++_fails >= 3) {
       _fails = 0;
-      _downUntil = DateTime.now().add(const Duration(seconds: 20));
+      _downUntil = DateTime.now().add(const Duration(seconds: 30));
     }
   }
 
@@ -152,31 +170,38 @@ class TileDiskCache {
     Timer(const Duration(seconds: 25), () async {
       try {
         await init();
-        final root = _root!;
-        if (!await root.exists()) return;
-        final files = <File>[];
-        var total = 0;
-        await for (final e in root.list(recursive: true, followLinks: false)) {
-          if (e is File) {
-            files.add(e);
-            total += await e.length();
-          }
-        }
-        if (total <= maxBytes) return;
-        final withTime = <MapEntry<File, DateTime>>[];
-        for (final f in files) {
-          withTime.add(MapEntry(f, await f.lastModified()));
-        }
-        withTime.sort((a, b) => a.value.compareTo(b.value));
-        for (final e in withTime) {
-          if (total <= trimTo) break;
-          try {
-            total -= await e.key.length();
-            await e.key.delete();
-          } catch (_) {}
-        }
+        final path = _root!.path;
+        // شمارش و پاک‌سازی در isolate جدا تا نقشه و اسکرول هیچ‌وقت نلغزد
+        await Isolate.run(() => _trimSync(path, maxBytes, trimTo));
       } catch (_) {}
     });
+  }
+
+  static void _trimSync(String path, int maxBytes, int trimTo) {
+    final root = Directory(path);
+    if (!root.existsSync()) return;
+    final files = <File>[];
+    final sizes = <int>[];
+    final times = <DateTime>[];
+    var total = 0;
+    for (final e in root.listSync(recursive: true, followLinks: false)) {
+      if (e is File) {
+        final st = e.statSync();
+        files.add(e);
+        sizes.add(st.size);
+        times.add(st.modified);
+        total += st.size;
+      }
+    }
+    if (total <= maxBytes) return;
+    final order = List<int>.generate(files.length, (i) => i)..sort((a, b) => times[a].compareTo(times[b]));
+    for (final i in order) {
+      if (total <= trimTo) break;
+      try {
+        files[i].deleteSync();
+        total -= sizes[i];
+      } catch (_) {}
+    }
   }
 }
 
@@ -190,6 +215,20 @@ class CachedTileProvider extends TileProvider {
     TileDiskCache.scheduleTrim();
     OfflineTiles.init();
     TileDiskCache.init();
+    _bumpImageCache();
+  }
+
+  static bool _cacheBumped = false;
+
+  /// کاشی‌های بیشتری در حافظه می‌مانند؛ برگشتن به جاهای دیده‌شده بدون خواندن دوباره‌ی دیسک
+  static void _bumpImageCache() {
+    if (_cacheBumped) return;
+    _cacheBumped = true;
+    try {
+      final c = PaintingBinding.instance.imageCache;
+      if (c.maximumSize < 1500) c.maximumSize = 1500;
+      if (c.maximumSizeBytes < 200 * 1024 * 1024) c.maximumSizeBytes = 200 * 1024 * 1024;
+    } catch (_) {}
   }
 
   final String layerId;
@@ -231,28 +270,23 @@ class _CachedTileImage extends ImageProvider<_CachedTileImage> {
     //    قبلاً اگر پوشه هنوز آماده نشده بود این مرحله رد می‌شد؛ حالا صبر می‌کنیم تا آماده شود.
     if (key.layerId == 'osm' || key.layerId == 'carto') {
       try {
-        final off = await OfflineTiles.fileForAsync(key.z, key.x, key.y);
-        if (off != null && await off.exists()) {
-          final ob = await off.readAsBytes();
-          if (ob.isNotEmpty) {
-            return await decode(await ui.ImmutableBuffer.fromUint8List(ob));
-          }
+        final off = OfflineTiles.fileFor(key.z, key.x, key.y) ?? await OfflineTiles.fileForAsync(key.z, key.x, key.y);
+        final ob = off == null ? null : TileDiskCache.readSync(off);
+        if (ob != null) {
+          return await decode(await ui.ImmutableBuffer.fromUint8List(ob));
         }
       } catch (_) {}
     }
 
     // ۲) کش دائمی (کاشی‌هایی که قبلاً دیده شده‌اند؛ برای همهٔ لایه‌ها)
-    final file = await TileDiskCache.fileFor(key.layerId, key.z, key.x, key.y);
-    Uint8List? bytes;
+    final file = TileDiskCache.fileForSync(key.layerId, key.z, key.x, key.y) ??
+        await TileDiskCache.fileFor(key.layerId, key.z, key.x, key.y);
+    Uint8List? bytes = TileDiskCache.readSync(file);
     var stale = false;
-    try {
-      if (await file.exists()) {
-        bytes = await file.readAsBytes();
-        final age = DateTime.now().difference(await file.lastModified());
-        stale = age > key.maxAge;
-      }
-    } catch (_) {
-      bytes = null;
+    if (bytes != null) {
+      try {
+        stale = DateTime.now().difference(file.lastModifiedSync()) > key.maxAge;
+      } catch (_) {}
     }
 
     // اگر کش همین لایه خالی بود، کش لایهٔ هم‌خانواده (osm ↔ carto) را امتحان می‌کنیم؛
@@ -262,11 +296,9 @@ class _CachedTileImage extends ImageProvider<_CachedTileImage> {
       try {
         final other = key.layerId == 'osm' ? 'carto' : 'osm';
         final of = await TileDiskCache.fileFor(other, key.z, key.x, key.y);
-        if (await of.exists()) {
-          final ob = await of.readAsBytes();
-          if (ob.isNotEmpty) {
-            return await decode(await ui.ImmutableBuffer.fromUint8List(ob));
-          }
+        final ob = TileDiskCache.readSync(of);
+        if (ob != null) {
+          return await decode(await ui.ImmutableBuffer.fromUint8List(ob));
         }
       } catch (_) {}
     }
