@@ -59,6 +59,7 @@ Future<void> showSkinSheet(
   await GameEconomy.load();
   await SkinStore.load();
   if (!context.mounted) return;
+  int? pend; // طرحی که کاربر لمس کرده و هنوز تأیید نشده
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -67,6 +68,9 @@ Future<void> showSkinSheet(
       return StatefulBuilder(
         builder: (ctx, setS) {
           final cur = SkinStore.idx(game, names.length);
+          final pk = pend ?? cur;
+          final pOwned = prices[pk] == 0 || GameEconomy.isOwned('skin_${game}_$pk');
+          final need = prices[pk] - GameEconomy.balance;
           return Directionality(
             textDirection: gDir,
             child: Container(
@@ -84,21 +88,11 @@ Future<void> showSkinSheet(
                       itemCount: names.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: .86),
                       itemBuilder: (_, i) {
-                        final sel = cur == i;
+                        final sel = pk == i;
+                        final isCur = cur == i;
                         final owned = prices[i] == 0 || GameEconomy.isOwned('skin_${game}_$i');
                         return GestureDetector(
-                          onTap: () async {
-                            if (!owned && !sel) {
-                              final ok = await GameEconomy.buy(ctx, 'skin_${game}_$i', prices[i], 'طرح «${names[i]}»');
-                              if (!ok) {
-                                setS(() {});
-                                return;
-                              }
-                            }
-                            await SkinStore.set(game, i);
-                            onChanged?.call();
-                            setS(() {});
-                          },
+                          onTap: () => setS(() => pend = i),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.all(8),
@@ -114,7 +108,7 @@ Future<void> showSkinSheet(
                                 const SizedBox(height: 6),
                                 Text(names[i], maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: sel ? gGold : Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
                                 const SizedBox(height: 2),
-                                if (sel)
+                                if (isCur)
                                   const Icon(Icons.check_circle, color: gGold, size: 18)
                                 else if (!owned)
                                   Text('🔒 ${wFa(prices[i])} 🪙', style: const TextStyle(color: gGold, fontWeight: FontWeight.w800, fontSize: 12.5))
@@ -125,6 +119,38 @@ Future<void> showSkinSheet(
                           ),
                         );
                       },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg, disabledBackgroundColor: gLine, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                        onPressed: (pk == cur || (!pOwned && need > 0))
+                            ? null
+                            : () async {
+                                if (!pOwned) {
+                                  final ok = await GameEconomy.buy(ctx, 'skin_${game}_$pk', prices[pk], 'طرح «${names[pk]}»');
+                                  if (!ok) {
+                                    setS(() {});
+                                    return;
+                                  }
+                                }
+                                await SkinStore.set(game, pk);
+                                onChanged?.call();
+                                if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
+                                if (context.mounted) gToast(context, '✓ طرح «${names[pk]}» ذخیره شد');
+                              },
+                        child: Text(
+                          pk == cur
+                              ? 'این طرح فعال است'
+                              : pOwned
+                                  ? 'تأیید و ذخیره'
+                                  : (need > 0 ? '${wFa(need)} 🪙 دیگر لازم است' : 'خرید و ذخیره · ${wFa(prices[pk])} 🪙'),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -228,6 +254,10 @@ const List<LudoSkin> kLudoSkins = <LudoSkin>[
   LudoSkin('آبی شب', 150, Color(0xff1d3b6b), Color(0xff0b1a33), Color(0xff7fb2ff), Color(0xffcfe0ff), Color(0xff9bb8ea), Color(0xff6d8fc9)),
   LudoSkin('ارغوانی', 200, Color(0xff6a1b9a), Color(0xff2a0845), Color(0xffffd54f), Color(0xfff3e1ff), Color(0xffcfa8e8), Color(0xff9c6bc0)),
   LudoSkin('طلای ایرانی', 250, Color(0xffb7791f), Color(0xff5a3a08), Color(0xfffff0a8), Color(0xfffff4cf), Color(0xffe8c36a), Color(0xffd09a3f)),
+  LudoSkin('نمد سبز', 300, Color(0xff1b5e20), Color(0xff0b3d12), Color(0xffffd54f), Color(0xff2e7d32), Color(0xff1b5e20), Color(0xff81c784)),
+  LudoSkin('چوب موجی تیره', 350, Color(0xff4a2418), Color(0xff2a120a), Color(0xffe0b070), Color(0xffe3c08a), Color(0xffc89a5a), Color(0xff8a4b2e)),
+  LudoSkin('مشکی مدرن', 400, Color(0xff1c1c1c), Color(0xff0a0a0a), Color(0xff9e9e9e), Color(0xff2e2e2e), Color(0xff1a1a1a), Color(0xfff2f2f2)),
+  LudoSkin('اژدها رنگارنگ', 500, Color(0xffd8a868), Color(0xff9a6a35), Color(0xffe53935), Color(0xffffe082), Color(0xff81d4fa), Color(0xfff5f5f5)),
 ];
 
 class _LudoMini extends CustomPainter {
