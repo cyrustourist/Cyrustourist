@@ -345,20 +345,20 @@ class InviteEntryCard extends StatelessWidget {
           boxShadow: const <BoxShadow>[BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 4))],
         ),
         child: Row(
-          children: const [
-            Text('👥', style: TextStyle(fontSize: 34)),
-            SizedBox(width: 12),
+          children: [
+            const Text('👥', style: TextStyle(fontSize: 34)),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('معرفی به دوستان', style: TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
-                  SizedBox(height: 3),
-                  Text('هر بار لینک را بفرستی سکه می‌گیری', style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.6)),
+                  Text(GameT.fa ? 'معرفی به دوستان' : 'Invite friends', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                  const SizedBox(height: 3),
+                  Text(GameT.fa ? 'هر بار لینک را بفرستی سکه می‌گیری' : 'Earn coins every time you share your link', style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.6)),
                 ],
               ),
             ),
-            Icon(Icons.chevron_left_rounded, color: gGold),
+            Icon(gDir == TextDirection.rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: gGold),
           ],
         ),
       ),
