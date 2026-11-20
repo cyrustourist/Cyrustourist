@@ -51,6 +51,8 @@ const Map<String, Map<String, String>> _dtx = {
     'fa': 'تاس بریزید و به خانهٔ ۱۰۰ برسید. نردبان بالا می‌برد و مار پایین می‌آورد. برای رسیدن به ۱۰۰ عدد دقیق لازم است و ۶ یک بار دیگر تاس می‌دهد.',
     'en': 'Roll and reach square 100. Ladders lift you up, snakes slide you down. You need the exact number to finish, and a six gives another roll.'
   },
+  'sl_players': {'fa': 'بازیکنان: {n} از ۶', 'en': 'Players: {n} of 6'},
+  'sl_note': {'fa': 'بدون اینترنت و بدون ورکر. همهٔ گوشی‌ها باید شبکهٔ آفلاین را روشن کنند و نزدیک هم باشند. تا ۶ نفر.', 'en': 'No internet needed. Everyone must turn on the offline network and stay close. Up to 6 players.'},
   'star_title': {'fa': 'منچ ستاره‌ای ۳ بعدی', 'en': '3D Star Ludo'},
   'star_rule': {
     'fa': 'صفحهٔ ستاره‌ای تا ۶ نفره. با ۶ مهره از جایگاه رنگی بیرون می‌آید و روی خانهٔ رنگیِ نوک بازوی شما می‌نشیند. ساعتگرد دور ستاره بچرخید، مهرهٔ حریف را بزنید (خانه‌های ستاره‌دار و نوک بازوها امن‌اند) و هر ۴ مهره را از خط رنگی خودتان به مرکز برسانید. ۶، زدن مهره و رسیدن به مرکز یک بار دیگر تاس می‌دهد. با دکمهٔ 3D/2D نمای صفحه را عوض کنید.',
@@ -2425,6 +2427,825 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
           iconTheme: const IconThemeData(color: gGold),
           title: Text('${GameT.t('ludo')} · ${GameT.t('nearby_title')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
           actions: [
+            gameFxAction(() => setState(() {})),
+            IconButton(
+              tooltip: GameT.fa ? 'چت بازیکنان' : 'Player chat',
+              onPressed: () => setState(() => chatOn = !chatOn),
+              icon: Icon(chatOn ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded, color: chatOn ? gGold : gMuted),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (ctx, cons) {
+              final w = min(cons.maxWidth - 8, 640.0);
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
+                child: Center(
+                  child: SizedBox(
+                    width: w,
+                    child: stage == 'play' ? _playBody(w) : body,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// منچ ستاره‌ای ۳ بعدی بین ۲ تا ۶ گوشی نزدیک (Nearby، بدون اینترنت، رایگان).
+/// مثل منچ جمعی: میزبان قوانین و تاس را اجرا می‌کند و وضعیت را به بقیه می‌فرستد. پیام‌ها با پیشوند sl_ جدا از منچ معمولی‌اند.
+class StarLudoNearbyPage extends StatefulWidget {
+  const StarLudoNearbyPage({super.key});
+
+  @override
+  State<StarLudoNearbyPage> createState() => _StarLudoNearbyPageState();
+}
+
+class _StarLudoNearbyPageState extends State<StarLudoNearbyPage> {
+  final OfflineMeshService _mesh = OfflineMeshService.instance;
+  final GameWallet _w = GameWallet.instance;
+  final Random _rnd = Random();
+  StreamSubscription<Map<String, dynamic>>? _sub;
+  Timer? _tick;
+  bool _starting = false;
+
+  // لابی
+  String stage = 'menu'; // menu | host | join | play
+  bool isHost = false;
+  bool joined = false;
+  String code = '';
+  String hostUid = '';
+  final List<String> ids = <String>[];
+  final List<String> pnames = <String>[];
+  final Map<String, _OpenRoom> rooms = <String, _OpenRoom>{};
+
+  // چت بین بازیکنان
+  bool chatOn = true;
+  final List<_ChatMsg> chat = <_ChatMsg>[];
+  int _lastChatMs = 0;
+
+  // بازی
+  List<int> seats = <int>[0, 2];
+  List<List<int>> toks = <List<int>>[];
+  int turn = 0;
+  int die = 1;
+  String ph = 'roll'; // roll | rolling | shown | pick | over
+  List<int> movable = <int>[];
+  String msgKey = '';
+  int winner = -1;
+  int seq = 0;
+  int yardTries = 0;
+  bool busy = false;
+  int gained = 0;
+  bool reported = false;
+  bool resultReady = false;
+  bool lost = false;
+  bool view3d = true;
+  int _gen = 0;
+  int _lastSnap = 0;
+
+  // زمان نوبت (روی میزبان اجرا می‌شود؛ به بقیه «ثانیه‌ی باقی‌مانده» فرستاده می‌شود)
+  int dlMs = 0;
+  String _dlKey = '';
+  int tl = 0;
+  int tlAt = 0;
+  Timer? _clock;
+  final Map<int, int> _timeouts = <int, int>{};
+
+  // بازی دوباره
+  final Set<String> rmVotes = <String>{};
+  bool rmSent = false;
+
+  int get me => ids.indexOf(_mesh.myUid);
+
+  @override
+  void initState() {
+    super.initState();
+    NearbyGameLink.instance.attach();
+    _sub = NearbyGameLink.instance.events.stream.listen(_onEvent);
+    _mesh.addListener(_onMesh);
+    _tick = Timer.periodic(const Duration(seconds: 2), (_) => _onTick());
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) => _clockTick());
+  }
+
+  @override
+  void dispose() {
+    _gen++;
+    _clock?.cancel();
+    if (stage == 'join' && joined && code.isNotEmpty) {
+      _send(<String, dynamic>{'g': 'sl_leave', 'to': hostUid, 'code': code});
+    }
+    _tick?.cancel();
+    _sub?.cancel();
+    _mesh.removeListener(_onMesh);
+    NearbyGameLink.instance.detach();
+    super.dispose();
+  }
+
+  void _send(Map<String, dynamic> m) => NearbyGameLink.instance.send(m);
+
+  void _onMesh() {
+    if (!mounted) return;
+    setState(() {});
+    if (stage == 'play' && isHost) _maybeAuto();
+  }
+
+  void _onTick() {
+    if (!mounted || !_mesh.running) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (stage == 'host') {
+      _send(<String, dynamic>{'g': 'sl_open', 'code': code, 'cnt': ids.length});
+    } else if (stage == 'join') {
+      rooms.removeWhere((k, v) => now - v.ts > 7000);
+      if (code.isNotEmpty && !joined) {
+        _send(<String, dynamic>{'g': 'sl_join', 'to': hostUid, 'code': code});
+      }
+      setState(() {});
+    } else if (stage == 'play') {
+      if (isHost) {
+        _send(_snap());
+      } else if (!lost && now - _lastSnap > 15000 && ph != 'over') {
+        setState(() => lost = true);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- زمان نوبت
+
+  void _updateDeadline() {
+    final waiting = winner < 0 && !busy && (ph == 'roll' || ph == 'pick');
+    final key = waiting ? '$ph|$turn' : '';
+    if (key.isEmpty) {
+      dlMs = 0;
+      _dlKey = '';
+      return;
+    }
+    if (key != _dlKey) {
+      _dlKey = key;
+      dlMs = DateTime.now().millisecondsSinceEpoch + (ph == 'pick' ? 30 : 25) * 1000;
+    }
+  }
+
+  int _tlNow() => dlMs == 0 ? 0 : max(0, ((dlMs - DateTime.now().millisecondsSinceEpoch) / 1000).ceil());
+
+  int _secsLeft() {
+    if (isHost) return _tlNow();
+    if (tl <= 0) return 0;
+    return max(0, tl - ((DateTime.now().millisecondsSinceEpoch - tlAt) / 1000).floor());
+  }
+
+  void _clockTick() {
+    if (!mounted || stage != 'play') return;
+    if (isHost && winner < 0 && dlMs > 0 && DateTime.now().millisecondsSinceEpoch > dlMs && !busy) {
+      _autoPlay();
+      return;
+    }
+    setState(() {});
+  }
+
+  /// پایان مهلت: میزبان به‌جای بازیکن تاس می‌اندازد یا یک مهره را انتخاب می‌کند.
+  void _autoPlay() {
+    final pl = turn;
+    if (pl >= ids.length) return;
+    _timeouts[pl] = (_timeouts[pl] ?? 0) + 1;
+    dlMs = 0;
+    _dlKey = '';
+    if (ph == 'roll') {
+      _hostRoll(pl);
+    } else if (ph == 'pick') {
+      _hostPick(_Star.botPick(toks, seats, turn, die, BotLevel.normal, _rnd));
+    }
+  }
+
+  Future<void> _toggleNet() async {
+    if (_starting) return;
+    if (_mesh.running) {
+      await _mesh.stop();
+      return;
+    }
+    setState(() => _starting = true);
+    final ok = await _mesh.start();
+    if (!mounted) return;
+    setState(() => _starting = false);
+    if (!ok) gToast(context, _mesh.lastError.isEmpty ? GameT.t('nearby_perm') : '${GameT.t('nearby_perm')}\n(${_mesh.lastError.length > 70 ? _mesh.lastError.substring(0, 70) : _mesh.lastError})');
+  }
+
+  // ---------------------------------------------------------------- پیام‌ها
+
+  void _onEvent(Map<String, dynamic> m) {
+    if (!mounted) return;
+    final g = '${m['g']}';
+    if (!g.startsWith('sl_')) return;
+    final from = '${m['u']}';
+    final fromName = '${m['n']}';
+    final toMe = '${m['to']}' == _mesh.myUid;
+    switch (g) {
+      case 'sl_open':
+        if (stage == 'join') {
+          final c = '${m['code']}';
+          setState(() {
+            rooms[c] = _OpenRoom(c, from, fromName, (m['cnt'] as num?)?.toInt() ?? 1, DateTime.now().millisecondsSinceEpoch);
+          });
+        }
+        break;
+      case 'sl_join':
+        if (stage == 'host' && toMe && '${m['code']}' == code && !ids.contains(from) && ids.length < 6) {
+          setState(() {
+            ids.add(from);
+            pnames.add(fromName);
+          });
+          _sendRoster();
+        } else if (stage == 'host' && toMe && ids.contains(from)) {
+          _sendRoster();
+        }
+        break;
+      case 'sl_leave':
+        if (stage == 'host' && toMe && '${m['code']}' == code && ids.contains(from) && from != _mesh.myUid) {
+          final k = ids.indexOf(from);
+          setState(() {
+            ids.removeAt(k);
+            pnames.removeAt(k);
+          });
+          _sendRoster();
+        }
+        break;
+      case 'sl_ros':
+        if (stage == 'join' && '${m['code']}' == code) {
+          final l = (m['ids'] as List<dynamic>).map((e) => '$e').toList();
+          final n = (m['names'] as List<dynamic>).map((e) => '$e').toList();
+          if (l.contains(_mesh.myUid)) {
+            setState(() {
+              ids
+                ..clear()
+                ..addAll(l);
+              pnames
+                ..clear()
+                ..addAll(n);
+              joined = true;
+            });
+          }
+        }
+        break;
+      case 'sl_s':
+        if (!isHost && '${m['code']}' == code && (stage == 'join' || stage == 'play')) _applySnap(m);
+        break;
+      case 'sl_rm':
+        if (isHost && stage == 'play' && toMe && '${m['code']}' == code && ids.contains(from) && winner >= 0) {
+          setState(() => rmVotes.add(from));
+        }
+        break;
+      case 'sl_chat':
+        if (chatOn && '${m['code']}' == code && ids.contains(from) && from != _mesh.myUid) {
+          final t = '${m['t']}';
+          if (t.isNotEmpty && t.length <= 80) {
+            setState(() {
+              chat.add(_ChatMsg(fromName, t, false));
+              if (chat.length > 30) chat.removeAt(0);
+            });
+          }
+        }
+        break;
+      case 'sl_roll':
+        if (isHost && stage == 'play' && toMe && '${m['code']}' == code && turn < ids.length && ids[turn] == from) {
+          _timeouts[turn] = 0;
+          _hostRoll(turn);
+        }
+        break;
+      case 'sl_pick':
+        if (isHost && stage == 'play' && toMe && '${m['code']}' == code && turn < ids.length && ids[turn] == from) {
+          _timeouts[turn] = 0;
+          _hostPick((m['i'] as num?)?.toInt() ?? -1);
+        }
+        break;
+    }
+  }
+
+  void _sendRoster() {
+    _send(<String, dynamic>{'g': 'sl_ros', 'code': code, 'ids': ids, 'names': pnames});
+  }
+
+  Map<String, dynamic> _snap() => <String, dynamic>{
+        'g': 'sl_s',
+        'code': code,
+        'ids': ids,
+        'names': pnames,
+        'seats': seats,
+        'toks': toks,
+        'turn': turn,
+        'die': die,
+        'ph': ph,
+        'mov': movable,
+        'msg': msgKey,
+        'win': winner,
+        'seq': seq,
+        'tl': _tlNow(),
+      };
+
+  void _push() {
+    seq++;
+    _updateDeadline();
+    _send(_snap());
+    if (mounted) setState(() {});
+  }
+
+  void _applySnap(Map<String, dynamic> m) {
+    final sq = (m['seq'] as num?)?.toInt() ?? 0;
+    if (stage == 'play' && sq <= seq) {
+      _lastSnap = DateTime.now().millisecondsSinceEpoch;
+      return;
+    }
+    final l = (m['ids'] as List<dynamic>).map((e) => '$e').toList();
+    if (!l.contains(_mesh.myUid)) return;
+    final prevMsg = msgKey;
+    final prevSeq = seq;
+    setState(() {
+      seq = sq;
+      stage = 'play';
+      lost = false;
+      tl = (m['tl'] as num?)?.toInt() ?? 0;
+      tlAt = DateTime.now().millisecondsSinceEpoch;
+      _lastSnap = DateTime.now().millisecondsSinceEpoch;
+      ids
+        ..clear()
+        ..addAll(l);
+      pnames
+        ..clear()
+        ..addAll((m['names'] as List<dynamic>).map((e) => '$e'));
+      seats = (m['seats'] as List<dynamic>).map((e) => (e as num).toInt()).toList();
+      toks = <List<int>>[
+        for (final r in (m['toks'] as List<dynamic>)) <int>[for (final x in (r as List<dynamic>)) (x as num).toInt()],
+      ];
+      turn = (m['turn'] as num).toInt();
+      die = (m['die'] as num).toInt();
+      ph = '${m['ph']}';
+      movable = (m['mov'] as List<dynamic>).map((e) => (e as num).toInt()).toList();
+      msgKey = '${m['msg']}';
+      winner = (m['win'] as num).toInt();
+      if (winner < 0) {
+        reported = false;
+        resultReady = false;
+        gained = 0;
+        rmSent = false;
+      }
+    });
+    if (sq != prevSeq) {
+      if (msgKey == 'captured' && prevMsg != 'captured') {
+        GameFx.hit();
+      } else if (ph == 'roll' || ph == 'pick') {
+        GameFx.move();
+      }
+    }
+    if (winner >= 0) {
+      GameFx.win();
+      _report();
+    }
+  }
+
+  // ---------------------------------------------------------------- میزبان
+
+  void _createGame() {
+    if (!_mesh.running) return;
+    code = '${1000 + _rnd.nextInt(9000)}';
+    isHost = true;
+    joined = true;
+    ids
+      ..clear()
+      ..add(_mesh.myUid);
+    pnames
+      ..clear()
+      ..add(_mesh.myName);
+    setState(() => stage = 'host');
+    _send(<String, dynamic>{'g': 'sl_open', 'code': code, 'cnt': 1});
+  }
+
+  void _openJoin() {
+    isHost = false;
+    joined = false;
+    code = '';
+    ids.clear();
+    pnames.clear();
+    setState(() => stage = 'join');
+  }
+
+  void _joinRoom(_OpenRoom r) {
+    setState(() {
+      code = r.code;
+      hostUid = r.hostUid;
+      joined = false;
+    });
+    _send(<String, dynamic>{'g': 'sl_join', 'to': hostUid, 'code': code});
+  }
+
+  void _hostStart() {
+    if (ids.length < 2) return;
+    _gen++;
+    seats = _starSeats(ids.length);
+    toks = <List<int>>[for (var i = 0; i < seats.length; i++) <int>[0, 0, 0, 0]];
+    turn = 0;
+    die = 1;
+    ph = 'roll';
+    movable = <int>[];
+    msgKey = '';
+    winner = -1;
+    yardTries = 0;
+    busy = false;
+    reported = false;
+    resultReady = false;
+    gained = 0;
+    rmVotes.clear();
+    _timeouts.clear();
+    dlMs = 0;
+    _dlKey = '';
+    stage = 'play';
+    _lastSnap = DateTime.now().millisecondsSinceEpoch;
+    _push();
+    _maybeAuto();
+  }
+
+  bool _gone(int pl) => (pl != 0 && !_mesh.peers.values.any((p) => p.uid == ids[pl])) || (_timeouts[pl] ?? 0) >= 2;
+
+  void _maybeAuto() {
+    if (!isHost || stage != 'play' || winner >= 0 || busy || ph != 'roll' || turn >= ids.length) return;
+    if (!_gone(turn)) return;
+    final gen = _gen;
+    final pl = turn;
+    Future<void>.delayed(const Duration(milliseconds: 900), () {
+      if (!mounted || gen != _gen) return;
+      _hostRoll(pl);
+    });
+  }
+
+  Future<void> _hostRoll(int pl) async {
+    if (!isHost || busy || ph != 'roll' || turn != pl || winner >= 0) return;
+    final gen = _gen;
+    busy = true;
+    ph = 'rolling';
+    msgKey = '';
+    _push();
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted || gen != _gen) return;
+    final r = _rnd.nextInt(6) + 1;
+    die = r;
+    GameFx.roll();
+    final opts = _Star.legal(toks, turn, r);
+    if (opts.isEmpty) {
+      final allYard = toks[turn].every((p) => p == 0);
+      final again = allYard && yardTries < 2;
+      msgKey = allYard ? 'need_six' : 'no_move';
+      ph = 'shown';
+      _push();
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (!mounted || gen != _gen) return;
+      if (again) {
+        yardTries++;
+      } else {
+        yardTries = 0;
+        turn = (turn + 1) % seats.length;
+      }
+      ph = 'roll';
+      msgKey = '';
+      busy = false;
+      _push();
+      _maybeAuto();
+      return;
+    }
+    if (_gone(turn)) {
+      ph = 'shown';
+      _push();
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted || gen != _gen) return;
+      final i = _Star.botPick(toks, seats, turn, r, BotLevel.normal, _rnd);
+      await _hostMove(i, r, gen);
+      return;
+    }
+    if (opts.length == 1) {
+      ph = 'shown';
+      _push();
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      if (!mounted || gen != _gen) return;
+      await _hostMove(opts.first, r, gen);
+      return;
+    }
+    ph = 'pick';
+    movable = opts;
+    msgKey = 'pick';
+    busy = false;
+    _push();
+  }
+
+  void _hostPick(int i) {
+    if (!isHost || ph != 'pick' || !movable.contains(i)) return;
+    final gen = _gen;
+    ph = 'shown';
+    movable = <int>[];
+    msgKey = '';
+    busy = true;
+    _hostMove(i, die, gen);
+  }
+
+  Future<void> _hostMove(int i, int r, int gen) async {
+    final who = turn;
+    final steps = toks[who][i] == 0 ? 1 : r;
+    final cap = _Star.move(toks, seats, who, i, r);
+    msgKey = cap > 0 ? 'captured' : '';
+    if (cap > 0) {
+      GameFx.hit();
+    } else {
+      GameFx.move();
+    }
+    ph = 'shown';
+    _push();
+    await Future<void>.delayed(Duration(milliseconds: 450 + steps * 140 + (cap > 0 ? 450 : 0)));
+    if (!mounted || gen != _gen) return;
+    if (toks[who].every((p) => p == _sFin)) {
+      winner = who;
+      ph = 'over';
+      busy = false;
+      GameFx.win();
+      _push();
+      _report();
+      return;
+    }
+    final extra = r == 6 || cap > 0 || toks[who][i] == _sFin;
+    if (!extra) turn = (turn + 1) % seats.length;
+    yardTries = 0;
+    ph = 'roll';
+    msgKey = extra ? 'extra' : '';
+    busy = false;
+    _push();
+    _maybeAuto();
+  }
+
+  // ---------------------------------------------------------------- بازیکن
+
+  void _myRoll() {
+    if (ph != 'roll' || turn != me) return;
+    _timeouts[me] = 0;
+    if (isHost) {
+      _hostRoll(me);
+    } else {
+      _send(<String, dynamic>{'g': 'sl_roll', 'to': hostUid, 'code': code});
+    }
+  }
+
+  /// «بازی دوباره» با همان بازیکنان (فقط روی اتصال مستقیم؛ بدون ورکر)
+  void _rematch() {
+    if (isHost) {
+      _hostStart();
+    } else if (!rmSent) {
+      _send(<String, dynamic>{'g': 'sl_rm', 'to': hostUid, 'code': code});
+      setState(() => rmSent = true);
+    }
+  }
+
+  void _myPick(int pl, int i) {
+    if (ph != 'pick' || turn != me || pl != me || !movable.contains(i)) return;
+    _timeouts[me] = 0;
+    if (isHost) {
+      _hostPick(i);
+    } else {
+      _send(<String, dynamic>{'g': 'sl_pick', 'to': hostUid, 'code': code, 'i': i});
+    }
+  }
+
+  Future<void> _report() async {
+    if (reported) return;
+    reported = true;
+    final g = await _w.reportOffline(winner == me ? 'win' : 'loss', 'nearby', game: 'ludo');
+    if (!mounted) return;
+    setState(() {
+      gained = g;
+      resultReady = true;
+    });
+  }
+
+  void _sendChat(String raw) {
+    final t = raw.trim();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (!chatOn || t.isEmpty || t.length > 60 || now - _lastChatMs < 1000) return;
+    _lastChatMs = now;
+    _send(<String, dynamic>{'g': 'sl_chat', 'code': code, 't': t});
+    setState(() {
+      chat.add(_ChatMsg(_mesh.myName, t, true));
+      if (chat.length > 30) chat.removeAt(0);
+    });
+  }
+
+  Widget _chatBox() {
+    if (!chatOn) return const SizedBox.shrink();
+    return GameChatPanel(lines: <ChatLine>[for (final m in chat) ChatLine(m.name, m.text, m.mine)], onSend: _sendChat);
+  }
+
+  // ---------------------------------------------------------------- رابط
+
+  String _status() {
+    if (winner >= 0) return winner == me ? GameT.t('you_win') : GameT.t('wins', <String, String>{'n': pnames[winner]});
+    if (turn == me) return GameT.t('your_turn');
+    return GameT.t('turn_of', <String, String>{'n': pnames[turn]});
+  }
+
+  Widget _netCard() {
+    final on = _mesh.running;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: on ? gPanel : gGold,
+          foregroundColor: on ? gGold : gBg,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+        onPressed: _toggleNet,
+        icon: _starting
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            : Icon(on ? Icons.wifi_tethering_off_rounded : Icons.wifi_tethering_rounded),
+        label: Text(
+          on ? '${GameT.t('nearby_stop')} · ${_mesh.peers.length}' : GameT.t('nearby_start'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+    );
+  }
+
+  Widget _bigButton(IconData icon, String text, VoidCallback? onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: gGold,
+          foregroundColor: gBg,
+          disabledBackgroundColor: gLine,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(text, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+      ),
+    );
+  }
+
+  Widget _row(String name, {Widget? trailing}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(color: gPanel, borderRadius: BorderRadius.circular(16), border: Border.all(color: gLine)),
+      child: Row(
+        children: [
+          const Icon(Icons.phone_android_rounded, color: gTeal),
+          const SizedBox(width: 10),
+          Expanded(child: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _menuBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        if (_mesh.running) ...[
+          _bigButton(Icons.add_circle_rounded, _dt('lu_host'), _createGame),
+          _bigButton(Icons.login_rounded, _dt('lu_join'), _openJoin),
+        ],
+        const SizedBox(height: 10),
+        Text(_dt('sl_note'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 12, height: 1.8)),
+      ],
+    );
+  }
+
+  Widget _hostBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        Text(_dt('sl_players', <String, String>{'n': '${ids.length}'}), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 15)),
+        const SizedBox(height: 8),
+        for (final n in pnames) _row(n),
+        const SizedBox(height: 6),
+        Text(_dt('lu_code', <String, String>{'c': code}), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 12)),
+        const SizedBox(height: 10),
+        _bigButton(Icons.play_arrow_rounded, ids.length < 2 ? _dt('lu_needmin') : _dt('lu_start'), ids.length < 2 ? null : _hostStart),
+      ],
+    );
+  }
+
+  Widget _joinBody() {
+    final list = rooms.values.toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _netCard(),
+        if (code.isNotEmpty && joined) ...[
+          Text(_dt('lu_wait_host'), textAlign: TextAlign.center, style: const TextStyle(color: gGold, fontWeight: FontWeight.w800, height: 1.8)),
+          const SizedBox(height: 10),
+          for (final n in pnames) _row(n),
+        ] else ...[
+          if (list.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: Text(_dt('lu_none'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, height: 1.9))),
+          for (final r in list)
+            _row(
+              r.hostName,
+              trailing: code == r.code
+                  ? Text(GameT.t('nearby_wait'), style: const TextStyle(color: gMuted, fontSize: 12))
+                  : FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg),
+                      onPressed: () => _joinRoom(r),
+                      child: Text(_dt('lu_join_short', <String, String>{'n': '${r.count}'}), style: const TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _playBody(double w) {
+    final canRoll = ph == 'roll' && turn == me && winner < 0 && !lost;
+    final pickable = ph == 'pick' && turn == me && !lost ? movable : const <int>[];
+    final shownDie = ph == 'rolling' ? 1 + (DateTime.now().millisecond ~/ 170) % 6 : die;
+    return Column(
+      children: [
+        _starChips(
+          seats: seats,
+          names: pnames,
+          home: <int>[for (var k = 0; k < seats.length; k++) toks[k].where((p) => p == _sFin).length],
+          turn: turn,
+          over: winner >= 0,
+        ),
+        const SizedBox(height: 10),
+        Text(_status(), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+        SizedBox(
+          height: 20,
+          child: Text(lost ? _dt('lu_lost') : (msgKey.isEmpty ? '' : _dt(msgKey)), style: const TextStyle(color: gSky, fontSize: 12.5, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(height: 4),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0.8, end: view3d ? 0.8 : 0.0),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+          builder: (ctx2, tilt, _) => _StarBoard(seats: seats, toks: toks, turn: turn, movable: pickable, onTap: _myPick, tilt: tilt),
+        ),
+        const SizedBox(height: 14),
+        if (winner < 0 && (ph == 'roll' || ph == 'pick') && _secsLeft() > 0) GameTimerBar(left: _secsLeft(), total: ph == 'pick' ? 30 : 25),
+        const SizedBox(height: 8),
+        _diceControls(die: shownDie, rolling: ph == 'rolling', enabled: canRoll, onRoll: _myRoll),
+        _chatBox(),
+        if (winner >= 0 && resultReady) ...<Widget>[
+          _diceResultCard(
+            title: _status(),
+            gained: gained,
+            onAgain: _rematch,
+            onBack: () => Navigator.of(context).pop(),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              isHost
+                  ? (rmVotes.isEmpty ? '' : (GameT.fa ? '${rmVotes.length} نفر بازی دوباره می‌خواهند' : '${rmVotes.length} want a rematch'))
+                  : (rmSent ? (GameT.fa ? 'درخواست بازی دوباره ارسال شد؛ منتظر میزبان…' : 'Rematch requested; waiting for the host…') : ''),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: gSky, fontSize: 12.5),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget body;
+    switch (stage) {
+      case 'host':
+        body = _hostBody();
+        break;
+      case 'join':
+        body = _joinBody();
+        break;
+      case 'play':
+        body = const SizedBox.shrink();
+        break;
+      default:
+        body = _menuBody();
+    }
+    return Directionality(
+      textDirection: gDir,
+      child: Scaffold(
+        backgroundColor: gBg,
+        appBar: AppBar(
+          backgroundColor: gBg,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: gGold),
+          title: Text('${_dt('star_title')} · ${GameT.t('nearby_title')}', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 15)),
+          actions: [
+            TextButton(
+              onPressed: () => setState(() => view3d = !view3d),
+              child: Text(view3d ? '3D' : '2D', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+            ),
             gameFxAction(() => setState(() {})),
             IconButton(
               tooltip: GameT.fa ? 'چت بازیکنان' : 'Player chat',
