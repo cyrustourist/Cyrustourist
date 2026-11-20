@@ -51,6 +51,11 @@ const Map<String, Map<String, String>> _dtx = {
     'fa': 'تاس بریزید و به خانهٔ ۱۰۰ برسید. نردبان بالا می‌برد و مار پایین می‌آورد. برای رسیدن به ۱۰۰ عدد دقیق لازم است و ۶ یک بار دیگر تاس می‌دهد.',
     'en': 'Roll and reach square 100. Ladders lift you up, snakes slide you down. You need the exact number to finish, and a six gives another roll.'
   },
+  'star_title': {'fa': 'منچ ستاره‌ای ۳ بعدی', 'en': '3D Star Ludo'},
+  'star_rule': {
+    'fa': 'صفحهٔ ستاره‌ای تا ۶ نفره. با ۶ مهره از جایگاه رنگی بیرون می‌آید و روی خانهٔ رنگیِ نوک بازوی شما می‌نشیند. ساعتگرد دور ستاره بچرخید، مهرهٔ حریف را بزنید (خانه‌های ستاره‌دار و نوک بازوها امن‌اند) و هر ۴ مهره را از خط رنگی خودتان به مرکز برسانید. ۶، زدن مهره و رسیدن به مرکز یک بار دیگر تاس می‌دهد. با دکمهٔ 3D/2D نمای صفحه را عوض کنید.',
+    'en': 'Star board for up to 6 players. A six brings a piece out onto the coloured square at the tip of your arm. Travel clockwise around the star, capture opponents (star squares and arm tips are safe) and bring all 4 pieces up your coloured lane to the centre. A six, a capture or reaching the centre gives another roll. Use the 3D/2D button to change the view.'
+  },
   'ludo_rule': {
     'fa': 'با ۶ مهره از خانه بیرون می‌آید. مهرهٔ حریف را بزنید تا به خانه برگردد (خانه‌های ستاره‌دار و شروع امن‌اند). هر ۴ مهره را زودتر به مرکز برسانید. ۶، زدن مهره و رسیدن به مرکز یک بار دیگر تاس می‌دهد.',
     'en': 'A six brings a piece out. Capture opponent pieces to send them home (star and start squares are safe). Be first to bring all 4 pieces to the centre. A six, a capture or reaching the centre gives another roll.'
@@ -3013,6 +3018,1117 @@ class _SnakesNearbyPageState extends State<SnakesNearbyPage> {
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
                 child: Center(child: SizedBox(width: w, child: stage == 'play' ? _playBody(w) : _menuBody())),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================= منچ ستاره‌ای ۳ بعدی (رایگان)
+// صفحهٔ ۶ بازویی مثل منچ‌های چوبی، ۲ تا ۶ بازیکن (ربات یا چند نفره روی یک گوشی).
+// قفل سکه‌ای و قیمت ندارد. نمای ۳ بعدی با دکمهٔ 3D/2D بالای صفحه عوض می‌شود.
+
+const int _sR = 4;
+const int _sArms = 6;
+const int _sPer = 2 * _sR + 1;
+const int _sN = _sArms * _sPer;
+const int _sFin = _sN + _sR + 1;
+const double _sH = 2.75;
+const double _sYardR = _sH + _sR + 2.0;
+const List<Color> _sColors = <Color>[
+  Color(0xffff8f1f),
+  Color(0xff2d2d33),
+  Color(0xfff6c445),
+  Color(0xff2f8fe8),
+  Color(0xffe8453c),
+  Color(0xff3fae49),
+];
+
+Color _smix(Color a, Color b, double t) => Color.lerp(a, b, t) ?? a;
+
+List<int> _starSeats(int n) {
+  if (n >= 6) return <int>[0, 1, 2, 3, 4, 5];
+  if (n == 4) return <int>[0, 1, 3, 4];
+  if (n == 3) return <int>[0, 2, 4];
+  return <int>[0, 3];
+}
+
+final List<Offset> _kStarOutline = _starOutline();
+
+List<Offset> _starOutline() {
+  final pts = <Offset>[];
+  for (var i = 0; i < 180; i++) {
+    final phi = 2 * pi * i / 180;
+    final psi = phi - pi / 2;
+    final r = 9.6 + 0.7 * cos(6 * psi) + 0.16 * sin(7 * phi + 0.6) + 0.1 * sin(11 * phi);
+    pts.add(Offset(r * cos(phi), r * sin(phi)));
+  }
+  return pts;
+}
+
+/// منطق و هندسهٔ منچ ستاره‌ای. پیشروی p: ۰ خانه، ۱.._sN مسیر (۱ = نوک بازوی خود)، بعد خط رنگی، _sFin = مرکز.
+class _Star {
+  _Star._();
+
+  static final Set<int> safe = _buildSafe();
+  static final List<Offset> track = _buildTrack();
+  static const List<double> _yl = <double>[-1.35, -0.45, 0.45, 1.35];
+
+  static Set<int> _buildSafe() {
+    final s = <int>{};
+    for (var a = 0; a < _sArms; a++) {
+      s.add(a * _sPer + _sR);
+      s.add(a * _sPer + _sR + 1 + (_sR - 1 - 2));
+    }
+    return s;
+  }
+
+  static Offset dir(int a) {
+    final t = a * pi / 3;
+    return Offset(-sin(t), cos(t));
+  }
+
+  static Offset side(int a) {
+    final d = dir(a);
+    return Offset(-d.dy, d.dx);
+  }
+
+  static Offset armPt(int a, double x, double r) => dir(a) * (_sH + r) + side(a) * x;
+
+  static List<Offset> _buildTrack() {
+    final t = <Offset>[];
+    for (var a = 0; a < _sArms; a++) {
+      for (var r = 0; r < _sR; r++) {
+        t.add(armPt(a, -1, r.toDouble()));
+      }
+      t.add(armPt(a, 0, _sR.toDouble()));
+      for (var r = _sR - 1; r >= 0; r--) {
+        t.add(armPt(a, 1, r.toDouble()));
+      }
+    }
+    return t;
+  }
+
+  static int trackIndex(int seat, int p) => (seat * _sPer + _sR + p - 1) % _sN;
+
+  static Offset yardPt(int a, int i) {
+    final l = _yl[i];
+    return dir(a) * (_sYardR - 0.12 * l * l) + side(a) * l;
+  }
+
+  static Offset cell(List<int> seats, int pl, int i, int p) {
+    final a = seats[pl];
+    if (p == 0) return yardPt(a, i);
+    if (p <= _sN) return track[trackIndex(a, p)];
+    if (p < _sFin) return armPt(a, 0, (_sR - (p - _sN)).toDouble());
+    return dir(a) * 0.95 + side(a) * ((i - 1.5) * 0.3);
+  }
+
+  static List<int> legal(List<List<int>> t, int pl, int roll) {
+    final out = <int>[];
+    for (var i = 0; i < 4; i++) {
+      final p = t[pl][i];
+      if (p == 0) {
+        if (roll == 6) out.add(i);
+      } else if (p + roll <= _sFin) {
+        out.add(i);
+      }
+    }
+    return out;
+  }
+
+  static int move(List<List<int>> t, List<int> seats, int pl, int i, int roll) {
+    final p = t[pl][i];
+    final np = p == 0 ? 1 : p + roll;
+    t[pl][i] = np;
+    var captured = 0;
+    if (np >= 1 && np <= _sN) {
+      final idx = trackIndex(seats[pl], np);
+      if (!safe.contains(idx)) {
+        for (var o = 0; o < t.length; o++) {
+          if (o == pl) continue;
+          for (var j = 0; j < 4; j++) {
+            final q = t[o][j];
+            if (q >= 1 && q <= _sN && trackIndex(seats[o], q) == idx) {
+              t[o][j] = 0;
+              captured++;
+            }
+          }
+        }
+      }
+    }
+    return captured;
+  }
+
+  static bool danger(List<List<int>> t, List<int> seats, int pl, int idx) {
+    for (var o = 0; o < t.length; o++) {
+      if (o == pl) continue;
+      for (var j = 0; j < 4; j++) {
+        final q = t[o][j];
+        if (q < 1 || q > _sN) continue;
+        final d = (idx - trackIndex(seats[o], q) + _sN) % _sN;
+        if (d >= 1 && d <= 6) return true;
+      }
+    }
+    return false;
+  }
+
+  static int botPick(List<List<int>> t, List<int> seats, int pl, int roll, BotLevel level, Random rnd) {
+    final opts = legal(t, pl, roll);
+    if (opts.isEmpty) return -1;
+    if (level == BotLevel.easy || opts.length == 1) return opts[rnd.nextInt(opts.length)];
+    if (level == BotLevel.normal && rnd.nextInt(100) < 25) return opts[rnd.nextInt(opts.length)];
+    var best = -1e9;
+    var bestI = opts.first;
+    for (final i in opts) {
+      final p = t[pl][i];
+      final copy = <List<int>>[for (final row in t) List<int>.from(row)];
+      final cap = move(copy, seats, pl, i, roll);
+      final np = copy[pl][i];
+      var s = cap * 100.0 + roll + np * 0.1;
+      if (np == _sFin) s += 80;
+      if (p == 0) s += 45;
+      if (p <= _sN && np > _sN) s += 30;
+      if (np >= 1 && np <= _sN) {
+        final idx = trackIndex(seats[pl], np);
+        if (safe.contains(idx)) {
+          s += 18;
+        } else if (level == BotLevel.hard && danger(copy, seats, pl, idx)) {
+          s -= 25;
+        }
+      }
+      if (level == BotLevel.hard && p >= 1 && p <= _sN) {
+        final cur = trackIndex(seats[pl], p);
+        if (!safe.contains(cur) && danger(t, seats, pl, cur)) s += 20;
+      }
+      s += rnd.nextDouble();
+      if (s > best) {
+        best = s;
+        bestI = i;
+      }
+    }
+    return bestI;
+  }
+}
+
+/// دوربین ساده با پرسپکتیو: tilt = زاویهٔ خم شدن صفحه (۰ = از بالا).
+class _SProj {
+  _SProj(this.tilt, double width)
+      : _cs = cos(tilt),
+        _sn = sin(tilt) {
+    var minX = 1e9;
+    var maxX = -1e9;
+    var minY = 1e9;
+    var maxY = -1e9;
+    for (final b in _kStarOutline) {
+      for (final h in const <double>[-0.7, 2.8]) {
+        final r = _raw(b, h);
+        minX = min(minX, r.dx);
+        maxX = max(maxX, r.dx);
+        minY = min(minY, r.dy);
+        maxY = max(maxY, r.dy);
+      }
+    }
+    _minX = minX;
+    _minY = minY;
+    k = (width - 2 * _pad) / (maxX - minX);
+    height = (maxY - minY) * k + 2 * _pad;
+  }
+
+  static const double _d = 42;
+  static const double _pad = 4;
+  final double tilt;
+  final double _cs;
+  final double _sn;
+  late final double _minX;
+  late final double _minY;
+  late final double k;
+  late final double height;
+
+  Offset _raw(Offset b, double h) {
+    final yc = b.dy * _cs - h * _sn;
+    final zc = -b.dy * _sn - h * _cs;
+    final w = _d / (_d + zc);
+    return Offset(b.dx * w, yc * w);
+  }
+
+  Offset pt(Offset b, [double h = 0]) {
+    final r = _raw(b, h);
+    return Offset((r.dx - _minX) * k + _pad, (r.dy - _minY) * k + _pad);
+  }
+
+  double scaleAt(Offset b, [double h = 0]) {
+    final zc = -b.dy * _sn - h * _cs;
+    return k * _d / (_d + zc);
+  }
+
+  double squash(Offset b) {
+    final dy = (pt(b + const Offset(0, 1)).dy - pt(b - const Offset(0, 1)).dy).abs();
+    final dx = (pt(b + const Offset(1, 0)).dx - pt(b - const Offset(1, 0)).dx).abs();
+    return dx <= 0 ? 1.0 : max(0.02, dy / dx);
+  }
+}
+
+class _SPawn {
+  const _SPawn({required this.pl, required this.i, required this.pos, required this.h, required this.color, required this.glow, required this.small});
+  final int pl;
+  final int i;
+  final Offset pos;
+  final double h;
+  final Color color;
+  final bool glow;
+  final bool small;
+}
+
+class _SAnim {
+  const _SAnim(this.pts, this.start, this.end);
+  final List<Offset> pts;
+  final double start;
+  final double end;
+}
+
+class _SPos {
+  const _SPos(this.o, this.h);
+  final Offset o;
+  final double h;
+}
+
+class _StarBoard extends StatefulWidget {
+  const _StarBoard({
+    required this.seats,
+    required this.toks,
+    required this.turn,
+    required this.movable,
+    required this.onTap,
+    required this.tilt,
+  });
+  final List<int> seats;
+  final List<List<int>> toks;
+  final int turn;
+  final List<int> movable;
+  final void Function(int pl, int i) onTap;
+  final double tilt;
+
+  @override
+  State<_StarBoard> createState() => _StarBoardState();
+}
+
+class _StarBoardState extends State<_StarBoard> with SingleTickerProviderStateMixin {
+  late final AnimationController _ac;
+  late List<List<int>> _prev;
+  final Map<int, _SAnim> _anims = <int, _SAnim>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _prev = _copy(widget.toks);
+  }
+
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+
+  List<List<int>> _copy(List<List<int>> t) => <List<int>>[for (final r in t) List<int>.from(r)];
+
+  @override
+  void didUpdateWidget(covariant _StarBoard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _diff();
+  }
+
+  void _diff() {
+    final toks = widget.toks;
+    final seats = widget.seats;
+    if (_prev.length != toks.length) {
+      _prev = _copy(toks);
+      _anims.clear();
+      return;
+    }
+    final changed = <int>[];
+    for (var pl = 0; pl < toks.length; pl++) {
+      for (var i = 0; i < 4; i++) {
+        if (_prev[pl][i] != toks[pl][i]) changed.add(pl * 4 + i);
+      }
+    }
+    if (changed.isEmpty) return;
+    if (changed.length > 6) {
+      _prev = _copy(toks);
+      _anims.clear();
+      return;
+    }
+    final movers = <int, List<Offset>>{};
+    final caught = <int, List<Offset>>{};
+    for (final id in changed) {
+      final pl = id ~/ 4;
+      final i = id % 4;
+      final o = _prev[pl][i];
+      final n = toks[pl][i];
+      if (n == 0) {
+        caught[id] = <Offset>[_Star.cell(seats, pl, i, o), _Star.cell(seats, pl, i, 0)];
+      } else {
+        final pts = <Offset>[_Star.cell(seats, pl, i, o)];
+        if (o == 0) {
+          pts.add(_Star.cell(seats, pl, i, 1));
+        } else {
+          for (var q = o + 1; q <= n; q++) {
+            pts.add(_Star.cell(seats, pl, i, q));
+          }
+        }
+        movers[id] = pts;
+      }
+    }
+    var moverMs = 0;
+    movers.forEach((id, pts) {
+      moverMs = max(moverMs, ((pts.length - 1) * 140).clamp(280, 1000).toInt());
+    });
+    final capMs = caught.isEmpty ? 0 : 450;
+    final total = max(1, moverMs + capMs);
+    _anims.clear();
+    movers.forEach((id, pts) {
+      _anims[id] = _SAnim(pts, 0, moverMs / total);
+    });
+    caught.forEach((id, pts) {
+      _anims[id] = _SAnim(pts, moverMs / total, 1);
+    });
+    _ac.duration = Duration(milliseconds: total);
+    _ac.forward(from: 0);
+    _prev = _copy(toks);
+  }
+
+  _SPos _animPos(_SAnim a, double t) {
+    if (t <= a.start || a.end <= a.start) return _SPos(a.pts.first, 0);
+    if (t >= a.end) return _SPos(a.pts.last, 0);
+    final local = (t - a.start) / (a.end - a.start);
+    final segs = a.pts.length - 1;
+    final s = local * segs;
+    final i = min(s.floor(), segs - 1);
+    final f = s - i;
+    final e = Curves.easeInOut.transform(f);
+    final from = a.pts[i];
+    final to = a.pts[i + 1];
+    final dist = (to - from).distance;
+    final hop = sin(pi * f) * min(1.6, 0.45 + dist * 0.18);
+    return _SPos(from + (to - from) * e, hop);
+  }
+
+  List<_SPawn> _pawns() {
+    final toks = widget.toks;
+    final seats = widget.seats;
+    final t = _ac.value;
+    final count = toks.length * 4;
+    final keys = List<String>.filled(count, '');
+    final groups = <String, List<int>>{};
+    for (var pl = 0; pl < toks.length; pl++) {
+      for (var i = 0; i < 4; i++) {
+        final p = toks[pl][i];
+        String key;
+        if (p >= 1 && p <= _sN) {
+          key = 't${_Star.trackIndex(seats[pl], p)}';
+        } else if (p > _sN && p < _sFin) {
+          key = 'h$pl-$p';
+        } else {
+          key = 'u$pl-$i-$p';
+        }
+        keys[pl * 4 + i] = key;
+        groups.putIfAbsent(key, () => <int>[]).add(pl * 4 + i);
+      }
+    }
+    final out = <_SPawn>[];
+    for (var id = 0; id < count; id++) {
+      final pl = id ~/ 4;
+      final i = id % 4;
+      final p = toks[pl][i];
+      var pos = _Star.cell(seats, pl, i, p);
+      var h = 0.0;
+      final an = _anims[id];
+      if (an != null) {
+        final ap = _animPos(an, t);
+        pos = ap.o;
+        h = ap.h;
+      }
+      final grp = groups[keys[id]]!;
+      if (grp.length > 1) {
+        final a = 2 * pi * grp.indexOf(id) / grp.length;
+        pos = pos + Offset(cos(a) * 0.26, sin(a) * 0.26);
+      }
+      out.add(_SPawn(
+        pl: pl,
+        i: i,
+        pos: pos,
+        h: h,
+        color: _sColors[seats[pl]],
+        glow: pl == widget.turn && widget.movable.contains(i),
+        small: p >= _sFin,
+      ));
+    }
+    return out;
+  }
+
+  void _tap(Offset local, _SProj proj) {
+    _SPawn? best;
+    var bd = 1e9;
+    for (final p in _pawns()) {
+      if (!p.glow) continue;
+      final c = proj.pt(p.pos, p.h + 0.75);
+      final dd = (c - local).distance;
+      if (dd < bd) {
+        bd = dd;
+        best = p;
+      }
+    }
+    if (best != null && bd <= max(28.0, proj.k * 1.6)) widget.onTap(best.pl, best.i);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (ctx, cons) {
+        final proj = _SProj(widget.tilt, cons.maxWidth);
+        return SizedBox(
+          width: cons.maxWidth,
+          height: proj.height,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapUp: (d) => _tap(d.localPosition, proj),
+            child: AnimatedBuilder(
+              animation: _ac,
+              builder: (_, __) => CustomPaint(
+                size: Size(cons.maxWidth, proj.height),
+                painter: _StarPainter(proj: proj, seats: widget.seats, activeSeat: widget.seats[widget.turn], pawns: _pawns()),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StarPainter extends CustomPainter {
+  _StarPainter({required this.proj, required this.seats, required this.activeSeat, required this.pawns});
+  final _SProj proj;
+  final List<int> seats;
+  final int activeSeat;
+  final List<_SPawn> pawns;
+
+  Path _path(List<Offset> pts, [double h = 0]) {
+    final path = Path();
+    for (var i = 0; i < pts.length; i++) {
+      final o = proj.pt(pts[i], h);
+      if (i == 0) {
+        path.moveTo(o.dx, o.dy);
+      } else {
+        path.lineTo(o.dx, o.dy);
+      }
+    }
+    path.close();
+    return path;
+  }
+
+  Rect _ell(Offset b, double r, [double h = 0]) {
+    final c = proj.pt(b, h);
+    final rx = (proj.pt(b + Offset(r, 0), h).dx - proj.pt(b - Offset(r, 0), h).dx).abs() / 2;
+    final ry = (proj.pt(b + Offset(0, r), h).dy - proj.pt(b - Offset(0, r), h).dy).abs() / 2;
+    return Rect.fromCenter(center: c, width: max(rx * 2, 0.5), height: max(ry * 2, 0.5));
+  }
+
+  void _disc(Canvas canvas, Offset b, double r, Color c, {Color? ring, bool star = false}) {
+    final rect = _ell(b, r);
+    canvas.drawOval(_ell(b, r * 1.14).shift(Offset(0, rect.height * 0.07)), Paint()..color = const Color(0x66000000));
+    canvas.drawOval(
+      rect,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.3, -0.45),
+          colors: <Color>[_smix(c, Colors.white, 0.35), c, _smix(c, Colors.black, 0.25)],
+          stops: const <double>[0, 0.6, 1],
+        ).createShader(rect),
+    );
+    if (ring != null) {
+      canvas.drawOval(
+        rect.deflate(rect.shortestSide * 0.13),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(1.0, rect.shortestSide * 0.16)
+          ..color = ring,
+      );
+    }
+    canvas.drawOval(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.9
+        ..color = const Color(0x88301808),
+    );
+    if (star) {
+      final tp = TextPainter(
+        text: TextSpan(text: '★', style: TextStyle(color: const Color(0xff7a3b22), fontSize: rect.width * 0.62)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      canvas.save();
+      canvas.translate(rect.center.dx, rect.center.dy);
+      canvas.scale(1, rect.height / max(rect.width, 0.1));
+      tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
+      canvas.restore();
+    }
+  }
+
+  Color _arm(int a) {
+    final c = _sColors[a];
+    return seats.contains(a) ? c : _smix(c, const Color(0xff6b5a50), 0.72);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ol = _kStarOutline;
+
+    // سایهٔ زیر صفحه
+    canvas.drawPath(
+      _path(ol, -0.9).shift(Offset(0, proj.k * 0.45)),
+      Paint()
+        ..color = const Color(0x88000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, proj.k * 0.5),
+    );
+    // ضخامت صفحه
+    for (var i = 6; i >= 1; i--) {
+      canvas.drawPath(_path(ol, -0.1 * i), Paint()..color = _smix(const Color(0xff3a1c0e), const Color(0xff1c0c06), i / 6));
+    }
+    // روی صفحه (چوب گردویی)
+    final top = _path(ol, 0);
+    canvas.drawPath(
+      top,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xff7a4128), Color(0xff4a2415), Color(0xff6a3720)],
+          stops: <double>[0, 0.55, 1],
+        ).createShader(top.getBounds()),
+    );
+    canvas.save();
+    canvas.clipPath(top);
+    for (var g = 0; g < 18; g++) {
+      final y0 = -11.0 + g * 1.25;
+      final gp = Path();
+      for (var s = 0; s <= 11; s++) {
+        final x = -11.0 + s * 2.0;
+        final o = proj.pt(Offset(x, y0 + 0.5 * sin(x * 0.45 + g * 1.3)));
+        if (s == 0) {
+          gp.moveTo(o.dx, o.dy);
+        } else {
+          gp.lineTo(o.dx, o.dy);
+        }
+      }
+      canvas.drawPath(
+        gp,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(0.8, proj.k * 0.06)
+          ..color = g.isEven ? const Color(0x22000000) : const Color(0x16ffb070),
+      );
+    }
+    canvas.restore();
+    canvas.drawPath(
+      top,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.0, proj.k * 0.1)
+        ..color = const Color(0x55ffd9a0),
+    );
+
+    // جایگاه رنگی مهره‌ها
+    for (var a = 0; a < _sArms; a++) {
+      final c = _arm(a);
+      final inn = <Offset>[];
+      final out = <Offset>[];
+      for (var j = 0; j <= 14; j++) {
+        final l = -2.1 + j * 0.3;
+        final r = _sYardR - 0.12 * l * l;
+        inn.add(_Star.dir(a) * (r - 0.85) + _Star.side(a) * l);
+        out.add(_Star.dir(a) * (r + 0.85) + _Star.side(a) * l);
+      }
+      final band = _path(<Offset>[...inn, ...out.reversed]);
+      if (a == activeSeat) {
+        canvas.drawPath(
+          band,
+          Paint()
+            ..color = c.withAlpha(200)
+            ..maskFilter = MaskFilter.blur(BlurStyle.outer, proj.k * 0.6),
+        );
+      }
+      canvas.drawPath(
+        band,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[_smix(c, Colors.white, 0.25), _smix(c, Colors.black, 0.25)],
+          ).createShader(band.getBounds()),
+      );
+      for (var i = 0; i < 4; i++) {
+        _disc(canvas, _Star.yardPt(a, i), 0.5, const Color(0xffdadada));
+      }
+    }
+
+    // خانه‌های مسیر
+    for (var i = 0; i < _sN; i++) {
+      final a = i ~/ _sPer;
+      if (i % _sPer == _sR) {
+        _disc(canvas, _Star.track[i], 0.42, _smix(_arm(a), const Color(0xfff0dcae), 0.45), ring: _arm(a));
+      } else {
+        _disc(canvas, _Star.track[i], 0.42, const Color(0xfff0dcae), star: _Star.safe.contains(i));
+      }
+    }
+    // خط رنگی پایانی
+    for (var a = 0; a < _sArms; a++) {
+      for (var k = 1; k <= _sR; k++) {
+        _disc(canvas, _Star.armPt(a, 0, (_sR - k).toDouble()), 0.42, _arm(a));
+      }
+    }
+
+    // مرکز ستاره
+    canvas.drawOval(_ell(Offset.zero, 2.08), Paint()..color = const Color(0x66000000));
+    for (var a = 0; a < _sArms; a++) {
+      final d = _Star.dir(a);
+      final ang = atan2(d.dy, d.dx);
+      final pts = <Offset>[Offset.zero];
+      for (var j = 0; j <= 8; j++) {
+        final t = ang - pi / 6 + j * (pi / 3) / 8;
+        pts.add(Offset(cos(t), sin(t)) * 1.95);
+      }
+      canvas.drawPath(_path(pts), Paint()..color = _arm(a));
+    }
+    canvas.drawOval(
+      _ell(Offset.zero, 1.95),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.5, proj.k * 0.12)
+        ..color = const Color(0xfff0c36a),
+    );
+    canvas.drawOval(_ell(Offset.zero, 0.5), Paint()..color = const Color(0xfffff3cf));
+    canvas.drawOval(
+      _ell(Offset.zero, 0.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.0, proj.k * 0.08)
+        ..color = const Color(0xffd9a441),
+    );
+
+    // مهره‌ها: دورترها اول
+    final sorted = List<_SPawn>.from(pawns)..sort((x, y) => proj.pt(x.pos).dy.compareTo(proj.pt(y.pos).dy));
+    for (final p in sorted) {
+      _drawPawn(canvas, p);
+    }
+  }
+
+  double _bw(double z) => 0.17 + 0.30 * exp(-pow(z / 0.55, 2).toDouble());
+
+  void _drawPawn(Canvas canvas, _SPawn p) {
+    final c = p.color;
+    final hs = p.small ? 0.62 : 1.0;
+    final sc = proj.scaleAt(p.pos);
+    final sq = proj.squash(p.pos);
+    final ground = proj.pt(p.pos);
+    final foot = proj.pt(p.pos, p.h);
+
+    // سایه روی صفحه
+    final shW = 1.05 * hs * sc;
+    canvas.drawOval(
+      Rect.fromCenter(center: ground + Offset(0.1 * hs * sc, 0.02 * hs * sc), width: shW, height: max(1.0, shW * sq)),
+      Paint()
+        ..color = const Color(0x77000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, max(1.0, sc * 0.1)),
+    );
+    if (p.glow) {
+      final gw = 1.9 * hs * sc;
+      final gr = Rect.fromCenter(center: ground, width: gw, height: max(2.0, gw * sq));
+      canvas.drawOval(
+        gr,
+        Paint()
+          ..color = gGold.withAlpha(150)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, max(2.0, sc * 0.35)),
+      );
+      canvas.drawOval(
+        gr.deflate(gw * 0.05),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(1.5, sc * 0.1)
+          ..color = gGold,
+      );
+    }
+
+    // پایه
+    final rx = 0.47 * hs * sc;
+    canvas.drawOval(Rect.fromCenter(center: foot, width: rx * 2, height: max(1.0, rx * 2 * sq)), Paint()..color = _smix(c, Colors.black, 0.4));
+
+    // بدنه
+    final left = <Offset>[];
+    final right = <Offset>[];
+    for (var j = 0; j <= 12; j++) {
+      final z = 0.95 * j / 12;
+      final cz = proj.pt(p.pos, p.h + z * hs);
+      final w = _bw(z) * hs * sc;
+      left.add(Offset(cz.dx - w, cz.dy));
+      right.add(Offset(cz.dx + w, cz.dy));
+    }
+    final body = Path()..moveTo(left.first.dx, left.first.dy);
+    for (final o in left.skip(1)) {
+      body.lineTo(o.dx, o.dy);
+    }
+    for (final o in right.reversed) {
+      body.lineTo(o.dx, o.dy);
+    }
+    body.close();
+    canvas.drawPath(
+      body,
+      Paint()
+        ..shader = LinearGradient(
+          colors: <Color>[_smix(c, Colors.white, 0.5), c, _smix(c, Colors.black, 0.45)],
+          stops: const <double>[0, 0.45, 1],
+        ).createShader(body.getBounds()),
+    );
+
+    // یقه
+    final collarC = proj.pt(p.pos, p.h + 0.95 * hs);
+    final cw = 0.62 * hs * sc;
+    canvas.drawOval(Rect.fromCenter(center: collarC, width: cw, height: max(1.0, cw * sq)), Paint()..color = _smix(c, Colors.white, 0.18));
+
+    // سر
+    final hc = proj.pt(p.pos, p.h + 1.2 * hs);
+    final hr = 0.34 * hs * sc;
+    final hrect = Rect.fromCircle(center: hc, radius: hr);
+    canvas.drawCircle(
+      hc,
+      hr,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.35, -0.4),
+          radius: 0.95,
+          colors: <Color>[_smix(c, Colors.white, 0.75), c, _smix(c, Colors.black, 0.5)],
+          stops: const <double>[0, 0.5, 1],
+        ).createShader(hrect),
+    );
+    canvas.drawCircle(hc + Offset(-hr * 0.35, -hr * 0.38), hr * 0.14, Paint()..color = const Color(0x99ffffff));
+  }
+
+  @override
+  bool shouldRepaint(covariant _StarPainter old) => true;
+}
+
+Widget _starChips({
+  required List<int> seats,
+  required List<String> names,
+  required List<int> home,
+  required int turn,
+  required bool over,
+}) {
+  final per = (seats.length == 3 || seats.length == 6) ? 3 : 2;
+  final rows = <Widget>[];
+  for (var s = 0; s < seats.length; s += per) {
+    final row = <Widget>[];
+    for (var k = s; k < s + per; k++) {
+      if (row.isNotEmpty) row.add(const SizedBox(width: 8));
+      row.add(k < seats.length ? _diceChip(names[k], _sColors[seats[k]], '${home[k]}/4', !over && turn == k) : const Expanded(child: SizedBox()));
+    }
+    if (rows.isNotEmpty) rows.add(const SizedBox(height: 8));
+    rows.add(Row(children: row));
+  }
+  return Column(children: rows);
+}
+
+/// صفحهٔ بازی منچ ستاره‌ای ۳ بعدی (رایگان): ۲ تا ۶ بازیکن
+class StarLudoPage extends StatefulWidget {
+  const StarLudoPage({super.key, required this.mode, this.level = BotLevel.normal, this.players = 2});
+  final DiceMode mode;
+  final BotLevel level;
+  final int players;
+
+  @override
+  State<StarLudoPage> createState() => _StarLudoPageState();
+}
+
+class _StarLudoPageState extends State<StarLudoPage> {
+  final GameWallet _w = GameWallet.instance;
+  final Random _rnd = Random();
+  late final List<int> seats = _starSeats(widget.players);
+  late final List<List<int>> toks = <List<int>>[for (var i = 0; i < seats.length; i++) <int>[0, 0, 0, 0]];
+  int turn = 0;
+  int die = 1;
+  bool rolling = false;
+  bool busy = false;
+  bool awaiting = false;
+  int pendingRoll = 0;
+  List<int> movable = <int>[];
+  int yardTries = 0;
+  int winner = -1;
+  String msg = '';
+  int gained = 0;
+  bool resultReady = false;
+  bool view3d = true;
+  int _gen = 0;
+
+  bool get isBot => widget.mode == DiceMode.bot;
+  bool get finished => winner >= 0;
+  bool isBotSeat(int pl) => isBot && pl != 0;
+  bool get humanTurn => !finished && !isBotSeat(turn);
+
+  List<String> get names {
+    final n = seats.length;
+    if (isBot) {
+      return <String>[GameT.t('you'), for (var k = 1; k < n; k++) n == 2 ? GameT.t('robot') : '${GameT.t('robot')} $k'];
+    }
+    return <String>[for (var k = 1; k <= n; k++) _dt('player_n', <String, String>{'n': '$k'})];
+  }
+
+  int _home(int pl) => toks[pl].where((p) => p == _sFin).length;
+
+  void _restart() {
+    _gen++;
+    setState(() {
+      for (final row in toks) {
+        for (var i = 0; i < 4; i++) {
+          row[i] = 0;
+        }
+      }
+      turn = 0;
+      die = 1;
+      rolling = false;
+      busy = false;
+      awaiting = false;
+      pendingRoll = 0;
+      movable = <int>[];
+      yardTries = 0;
+      winner = -1;
+      msg = '';
+      gained = 0;
+      resultReady = false;
+    });
+  }
+
+  Future<void> _roll() async {
+    if (busy || awaiting || finished) return;
+    final gen = _gen;
+    setState(() {
+      busy = true;
+      rolling = true;
+      msg = '';
+    });
+    for (var i = 0; i < 8; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+      if (!mounted || gen != _gen) return;
+      setState(() => die = _rnd.nextInt(6) + 1);
+    }
+    final r = _rnd.nextInt(6) + 1;
+    GameFx.roll();
+    setState(() {
+      die = r;
+      rolling = false;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted || gen != _gen) return;
+    await _afterRoll(r, gen);
+  }
+
+  Future<void> _afterRoll(int r, int gen) async {
+    final opts = _Star.legal(toks, turn, r);
+    if (opts.isEmpty) {
+      final allYard = toks[turn].every((p) => p == 0);
+      final again = allYard && yardTries < 2;
+      setState(() => msg = allYard ? _dt('need_six') : _dt('no_move'));
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+      if (!mounted || gen != _gen) return;
+      setState(() {
+        if (again) {
+          yardTries++;
+        } else {
+          yardTries = 0;
+          turn = (turn + 1) % seats.length;
+        }
+        busy = false;
+        msg = '';
+      });
+      _maybeBot(gen);
+      return;
+    }
+    if (isBotSeat(turn)) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted || gen != _gen) return;
+      final i = _Star.botPick(toks, seats, turn, r, widget.level, _rnd);
+      await _doMove(i, r, gen);
+      return;
+    }
+    if (opts.length == 1) {
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      if (!mounted || gen != _gen) return;
+      await _doMove(opts.first, r, gen);
+      return;
+    }
+    setState(() {
+      awaiting = true;
+      pendingRoll = r;
+      movable = opts;
+      msg = _dt('pick');
+    });
+  }
+
+  void _onTokenTap(int pl, int i) {
+    if (!awaiting || pl != turn || !movable.contains(i) || finished) return;
+    final r = pendingRoll;
+    final gen = _gen;
+    setState(() {
+      awaiting = false;
+      movable = <int>[];
+      msg = '';
+    });
+    _doMove(i, r, gen);
+  }
+
+  Future<void> _doMove(int i, int r, int gen) async {
+    final who = turn;
+    var cap = 0;
+    final steps = toks[who][i] == 0 ? 1 : r;
+    setState(() {
+      cap = _Star.move(toks, seats, who, i, r);
+      msg = cap > 0 ? _dt('captured') : '';
+    });
+    if (cap > 0) {
+      GameFx.hit();
+    } else {
+      GameFx.move();
+    }
+    await Future<void>.delayed(Duration(milliseconds: 450 + steps * 140 + (cap > 0 ? 450 : 0)));
+    if (!mounted || gen != _gen) return;
+    if (_home(who) == 4) {
+      GameFx.win();
+      setState(() {
+        winner = who;
+        busy = false;
+      });
+      _finish();
+      return;
+    }
+    final extra = r == 6 || cap > 0 || toks[who][i] == _sFin;
+    setState(() {
+      if (!extra) turn = (turn + 1) % seats.length;
+      yardTries = 0;
+      busy = false;
+      if (extra) msg = _dt('extra');
+    });
+    _maybeBot(gen);
+  }
+
+  void _maybeBot(int gen) {
+    if (!isBotSeat(turn) || finished) return;
+    Future<void>.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted || gen != _gen || finished || !isBotSeat(turn) || busy || awaiting) return;
+      _roll();
+    });
+  }
+
+  Future<void> _finish() async {
+    final String result;
+    final String level;
+    if (isBot) {
+      result = winner == 0 ? 'win' : 'loss';
+      level = widget.level.name;
+    } else {
+      result = 'win';
+      level = 'local';
+    }
+    final g = await _w.reportOffline(result, level, game: 'ludo');
+    if (!mounted) return;
+    setState(() {
+      gained = g;
+      resultReady = true;
+    });
+  }
+
+  String _statusText() {
+    final n = names;
+    if (finished) {
+      if (isBot) return winner == 0 ? GameT.t('you_win') : GameT.t('you_lose');
+      return GameT.t('wins', <String, String>{'n': n[winner]});
+    }
+    if (isBot && turn == 0) return GameT.t('your_turn');
+    if (isBot && seats.length == 2) return GameT.t('opp_turn');
+    return GameT.t('turn_of', <String, String>{'n': n[turn]});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = names;
+    return Directionality(
+      textDirection: gDir,
+      child: Scaffold(
+        backgroundColor: gBg,
+        appBar: AppBar(
+          backgroundColor: gBg,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: const IconThemeData(color: gGold),
+          title: Text(_dt('star_title'), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+          actions: [
+            TextButton(
+              onPressed: () => setState(() => view3d = !view3d),
+              child: Text(view3d ? '3D' : '2D', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900)),
+            ),
+            gameFxAction(() => setState(() {})),
+          ],
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (ctx, cons) {
+              final w = min(cons.maxWidth - 8, 640.0);
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 20),
+                child: Center(
+                  child: SizedBox(
+                    width: w,
+                    child: Column(
+                      children: [
+                        _starChips(seats: seats, names: n, home: <int>[for (var k = 0; k < seats.length; k++) _home(k)], turn: turn, over: finished),
+                        const SizedBox(height: 10),
+                        Text(_statusText(), style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 16)),
+                        SizedBox(
+                          height: 20,
+                          child: Text(msg, style: const TextStyle(color: gSky, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                        ),
+                        const SizedBox(height: 4),
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.8, end: view3d ? 0.8 : 0.0),
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeInOut,
+                          builder: (ctx2, tilt, _) => _StarBoard(
+                            seats: seats,
+                            toks: toks,
+                            turn: turn,
+                            movable: awaiting ? movable : const <int>[],
+                            onTap: _onTokenTap,
+                            tilt: tilt,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        _diceControls(die: die, rolling: rolling, enabled: humanTurn && !busy && !awaiting, onRoll: _roll),
+                        if (isBot) BotChatBox(botName: GameT.t('robot')),
+                        if (finished && resultReady)
+                          _diceResultCard(
+                            title: _statusText(),
+                            gained: gained,
+                            onAgain: _restart,
+                            onBack: () => Navigator.of(context).pop(),
+                          ),
+                        const SizedBox(height: 14),
+                        Text(_dt('star_rule'), textAlign: TextAlign.center, style: const TextStyle(color: gMuted, fontSize: 11.5, height: 1.7)),
+                      ],
+                    ),
+                  ),
+                ),
               );
             },
           ),
