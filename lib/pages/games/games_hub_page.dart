@@ -397,6 +397,15 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     },
                   ),
                   _modeTile(
+                    Icons.wifi_tethering_rounded,
+                    GameT.fa ? 'منچ ستاره‌ای ۳ بعدی · گوشی نزدیک (رایگان)' : '3D Star Ludo · nearby phones (free)',
+                    GameT.fa ? 'گروهی تا ۶ گوشی نزدیک، بدون اینترنت' : 'Group game with up to 6 nearby phones, no internet',
+                    () {
+                      Navigator.of(ctx).pop();
+                      _push(const StarLudoNearbyPage());
+                    },
+                  ),
+                  _modeTile(
                     Icons.auto_awesome_rounded,
                     GameT.fa ? 'منچ ستاره‌ای ۳ بعدی · روی یک گوشی (رایگان)' : '3D Star Ludo · one phone (free)',
                     GameT.fa ? 'تا ۶ نفر، بدون اینترنت' : 'Up to 6 players, no internet',
