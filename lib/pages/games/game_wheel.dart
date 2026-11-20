@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../groups/group_ui.dart';
 import 'bg_sfx.dart';
+import 'game_texts.dart';
 
 /// گردونه‌ی شانس: هر روز یک چرخش رایگان (با شمارنده‌ی معکوس تا ساعت ۰۰:۰۰ فردا)،
 /// چرخش اضافه با سکه، ذخیره‌ی دائمی روی گوشی و جمع‌شدن جایزه‌ها با سکه و XP بازی‌ها.
@@ -168,7 +169,8 @@ int pickWheelPrize(Random r) {
 String wheelCountdown(Duration d) {
   String two(int n) => n.toString().padLeft(2, '0');
   final s = d.inSeconds < 0 ? 0 : d.inSeconds;
-  return wFa('${two(s ~/ 3600)}:${two((s % 3600) ~/ 60)}:${two(s % 60)}');
+  final t = '${two(s ~/ 3600)}:${two((s % 3600) ~/ 60)}:${two(s % 60)}';
+  return GameT.fa ? wFa(t) : t;
 }
 
 // ---------------------------------------------------------------------------
@@ -608,20 +610,22 @@ class _WheelEntryCardState extends State<WheelEntryCard> {
                 children: [
                   Row(
                     children: [
-                      const Text('🎡 گردونه شانس', style: TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 17)),
+                      Text(GameT.fa ? '🎡 گردونه شانس' : '🎡 Lucky Wheel', style: const TextStyle(color: gGold, fontWeight: FontWeight.w900, fontSize: 17)),
                       const SizedBox(width: 8),
-                      if (ready) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: const Color(0xffff6b6b), borderRadius: BorderRadius.circular(12)), child: const Text('آماده!', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800))),
+                      if (ready) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: const Color(0xffff6b6b), borderRadius: BorderRadius.circular(12)), child: Text(GameT.fa ? 'آماده!' : 'Ready!', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800))),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    ready ? 'چرخش رایگان امروز را بگیر؛ جایزه به جمع امتیازت اضافه می‌شود' : 'چرخش بعدی: ${wheelCountdown(st.untilMidnight)}',
+                    ready
+                        ? (GameT.fa ? 'چرخش رایگان امروز را بگیر؛ جایزه به جمع امتیازت اضافه می‌شود' : 'Take today\'s free spin; the prize is added to your total')
+                        : (GameT.fa ? 'چرخش بعدی: ${wheelCountdown(st.untilMidnight)}' : 'Next spin: ${wheelCountdown(st.untilMidnight)}'),
                     style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.6),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_left_rounded, color: gGold),
+            Icon(gDir == TextDirection.rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: gGold),
           ],
         ),
       ),
