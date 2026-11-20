@@ -354,7 +354,8 @@ class _GamesHubPageState extends State<GamesHubPage> {
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            child: Column(
+            child: SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -385,7 +386,28 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _pickLudoPlayers(bot: false);
                   }
                 }),
+                if (!snakes) ...[
+                  _modeTile(
+                    Icons.auto_awesome_rounded,
+                    GameT.fa ? 'منچ ستاره‌ای ۳ بعدی · با ربات (رایگان)' : '3D Star Ludo · vs robot (free)',
+                    GameT.fa ? 'صفحهٔ ۶ بازو، تا ۶ نفر' : '6-arm board, up to 6 players',
+                    () {
+                      Navigator.of(ctx).pop();
+                      _pickLudoPlayers(bot: true, star: true);
+                    },
+                  ),
+                  _modeTile(
+                    Icons.auto_awesome_rounded,
+                    GameT.fa ? 'منچ ستاره‌ای ۳ بعدی · روی یک گوشی (رایگان)' : '3D Star Ludo · one phone (free)',
+                    GameT.fa ? 'تا ۶ نفر، بدون اینترنت' : 'Up to 6 players, no internet',
+                    () {
+                      Navigator.of(ctx).pop();
+                      _pickLudoPlayers(bot: false, star: true);
+                    },
+                  ),
+                ],
               ],
+            ),
             ),
           ),
         ),
@@ -394,7 +416,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
   }
 
   /// منچ: انتخاب ۲ یا ۴ نفره (با ربات: شما + ۱ یا ۳ ربات؛ روی یک گوشی: ۲ یا ۴ نفر).
-  void _pickLudoPlayers({required bool bot}) {
+  void _pickLudoPlayers({required bool bot, bool star = false}) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: gPanel,
@@ -407,17 +429,17 @@ class _GamesHubPageState extends State<GamesHubPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                for (final n in const <int>[2, 4])
+                for (final n in star ? const <int>[2, 3, 4, 6] : const <int>[2, 4])
                   _modeTile(
-                    n == 2 ? Icons.looks_two_rounded : Icons.looks_4_rounded,
+                    n == 2 ? Icons.looks_two_rounded : (n == 3 ? Icons.looks_3_rounded : (n == 4 ? Icons.looks_4_rounded : Icons.looks_6_rounded)),
                     GameT.fa ? '$n نفره' : '$n players',
                     '',
                     () {
                       Navigator.of(ctx).pop();
                       if (bot) {
-                        _pickLudoLevel(n);
+                        _pickLudoLevel(n, star: star);
                       } else {
-                        _push(LudoPage(mode: DiceMode.local, players: n));
+                        _push(star ? StarLudoPage(mode: DiceMode.local, players: n) : LudoPage(mode: DiceMode.local, players: n));
                       }
                     },
                   ),
@@ -429,7 +451,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
     );
   }
 
-  void _pickLudoLevel(int players) {
+  void _pickLudoLevel(int players, {bool star = false}) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: gPanel,
@@ -449,7 +471,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     '',
                     () {
                       Navigator.of(ctx).pop();
-                      _push(LudoPage(mode: DiceMode.bot, level: l, players: players));
+                      _push(star ? StarLudoPage(mode: DiceMode.bot, level: l, players: players) : LudoPage(mode: DiceMode.bot, level: l, players: players));
                     },
                   ),
               ],
