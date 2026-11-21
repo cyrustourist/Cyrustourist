@@ -28,6 +28,11 @@ class TransferItem {
   /// gallery | downloads (بعد از ذخیرهٔ فایل دریافتی)
   String saved = '';
 
+  /// مسیر کپی قابل نصب (فقط برای APK دریافتی)
+  String installPath = '';
+
+  bool get isApk => name.toLowerCase().endsWith('.apk');
+
   double get progress => size <= 0 ? 0 : (done / size).clamp(0.0, 1.0).toDouble();
 }
 
@@ -392,6 +397,19 @@ class FileTransferService extends ChangeNotifier {
       if (kind == null || kind.isEmpty) {
         it.state = 'failed';
       } else {
+        if (name.toLowerCase().endsWith('.apk')) {
+          // یک کپی در حافظهٔ موقت برنامه تا دکمهٔ «نصب» بتواند آن را از راه FileProvider باز کند
+          try {
+            final dir = Directory('${tmp.path}/received_apk');
+            if (!await dir.exists()) await dir.create(recursive: true);
+            final safe = name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+            final dst = '${dir.path}/${pid}_$safe';
+            await File(tmpPath).copy(dst);
+            it.installPath = dst;
+          } catch (_) {
+            it.installPath = '';
+          }
+        }
         it.state = 'done';
         it.saved = kind;
         it.done = it.size;
@@ -443,8 +461,29 @@ class FileTransferService extends ChangeNotifier {
     }
   }
 
+  /// نصب APK دریافتی. نتیجه: started | perm | missing | fail
+  /// perm = کاربر به صفحهٔ «اجازهٔ نصب از این برنامه» برده شد؛ بعد از فعال کردن دوباره «نصب» را بزند.
+  Future<String> installApk(String path) async {
+    try {
+      final r = await _filesChannel.invokeMethod<String>('installApk', <String, dynamic>{'path': path});
+      return r ?? 'fail';
+    } catch (e) {
+      debugPrint('FileTransfer install: ${e.runtimeType}');
+      return 'fail';
+    }
+  }
+
+  Future<void> _cleanApkCache() async {
+    try {
+      final tmp = await getTemporaryDirectory();
+      final dir = Directory('${tmp.path}/received_apk');
+      if (await dir.exists()) await dir.delete(recursive: true);
+    } catch (_) {}
+  }
+
   /// بازگشت به صفحهٔ انتخاب (فهرست انتقال‌ها می‌ماند)
   Future<void> reset() async {
+    if (items.isEmpty) await _cleanApkCache();
     await _stopNearby();
     stage = 'idle';
     error = '';
@@ -459,6 +498,7 @@ class FileTransferService extends ChangeNotifier {
     error = '';
     peerName = '';
     items.clear();
+    unawaited(_cleanApkCache());
     _byPid.clear();
     _uris.clear();
     _meta.clear();
