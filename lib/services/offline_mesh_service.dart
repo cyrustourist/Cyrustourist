@@ -39,6 +39,25 @@ class OfflinePeer {
   final String name;
 }
 
+/// یک نفر در شبکه (وصل مستقیم یا از راه گوشی‌های واسط). hops = تعداد اتصال‌ها تا او؛ ۱ یعنی مستقیم.
+class OfflinePerson {
+  OfflinePerson({required this.uid, required this.name, required this.hops});
+  final String uid;
+  final String name;
+  final int hops;
+  bool get direct => hops <= 1;
+}
+
+class _Known {
+  _Known(this.uid, this.name, this.ts, this.hops, this.seenAt, this.raw);
+  final String uid;
+  final String name;
+  final int ts;
+  final int hops;
+  final int seenAt;
+  final Map<String, dynamic> raw;
+}
+
 /// شبکه‌ی آفلاین گردشگران (بدون اینترنت) با Nearby Connections.
 /// استراتژی P2P_CLUSTER: هر گوشی هم تبلیغ می‌کند هم جستجو؛ پیام‌ها بین گوشی‌ها
 /// پاس داده می‌شوند (relay) تا گروه بزرگ‌تر از اتصال مستقیم هم پیام را بگیرد.
@@ -91,6 +110,18 @@ class OfflineMeshService extends ChangeNotifier {
   final Map<String, String> _names = {}; // endpointId → "نام|uid"
   final List<_Stored> _outbox = [];
   final Map<String, Set<String>> _delivered = {}; // uid همتا → شناسه‌ی پیام‌هایی که به او داده‌ایم
+
+  // حضور در شبکه: هر گوشی روشن‌شده خودش را هر چند ثانیه پخش می‌کند تا همه (حتی چند پرش دورتر) او را ببینند.
+  static const Duration _presenceEvery = Duration(seconds: 25);
+  static const Duration _presenceTtl = Duration(seconds: 80);
+  Timer? _presenceTimer;
+  final Map<String, _Known> _known = {};
+
+  /// اتاقی که کاربر الان بازش کرده (برای نشمردن پیام‌های خوانده‌شده)
+  String? activeRoom;
+
+  /// تعداد پیام‌های نخوانده‌ی گفتگوهای شخصی: اتاق → تعداد
+  final Map<String, int> unread = {};
 
   Future<void> _loadIdentity() async {
     final p = await SharedPreferences.getInstance();
@@ -164,6 +195,70 @@ class OfflineMeshService extends ChangeNotifier {
     }
   }
 
+  /// همه‌ی افراد شبکه: گوشی‌های وصل مستقیم + کسانی که از راه گوشی‌های واسط دیده می‌شوند.
+  List<OfflinePerson> get people {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final out = <String, OfflinePerson>{};
+    for (final p in peers.values) {
+      out[p.uid] = OfflinePerson(uid: p.uid, name: p.name, hops: 1);
+    }
+    for (final k in _known.values) {
+      if (k.uid == myUid || out.containsKey(k.uid)) continue;
+      if (now - k.seenAt > _presenceTtl.inMilliseconds) continue;
+      // اگر مستقیم وصل نیست (مثلاً تازه قطع شده)، دست‌کم ۲ اتصال حساب می‌شود
+      out[k.uid] = OfflinePerson(uid: k.uid, name: k.name, hops: max(k.hops, 2));
+    }
+    final list = out.values.toList();
+    list.sort((a, b) => a.hops != b.hops ? a.hops.compareTo(b.hops) : a.name.compareTo(b.name));
+    return list;
+  }
+
+  /// نام اتاق گفتگوی شخصی با یک نفر (برای هر دو گوشی یکی است).
+  String dmRoomWith(String uid) {
+    final ids = <String>[myUid, uid]..sort();
+    return 'n${ids.join('_')}';
+  }
+
+  bool _isMyDm(String room) => room.startsWith('n') && room.substring(1).split('_').contains(myUid);
+
+  void _announce() {
+    if (!running) return;
+    final m = <String, dynamic>{'p': 1, 'u': myUid, 'n': myName, 'ts': DateTime.now().millisecondsSinceEpoch, 'ttl': _maxTtl, 'h': 0};
+    _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(m))));
+  }
+
+  void _startPresence() {
+    _presenceTimer?.cancel();
+    _presenceTimer = Timer.periodic(_presenceEvery, (_) {
+      if (!running) return;
+      _announce();
+      final limit = DateTime.now().millisecondsSinceEpoch - _presenceTtl.inMilliseconds;
+      final before = _known.length;
+      _known.removeWhere((_, k) => k.seenAt < limit);
+      if (_known.length != before) notifyListeners();
+    });
+    _announce();
+  }
+
+  void _onPresence(String from, Map<String, dynamic> m) {
+    final uid = '${m['u']}';
+    if (uid.isEmpty || uid == myUid) return;
+    final ts = (m['ts'] as num?)?.toInt() ?? 0;
+    final old = _known[uid];
+    if (old != null && ts <= old.ts) return; // تکراری یا قدیمی‌تر
+    final h = (m['h'] as num?)?.toInt() ?? 0;
+    final name = '${m['n']}'.trim();
+    _known[uid] = _Known(uid, name.isEmpty ? 'Traveler' : name, ts, h + 1, DateTime.now().millisecondsSinceEpoch, Map<String, dynamic>.of(m));
+    notifyListeners();
+    final ttl = (m['ttl'] as num?)?.toInt() ?? 0;
+    if (ttl > 1) {
+      final out = Map<String, dynamic>.of(m);
+      out['ttl'] = ttl - 1;
+      out['h'] = h + 1;
+      _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(out))), except: from);
+    }
+  }
+
   Future<void> _startForeground() async {
     if (_fgOn || callForegroundActive || kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
@@ -232,6 +327,19 @@ class OfflineMeshService extends ChangeNotifier {
   /// ttl=1 یعنی خودش فقط دریافت می‌کند؛ آن گوشی هم پیام‌ها را نگه می‌دارد و به همسایه‌های بعدی‌اش می‌رساند.
   Future<void> _syncTo(String endpointId, String peerUid) async {
     await Future<void>.delayed(const Duration(milliseconds: 1200));
+    if (!running || !peers.containsKey(endpointId)) return;
+    // خودمان را اعلام می‌کنیم و فهرست افرادی که می‌شناسیم را به همسایه‌ی تازه می‌دهیم
+    _announce();
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    for (final k in List<_Known>.of(_known.values)) {
+      if (!running || !peers.containsKey(endpointId)) return;
+      if (k.uid == peerUid || nowMs - k.seenAt > _presenceTtl.inMilliseconds) continue;
+      final out = <String, dynamic>{...k.raw, 'ttl': 1, 'h': k.hops};
+      try {
+        await Nearby().sendBytesPayload(endpointId, Uint8List.fromList(utf8.encode(jsonEncode(out))));
+      } catch (_) {}
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+    }
     final sent = _delivered.putIfAbsent(peerUid, () => <String>{});
     if (sent.length > 600) sent.clear();
     _pruneOutbox();
@@ -298,6 +406,7 @@ class OfflineMeshService extends ChangeNotifier {
       status = 'on';
       notifyListeners();
       unawaited(_startForeground());
+      _startPresence();
       return true;
     } catch (e) {
       running = false;
@@ -336,6 +445,9 @@ class OfflineMeshService extends ChangeNotifier {
     _pending.clear();
     _names.clear();
     _delivered.clear();
+    _presenceTimer?.cancel();
+    _presenceTimer = null;
+    _known.clear();
     await _stopForeground();
     notifyListeners();
   }
@@ -423,6 +535,10 @@ class OfflineMeshService extends ChangeNotifier {
           _fileMeta[pid] = m;
           _tryFinishImage(pid);
         }
+        return;
+      }
+      if (m['p'] != null) {
+        _onPresence(fromEndpoint, m);
         return;
       }
       if (m['g'] != null) {
@@ -519,6 +635,7 @@ class OfflineMeshService extends ChangeNotifier {
   void _add(OfflineMsg m) {
     messages.add(m);
     if (messages.length > _maxHistory) messages.removeRange(0, messages.length - _maxHistory);
+    if (!m.mine && _isMyDm(m.room) && activeRoom != m.room) unread[m.room] = (unread[m.room] ?? 0) + 1;
     notifyListeners();
   }
 
