@@ -14,9 +14,9 @@ class HokmPrefs extends ChangeNotifier {
 
   static const String _k = 'hokm4_prefs';
 
-  int bg = 0; // زمینه
-  int face = 0; // روی کارت
-  int back = 0; // پشت کارت
+  int bg = 8; // زمینه (پیش‌فرض نصب تازه: کازینوی نئونی)
+  int face = 5; // روی کارت (پیش‌فرض نصب تازه: تک‌نماد رنگی)
+  int back = 7; // پشت کارت (پیش‌فرض نصب تازه: سیمرغ)
   int snd = 0; // مدل صدا
   int vol = 70;
   bool mute = false;
@@ -26,9 +26,9 @@ class HokmPrefs extends ChangeNotifier {
   String name = 'کوروش';
   String avatar = '0'; // اندیس آواتار یا عکس base64
 
-  static const List<String> bgNames = <String>['چوب', 'سبز نمدی', 'آبی', 'فرش قرمز', 'مشکی و طلایی', 'بنفش', 'فیروزه‌ای', 'ماسه‌ای'];
-  static const List<String> faceNames = <String>['کلاسیک', 'چهاررنگ', 'تیره', 'کرمی قدیمی', 'مدرن'];
-  static const List<String> backNames = <String>['آبی گل‌دار', 'قرمز', 'سبز', 'طلایی هندسی', 'بنفش', 'مشکی لوزی', 'فیروزه‌ای'];
+  static const List<String> bgNames = <String>['چوب', 'سبز نمدی', 'آبی', 'فرش قرمز', 'مشکی و طلایی', 'بنفش', 'فیروزه‌ای', 'ماسه‌ای', 'کازینوی نئونی', 'زمرد شاهانه', 'شب ستاره‌باران', 'یاقوت', 'تخت جمشید', 'فیروزه‌ی نیشابور'];
+  static const List<String> faceNames = <String>['کلاسیک', 'چهاررنگ', 'تیره', 'کرمی قدیمی', 'مدرن', 'تک‌نماد رنگی', 'طلایی', 'مشکی-طلایی'];
+  static const List<String> backNames = <String>['آبی گل‌دار', 'قرمز', 'سبز', 'طلایی هندسی', 'بنفش', 'مشکی لوزی', 'فیروزه‌ای', 'سیمرغ', 'فروهر', 'تخت جمشید', 'سرباز هخامنشی'];
   static const List<String> sndNames = <String>['کلاسیک', 'چوبی', 'دیجیتال', 'زنگوله'];
 
   /// آواتارهای آماده: ایموجی و دو رنگ پس‌زمینه
