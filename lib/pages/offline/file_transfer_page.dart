@@ -162,6 +162,23 @@ class _FileTransferPageState extends State<FileTransferPage> {
     }
   }
 
+  Future<void> _install(TransferItem it) async {
+    final r = await _svc.installApk(it.installPath);
+    if (!mounted) return;
+    switch (r) {
+      case 'started':
+        break;
+      case 'perm':
+        _snack(_t('اجازهٔ «نصب برنامه‌های ناشناس» را برای سایروس توریست روشن کنید و برگردید، بعد دوباره «نصب» را بزنید.', 'Allow “Install unknown apps” for Cyrus Tourist, come back and tap “Install” again.'));
+        break;
+      case 'missing':
+        _snack(_t('فایل پیدا نشد. آن را از Download/Cyrustourist باز کنید.', 'File not found. Open it from Download/Cyrustourist.'));
+        break;
+      default:
+        _snack(_t('نصب شروع نشد. فایل را از Download/Cyrustourist باز کنید.', 'Could not start the install. Open the file from Download/Cyrustourist.'));
+    }
+  }
+
   String _size(int b) {
     if (b <= 0) return '';
     if (b < 1024 * 1024) return '${(b / 1024).ceil()} KB';
@@ -371,7 +388,7 @@ class _FileTransferPageState extends State<FileTransferPage> {
         if (it.mine) {
           status = _t('ارسال شد', 'Sent');
         } else {
-          status = it.saved == 'gallery' ? _t('ذخیره شد در گالری (پوشهٔ Cyrustourist)', 'Saved to gallery (Cyrustourist)') : _t('ذخیره شد در Download/Cyrustourist', 'Saved to Download/Cyrustourist') + (it.name.toLowerCase().endsWith('.apk') ? _t('\nبرای نصب، فایل را از مدیر فایل یا Download باز کنید.', '\nOpen the file from Downloads to install.') : '');
+          status = it.saved == 'gallery' ? _t('ذخیره شد در گالری (پوشهٔ Cyrustourist)', 'Saved to gallery (Cyrustourist)') : _t('ذخیره شد در Download/Cyrustourist', 'Saved to Download/Cyrustourist') + (it.isApk ? (it.installPath.isNotEmpty ? _t('\nبرای نصب، دکمهٔ «نصب» را بزنید.', '\nTap “Install” to install it.') : _t('\nبرای نصب، فایل را از مدیر فایل یا Download باز کنید.', '\nOpen the file from Downloads to install.')) : '');
         }
         color = _teal;
         break;
@@ -401,6 +418,24 @@ class _FileTransferPageState extends State<FileTransferPage> {
                 Text(it.name.isEmpty ? '…' : it.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 3),
                 Text(sz.isEmpty ? status : '$status · $sz', style: TextStyle(color: color, fontSize: 12)),
+                if (!it.mine && it.state == 'done' && it.isApk && it.installPath.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: SizedBox(
+                      height: 38,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _install(it),
+                        icon: const Icon(Icons.install_mobile_rounded, size: 18),
+                        label: Text(_t('نصب', 'Install'), style: const TextStyle(fontWeight: FontWeight.w900)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _gold,
+                          foregroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (it.state == 'run' && it.size > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
