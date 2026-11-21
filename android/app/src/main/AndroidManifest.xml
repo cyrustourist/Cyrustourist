@@ -53,6 +53,8 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- نگه‌داشتن شبکه‌ی آفلاین (Nearby) در پس‌زمینه -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
     <application
         android:name="${applicationName}"
@@ -125,12 +127,12 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- سرویس پیش‌زمینهٔ تماس (از پلاگین اعلان‌ها)؛ نوع: میکروفن -->
+        <!-- سرویس پیش‌زمینه (از پلاگین اعلان‌ها)؛ نوع: میکروفن (تماس) و دستگاه متصل (شبکه‌ی آفلاین) -->
         <service
             android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
             android:exported="false"
             android:stopWithTask="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="microphone|connectedDevice" />
 
         <!-- FCM: default notification channel + icon + color -->
         <meta-data
