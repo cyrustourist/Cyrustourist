@@ -16,6 +16,7 @@ import 'app_permissions.dart';
 import 'badge_service.dart';
 import 'call_session.dart';
 import 'call_texts.dart';
+import 'offline_mesh_service.dart';
 
 /// دکمهٔ «رد» اعلان تماس وقتی اپ بسته/پس‌زمینه است (بدون باز کردن اپ).
 @pragma('vm:entry-point')
@@ -784,6 +785,7 @@ class CallService with WidgetsBindingObserver {
   // سرویس پیش‌زمینه (میکروفن) هنگام تماس
   // ------------------------------------------------------------------
   static Future<void> startForegroundCall(String peerName) async {
+    OfflineMeshService.instance.callForegroundActive = true;
     try {
       final android = FlutterLocalNotificationsPlugin()
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -818,5 +820,7 @@ class CallService with WidgetsBindingObserver {
     } catch (e) {
       debugPrint('foreground call stop error: $e');
     }
+    // اگر شبکه‌ی آفلاین روشن است، سرویس پیش‌زمینه‌ی خودش را دوباره بگیرد.
+    unawaited(OfflineMeshService.instance.restoreForeground());
   }
 }
