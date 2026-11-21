@@ -736,6 +736,8 @@ class _HokmTablePageState extends State<HokmTablePage> {
     final cnt = (v['cnt'] as List).map(_n).toList();
     final trick = v['trick'] as List;
     final myTurn = ph == 2 && _n(v['turn']) == seat;
+    // خال حکم (فقط در حالت حکم؛ در نرس و سرس و تک‌نرس حکمی وجود ندارد)
+    final trumpSuit = (_n(v['kind']) == 0 && v['decided'] == true) ? _n(v['trump']) : -1;
     final legalIds = <int>{};
     var ringColor = const Color(0xffffd84a);
     if (myTurn) {
@@ -768,7 +770,7 @@ class _HokmTablePageState extends State<HokmTablePage> {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => _onCardTap(c, ok),
-          child: HokmCardView(card: c, w: cw, ring: myTurn && ok ? ringColor : null, dim: myTurn && !ok),
+          child: HokmCardView(card: c, w: cw, ring: myTurn && ok ? ringColor : null, dim: myTurn && !ok, trump: c.suit == trumpSuit),
         );
       },
     );
