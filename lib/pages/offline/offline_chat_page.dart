@@ -37,12 +37,15 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
   @override
   void initState() {
     super.initState();
+    _svc.activeRoom = widget.room;
+    _svc.unread.remove(widget.room);
     _svc.addListener(_onChange);
   }
 
   @override
   void dispose() {
     _svc.removeListener(_onChange);
+    if (_svc.activeRoom == widget.room) _svc.activeRoom = null;
     _ctrl.dispose();
     _scroll.dispose();
     super.dispose();
@@ -124,6 +127,7 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
 
   Widget _statusCard(bool on) {
     final n = _svc.peers.length;
+    final people = _svc.people;
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 4, 14, 8),
       padding: const EdgeInsets.all(12),
@@ -136,7 +140,7 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  on ? _t('روشن است • $n گوشی متصل', 'On • $n device(s) connected') : _t('خاموش است', 'Off'),
+                  on ? _t('روشن است • $n گوشی متصل • ${people.length} نفر در شبکه', 'On • $n connected • ${people.length} in network') : _t('خاموش است', 'Off'),
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
                 ),
               ),
@@ -149,29 +153,29 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
               ),
             ],
           ),
-          if (on && n > 0 && widget.room.isEmpty) ...[
+          if (on && people.isNotEmpty && widget.room.isEmpty) ...[
             const SizedBox(height: 10),
             Align(
               alignment: AlignmentDirectional.centerStart,
-              child: Text(_t('افراد نزدیک', 'People nearby'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 13)),
+              child: Text(_t('افراد شبکه', 'People in network'), style: const TextStyle(color: _gold, fontWeight: FontWeight.w900, fontSize: 13)),
             ),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 190),
               child: ListView(
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
-                children: [for (final p in _svc.peers.values) _peerRow(p)],
+                children: [for (final p in people) _peerRow(p)],
               ),
             ),
           ],
-          if (on && n > 0 && widget.room.isNotEmpty) ...[
+          if (on && people.isNotEmpty && widget.room.isNotEmpty) ...[
             const SizedBox(height: 8),
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: Wrap(
                 spacing: 6,
                 runSpacing: 4,
-                children: _svc.peers.values
+                children: people
                     .map((p) => Chip(
                           label: Text(p.name, style: const TextStyle(fontSize: 12, color: Colors.white)),
                           backgroundColor: _bg,
@@ -187,28 +191,39 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
     );
   }
 
-  /// ردیف یک گوشی نزدیک: نام + کلید پیام (گفتگوی دونفره) + کلید فایل
-  Widget _peerRow(OfflinePeer p) {
+  /// ردیف یک نفر در شبکه: نام (و فاصله اگر از راه گوشی‌های واسط است) + کلید پیام + کلید فایل (فقط برای گوشی وصل مستقیم)
+  Widget _peerRow(OfflinePerson p) {
     final initial = p.name.isEmpty ? '?' : String.fromCharCode(p.name.runes.first);
+    final unread = _svc.unread[_svc.dmRoomWith(p.uid)] ?? 0;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Row(
         children: [
           CircleAvatar(radius: 16, backgroundColor: _bg, child: Text(initial, style: const TextStyle(color: _gold, fontWeight: FontWeight.w900))),
           const SizedBox(width: 10),
-          Expanded(child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                if (!p.direct)
+                  Text(_t('از راه ${p.hops - 1} گوشی واسط', 'via ${p.hops - 1} relay phone(s)'), style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              ],
+            ),
+          ),
           TextButton.icon(
             style: TextButton.styleFrom(foregroundColor: _gold, visualDensity: VisualDensity.compact),
             onPressed: () => _openDm(p),
-            icon: const Icon(Icons.chat_bubble_rounded, size: 18),
+            icon: Badge(isLabelVisible: unread > 0, label: Text('$unread'), child: const Icon(Icons.chat_bubble_rounded, size: 18)),
             label: Text(_t('پیام', 'Message'), style: const TextStyle(fontWeight: FontWeight.w800)),
           ),
-          TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: const Color(0xff29e0ad), visualDensity: VisualDensity.compact),
-            onPressed: () => _sendFileTo(p),
-            icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-            label: Text(_t('فایل', 'File'), style: const TextStyle(fontWeight: FontWeight.w800)),
-          ),
+          if (p.direct)
+            TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: const Color(0xff29e0ad), visualDensity: VisualDensity.compact),
+              onPressed: () => _sendFileTo(p),
+              icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+              label: Text(_t('فایل', 'File'), style: const TextStyle(fontWeight: FontWeight.w800)),
+            ),
         ],
       ),
     );
@@ -216,14 +231,14 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
 
   /// گفتگوی دونفره با یک گوشی نزدیک؛ نام اتاق برای هر دو گوشی یکی است (شناسه‌ها مرتب می‌شوند).
   /// توجه: پیام‌ها مثل گروه‌ها روی همان شبکه پخش می‌شوند و رمزنگاری نشده‌اند.
-  Future<void> _openDm(OfflinePeer p) async {
+  Future<void> _openDm(OfflinePerson p) async {
     final ids = <String>[_svc.myUid, p.uid]..sort();
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => OfflineChatPage(room: 'n${ids.join('_')}', title: p.name)));
     if (mounted) setState(() {});
   }
 
   /// ارسال فایل به یک گوشی نزدیک: شبکه‌ی چت خاموش می‌شود و صفحه‌ی انتقال فایل باز می‌شود.
-  Future<void> _sendFileTo(OfflinePeer p) async {
+  Future<void> _sendFileTo(OfflinePerson p) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => Directionality(
@@ -259,12 +274,12 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
           child: Text(
             widget.room.isEmpty
                 ? _t(
-                    'وقتی اینترنت قطع است یا در سفر هستید، شبکه را روشن کنید تا با گوشی‌های نزدیک (چند ده متر) پیام گروهی رد و بدل کنید.\nهمه باید این صفحه را باز و شبکه را روشن کنند.',
-                    'When there is no internet, turn this on to chat with nearby phones (tens of meters).\nEveryone must open this page and start the network.',
+                    'وقتی اینترنت قطع است یا در سفر هستید، شبکه را روشن کنید تا با گوشی‌های نزدیک (چند ده متر) پیام گروهی رد و بدل کنید.\nهر کس شبکه را روشن کند خودکار در فهرست افراد می‌آید و پیام‌ها از راه گوشی‌های دیگر هم رد می‌شوند.',
+                    'When there is no internet, turn this on to chat with nearby phones (tens of meters).\nAnyone who starts the network is added to the list automatically, and messages hop through other phones.',
                   )
                 : _t(
-                    'شبکه را روشن کنید تا با گوشی‌های نزدیک گفتگو کنید.\nطرف مقابل هم باید همین گفتگو را باز و شبکه را روشن کند.',
-                    'Turn the network on to chat with nearby phones.\nThe other person must open this chat and start the network too.',
+                    'شبکه را روشن کنید تا با گوشی‌های نزدیک گفتگو کنید.\nطرف مقابل هم باید شبکه را روشن کند؛ اگر دور باشد پیام از راه گوشی‌های دیگر می‌رسد.',
+                    'Turn the network on to chat with nearby phones.\nThe other person must start the network too; if far away, messages hop through other phones.',
                   ),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white60, height: 1.7),
