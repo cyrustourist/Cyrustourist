@@ -137,6 +137,31 @@ class MainActivity : FlutterActivity() {
      * عکس → Pictures/Cyrustourist ، ویدیو → Movies/Cyrustourist ، بقیه → Download/Cyrustourist.
      * خروجی: "gallery" یا "downloads"؛ در شکست null.
      */
+    /** نصب APK دریافتی (کپی داخل cache/received_apk) از راه FileProvider. نتیجه: started | perm | missing | fail */
+    private fun installApk(path: String?): String {
+        try {
+            if (path == null) return "missing"
+            val f = File(path)
+            if (!f.exists()) return "missing"
+            val root = File(cacheDir, "received_apk").canonicalPath
+            if (!f.canonicalPath.startsWith(root + File.separator)) return "fail"
+            if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+                val s = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + packageName))
+                s.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(s)
+                return "perm"
+            }
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.apkprovider", f)
+            val i = Intent(Intent.ACTION_VIEW)
+            i.setDataAndType(uri, "application/vnd.android.package-archive")
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(i)
+            return "started"
+        } catch (e: Throwable) {
+            return "fail"
+        }
+    }
+
     private fun saveFileToPublic(path: String, rawName: String, mime: String): String? {
         val src = File(path)
         if (!src.exists()) return null
@@ -293,6 +318,10 @@ class MainActivity : FlutterActivity() {
                             runOnUiThread { result.success(kind) }
                         }.start()
                     }
+                }
+
+                "installApk" -> {
+                    result.success(installApk(call.argument<String>("path")))
                 }
 
                 "appApk" -> {
