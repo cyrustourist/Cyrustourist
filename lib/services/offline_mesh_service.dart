@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,7 +18,7 @@ import 'user_profile_service.dart';
 
 /// پیام شبکه‌ی آفلاین
 class OfflineMsg {
-  OfflineMsg({required this.id, required this.uid, required this.name, required this.text, required this.ts, required this.mine, this.room = '', this.imagePath});
+  OfflineMsg({required this.id, required this.uid, required this.name, required this.text, required this.ts, required this.mine, this.room = '', this.imagePath, this.audioPath, this.audioSecs = 0});
   final String id;
   final String uid;
   final String name;
@@ -30,6 +31,26 @@ class OfflineMsg {
 
   /// مسیر فایل عکس روی همین گوشی (اگر پیام عکس باشد)
   final String? imagePath;
+
+  /// مسیر فایل صدا و طول آن به ثانیه (اگر پیام صوتی باشد)
+  final String? audioPath;
+  final int audioSecs;
+}
+
+/// کوچک‌کردن عکس برای شبکه (حداکثر ۱۲۸۰ پیکسل) تا رله‌ی چندپرشی سنگین نشود؛ در isolate جدا اجرا می‌شود.
+bool _shrinkJob(List<String> a) {
+  try {
+    final im = img.decodeImage(File(a[0]).readAsBytesSync());
+    if (im == null) return false;
+    var r = img.bakeOrientation(im);
+    if (r.width > 1280 || r.height > 1280) {
+      r = r.width >= r.height ? img.copyResize(r, width: 1280) : img.copyResize(r, height: 1280);
+    }
+    File(a[1]).writeAsBytesSync(img.encodeJpg(r, quality: 80));
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 class OfflinePeer {
@@ -104,6 +125,12 @@ class OfflineMeshService extends ChangeNotifier {
   // انتقال عکس: فایل (payload) و پیام توصیفی (متادیتا) جدا می‌رسند و با شناسه‌ی payload به هم وصل می‌شوند
   final Map<int, String> _fileUris = <int, String>{};
   final Map<int, Map<String, dynamic>> _fileMeta = <int, Map<String, dynamic>>{};
+  final Map<int, String> _fileFrom = <int, String>{}; // شناسه‌ی payload → همسایه‌ای که فایل را فرستاده
+
+  // ذخیره‌وارسال فایل‌ها (عکس و پیام صوتی): چند فایل اخیر برای گوشی‌های تازه‌وصل‌شده
+  static const int _fileBoxMax = 8;
+  static const Duration _fileBoxAge = Duration(hours: 2);
+  final List<_StoredFile> _fileBox = [];
   final Set<int> _fileDone = <int>{};
   final Set<String> _seen = {};
   final Set<String> _pending = {}; // اتصال‌های در حال برقراری
@@ -354,6 +381,17 @@ class OfflineMeshService extends ChangeNotifier {
       } catch (_) {}
       await Future<void>.delayed(const Duration(milliseconds: 60));
     }
+    // فایل‌های اخیر (عکس و صدا) که این گوشی هنوز ندارد؛ ttl=1 یعنی خودش فقط دریافت می‌کند
+    final limit = DateTime.now().subtract(_fileBoxAge).millisecondsSinceEpoch;
+    for (final f in List<_StoredFile>.of(_fileBox)) {
+      if (!running || !peers.containsKey(endpointId)) return;
+      if (f.at < limit || '${f.meta['u']}' == peerUid) continue;
+      final id = '${f.meta['id']}';
+      if (sent.contains(id) || !await File(f.path).exists()) continue;
+      try {
+        await _pushFile(endpointId, f.path, <String, dynamic>{...f.meta, 'ttl': 1});
+      } catch (_) {}
+    }
   }
 
   /// آخرین خطای شروع شبکه (برای نمایش راهنمای دقیق‌تر به کاربر)
@@ -445,6 +483,7 @@ class OfflineMeshService extends ChangeNotifier {
     _pending.clear();
     _names.clear();
     _delivered.clear();
+    _fileFrom.clear();
     _presenceTimer?.cancel();
     _presenceTimer = null;
     _known.clear();
@@ -521,6 +560,7 @@ class OfflineMeshService extends ChangeNotifier {
         final dynamic d = p;
         final int pid = d.id as int;
         final dynamic uri = d.uri ?? d.filePath;
+        _fileFrom[pid] = fromEndpoint;
         if (uri != null) _fileUris[pid] = '$uri';
         _tryFinishImage(pid);
       } catch (_) {}
@@ -532,6 +572,14 @@ class OfflineMeshService extends ChangeNotifier {
       if (m['img'] != null) {
         final pid = (m['pid'] as num?)?.toInt();
         if (pid != null) {
+          // اگر این پیام را قبلاً (از مسیر دیگری) گرفته‌ایم، دریافت فایل را لغو می‌کنیم تا پهنای باند هدر نرود
+          if (_seen.contains('${m['id']}')) {
+            try {
+              Nearby().cancelPayload(pid);
+            } catch (_) {}
+            return;
+          }
+          _fileFrom[pid] = fromEndpoint;
           _fileMeta[pid] = m;
           _tryFinishImage(pid);
         }
@@ -578,25 +626,30 @@ class OfflineMeshService extends ChangeNotifier {
         _fileUris.remove(pid);
         _fileMeta.remove(pid);
         _fileDone.remove(pid);
+        _fileFrom.remove(pid);
       }
     } catch (_) {}
   }
 
-  /// وقتی فایل کامل شد و پیام توصیفی هم رسید، عکس را در پوشه‌ی برنامه ذخیره و به چت اضافه می‌کند.
+  /// وقتی فایل کامل شد و پیام توصیفی هم رسید، آن را در پوشه‌ی برنامه ذخیره، به چت اضافه و
+  /// (اگر ttl باقی مانده) برای بقیه‌ی همسایه‌ها رله می‌کند. نوع فایل: 'i' عکس، 'a' پیام صوتی.
   Future<void> _tryFinishImage(int pid) async {
     final meta = _fileMeta[pid];
     final uri = _fileUris[pid];
     if (meta == null || uri == null || !_fileDone.contains(pid)) return;
+    final from = _fileFrom[pid];
     _fileMeta.remove(pid);
     _fileUris.remove(pid);
     _fileDone.remove(pid);
+    _fileFrom.remove(pid);
     final id = '${meta['id']}';
     if (!_markSeen(id)) return;
     try {
+      final isAudio = '${meta['k'] ?? 'i'}' == 'a';
       final dir = await getApplicationDocumentsDirectory();
-      final folder = Directory('${dir.path}/offline_photos');
+      final folder = Directory('${dir.path}/${isAudio ? 'offline_audio' : 'offline_photos'}');
       await folder.create(recursive: true);
-      final dest = '${folder.path}/${id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')}.jpg';
+      final dest = '${folder.path}/${id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')}.${isAudio ? 'm4a' : 'jpg'}';
       await (Nearby() as dynamic).copyFileAndDeleteOriginal(uri, dest);
       if (!await File(dest).exists()) return;
       _add(OfflineMsg(
@@ -607,28 +660,100 @@ class OfflineMeshService extends ChangeNotifier {
         ts: (meta['ts'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
         mine: '${meta['u']}' == myUid,
         room: '${meta['r'] ?? ''}',
-        imagePath: dest,
+        imagePath: isAudio ? null : dest,
+        audioPath: isAudio ? dest : null,
+        audioSecs: (meta['d'] as num?)?.toInt() ?? 0,
       ));
+      _rememberFile(meta, dest);
+      // رله: فقط اگر فرستنده ttl گذاشته باشد (نسخه‌های قدیمی ttl ندارند و رله نمی‌شوند)
+      final ttl = (meta['ttl'] as num?)?.toInt() ?? 0;
+      if (ttl > 1) {
+        final out = <String, dynamic>{...meta, 'ttl': ttl - 1};
+        out.remove('pid');
+        unawaited(_relayFile(dest, out, except: from));
+      }
     } catch (_) {}
   }
 
-  /// ارسال عکس با کیفیت به همه‌ی گوشی‌های وصل‌شده (مستقیم، بدون عبور از گوشی‌های دیگر).
-  /// خروجی false یعنی هیچ گوشی‌ای وصل نیست.
+  void _rememberFile(Map<String, dynamic> meta, String path) {
+    final m = Map<String, dynamic>.of(meta)..remove('pid');
+    _fileBox.add(_StoredFile(m, path, DateTime.now().millisecondsSinceEpoch));
+    final limit = DateTime.now().subtract(_fileBoxAge).millisecondsSinceEpoch;
+    _fileBox.removeWhere((f) => f.at < limit);
+    if (_fileBox.length > _fileBoxMax) _fileBox.removeRange(0, _fileBox.length - _fileBoxMax);
+  }
+
+  /// یک فایل را با شناسه‌ی payload خودش و پیام توصیفی برای یک همسایه می‌فرستد.
+  Future<void> _pushFile(String ep, String path, Map<String, dynamic> meta) async {
+    final dynamic nearby = Nearby();
+    final pid = await nearby.sendFilePayload(ep, path) as int;
+    final m = <String, dynamic>{...meta, 'pid': pid};
+    await Nearby().sendBytesPayload(ep, Uint8List.fromList(utf8.encode(jsonEncode(m))));
+    final uid = peers[ep]?.uid;
+    if (uid != null) _delivered.putIfAbsent(uid, () => <String>{}).add('${meta['id']}');
+  }
+
+  Future<void> _relayFile(String path, Map<String, dynamic> meta, {String? except}) async {
+    for (final ep in peers.keys.toList()) {
+      if (ep == except || !running) continue;
+      try {
+        await _pushFile(ep, path, meta);
+      } catch (_) {}
+    }
+  }
+
+  /// نسخه‌ی کوچک‌شده‌ی عکس برای ارسال روی شبکه (اگر کوچک‌کردن نشد، خود فایل).
+  Future<String> _shrinkForMesh(String path) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final folder = Directory('${dir.path}/offline_out');
+      await folder.create(recursive: true);
+      final out = '${folder.path}/m_${DateTime.now().microsecondsSinceEpoch}.jpg';
+      final ok = await compute(_shrinkJob, <String>[path, out]);
+      return ok ? out : path;
+    } catch (_) {
+      return path;
+    }
+  }
+
+  /// ارسال عکس به شبکه: عکس تا ۱۲۸۰ پیکسل کوچک می‌شود و از راه گوشی‌های واسط تا [_maxTtl] پرش می‌رود.
+  /// اگر الان گوشی‌ای وصل نیست، نگه داشته می‌شود و به گوشی‌هایی که نزدیک شوند می‌رسد.
+  /// خروجی false یعنی شبکه روشن نیست.
   Future<bool> sendImage(String path, {String room = '', String caption = ''}) async {
-    if (!running || peers.isEmpty) return false;
+    if (!running) return false;
     final id = '$myUid-${DateTime.now().microsecondsSinceEpoch}';
     _markSeen(id);
     final ts = DateTime.now().millisecondsSinceEpoch;
     _add(OfflineMsg(id: id, uid: myUid, name: myName, text: caption, ts: ts, mine: true, room: room, imagePath: path));
-    final dynamic nearby = Nearby();
-    for (final ep in peers.keys.toList()) {
-      try {
-        final pid = await nearby.sendFilePayload(ep, path) as int;
-        final meta = <String, dynamic>{'img': 1, 'pid': pid, 'id': id, 'u': myUid, 'n': myName, 't': caption, 'ts': ts};
-        if (room.isNotEmpty) meta['r'] = room;
-        await Nearby().sendBytesPayload(ep, Uint8List.fromList(utf8.encode(jsonEncode(meta))));
-      } catch (_) {}
+    final small = await _shrinkForMesh(path);
+    final meta = <String, dynamic>{'img': 1, 'k': 'i', 'id': id, 'u': myUid, 'n': myName, 't': caption, 'ts': ts, 'ttl': _maxTtl};
+    if (room.isNotEmpty) meta['r'] = room;
+    _rememberFile(meta, small);
+    await _relayFile(small, meta);
+    return true;
+  }
+
+  /// ارسال پیام صوتی کوتاه (فایل m4a) با همان مسیر رله و ذخیره‌وارسال عکس.
+  Future<bool> sendAudio(String path, int secs, {String room = ''}) async {
+    if (!running) return false;
+    final id = '$myUid-${DateTime.now().microsecondsSinceEpoch}';
+    _markSeen(id);
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    var local = path;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final folder = Directory('${dir.path}/offline_audio');
+      await folder.create(recursive: true);
+      local = '${folder.path}/${id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')}.m4a';
+      await File(path).copy(local);
+    } catch (_) {
+      local = path;
     }
+    _add(OfflineMsg(id: id, uid: myUid, name: myName, text: '', ts: ts, mine: true, room: room, audioPath: local, audioSecs: secs));
+    final meta = <String, dynamic>{'img': 1, 'k': 'a', 'id': id, 'u': myUid, 'n': myName, 'ts': ts, 'd': secs, 'ttl': _maxTtl};
+    if (room.isNotEmpty) meta['r'] = room;
+    _rememberFile(meta, local);
+    await _relayFile(local, meta);
     return true;
   }
 
@@ -668,6 +793,13 @@ class OfflineMeshService extends ChangeNotifier {
     _remember(m);
     _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(m))));
   }
+}
+
+class _StoredFile {
+  _StoredFile(this.meta, this.path, this.at);
+  final Map<String, dynamic> meta;
+  final String path;
+  final int at;
 }
 
 class _Stored {
