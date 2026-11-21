@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 import '../../core/language/menu_translations.dart';
 import '../../services/offline_mesh_service.dart';
@@ -30,6 +33,17 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
   final _scroll = ScrollController();
   bool _starting = false;
 
+  // پیام صوتی: ضبط با یک لمس شروع و با لمس دوم ارسال می‌شود (حداکثر ۳۰ ثانیه)
+  static const int _maxRecSecs = 30;
+  final AudioRecorder _rec = AudioRecorder();
+  final AudioPlayer _player = AudioPlayer();
+  StreamSubscription<void>? _playSub;
+  Timer? _recTimer;
+  bool _recording = false;
+  int _recSecs = 0;
+  String? _recPath;
+  String? _playingId;
+
   bool get _fa => MenuLanguage.current == 'fa';
   List<OfflineMsg> get _msgs => _svc.messagesFor(widget.room);
   String _t(String fa, String en) => _fa ? fa : en;
@@ -40,11 +54,18 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
     _svc.activeRoom = widget.room;
     _svc.unread.remove(widget.room);
     _svc.addListener(_onChange);
+    _playSub = _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playingId = null);
+    });
   }
 
   @override
   void dispose() {
     _svc.removeListener(_onChange);
+    _recTimer?.cancel();
+    _playSub?.cancel();
+    _rec.dispose();
+    _player.dispose();
     if (_svc.activeRoom == widget.room) _svc.activeRoom = null;
     _ctrl.dispose();
     _scroll.dispose();
@@ -325,6 +346,24 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
                       ),
                     ),
                   ),
+                if (m.audioPath != null)
+                  InkWell(
+                    onTap: () => _togglePlay(m),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_playingId == m.id ? Icons.stop_circle_rounded : Icons.play_circle_fill_rounded, color: _gold, size: 36),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.graphic_eq_rounded, color: Colors.white38),
+                          const SizedBox(width: 8),
+                          Text(_fmt(m.audioSecs), style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (m.text.isNotEmpty) Text(m.text, style: const TextStyle(color: Colors.white, height: 1.5)),
                 Text('$hh:$mm', style: const TextStyle(color: Colors.white38, fontSize: 10)),
               ],
@@ -335,10 +374,10 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
     );
   }
 
-  /// ارسال عکس با کیفیت بالا (حداکثر ۲۵۶۰ پیکسل) مستقیم به گوشی‌های نزدیک.
+  /// ارسال عکس به شبکه (برای پخش چندپرشی تا ۱۲۸۰ پیکسل کوچک می‌شود؛ برای کیفیت کامل از «ارسال فایل» استفاده کنید).
   Future<void> _sendPhoto() async {
-    if (!_svc.running || _svc.peers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('ابتدا شبکه را روشن کنید و منتظر وصل شدن گوشی‌ها بمانید', 'Start the network and wait for phones to connect first'))));
+    if (!_svc.running) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('ابتدا شبکه را روشن کنید', 'Start the network first'))));
       return;
     }
     try {
@@ -347,9 +386,98 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
       final ok = await _svc.sendImage(x.path, room: widget.room);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? _t('عکس در حال ارسال است؛ تا رسیدن کامل منتظر بمانید', 'Photo is being sent; it may take a moment') : _t('گوشی‌ای وصل نیست', 'No phone connected')),
+        content: Text(!ok
+            ? _t('شبکه روشن نیست', 'Network is off')
+            : _svc.peers.isEmpty
+                ? _t('هنوز گوشی‌ای وصل نیست؛ عکس به گوشی‌هایی که نزدیک شوند می‌رسد', 'No phone connected yet; the photo will reach phones that come near')
+                : _t('عکس در حال ارسال است؛ تا رسیدن کامل منتظر بمانید', 'Photo is being sent; it may take a moment')),
       ));
     } catch (_) {}
+  }
+
+  String _fmt(int secs) => '${(secs ~/ 60)}:${(secs % 60).toString().padLeft(2, '0')}';
+
+  void _snack(String fa, String en) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t(fa, en))));
+  }
+
+  Future<void> _startRec() async {
+    if (_recording) return;
+    if (!_svc.running) {
+      _snack('ابتدا شبکه را روشن کنید', 'Start the network first');
+      return;
+    }
+    try {
+      if (!await _rec.hasPermission()) {
+        _snack('مجوز میکروفن را بدهید', 'Allow microphone permission');
+        return;
+      }
+      await _player.stop();
+      final path = '${Directory.systemTemp.path}/vm_${DateTime.now().microsecondsSinceEpoch}.m4a';
+      await _rec.start(const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 24000, sampleRate: 16000, numChannels: 1), path: path);
+      _recPath = path;
+      if (!mounted) return;
+      setState(() {
+        _recording = true;
+        _recSecs = 0;
+        _playingId = null;
+      });
+      _recTimer?.cancel();
+      _recTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted || !_recording) return;
+        setState(() => _recSecs++);
+        if (_recSecs >= _maxRecSecs) _finishRec(send: true);
+      });
+    } catch (_) {
+      _snack('ضبط صدا شروع نشد', 'Could not start recording');
+    }
+  }
+
+  Future<void> _finishRec({required bool send}) async {
+    if (!_recording) return;
+    _recTimer?.cancel();
+    _recTimer = null;
+    final secs = _recSecs;
+    String? path;
+    try {
+      path = await _rec.stop();
+    } catch (_) {}
+    path ??= _recPath;
+    if (mounted) setState(() => _recording = false);
+    if (path == null) return;
+    if (!send || secs < 1) {
+      try {
+        await File(path).delete();
+      } catch (_) {}
+      return;
+    }
+    final ok = await _svc.sendAudio(path, secs, room: widget.room);
+    if (!ok) {
+      _snack('شبکه روشن نیست', 'Network is off');
+    } else if (_svc.peers.isEmpty) {
+      _snack('هنوز گوشی‌ای وصل نیست؛ پیام صوتی به گوشی‌هایی که نزدیک شوند می‌رسد', 'No phone connected yet; the voice message will reach phones that come near');
+    }
+    try {
+      await File(path).delete();
+    } catch (_) {}
+  }
+
+  Future<void> _togglePlay(OfflineMsg m) async {
+    final path = m.audioPath;
+    if (path == null) return;
+    try {
+      if (_playingId == m.id) {
+        await _player.stop();
+        if (mounted) setState(() => _playingId = null);
+        return;
+      }
+      await _player.stop();
+      await _player.play(DeviceFileSource(path));
+      if (mounted) setState(() => _playingId = m.id);
+    } catch (_) {
+      if (mounted) setState(() => _playingId = null);
+    }
   }
 
   Future<void> _savePhoto(String path) async {
@@ -394,7 +522,40 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
     );
   }
 
+  Widget _recordBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+      color: _card,
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: _t('لغو', 'Cancel'),
+            onPressed: () => _finishRec(send: false),
+            icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
+          ),
+          const Icon(Icons.fiber_manual_record_rounded, color: Colors.redAccent, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${_t('در حال ضبط', 'Recording')}  ${_fmt(_recSecs)} / ${_fmt(_maxRecSecs)}',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+            ),
+          ),
+          CircleAvatar(
+            backgroundColor: _gold,
+            child: IconButton(
+              tooltip: _t('ارسال', 'Send'),
+              onPressed: () => _finishRec(send: true),
+              icon: const Icon(Icons.send_rounded, color: Color(0xff06121d), size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _inputBar() {
+    if (_recording) return _recordBar();
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       color: _card,
@@ -404,6 +565,11 @@ class _OfflineChatPageState extends State<OfflineChatPage> {
             onPressed: _sendPhoto,
             tooltip: _t('ارسال عکس', 'Send photo'),
             icon: const Icon(Icons.photo_rounded, color: _gold),
+          ),
+          IconButton(
+            onPressed: _startRec,
+            tooltip: _t('پیام صوتی', 'Voice message'),
+            icon: const Icon(Icons.mic_rounded, color: _gold),
           ),
           Expanded(
             child: TextField(
