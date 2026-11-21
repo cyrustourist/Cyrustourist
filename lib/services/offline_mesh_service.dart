@@ -107,6 +107,9 @@ class OfflineMeshService extends ChangeNotifier {
   Future<void> restoreForeground() async {
     callForegroundActive = false;
     if (!running) return;
+    // کمی صبر تا توقف سرویس تماس کامل شود و بعد دوباره شروع شود (جلوگیری از رقابت start/stop)
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (!running || callForegroundActive) return;
     _fgOn = false;
     await _startForeground();
   }
@@ -250,7 +253,7 @@ class OfflineMeshService extends ChangeNotifier {
 
   void _announce() {
     if (!running) return;
-    final m = <String, dynamic>{'p': 1, 'u': myUid, 'n': myName, 'ts': DateTime.now().millisecondsSinceEpoch, 'ttl': _maxTtl, 'h': 0};
+    final m = <String, dynamic>{'pr': 1, 'u': myUid, 'n': myName, 'ts': DateTime.now().millisecondsSinceEpoch, 'ttl': _maxTtl, 'h': 0};
     _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(m))));
   }
 
@@ -585,13 +588,14 @@ class OfflineMeshService extends ChangeNotifier {
         }
         return;
       }
-      if (m['p'] != null) {
-        _onPresence(fromEndpoint, m);
-        return;
-      }
       if (m['g'] != null) {
         final h = gameHandler;
         if (h != null) h(m);
+        return;
+      }
+      // کلید 'pr' (حضور) عمداً یکتاست؛ پیام‌های بازی کلیدهایی مثل 'p' دارند
+      if (m['pr'] != null) {
+        _onPresence(fromEndpoint, m);
         return;
       }
       final id = '${m['id']}';
