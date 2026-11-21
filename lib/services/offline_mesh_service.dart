@@ -5,12 +5,14 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location/location.dart' as location;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/language/menu_translations.dart';
 import 'user_profile_service.dart';
 
 /// پیام شبکه‌ی آفلاین
@@ -45,8 +47,29 @@ class OfflineMeshService extends ChangeNotifier {
   static final OfflineMeshService instance = OfflineMeshService._();
 
   static const String _serviceId = 'ir.cyrustourist.offline';
-  static const int _maxTtl = 4;
+  static const int _maxTtl = 6;
   static const int _maxHistory = 300;
+
+  // ذخیره‌وارسال: پیام‌های متنی اخیر نگه داشته می‌شوند و به هر گوشی تازه‌وصل‌شده داده می‌شوند.
+  static const int _outboxMax = 150;
+  static const Duration _outboxAge = Duration(hours: 6);
+
+  // سرویس پیش‌زمینه: برنامه با خاموش‌شدن صفحه یا رفتن به پس‌زمینه شبکه را از دست نمی‌دهد.
+  static const String _fgChannelId = 'cyrus_mesh_fg';
+  static const int _fgNotifId = 7741;
+  bool _fgOn = false;
+
+  /// call_service هنگام تماس اینترنتی این را true می‌کند؛ در این مدت سرویس پیش‌زمینه
+  /// دست‌نخورده می‌ماند تا نوع «میکروفن» تماس از بین نرود.
+  bool callForegroundActive = false;
+
+  /// بعد از پایان تماس اینترنتی، سرویس پیش‌زمینه‌ی شبکه‌ی آفلاین را دوباره برقرار می‌کند.
+  Future<void> restoreForeground() async {
+    callForegroundActive = false;
+    if (!running) return;
+    _fgOn = false;
+    await _startForeground();
+  }
 
   bool running = false;
   String status = '';
@@ -66,6 +89,8 @@ class OfflineMeshService extends ChangeNotifier {
   final Set<String> _seen = {};
   final Set<String> _pending = {}; // اتصال‌های در حال برقراری
   final Map<String, String> _names = {}; // endpointId → "نام|uid"
+  final List<_Stored> _outbox = [];
+  final Map<String, Set<String>> _delivered = {}; // uid همتا → شناسه‌ی پیام‌هایی که به او داده‌ایم
 
   Future<void> _loadIdentity() async {
     final p = await SharedPreferences.getInstance();
@@ -139,6 +164,90 @@ class OfflineMeshService extends ChangeNotifier {
     }
   }
 
+  Future<void> _startForeground() async {
+    if (_fgOn || callForegroundActive || kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      final android = FlutterLocalNotificationsPlugin()
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (android == null) return;
+      final fa = MenuLanguage.current == 'fa';
+      await android.createNotificationChannel(AndroidNotificationChannel(
+        _fgChannelId,
+        fa ? 'شبکه‌ی آفلاین' : 'Offline network',
+        description: fa ? 'فعال ماندن شبکه‌ی نزدیک در پس‌زمینه' : 'Keeps the nearby network alive in the background',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+      ));
+      await android.startForegroundService(
+        _fgNotifId,
+        fa ? 'شبکه‌ی آفلاین گردشگران' : 'Offline tourist network',
+        fa ? 'گوشی شما در شبکه‌ی نزدیک فعال است' : 'Your phone is active in the nearby network',
+        notificationDetails: AndroidNotificationDetails(
+          _fgChannelId,
+          fa ? 'شبکه‌ی آفلاین' : 'Offline network',
+          importance: Importance.low,
+          priority: Priority.low,
+          ongoing: true,
+          playSound: false,
+          enableVibration: false,
+          icon: '@drawable/ic_stat_notify',
+        ),
+        foregroundServiceTypes: {AndroidServiceForegroundType.foregroundServiceTypeConnectedDevice},
+      );
+      _fgOn = true;
+    } catch (e) {
+      debugPrint('OfflineMeshService foreground start: $e');
+    }
+  }
+
+  Future<void> _stopForeground() async {
+    if (!_fgOn || callForegroundActive) {
+      _fgOn = false;
+      return;
+    }
+    _fgOn = false;
+    try {
+      final android = FlutterLocalNotificationsPlugin()
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await android?.stopForegroundService();
+    } catch (e) {
+      debugPrint('OfflineMeshService foreground stop: $e');
+    }
+  }
+
+  void _pruneOutbox() {
+    final limit = DateTime.now().subtract(_outboxAge).millisecondsSinceEpoch;
+    _outbox.removeWhere((s) => s.at < limit);
+    if (_outbox.length > _outboxMax) _outbox.removeRange(0, _outbox.length - _outboxMax);
+  }
+
+  /// پیام متنی را برای تحویل به گوشی‌هایی که بعداً نزدیک می‌شوند نگه می‌دارد.
+  void _remember(Map<String, dynamic> m) {
+    _outbox.add(_Stored(Map<String, dynamic>.of(m), DateTime.now().millisecondsSinceEpoch));
+    _pruneOutbox();
+  }
+
+  /// بعد از وصل‌شدن یک گوشی تازه، پیام‌های اخیری که هنوز نگرفته را برایش می‌فرستد.
+  /// ttl=1 یعنی خودش فقط دریافت می‌کند؛ آن گوشی هم پیام‌ها را نگه می‌دارد و به همسایه‌های بعدی‌اش می‌رساند.
+  Future<void> _syncTo(String endpointId, String peerUid) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    final sent = _delivered.putIfAbsent(peerUid, () => <String>{});
+    if (sent.length > 600) sent.clear();
+    _pruneOutbox();
+    for (final s in List<_Stored>.of(_outbox)) {
+      if (!running || !peers.containsKey(endpointId)) return;
+      if ('${s.data['u']}' == peerUid) continue;
+      final id = '${s.data['id']}';
+      if (!sent.add(id)) continue;
+      final out = <String, dynamic>{...s.data, 'ttl': 1};
+      try {
+        await Nearby().sendBytesPayload(endpointId, Uint8List.fromList(utf8.encode(jsonEncode(out))));
+      } catch (_) {}
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+    }
+  }
+
   /// آخرین خطای شروع شبکه (برای نمایش راهنمای دقیق‌تر به کاربر)
   String lastError = '';
 
@@ -188,6 +297,7 @@ class OfflineMeshService extends ChangeNotifier {
       running = true;
       status = 'on';
       notifyListeners();
+      unawaited(_startForeground());
       return true;
     } catch (e) {
       running = false;
@@ -225,6 +335,8 @@ class OfflineMeshService extends ChangeNotifier {
     peers.clear();
     _pending.clear();
     _names.clear();
+    _delivered.clear();
+    await _stopForeground();
     notifyListeners();
   }
 
@@ -275,6 +387,7 @@ class OfflineMeshService extends ChangeNotifier {
       final name = parts.first.isEmpty ? 'Traveler' : parts.first;
       final uid = parts.length > 1 ? parts.last : id;
       peers[id] = OfflinePeer(id, uid, name);
+      unawaited(_syncTo(id, uid));
     } else {
       peers.remove(id);
       if (running) _retryLater(id);
@@ -329,6 +442,7 @@ class OfflineMeshService extends ChangeNotifier {
         room: '${m['r'] ?? ''}',
       );
       _add(msg);
+      _remember(m);
       final ttl = (m['ttl'] as num?)?.toInt() ?? 0;
       if (ttl > 1) {
         m['ttl'] = ttl - 1;
@@ -434,6 +548,13 @@ class OfflineMeshService extends ChangeNotifier {
     _add(OfflineMsg(id: id, uid: myUid, name: myName, text: t, ts: ts, mine: true, room: room));
     final m = <String, dynamic>{'id': id, 'u': myUid, 'n': myName, 't': t, 'ts': ts, 'ttl': _maxTtl};
     if (room.isNotEmpty) m['r'] = room;
+    _remember(m);
     _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(m))));
   }
+}
+
+class _Stored {
+  _Stored(this.data, this.at);
+  final Map<String, dynamic> data;
+  final int at;
 }
