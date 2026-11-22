@@ -576,7 +576,7 @@ class _HokmTablePageState extends State<HokmTablePage> {
         textDirection: TextDirection.rtl,
         children: [
           Text(v['seven'] == true ? 'حکم (۷ یار) : ' : 'حکم : ', style: TextStyle(color: Color(0xffffd84a), fontWeight: FontWeight.w900, fontSize: 18)),
-          Text(kSuitChar[trump], style: TextStyle(color: (trump == 1 || trump == 2) ? const Color(0xffff4b4b) : Colors.white, fontSize: 32, height: 1, shadows: const <Shadow>[Shadow(color: Colors.black, blurRadius: 3)])),
+          HokmSuit(trump, 30, (trump == 1 || trump == 2) ? const Color(0xffff4b4b) : Colors.white, shadow: true),
         ],
       );
     } else {
@@ -612,7 +612,7 @@ class _HokmTablePageState extends State<HokmTablePage> {
       if (trick.isNotEmpty) {
         final ls = _card((trick.first as List)[1]).suit;
         spans.add(const TextSpan(text: 'خال زمین '));
-        spans.add(TextSpan(text: ' ${kSuitChar[ls]} ', style: TextStyle(color: (ls == 1 || ls == 2) ? const Color(0xffff6b6b) : Colors.white, fontSize: 17, fontWeight: FontWeight.w900, backgroundColor: Colors.black54)));
+        spans.add(WidgetSpan(alignment: PlaceholderAlignment.middle, child: Container(color: Colors.black54, padding: const EdgeInsets.symmetric(horizontal: 4), child: HokmSuit(ls, 15, (ls == 1 || ls == 2) ? const Color(0xffff6b6b) : Colors.white))));
         spans.add(const TextSpan(text: ' · '));
       }
       spans.add(TextSpan(text: 'دست‌ها: ما ${tr[mt]} · حریف ${tr[1 - mt]} · تا ${_n(v['target'])} امتیاز'));
@@ -631,7 +631,7 @@ class _HokmTablePageState extends State<HokmTablePage> {
             HokmSfx.play('click');
             _act(<String, dynamic>{'k': 'choose', 'o': o});
           },
-          child: Text(kSuitChar[s], style: TextStyle(fontSize: 56, height: 1, color: (s == 1 || s == 2) ? const Color(0xffe53030) : const Color(0xfff4f4f4), shadows: const <Shadow>[Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 2))])),
+          child: HokmSuit(s, 52, (s == 1 || s == 2) ? const Color(0xffe53030) : const Color(0xfff4f4f4), shadow: true),
         );
     Widget orb(String t, String o) => GestureDetector(
           onTap: () {
