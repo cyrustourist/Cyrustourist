@@ -23,13 +23,12 @@ dependencies:
   image_picker: ^1.1.2
 
   # صدای بازی حکم (موج‌ها در خود برنامه ساخته می‌شوند)
-  audioplayers: ^6.1.0
+  audioplayers: ^6.8.1
 
   # انتخاب فایل/ویدیو برای جابه‌جایی فایل بدون اینترنت
   file_picker: ^8.1.6
-  gal: ^2.3.0
   image: ^4.2.0
-  webview_flutter: ^4.13.0
+  webview_flutter: ^4.14.1
 
   # آیکون‌های SVG سبک برای دکمه‌های پیام‌رسان
   flutter_svg: ^2.0.10+1
@@ -52,7 +51,7 @@ dependencies:
   exif: ^3.3.0
 
   # جستجوی صوتی (نقشه و جستجوی هوشمند) — ۱۰ زبان برنامه
-  speech_to_text: ^7.0.0
+  speech_to_text: ^7.5.0
 
   # ساعت جهانی دقیق (آفلاین، رایگان، بدون کلید API)
   timezone: ^0.9.4
