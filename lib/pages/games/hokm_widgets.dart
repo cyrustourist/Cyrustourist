@@ -118,19 +118,19 @@ class HokmCardView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label, style: TextStyle(color: col, fontWeight: FontWeight.w900, fontSize: w * .5, height: 1)),
-            Text(y, style: TextStyle(color: col, fontSize: w * .34, height: 1)),
+            HokmSuit(card.suit, w * .313, col),
           ],
         ),
       );
     } else if (r == 14) {
-      mid = Center(child: Text(y, style: TextStyle(color: col, fontSize: w * .62, height: 1)));
+      mid = Center(child: HokmSuit(card.suit, w * .570, col));
     } else {
       mid = Stack(
         children: [
           for (final p in _pips[r] ?? _pip2)
             Align(
               alignment: Alignment(p[0] / 50 - 1, p[1] / 50 - 1),
-              child: Transform.rotate(angle: p[1] > 50 ? pi : 0, child: Text(y, style: TextStyle(color: col, fontSize: w * .27, height: 1))),
+              child: Transform.rotate(angle: p[1] > 50 ? pi : 0, child: HokmSuit(card.suit, w * .248, col)),
             ),
         ],
       );
@@ -139,7 +139,7 @@ class HokmCardView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label, style: TextStyle(color: col, fontWeight: FontWeight.w900, fontSize: w * .26, height: 1)),
-            Text(y, style: TextStyle(color: col, fontSize: w * .22, height: 1)),
+            HokmSuit(card.suit, w * .202, col),
           ],
         );
     return <Widget>[
@@ -155,7 +155,7 @@ class HokmCardView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label, style: TextStyle(color: col, fontWeight: FontWeight.w900, fontSize: label.length > 1 ? w * .27 : w * .33, height: 1)),
-            Text(y, style: TextStyle(color: col, fontSize: w * .26, height: 1)),
+            HokmSuit(card.suit, w * .239, col),
           ],
         );
     final accent = st.frame ?? col;
@@ -169,7 +169,7 @@ class HokmCardView extends StatelessWidget {
             height: w * .68,
             decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: accent.withOpacity(.75), width: w * .016)),
           ),
-          Text(y, style: TextStyle(color: col, fontSize: w * .6, height: 1)),
+          HokmSuit(card.suit, w * .552, col),
         ],
       );
     } else if (r >= 11) {
@@ -178,11 +178,11 @@ class HokmCardView extends StatelessWidget {
         children: [
           SizedBox(width: w * .38, height: w * .2, child: CustomPaint(painter: _CrownPainter(r, accent))),
           Text(label, style: TextStyle(color: col, fontWeight: FontWeight.w900, fontSize: w * .4, height: 1)),
-          Text(y, style: TextStyle(color: col, fontSize: w * .3, height: 1)),
+          HokmSuit(card.suit, w * .276, col),
         ],
       );
     } else {
-      center = Text(y, style: TextStyle(color: col, fontSize: w * .7, height: 1));
+      center = HokmSuit(card.suit, w * .644, col);
     }
     return <Widget>[
       if (st.frame != null)
@@ -493,11 +493,11 @@ class _BgPainter extends CustomPainter {
   }
 
   void _suitMark(Canvas c, String ch, Offset at, double size, Color col, double rot) {
-    final tp = TextPainter(text: TextSpan(text: ch, style: TextStyle(fontSize: size, color: col)), textDirection: TextDirection.ltr)..layout();
+    final idx = kSuitChar.indexOf(ch);
     c.save();
     c.translate(at.dx, at.dy);
     c.rotate(rot);
-    tp.paint(c, Offset(-tp.width / 2, -tp.height / 2));
+    c.drawPath(hokmSuitPath(idx < 0 ? 0 : idx, size).shift(Offset(-size / 2, -size / 2)), Paint()..color = col);
     c.restore();
   }
 
@@ -657,6 +657,86 @@ class HokmLogo extends StatelessWidget {
       child: ClipOval(child: Image.asset('assets/images/logo-new.jpg', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: Colors.white))),
     );
   }
+}
+
+// ------------------------------------------------------------------ خال‌ها به‌صورت شکل برداری
+// خال‌ها با Path کشیده می‌شوند، نه با نویسه‌ی متنی؛ چون روی بعضی گوشی‌ها پیک و خاج با فونت ایموجی
+// (سیاه و بی‌توجه به رنگ) نشان داده می‌شدند و روی کارت تیره دیده نمی‌شدند.
+
+/// مسیر خال در مربع [s]×[s]. ۰ پیک، ۱ دل، ۲ خشت، ۳ خاج.
+Path hokmSuitPath(int suit, double s) {
+  double x(double v) => v * s;
+  switch (suit) {
+    case 1:
+      return Path()
+        ..moveTo(x(.5), x(.92))
+        ..cubicTo(x(.04), x(.60), x(0), x(.30), x(.22), x(.15))
+        ..cubicTo(x(.36), x(.06), x(.5), x(.14), x(.5), x(.30))
+        ..cubicTo(x(.5), x(.14), x(.64), x(.06), x(.78), x(.15))
+        ..cubicTo(x(1), x(.30), x(.96), x(.60), x(.5), x(.92))
+        ..close();
+    case 2:
+      return Path()
+        ..moveTo(x(.5), x(.03))
+        ..lineTo(x(.86), x(.5))
+        ..lineTo(x(.5), x(.97))
+        ..lineTo(x(.14), x(.5))
+        ..close();
+    case 0:
+      return Path()
+        ..moveTo(x(.5), x(.04))
+        ..cubicTo(x(.96), x(.38), x(1), x(.66), x(.76), x(.76))
+        ..cubicTo(x(.64), x(.81), x(.54), x(.76), x(.52), x(.68))
+        ..lineTo(x(.62), x(.96))
+        ..lineTo(x(.38), x(.96))
+        ..lineTo(x(.48), x(.68))
+        ..cubicTo(x(.46), x(.76), x(.36), x(.81), x(.24), x(.76))
+        ..cubicTo(x(0), x(.66), x(.04), x(.38), x(.5), x(.04))
+        ..close();
+    default:
+      Path u(Path a, Path b) => Path.combine(PathOperation.union, a, b);
+      var p = Path()..addOval(Rect.fromCircle(center: Offset(x(.5), x(.27)), radius: x(.21)));
+      p = u(p, Path()..addOval(Rect.fromCircle(center: Offset(x(.26), x(.58)), radius: x(.21))));
+      p = u(p, Path()..addOval(Rect.fromCircle(center: Offset(x(.74), x(.58)), radius: x(.21))));
+      p = u(p, Path()..addOval(Rect.fromCircle(center: Offset(x(.5), x(.5)), radius: x(.14))));
+      p = u(p, Path()
+        ..moveTo(x(.5), x(.52))
+        ..lineTo(x(.62), x(.96))
+        ..lineTo(x(.38), x(.96))
+        ..close());
+      return p;
+  }
+}
+
+/// خال با رنگ دقیقاً مشخص (مستقل از فونت دستگاه). [shadow] سایه‌ی ملایم زیر خال می‌اندازد.
+class HokmSuit extends StatelessWidget {
+  const HokmSuit(this.suit, this.size, this.color, {super.key, this.shadow = false});
+  final int suit;
+  final double size;
+  final Color color;
+  final bool shadow;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(width: size, height: size, child: CustomPaint(painter: _SuitPainter(suit, color, shadow)));
+}
+
+class _SuitPainter extends CustomPainter {
+  _SuitPainter(this.suit, this.color, this.shadow);
+  final int suit;
+  final Color color;
+  final bool shadow;
+
+  @override
+  void paint(Canvas c, Size s) {
+    final path = hokmSuitPath(suit, s.width);
+    if (shadow) {
+      c.drawPath(path.shift(Offset(0, s.width * .05)), Paint()..color = Colors.black.withOpacity(.6)..maskFilter = MaskFilter.blur(BlurStyle.normal, s.width * .05));
+    }
+    c.drawPath(path, Paint()..color = color..isAntiAlias = true);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SuitPainter o) => o.suit != suit || o.color != color || o.shadow != shadow;
 }
 
 // ------------------------------------------------------------------ پشت کارت‌های ایرانی
