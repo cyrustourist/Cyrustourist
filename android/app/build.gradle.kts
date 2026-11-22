@@ -21,6 +21,13 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    // فشرده‌سازی کتابخانه‌های بومی (.so) داخل APK برای کم شدن حجم دانلود
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     defaultConfig {
         applicationId = "cyrustourist.ir.app"
 
