@@ -1,0 +1,20 @@
+      - name: APK size report (largest files inside APK)
+        if: success()
+        shell: bash
+        run: |
+          APK="$RUNNER_TEMP/apk-out/$APK64_NAME"
+          {
+            echo "## APK size report"
+            echo ""
+            echo "Total: $(stat -c%s "$APK") bytes"
+            echo ""
+            echo "### Top 25 files (compressed size in bytes)"
+            echo '```text'
+            unzip -lv "$APK" | awk 'NF>=8 && $1 ~ /^[0-9]+$/ {print $3, $8}' | sort -rn | head -25
+            echo '```'
+            echo ""
+            echo "### Per folder (compressed bytes)"
+            echo '```text'
+            unzip -lv "$APK" | awk 'NF>=8 && $1 ~ /^[0-9]+$/ {n=split($8,a,"/"); k=(n>2)?a[1]"/"a[2]:a[1]; s[k]+=$3} END{for(k in s) print s[k], k}' | sort -rn | head -15
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
