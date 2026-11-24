@@ -223,22 +223,44 @@ class CallSession extends ChangeNotifier {
 
   bool _fgStarted = false;
 
+  /// میکروفن (و در تماس تصویری دوربین). تصویر اول با کیفیت بهتر (حدود qHD، ۲۴ فریم) خواسته می‌شود؛
+  /// اگر دوربین نپذیرفت، همان تصویر سبک قبلی (۳۲۰×۲۴۰، ۱۵ فریم). بیت‌ریت واقعی بعد از اتصال محدود می‌شود.
+  Future<MediaStream?> _openMedia() async {
+    final nav = navigator.mediaDevices;
+    if (!isVideo) {
+      try {
+        return await nav.getUserMedia({'audio': true, 'video': false});
+      } catch (_) {
+        return null;
+      }
+    }
+    try {
+      return await nav.getUserMedia({
+        'audio': true,
+        'video': {
+          'mandatory': {'minWidth': '960', 'minHeight': '540', 'minFrameRate': '24'},
+          'facingMode': 'user',
+          'optional': [],
+        },
+      });
+    } catch (_) {}
+    try {
+      return await nav.getUserMedia({
+        'audio': true,
+        'video': {
+          'mandatory': {'minWidth': '320', 'minHeight': '240', 'minFrameRate': '15'},
+          'facingMode': 'user',
+          'optional': [],
+        },
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<bool> _preparePeer() async {
     // میکروفن و تنظیمات ICE هم‌زمان آماده می‌شوند (قبلاً پشت‌سرهم بودند)
-    final micF = navigator.mediaDevices
-        .getUserMedia({
-          'audio': true,
-          // تصویر سبک (حدود 320 تا 640 پیکسل، 15 فریم) تا پهنای باند و TURN کمتر مصرف شود
-          'video': isVideo
-              ? {
-                  'mandatory': {'minWidth': '320', 'minHeight': '240', 'minFrameRate': '15'},
-                  'facingMode': 'user',
-                  'optional': [],
-                }
-              : false,
-        })
-        .then<MediaStream?>((m) => m)
-        .catchError((Object _) => null);
+    final micF = _openMedia();
     final ice = await _loadIce();
     _gatherDone = Completer<void>();
     _candidateReady = Completer<void>();
@@ -247,6 +269,10 @@ class CallSession extends ChangeNotifier {
     final pc = await createPeerConnection({
       'iceServers': ice,
       'sdpSemantics': 'unified-plan',
+      // یک مسیر مشترک برای صدا و تصویر (نصف آدرس‌ها و آزمون‌های اتصال) و جمع‌آوری آدرس از پیش
+      'bundlePolicy': 'max-bundle',
+      'rtcpMuxPolicy': 'require',
+      'iceCandidatePoolSize': 2,
     });
     _pc = pc;
     if (isVideo) {
@@ -306,6 +332,13 @@ class CallSession extends ChangeNotifier {
             Future<void>.delayed(const Duration(milliseconds: 900), () {
               if (!_closed) unawaited(_applyRoute());
             });
+            if (isVideo) {
+              unawaited(_tuneVideoSender());
+              // مسیر انتخاب‌شده ممکن است چند ثانیه بعد از رله به مستقیم عوض شود
+              Future<void>.delayed(const Duration(seconds: 8), () {
+                if (!_closed) unawaited(_tuneVideoSender());
+              });
+            }
           } else if (statusText != 'وصل شد') {
             // اتصال بعد از «اتصال ضعیف است…» برگشت
             statusText = 'وصل شد';
@@ -358,8 +391,82 @@ class CallSession extends ChangeNotifier {
     return true;
   }
 
+  /// نوع مسیر انتخاب‌شدهٔ اتصال از getStats: 'direct' | 'relay' | 'unknown'.
+  Future<String> _pathKind() async {
+    try {
+      final pc = _pc;
+      if (pc == null) return 'unknown';
+      final reports = await pc.getStats();
+      final byId = <String, StatsReport>{for (final r in reports) r.id: r};
+      StatsReport? pair;
+      for (final r in reports) {
+        if (r.type == 'transport' && r.values['selectedCandidatePairId'] != null) {
+          pair = byId['${r.values['selectedCandidatePairId']}'];
+          if (pair != null) break;
+        }
+      }
+      if (pair == null) {
+        for (final r in reports) {
+          if (r.type == 'candidate-pair' && '${r.values['state']}' == 'succeeded' && '${r.values['nominated']}' == 'true') {
+            pair = r;
+            break;
+          }
+        }
+      }
+      if (pair == null) return 'unknown';
+      final l = byId['${pair.values['localCandidateId']}'];
+      final rm = byId['${pair.values['remoteCandidateId']}'];
+      if (l == null && rm == null) return 'unknown';
+      final lt = '${l?.values['candidateType'] ?? ''}';
+      final rt = '${rm?.values['candidateType'] ?? ''}';
+      if (lt == 'relay' || rt == 'relay') return 'relay';
+      if (lt.isEmpty && rt.isEmpty) return 'unknown';
+      return 'direct';
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
+  /// سقف بیت‌ریت و فریم تصویرِ خروجی را بر اساس مسیر اتصال تنظیم می‌کند.
+  /// تخمین پهنای باند خود WebRTC باز هم رزولوشن و کیفیت را با شبکه تطبیق می‌دهد؛ این فقط سقف است.
+  Future<void> _tuneVideoSender() async {
+    if (_closed || !isVideo) return;
+    try {
+      final pc = _pc;
+      if (pc == null) return;
+      final kind = await _pathKind();
+      final kbps = switch (kind) {
+        'direct' => _sendKbpsDirect,
+        'relay' => _sendKbpsRelay,
+        _ => _sendKbpsUnknown,
+      };
+      final fps = kind == 'relay' ? 20 : 30;
+      for (final s in await pc.getSenders()) {
+        if (s.track?.kind != 'video') continue;
+        final params = s.parameters;
+        final enc = params.encodings;
+        if (enc == null || enc.isEmpty) continue;
+        for (final e in enc) {
+          e.maxBitrate = kbps * 1000;
+          e.maxFramerate = fps;
+        }
+        await s.setParameters(params);
+      }
+      debugPrint('call video tuned: path=$kind max=${kbps}kbps fps=$fps');
+    } catch (e) {
+      debugPrint('call video tune failed: $e');
+    }
+  }
+
   // سقف پهنای باند تصویر (کیلوبیت بر ثانیه) در SDP؛ مصرف TURN و اینترنت کاربر را کم می‌کند.
-  static const int _videoMaxKbps = 500;
+  // سقف دقیق‌تر بعد از اتصال و بر اساس نوع مسیر (مستقیم یا رله) در _tuneVideoSender اعمال می‌شود.
+  static const int _videoMaxKbps = 900;
+
+  // سقف ارسال تصویر بعد از اتصال (کیلوبیت بر ثانیه): مسیر مستقیم بالاتر، رله‌شده (TURN) پایین‌تر
+  // تا سهمیهٔ سرورهای رله نسوزد. برای کیفیت بیشتر/کمتر فقط همین سه عدد را عوض کنید.
+  static const int _sendKbpsDirect = 900;
+  static const int _sendKbpsRelay = 450;
+  static const int _sendKbpsUnknown = 600;
 
   static String _capVideo(String sdp) {
     if (sdp.isEmpty || !sdp.contains('m=video')) return sdp;
@@ -438,7 +545,7 @@ class CallSession extends ChangeNotifier {
       final early = _candidateReady?.future.then((_) => Future<void>.delayed(const Duration(milliseconds: 250)));
       final waits = <Future<void>>[if (done != null) done, if (early != null) early];
       if (waits.isNotEmpty) {
-        await Future.any<void>(waits).timeout(const Duration(seconds: 4), onTimeout: () {});
+        await Future.any<void>(waits).timeout(const Duration(seconds: 3), onTimeout: () {});
       }
     } catch (_) {}
     final d = await _pc?.getLocalDescription();
