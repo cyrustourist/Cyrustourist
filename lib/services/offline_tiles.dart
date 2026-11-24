@@ -201,7 +201,11 @@ class OfflineTiles {
 
     final okAll = !aborted && !_cancel;
     progress.value = OfflineProgress(done, total, finished: okAll, failed: !okAll);
-    Timer(const Duration(seconds: 2), () => progress.value = null);
+    // فقط اگر در این فاصله دانلود تازه‌ای شروع نشده باشد پیشرفت پاک شود (وگرنه پنجرهٔ دانلود جدید زود بسته می‌شد)
+    Timer(const Duration(seconds: 2), () {
+      final p = progress.value;
+      if (p != null && (p.finished || p.failed)) progress.value = null;
+    });
     return okAll;
   }
 }
