@@ -213,19 +213,30 @@ class _SplashPageState extends State<SplashPage> {
   void initState() {
     super.initState();
 
-    _initLanguages();
-
     if (CallService.launchedByCall) {
+      unawaited(_initLanguages());
       _launchFromCall();
       return;
     }
 
-    Future.delayed(
-      const Duration(seconds: 3),
-      () {
-        if (mounted) _goHome();
-      },
-    );
+    unawaited(_boot());
+  }
+
+  /// حداقل زمان نمایش اسپلش (برای جلوگیری از چشمک‌زدن) و سقف انتظار برای آماده‌شدن زبان‌ها.
+  /// قبلاً همیشه ۳ ثانیه ثابت منتظر می‌ماند؛ حالا به‌محض آماده بودن زبان‌ها وارد صفحهٔ اصلی می‌شود.
+  static const Duration _minShow = Duration(milliseconds: 700);
+  static const Duration _maxWait = Duration(seconds: 2);
+
+  Future<void> _boot() async {
+    final t0 = DateTime.now();
+    try {
+      await _initLanguages().timeout(_maxWait);
+    } catch (_) {
+      // زبان‌ها دیر شدند یا خطا دادند؛ با زبان پیش‌فرض ادامه می‌دهیم
+    }
+    final left = _minShow - DateTime.now().difference(t0);
+    if (left > Duration.zero) await Future<void>.delayed(left);
+    if (mounted) _goHome();
   }
 
   /// صفحهٔ اصلی را جایگزین اسپلش می‌کند؛ اگر در این فاصله صفحهٔ تماس جلو آمده، زیر آن قرار می‌گیرد
