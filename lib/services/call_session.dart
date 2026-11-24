@@ -194,24 +194,47 @@ class CallSession extends ChangeNotifier {
     await _loadIceStatic();
   }
 
+  // پاسخ /api/call/config (ICE + کلیدهای پنل) با کش ۶۰ ثانیه‌ای: «بررسی کلید» و «گرفتن ICE» یک درخواست مشترک دارند.
+  static Map<String, dynamic>? _cfg;
+  static DateTime? _cfgAt;
+  static Future<Map<String, dynamic>?>? _cfgInflight;
+
+  /// پاسخ config را برمی‌گرداند؛ null یعنی ورکر جواب نداد. [force] کش را نادیده می‌گیرد.
+  static Future<Map<String, dynamic>?> loadConfig({bool force = false}) {
+    final at = _cfgAt;
+    if (!force && _cfg != null && at != null && DateTime.now().difference(at) < const Duration(seconds: 60)) {
+      return Future.value(_cfg);
+    }
+    return _cfgInflight ??= () async {
+      try {
+        final uid = await BadgeService.userUid();
+        final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid}, timeout: const Duration(seconds: 6));
+        if (j != null) {
+          _cfg = j;
+          _cfgAt = DateTime.now();
+          final list = j['ice_servers'];
+          if (list is List && list.isNotEmpty) {
+            _iceCache = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+            _iceAt = DateTime.now();
+          }
+        }
+        return j;
+      } catch (_) {
+        return null;
+      } finally {
+        _cfgInflight = null;
+      }
+    }();
+  }
+
   static Future<List<Map<String, dynamic>>> _loadIceStatic() async {
     final cached = _iceCache;
     final at = _iceAt;
     if (cached != null && at != null && DateTime.now().difference(at) < const Duration(minutes: 40)) {
       return cached;
     }
-    try {
-      final uid = await BadgeService.userUid();
-      final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid});
-      final list = j?['ice_servers'];
-      if (list is List && list.isNotEmpty) {
-        final parsed = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
-        _iceCache = parsed;
-        _iceAt = DateTime.now();
-        return parsed;
-      }
-    } catch (_) {}
-    return cached ?? _fallbackIce;
+    await loadConfig(force: true);
+    return _iceCache ?? cached ?? _fallbackIce;
   }
 
   Future<List<Map<String, dynamic>>> _loadIce() => _loadIceStatic();
@@ -401,7 +424,7 @@ class CallSession extends ChangeNotifier {
     }
     // سرویس پیش‌زمینه: تا وقتی کاربر از برنامه بیرون می‌رود، اندروید میکروفن را قطع نکند
     _fgStarted = true;
-    unawaited(CallService.startForegroundCall(peerName));
+    unawaited(CallService.startForegroundCall(peerName, video: isVideo));
     return true;
   }
 
@@ -754,9 +777,16 @@ class CallSession extends ChangeNotifier {
 
   Future<void> _pollOnce() async {
     if (_closed || callId == null || _pollBusy) return;
-    // فاصلهٔ پایش (تایمر ۵۰۰ms): زنگ‌خوردن تماس‌گیرنده ۰٫۵ث، اتصال ۰٫۵ث، گیرنده ۱ث، وصل‌شده ۱ث (ریل‌تایم)
+    // کم‌فشار برای ورکر (تایمر ۵۰۰ms؛ هر «تیک» نیم ثانیه):
+    //  - تماس‌گیرنده منتظر جواب: ۱ث   - در حال اتصال: ۱ث   - گیرنده در حال زنگ: ۲ث
+    //  - وصل‌شده و کانال مستقیم باز: ۳۰ث (پایان تماس از همان کانال می‌رسد؛ سرور فقط پشتیبان است)
+    //  - وصل‌شده بدون کانال: ۴ث
+    // بعد از خطاهای پیاپی فاصله بیشتر می‌شود تا ورکر زیر فشار بیشتر نرود.
     _tick++;
-    final every = phase == CallPhase.connected ? (_ctlOpen ? 16 : 2) : ((isCaller && phase == CallPhase.ringing) ? 1 : (phase == CallPhase.connecting ? 1 : 2));
+    final base = phase == CallPhase.connected
+        ? (_ctlOpen ? 60 : 8)
+        : ((isCaller && phase == CallPhase.ringing) || phase == CallPhase.connecting ? 2 : 4);
+    final every = base * (1 + (_pollFails > 4 ? 4 : _pollFails));
     if (_tick % every != 0) return;
     _pollBusy = true;
     try {
