@@ -39,8 +39,7 @@ class CallService with WidgetsBindingObserver {
   /// کلیدهای تماس را از ورکر می‌خواند؛ اگر ورکر جواب نداد وضعیت قبلی عوض نمی‌شود.
   Future<void> refreshFeatures() async {
     try {
-      final uid = await BadgeService.userUid();
-      final j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid}, timeout: const Duration(seconds: 6));
+      final j = await CallSession.loadConfig(force: true);
       final f = j?['features'];
       if (f is Map) {
         videoOn.value = f['video_enabled'] != false;
@@ -547,10 +546,10 @@ class CallService with WidgetsBindingObserver {
   ///  - ورکر جواب داد و از پنل خاموش شده ← همان پیامی که ورکر فرستاده
   ///  - ورکر جواب نداد (قطع/در دسترس نیست) ← متن زیبای «کارگران در حال کارند»
   Future<String?> _disabledMessage({bool video = false}) async {
+    // یک درخواست config مشترک (ICE + کلیدها) با کش کوتاه؛ قبلاً هر تماس دو بار به ورکر می‌رفت
     Map<String, dynamic>? j;
     try {
-      final uid = await BadgeService.userUid();
-      j = await BadgeService.call('GET', '/api/call/config', query: {'user_uid': uid}, timeout: const Duration(seconds: 6));
+      j = await CallSession.loadConfig();
     } catch (_) {
       j = null;
     }
@@ -784,7 +783,7 @@ class CallService with WidgetsBindingObserver {
   // ------------------------------------------------------------------
   // سرویس پیش‌زمینه (میکروفن) هنگام تماس
   // ------------------------------------------------------------------
-  static Future<void> startForegroundCall(String peerName) async {
+  static Future<void> startForegroundCall(String peerName, {bool video = false}) async {
     OfflineMeshService.instance.callForegroundActive = true;
     try {
       final android = FlutterLocalNotificationsPlugin()
@@ -805,7 +804,10 @@ class CallService with WidgetsBindingObserver {
           icon: '@drawable/ic_stat_notify',
           category: AndroidNotificationCategory.call,
         ),
-        foregroundServiceTypes: {AndroidServiceForegroundType.foregroundServiceTypeMicrophone},
+        foregroundServiceTypes: {
+          AndroidServiceForegroundType.foregroundServiceTypeMicrophone,
+          if (video) AndroidServiceForegroundType.foregroundServiceTypeCamera,
+        },
       );
     } catch (e) {
       debugPrint('foreground call start error: $e');
