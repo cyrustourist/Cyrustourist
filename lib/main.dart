@@ -956,15 +956,27 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       return referencePoint;
     }
 
-    try {
-      final originResults = await MapPlacesService().searchPlaces(
-        query: originController.text.trim(),
-        userLocation: referencePoint,
-      );
+    final text = originController.text.trim();
 
-      if (originResults.isNotEmpty) {
-        return originResults.first.location;
-      }
+    // مبدأ از پیشنهادها انتخاب شده بود: بدون جستجوی دوباره
+    if (originPoint != null && text == _selectedOriginName) {
+      return originPoint;
+    }
+
+    return _resolvePoint(text, referencePoint);
+  }
+
+  /// ابتدا فهرست آفلاین (فوری)، سپس جستجوی آنلاین با timeout
+  Future<LatLng?> _resolvePoint(String text, LatLng reference) async {
+    final local = LocalGazetteer.search(text, limit: 1);
+    if (local.isNotEmpty) return local.first.point;
+
+    try {
+      final results = await MapPlacesService().searchPlaces(
+        query: text,
+        userLocation: reference,
+      );
+      if (results.isNotEmpty) return results.first.location;
     } catch (_) {}
 
     return null;
@@ -1032,7 +1044,17 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       routingInProgress = true;
     });
 
-    final origin = await _resolveOrigin();
+    final destSelected =
+        destinationPoint != null && destinationText == _selectedDestinationName;
+
+    // مبدأ و مقصد هم‌زمان پیدا می‌شوند
+    final originFuture = _resolveOrigin();
+    final destFuture = destSelected
+        ? Future<LatLng?>.value(destinationPoint)
+        : _resolvePoint(destinationText, userLocation ?? iranCenter);
+
+    final origin = await originFuture;
+    final destination = await destFuture;
 
     if (!mounted) return;
 
@@ -1055,24 +1077,11 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       return;
     }
 
-    List<MapPlace> results = [];
-
-    try {
-      results = await MapPlacesService().searchPlaces(
-        query: destinationText,
-        userLocation: origin,
-      );
-    } catch (_) {
-      results = [];
-    }
-
-    if (!mounted) return;
-
     setState(() {
       routingInProgress = false;
     });
 
-    if (results.isEmpty) {
+    if (destination == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1087,7 +1096,6 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       return;
     }
 
-    final destination = results.first.location;
     await _openDirections(origin, destination);
   }
 
@@ -1115,6 +1123,9 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
     } catch (_) {}
   }
   LatLng? destinationPoint;
+  LatLng? originPoint;
+  String? _selectedOriginName;
+  String? _selectedDestinationName;
 
   /// اولین موقعیت را از جریان موقعیت می‌گیرد؛ اول با سرویس گوگل، بعد با LocationManager اندروید.
   Future<Position?> _waitForFix() async {
@@ -1651,8 +1662,11 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
   void _selectSuggestion(MapPlace place, {required bool isOrigin}) {
     if (isOrigin) {
       originController.text = place.name;
+      originPoint = place.location;
+      _selectedOriginName = place.name;
     } else {
       destinationController.text = place.name;
+      _selectedDestinationName = place.name;
       setState(() => destinationPoint = place.location);
     }
     try {
