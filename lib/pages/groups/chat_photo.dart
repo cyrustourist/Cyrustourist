@@ -10,17 +10,18 @@ import 'package:image_picker/image_picker.dart';
 import '../../services/group_texts.dart';
 import 'group_ui.dart';
 
-/// عکس آمادهٔ ارسال در چت: base64 فشرده + توضیح اختیاری.
-class ChatPhotoPick {
-  const ChatPhotoPick(this.base64, this.caption);
-  final String base64;
+/// حداکثر تعداد عکس در یک بار انتخاب.
+const int kChatPhotoMax = 10;
+
+/// عکس‌های آمادهٔ ارسال در چت: هر عکس base64 فشرده + یک توضیح اختیاری (روی عکس اول گذاشته می‌شود).
+class ChatPhotoBatch {
+  const ChatPhotoBatch(this.images, this.caption);
+  final List<String> images;
   final String caption;
 }
 
-/// انتخاب عکس (گالری/دوربین) ← فشرده‌سازی (حداکثر ضلع ۱۲۸۰، JPEG، حدود ۱۰۰ کیلوبایت)
-/// ← پیش‌نمایش با امکان نوشتن توضیح. null یعنی لغو یا ناموفق.
-Future<ChatPhotoPick?> pickChatPhoto(BuildContext context) async {
-  final source = await showModalBottomSheet<ImageSource>(
+Future<ImageSource?> _askSource(BuildContext context) {
+  return showModalBottomSheet<ImageSource>(
     context: context,
     backgroundColor: gPanel,
     builder: (ctx) => Directionality(
@@ -41,26 +42,50 @@ Future<ChatPhotoPick?> pickChatPhoto(BuildContext context) async {
       ),
     ),
   );
+}
+
+/// انتخاب عکس (گالری: چندتایی تا [maxCount] / دوربین: یکی) ← فشرده‌سازی هر عکس
+/// (حداکثر ضلع ۱۲۸۰، JPEG، حدود ۱۰۰ کیلوبایت) ← پیش‌نمایش با امکان نوشتن توضیح.
+/// null یعنی لغو یا ناموفق.
+Future<ChatPhotoBatch?> pickChatPhotos(BuildContext context, {int maxCount = kChatPhotoMax}) async {
+  final source = await _askSource(context);
   if (source == null || !context.mounted) return null;
   try {
-    final x = await ImagePicker().pickImage(source: source, maxWidth: 2000, maxHeight: 2000, imageQuality: 92);
-    if (x == null || !context.mounted) return null;
-    final raw = await x.readAsBytes();
-    final b64 = await compute(_compressForChat, raw);
-    if (b64 == null) {
-      if (context.mounted) gToast(context, GT.t('photo_bad'));
-      return null;
+    final List<XFile> files;
+    if (source == ImageSource.camera || maxCount <= 1) {
+      final x = await ImagePicker().pickImage(source: source, maxWidth: 2000, maxHeight: 2000, imageQuality: 92);
+      files = x == null ? const <XFile>[] : <XFile>[x];
+    } else {
+      final xs = await ImagePicker().pickMultiImage(maxWidth: 2000, maxHeight: 2000, imageQuality: 92, limit: maxCount);
+      files = xs.take(maxCount).toList();
+      if (xs.length > maxCount && context.mounted) {
+        gToast(context, GT.t('photo_limit', {'n': '$maxCount'}));
+      }
+    }
+    if (files.isEmpty || !context.mounted) return null;
+
+    final out = <String>[];
+    for (final f in files) {
+      final raw = await f.readAsBytes();
+      final b64 = await compute(_compressForChat, raw);
+      if (b64 != null) out.add(b64);
     }
     if (!context.mounted) return null;
-    return await _preview(context, b64);
+    if (out.isEmpty) {
+      gToast(context, GT.t('photo_bad'));
+      return null;
+    }
+    if (out.length < files.length) gToast(context, GT.t('photo_some_bad'));
+    return await _preview(context, out);
   } catch (_) {
     return null;
   }
 }
 
-Future<ChatPhotoPick?> _preview(BuildContext context, String b64) {
+Future<ChatPhotoBatch?> _preview(BuildContext context, List<String> images) {
   final caption = TextEditingController();
-  return showDialog<ChatPhotoPick>(
+  final many = images.length > 1;
+  return showDialog<ChatPhotoBatch>(
     context: context,
     builder: (ctx) => Directionality(
       textDirection: gDir,
@@ -69,13 +94,26 @@ Future<ChatPhotoPick?> _preview(BuildContext context, String b64) {
         contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 320),
-                child: Image.memory(base64Decode(b64), fit: BoxFit.contain),
+            if (!many)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 320),
+                  child: Image.memory(base64Decode(images.first), fit: BoxFit.contain),
+                ),
+              )
+            else
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final b in images)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(base64Decode(b), width: 72, height: 72, fit: BoxFit.cover, cacheWidth: 160),
+                    ),
+                ],
               ),
-            ),
             const SizedBox(height: 12),
             TextField(
               controller: caption,
@@ -99,8 +137,8 @@ Future<ChatPhotoPick?> _preview(BuildContext context, String b64) {
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(GT.t('cancel'), style: const TextStyle(color: Colors.white70))),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: gGold, foregroundColor: gBg),
-            onPressed: () => Navigator.of(ctx).pop(ChatPhotoPick(b64, caption.text.trim())),
-            child: Text(GT.t('photo_send'), style: const TextStyle(fontWeight: FontWeight.w900)),
+            onPressed: () => Navigator.of(ctx).pop(ChatPhotoBatch(images, caption.text.trim())),
+            child: Text(many ? '${GT.t('photo_send')} (${images.length})' : GT.t('photo_send'), style: const TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
       ),
