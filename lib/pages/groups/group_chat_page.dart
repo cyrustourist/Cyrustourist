@@ -61,6 +61,8 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
   int _peerSeen = 0;
   int _sentSeen = 0;
   bool _photoSending = false;
+  int _photoDone = 0;
+  int _photoTotal = 0;
   String _linksMode = 'own';
 
   bool get _isStaff => !_g.isDm && (_role == 'owner' || _role == 'admin');
@@ -203,11 +205,43 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
     });
   }
 
-  Future<void> _sendSticker() async {
+  /// ایموجی را در جای مکان‌نما (یا جایگزین متن انتخاب‌شده) داخل کادر نوشتن می‌گذارد.
+  void _insertEmoji(String e) {
+    final v = _input.value;
+    final sel = v.selection;
+    final start = sel.isValid ? sel.start : v.text.length;
+    final end = sel.isValid ? sel.end : v.text.length;
+    final text = v.text.replaceRange(start, end, e);
+    if (text.length > 1000) return;
+    _input.value = TextEditingValue(text: text, selection: TextSelection.collapsed(offset: start + e.length));
+  }
+
+  /// پاک‌کردن یک نویسهٔ کامل (ایموجی‌های چندقسمتی مثل ❤️ یا 👍🏽 یکجا پاک می‌شوند).
+  void _backspaceInput() {
+    final v = _input.value;
+    final sel = v.selection;
+    final start = sel.isValid ? sel.start : v.text.length;
+    final end = sel.isValid ? sel.end : v.text.length;
+    if (start != end) {
+      _input.value = TextEditingValue(text: v.text.replaceRange(start, end, ''), selection: TextSelection.collapsed(offset: start));
+      return;
+    }
+    if (start == 0) return;
+    final before = v.text.substring(0, start).runes.toList();
+    var i = before.length - 1;
+    while (i > 0 && (before[i] == 0xFE0F || before[i] == 0x200D || (before[i] >= 0x1F3FB && before[i] <= 0x1F3FF))) {
+      i--;
+    }
+    while (i > 1 && before[i - 1] == 0x200D) {
+      i -= 2;
+    }
+    final kept = String.fromCharCodes(before.sublist(0, i));
+    _input.value = TextEditingValue(text: kept + v.text.substring(start), selection: TextSelection.collapsed(offset: kept.length));
+  }
+
+  Future<void> _openStickers() async {
     if (_sending || _slowLeft > 0) return;
-    final s = await showStickerPicker(context);
-    if (s == null || !mounted) return;
-    await _send(sticker: s);
+    await showStickerInserter(context, onPick: _insertEmoji, onBackspace: _backspaceInput);
   }
 
   Future<void> _send({String? sticker}) async {
@@ -241,25 +275,57 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
       gToast(context, GT.t(const {'mode_off': 'photo_off_mode', 'group_off': 'photo_off_group', 'need_tick': 'photo_off_tick', 'need_verified': 'photo_off_verified'}[_mediaWhy] ?? 'photo_off'));
       return;
     }
-    final pick = await pickChatPhoto(context);
+    // در حالت آهسته هر پیام یک نوبت حساب می‌شود، پس فقط یک عکس در هر بار.
+    final slowOn = !_isStaff && !_g.isDm && _slowSecs > 0;
+    if (slowOn) gToast(context, GT.t('photo_slow_one'));
+    final pick = await pickChatPhotos(context, maxCount: slowOn ? 1 : kChatPhotoMax);
     if (pick == null || !mounted) return;
-    setState(() => _photoSending = true);
-    final r = await GroupService.send(_g.id, pick.caption, replyTo: _replyTo?.id ?? 0, media: pick.base64);
-    if (!mounted) return;
-    setState(() => _photoSending = false);
-    if (r.ok) {
+    final total = pick.images.length;
+    setState(() {
+      _photoSending = true;
+      _photoDone = 0;
+      _photoTotal = total;
+    });
+    GroupResult? fail;
+    var sent = 0;
+    for (var i = 0; i < total; i++) {
+      // توضیح و پاسخ (reply) فقط روی عکس اول می‌آید؛ بقیه عکس‌ها پشت سرش جدا ارسال می‌شوند.
+      final r = await GroupService.send(
+        _g.id,
+        i == 0 ? pick.caption : '',
+        replyTo: i == 0 ? (_replyTo?.id ?? 0) : 0,
+        media: pick.images[i],
+      );
+      if (!mounted) return;
+      if (!r.ok) {
+        fail = r;
+        break;
+      }
+      sent++;
+      setState(() => _photoDone = sent);
+    }
+    setState(() {
+      _photoSending = false;
+      _photoDone = 0;
+      _photoTotal = 0;
+    });
+    if (sent > 0) {
       setState(() => _replyTo = null);
-      if (!_isStaff && !_g.isDm && _slowSecs > 0) _startSlow(_slowSecs);
+      if (slowOn) _startSlow(_slowSecs);
       await _poll();
       _jumpToEnd();
-      return;
     }
-    if (r.error == 'g_slowmode') _startSlow(int.tryParse('${r.raw?['wait']}') ?? _slowSecs);
-    if (r.error == 'no_name' || r.error == 'not_registered') {
+    final failed = fail;
+    if (failed == null || !mounted) return;
+    if (failed.error == 'g_slowmode') _startSlow(int.tryParse('${failed.raw?['wait']}') ?? _slowSecs);
+    if (failed.error == 'no_name' || failed.error == 'not_registered') {
       askGroupProfile(context);
       return;
     }
-    gToast(context, r.text.isEmpty ? GT.t('photo_failed') : r.text);
+    gToast(
+      context,
+      sent > 0 ? GT.t('photo_partial', {'a': '$sent', 'b': '$total'}) : (failed.text.isEmpty ? GT.t('photo_failed') : failed.text),
+    );
   }
 
   Future<void> _saveImage(String url) async {
@@ -789,7 +855,17 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Row(children: [
           _photoSending
-              ? const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: gGold)))
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: gGold)),
+                    if (_photoTotal > 1)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 6),
+                        child: Text('$_photoDone/$_photoTotal', style: const TextStyle(color: gGold, fontSize: 12, fontWeight: FontWeight.w800)),
+                      ),
+                  ]),
+                )
               : IconButton(
                   tooltip: GT.t('attach_photo'),
                   onPressed: _slowLeft > 0 ? null : _sendPhoto,
@@ -808,7 +884,7 @@ class _GroupChatPageState extends State<GroupChatPage> with WidgetsBindingObserv
                 hintText: GT.t('type_msg'),
                 hintStyle: const TextStyle(color: gMuted),
                 counterText: '',
-                suffixIcon: IconButton(tooltip: GT.t('stickers'), onPressed: _slowLeft > 0 ? null : _sendSticker, icon: const Icon(Icons.emoji_emotions_outlined, color: gGold)),
+                suffixIcon: IconButton(tooltip: GT.t('stickers'), onPressed: _slowLeft > 0 ? null : _openStickers, icon: const Icon(Icons.emoji_emotions_outlined, color: gGold)),
                 filled: true,
                 fillColor: gPanel,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
