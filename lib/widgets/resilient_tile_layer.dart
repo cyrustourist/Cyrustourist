@@ -16,7 +16,9 @@ const String kSatelliteUrlTemplate = '';
 bool get kHasSatellite => kSatelliteUrlTemplate.isNotEmpty;
 
 /// نوع لایهٔ نقشه (انتخاب کاربر، ماندگار)
-enum MapLayerKind { standard, terrain, satellite, hybrid }
+/// ترتیب مقادیر را عوض نکنید (اندیس در حافظه ذخیره می‌شود)؛ گزینه‌های جدید فقط به انتها اضافه شوند.
+/// cyclo / sentinel / sentinelHybrid رایگان‌اند و به توکن نیاز ندارند.
+enum MapLayerKind { standard, terrain, satellite, hybrid, cyclo, sentinel, sentinelHybrid }
 
 class MapLayerPref {
   MapLayerPref._();
@@ -249,6 +251,9 @@ Future<void> showMapLayerSheet(BuildContext context) {
     [MapLayerKind.standard, Icons.map_rounded, _lt('نقشه استاندارد', 'Standard map', 'خريطة عادية'), _lt('جاده‌ها و نام مکان‌ها، سریع‌ترین', 'Roads and place names, fastest', 'الطرق وأسماء الأماكن')],
     [MapLayerKind.terrain, Icons.terrain_rounded, _lt('عوارض زمین', 'Terrain', 'التضاريس'), _lt('کوه، دره، خطوط ارتفاع و مسیرهای پیاده', 'Mountains, contours and trails', 'الجبال وخطوط الارتفاع')],
     [MapLayerKind.satellite, Icons.satellite_alt_rounded, _lt('ماهواره (دیدن خانه‌ها)', 'Satellite (see buildings)', 'القمر الصناعي'), _lt('عکس هوایی خانه‌ها و روستاها', 'Aerial imagery of houses and villages', 'صور جوية للمنازل والقرى')],
+    [MapLayerKind.cyclo, Icons.terrain_rounded, _lt('عوارض زمین ۲ (دوچرخه/پیاده)', 'Terrain 2 (cycling/hiking)', 'التضاريس ٢ (دراجات/مشي)'), _lt('خطوط ارتفاع، مسیرهای پیاده‌روی و کوهستان', 'Contours, hiking paths and mountains', 'خطوط الارتفاع ومسارات المشي والجبال')],
+    [MapLayerKind.sentinel, Icons.satellite_rounded, _lt('ماهواره رایگان (عوارض طبیعی)', 'Free satellite (natural features)', 'قمر صناعي مجاني'), _lt('کوه، دشت، کویر، جنگل و دریا (دقت کم، بدون جزئیات خانه‌ها)', 'Mountains, deserts, forests and sea (low detail)', 'الجبال والصحراء والغابات والبحر')],
+    [MapLayerKind.sentinelHybrid, Icons.layers_rounded, _lt('ماهواره رایگان + نام‌ها', 'Free satellite + labels', 'قمر صناعي مجاني + أسماء'), _lt('عوارض طبیعی همراه با نام جاده و مکان‌ها', 'Natural features with road and place names', 'التضاريس مع أسماء الطرق والأماكن')],
     [MapLayerKind.hybrid, Icons.layers_rounded, _lt('ماهواره + نام جاده‌ها', 'Satellite + labels', 'قمر صناعي + أسماء'), _lt('بهترین حالت برای پیدا کردن اقامتگاه', 'Best for locating a stay', 'الأفضل لتحديد الإقامة')],
   ];
   if (!kHasSatellite) {
@@ -341,7 +346,7 @@ Future<void> showMapLayerSheet(BuildContext context) {
                       child: Text(_lt('حذف نقشه‌های دانلودشده', 'Remove downloaded maps', 'حذف الخرائط المحمّلة'), style: const TextStyle(fontSize: 12)),
                     ),
                   ),
-                  Text('© OpenStreetMap · OpenTopoMap · CARTO',
+                  Text('© OpenStreetMap · OpenTopoMap · CyclOSM · EOX · CARTO',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 10)),
                 ],
@@ -457,8 +462,41 @@ class _ResilientTileLayerState extends State<ResilientTileLayer> {
         nativeZoom: 18,
       );
 
+  Widget _sentinel() => _cachedLayer(
+        id: 'sentinel',
+        url: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
+        age: _kSatAge,
+        maxZoom: widget.maxZoom,
+        nativeZoom: 13,
+      );
+
   Widget _buildFor(MapLayerKind kind) {
     switch (kind) {
+      case MapLayerKind.cyclo:
+        return Stack(fit: StackFit.expand, children: [
+          OfflineBaseTileLayer(maxZoom: widget.maxZoom),
+          _cachedLayer(
+            id: 'cyclosm',
+            url: 'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+            age: _kSatAge,
+            maxZoom: widget.maxZoom,
+            nativeZoom: 17,
+          ),
+          const _MapAttribution('© OpenStreetMap contributors | CyclOSM'),
+        ]);
+      case MapLayerKind.sentinel:
+        return Stack(fit: StackFit.expand, children: [
+          OfflineBaseTileLayer(maxZoom: widget.maxZoom),
+          _sentinel(),
+          const _MapAttribution('Sentinel-2 cloudless © EOX IT Services GmbH (contains modified Copernicus Sentinel data 2020)'),
+        ]);
+      case MapLayerKind.sentinelHybrid:
+        return Stack(fit: StackFit.expand, children: [
+          OfflineBaseTileLayer(maxZoom: widget.maxZoom),
+          _sentinel(),
+          _labels(),
+          const _MapAttribution('Sentinel-2 cloudless © EOX | Labels © CARTO, OpenStreetMap'),
+        ]);
       case MapLayerKind.terrain:
         return Stack(fit: StackFit.expand, children: [
           OfflineBaseTileLayer(maxZoom: widget.maxZoom),
