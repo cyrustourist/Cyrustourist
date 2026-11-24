@@ -917,6 +917,8 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
       mapReady = true;
       loading = false;
     });
+    // انیمیشن فقط برای صفحهٔ بارگذاری بود؛ بعد از آن بی‌دلیل هر فریم را بیدار نگه می‌داشت (باتری و روانی نقشه)
+    animationController.stop();
 
     await loadLastLocation();
     await getLocation();
