@@ -107,6 +107,20 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
     }
   }
 
+  /// پاسخ به تماس؛ در تماس تصویری ابتدا مجوز دوربین/میکروفن را (با توضیح) می‌گیرد تا وسط اتصال پنجرهٔ سیستم معطل نکند.
+  /// اگر کاربر مجوز نداد تماس هنوز در حال زنگ است و می‌تواند رد کند یا دوباره بپذیرد.
+  Future<void> _accept() async {
+    if (_busyAction) return;
+    _busyAction = true;
+    try {
+      if (s.isVideo && !await CallService.instance.ensureCamForCall(context)) return;
+      if (!mounted) return;
+      await s.acceptIncoming();
+    } finally {
+      _busyAction = false;
+    }
+  }
+
   /// رد تماس + بلاک موقت تماس‌های این کاربر
   Future<void> _tempBlock() async {
     if (_busyAction || s.peerUid.isEmpty) return;
@@ -427,7 +441,7 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _round(icon: s.isVideo ? Icons.videocam_rounded : Icons.call_rounded, label: CT.t('accept'), color: _green, onTap: s.acceptIncoming),
+                  _round(icon: s.isVideo ? Icons.videocam_rounded : Icons.call_rounded, label: CT.t('accept'), color: _green, onTap: _accept),
                   const SizedBox(height: 14),
                   s.isFriend
                       ? _pill(Icons.check_rounded, CT.t('in_friends'), null)
