@@ -123,6 +123,10 @@ class CallSession extends ChangeNotifier {
   bool _answerApplied = false;
   bool _closed = false;
   bool _everConnected = false;
+  // کانال کنترل مستقیم گوشی‌به‌گوشی: پایان تماس فوری و بدون سرور؛ پایش سرور بعد از اتصال کند می‌شود
+  RTCDataChannel? _ctl;
+  bool _ctlOpen = false;
+  bool _byeSent = false;
   bool _audioEntered = false;
   // تعداد تماس‌هایی که حالت صدای تماس را باز نگه داشته‌اند (تا پایان یک تماس، تماس بعدی را خراب نکند)
   static int _audioUsers = 0;
@@ -275,6 +279,16 @@ class CallSession extends ChangeNotifier {
       'iceCandidatePoolSize': 2,
     });
     _pc = pc;
+    // کانال کنترل: تماس‌گیرنده می‌سازد (قبل از offer)، گیرنده از onDataChannel می‌گیرد.
+    // اگر طرف مقابل نسخهٔ قدیمی باشد کانال باز نمی‌شود و همان پایش سریع قبلی کار می‌کند.
+    pc.onDataChannel = (RTCDataChannel ch) {
+      if (ch.label == 'ctl') _bindCtl(ch);
+    };
+    if (isCaller) {
+      try {
+        _bindCtl(await pc.createDataChannel('ctl', RTCDataChannelInit()..ordered = true));
+      } catch (_) {}
+    }
     if (isVideo) {
       try {
         await localRenderer.initialize();
@@ -389,6 +403,24 @@ class CallSession extends ChangeNotifier {
     _fgStarted = true;
     unawaited(CallService.startForegroundCall(peerName));
     return true;
+  }
+
+  void _bindCtl(RTCDataChannel ch) {
+    _ctl = ch;
+    _ctlOpen = ch.state == RTCDataChannelState.RTCDataChannelOpen;
+    ch.onDataChannelState = (RTCDataChannelState s) {
+      _ctlOpen = s == RTCDataChannelState.RTCDataChannelOpen;
+    };
+    ch.onMessage = (RTCDataChannelMessage m) {
+      if (m.text == 'bye') unawaited(_peerBye());
+    };
+  }
+
+  /// طرف مقابل از همین کانال مستقیم گفت تماس تمام شد (فوری، بدون سرور).
+  Future<void> _peerBye() async {
+    if (_closed) return;
+    _byeSent = true; // پیام برگشتی نفرستیم
+    await _finish('تماس پایان یافت.', notifyServer: false);
   }
 
   /// نوع مسیر انتخاب‌شدهٔ اتصال از getStats: 'direct' | 'relay' | 'unknown'.
@@ -724,7 +756,7 @@ class CallSession extends ChangeNotifier {
     if (_closed || callId == null || _pollBusy) return;
     // فاصلهٔ پایش (تایمر ۵۰۰ms): زنگ‌خوردن تماس‌گیرنده ۰٫۵ث، اتصال ۰٫۵ث، گیرنده ۱ث، وصل‌شده ۱ث (ریل‌تایم)
     _tick++;
-    final every = phase == CallPhase.connected ? 2 : ((isCaller && phase == CallPhase.ringing) ? 1 : (phase == CallPhase.connecting ? 1 : 2));
+    final every = phase == CallPhase.connected ? (_ctlOpen ? 16 : 2) : ((isCaller && phase == CallPhase.ringing) ? 1 : (phase == CallPhase.connecting ? 1 : 2));
     if (_tick % every != 0) return;
     _pollBusy = true;
     try {
@@ -831,6 +863,14 @@ class CallSession extends ChangeNotifier {
         }));
       } catch (_) {}
     }
+    // پایان فوری برای طرف مقابل از مسیر مستقیم گوشی‌به‌گوشی (سرور فقط پشتیبان است)
+    if (_ctlOpen && !_byeSent && _everConnected) {
+      _byeSent = true;
+      try {
+        await _ctl?.send(RTCDataChannelMessage('bye'));
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+      } catch (_) {}
+    }
     if (_fgStarted) {
       _fgStarted = false;
       unawaited(CallService.stopForegroundCall());
@@ -858,6 +898,8 @@ class CallSession extends ChangeNotifier {
     }
     _local = null;
     _pc = null;
+    _ctl = null;
+    _ctlOpen = false;
 
     phase = CallPhase.ended;
     statusText = reason;
