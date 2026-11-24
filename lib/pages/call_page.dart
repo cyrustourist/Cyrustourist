@@ -34,6 +34,7 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
   CallSession get s => widget.session;
   Timer? _closeTimer;
   bool _busyAction = false;
+  bool _accepting = false;
 
   @override
   void initState() {
@@ -110,14 +111,14 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
   /// پاسخ به تماس؛ در تماس تصویری ابتدا مجوز دوربین/میکروفن را (با توضیح) می‌گیرد تا وسط اتصال پنجرهٔ سیستم معطل نکند.
   /// اگر کاربر مجوز نداد تماس هنوز در حال زنگ است و می‌تواند رد کند یا دوباره بپذیرد.
   Future<void> _accept() async {
-    if (_busyAction) return;
-    _busyAction = true;
+    if (_accepting) return;
+    _accepting = true;
     try {
       if (s.isVideo && !await CallService.instance.ensureCamForCall(context)) return;
       if (!mounted) return;
       await s.acceptIncoming();
     } finally {
-      _busyAction = false;
+      _accepting = false;
     }
   }
 
