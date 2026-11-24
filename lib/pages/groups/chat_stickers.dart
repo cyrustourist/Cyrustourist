@@ -55,11 +55,16 @@ Future<void> _pushRecent(String s) async {
   } catch (_) {}
 }
 
-/// برگه انتخاب استیکر؛ نتیجه = ایموجی انتخاب‌شده (برای ارسال فوری) یا null.
-Future<String?> showStickerPicker(BuildContext context) async {
+/// برگهٔ استیکر که باز می‌ماند: هر لمس، ایموجی را همان لحظه به متنِ در حال نوشتن اضافه می‌کند
+/// (به‌جای ارسال فوری به‌صورت پیام جدا). [onBackspace] دکمهٔ پاک‌کردن آخرین نویسه را نشان می‌دهد.
+Future<void> showStickerInserter(
+  BuildContext context, {
+  required void Function(String emoji) onPick,
+  VoidCallback? onBackspace,
+}) async {
   final recent = await _loadRecent();
-  if (!context.mounted) return null;
-  final picked = await showModalBottomSheet<String>(
+  if (!context.mounted) return;
+  await showModalBottomSheet<void>(
     context: context,
     backgroundColor: gPanel,
     builder: (ctx) {
@@ -75,12 +80,21 @@ Future<String?> showStickerPicker(BuildContext context) async {
             child: DefaultTabController(
               length: packs.length,
               child: Column(children: [
-                TabBar(
-                  isScrollable: true,
-                  indicatorColor: gGold,
-                  dividerColor: gLine,
-                  tabs: [for (final p in packs) Tab(child: Text(p.$1, style: const TextStyle(fontSize: 22)))],
-                ),
+                Row(children: [
+                  Expanded(
+                    child: TabBar(
+                      isScrollable: true,
+                      indicatorColor: gGold,
+                      dividerColor: gLine,
+                      tabs: [for (final p in packs) Tab(child: Text(p.$1, style: const TextStyle(fontSize: 22)))],
+                    ),
+                  ),
+                  if (onBackspace != null)
+                    IconButton(
+                      onPressed: onBackspace,
+                      icon: const Icon(Icons.backspace_outlined, color: gGold),
+                    ),
+                ]),
                 Expanded(
                   child: TabBarView(children: [
                     for (final p in packs)
@@ -90,7 +104,10 @@ Future<String?> showStickerPicker(BuildContext context) async {
                         itemCount: p.$2.length,
                         itemBuilder: (_, i) => InkWell(
                           borderRadius: BorderRadius.circular(12),
-                          onTap: () => Navigator.of(ctx).pop(p.$2[i]),
+                          onTap: () {
+                            onPick(p.$2[i]);
+                            _pushRecent(p.$2[i]);
+                          },
                           child: Center(child: Text(p.$2[i], style: const TextStyle(fontSize: 34))),
                         ),
                       ),
@@ -103,6 +120,4 @@ Future<String?> showStickerPicker(BuildContext context) async {
       );
     },
   );
-  if (picked != null) await _pushRecent(picked);
-  return picked;
 }
