@@ -8,6 +8,10 @@ import '../map_place.dart';
 class MapPlacesService {
   final Distance _distance = const Distance();
 
+  /// کش کوچک نتایج (در حافظه) تا جستجوی تکراری دوباره به سرور نرود
+  static final Map<String, List<MapPlace>> _cache = {};
+  static const Duration _timeout = Duration(seconds: 6);
+
   /// جستجوی عمومی مکان‌ها
   ///
   /// برای:
@@ -29,26 +33,33 @@ class MapPlacesService {
       return [];
     }
 
+    final cacheKey = '${language}_${category?.name}_${query.trim().toLowerCase()}';
+    final cached = _cache[cacheKey];
+    if (cached != null) {
+      return _withDistance(cached, userLocation);
+    }
+
     final uri = Uri.https(
       'nominatim.openstreetmap.org',
       '/search',
       {
         'q': query,
         'format': 'jsonv2',
-        'limit': '20',
+        'limit': '8',
+        'countrycodes': 'ir',
         'addressdetails': '1',
         'accept-language': language,
       },
     );
 
-    final client = HttpClient();
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
 
     try {
       client.userAgent =
           'CyrusTourist/1.0 (cyrustourist.ir)';
 
       final request =
-          await client.getUrl(uri);
+          await client.getUrl(uri).timeout(_timeout);
 
       request.headers.set(
         HttpHeaders.acceptHeader,
@@ -56,7 +67,7 @@ class MapPlacesService {
       );
 
       final response =
-          await request.close();
+          await request.close().timeout(_timeout);
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -69,7 +80,8 @@ class MapPlacesService {
               .transform(
                 utf8.decoder,
               )
-              .join();
+              .join()
+              .timeout(_timeout);
 
       final data = jsonDecode(body);
 
@@ -153,12 +165,34 @@ class MapPlacesService {
             ),
       );
 
+      if (places.isNotEmpty) {
+        if (_cache.length > 60) _cache.remove(_cache.keys.first);
+        _cache[cacheKey] = places;
+      }
+
       return places;
     } finally {
       client.close(force: true);
     }
   }
 
+
+  List<MapPlace> _withDistance(List<MapPlace> src, LatLng from) {
+    final list = src
+        .map((p) => MapPlace(
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              location: p.location,
+              category: p.category,
+              address: p.address,
+              distanceMeters: _distance.as(LengthUnit.Meter, from, p.location),
+              source: p.source,
+            ))
+        .toList();
+    list.sort((a, b) => (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0));
+    return list;
+  }
 
   /// تشخیص دسته مکان بر اساس اطلاعات دریافت شده
   PlaceCategory detectCategory(
