@@ -13,6 +13,7 @@ import 'game_play_page.dart';
 import 'game_shop_sheet.dart';
 import 'game_texts.dart';
 import 'chess_page.dart';
+import '../../group_games/gg_hub_page.dart';
 import 'dots_page.dart';
 import 'mines_page.dart';
 import 'mini_games_page.dart';
@@ -911,6 +912,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('⭕❌', GameT.t('ttt'), () => _openMode(GameKind.ttt)),
                     _gameCard('🧱', GameT.fa ? 'توپ و آجر' : 'Brick Ball', () => _push(const MiniGamesPage(initial: 0))),
                     _gameCard('🟦', GameT.fa ? 'بلاک‌پازل' : 'Block Puzzle', () => _push(const MiniGamesPage(initial: 1))),
+                    _gameCard('🏒⛳', GameT.fa ? 'مسابقات گروهی آفلاین' : 'Offline Group Matches', () => _push(const GgHubPage())),
                   ],
                 ),
                 const SizedBox(height: 14),
