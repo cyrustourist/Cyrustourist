@@ -17,6 +17,7 @@ import '../../group_games/gg_hub_page.dart';
 import 'dots_page.dart';
 import 'iran_quiz_page.dart';
 import 'word_trip_page.dart';
+import 'iran_puzzle_page.dart';
 import 'mines_page.dart';
 import 'mini_games_page.dart';
 import 'esmfamil_nearby_page.dart';
@@ -917,6 +918,7 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('🏒⛳', GameT.fa ? 'مسابقات گروهی آفلاین' : 'Offline Group Matches', () => _push(const GgHubPage())),
                     _gameCard('🗺️', GameT.fa ? 'ایران‌شناسی' : 'Know Iran', () => _push(const IranQuizPage())),
                     _gameCard('🔤', GameT.fa ? 'کلمه‌گردی' : 'Word Trip', () => _push(const WordTripPage())),
+                    _gameCard('🧩', GameT.fa ? 'پازل ایران‌گردی' : 'Iran Jigsaw', () => _push(const IranPuzzlePage())),
                   ],
                 ),
                 const SizedBox(height: 14),
