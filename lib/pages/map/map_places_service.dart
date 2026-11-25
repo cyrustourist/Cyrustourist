@@ -136,6 +136,7 @@ class MapPlacesService {
         radiusMeters: radiusMeters,
         type: type,
         tags: _buildTags(type),
+        language: language,
       );
       if (local != null && local.isNotEmpty) {
         _putNearbyCache(cacheKey, local, DateTime.now());
@@ -877,6 +878,13 @@ out center tags qt 200;
     final labels = _genericLabels[type];
     if (labels == null) return '';
     return labels[lang] ?? labels['fa'] ?? '';
+  }
+
+  /// نام عمومی یک نوع مکان (برای مکان‌های بدون نام)؛ در پایگاه آفلاین هم استفاده می‌شود.
+  String genericLabel(MapPlaceType type, String language) {
+    final labels = _genericLabels[type];
+    if (labels == null) return '';
+    return labels[_languageCode(language)] ?? labels['fa'] ?? '';
   }
 
   static const Map<MapPlaceType, Map<String, String>> _genericLabels = {
