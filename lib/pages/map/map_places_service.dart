@@ -26,6 +26,9 @@ enum MapPlaceType {
   market,
   carService,
   simCard,
+  pharmacy,
+  taxi,
+  hospital,
 
   // ============================================================
   // کلید ۹ (جستجوی هوشمند) — دسته‌های اختصاصی که در خدمات سریع
@@ -475,6 +478,26 @@ class MapPlacesService {
           'office=telecommunication',
         ];
 
+      case MapPlaceType.pharmacy:
+        return const [
+          'amenity=pharmacy',
+          'healthcare=pharmacy',
+        ];
+
+      case MapPlaceType.taxi:
+        return const [
+          'amenity=taxi',
+          'public_transport=station',
+        ];
+
+      case MapPlaceType.hospital:
+        return const [
+          'amenity=hospital',
+          'healthcare=hospital',
+          'amenity=clinic',
+          'emergency=yes',
+        ];
+
       case MapPlaceType.cafe:
         return const [
           'amenity=cafe',
@@ -789,11 +812,18 @@ out center tags qt 200;
         continue;
       }
 
-      final name =
+      var name =
           _findName(
         tags,
         language,
       );
+
+      // بیشتر پمپ‌بنزین‌ها، خودپردازها، پارکینگ‌ها و سرویس‌های بهداشتی در
+      // OpenStreetMap نام ندارند؛ قبلاً همه‌ی آن‌ها دور ریخته می‌شد و
+      // کلیدهای سریع نقشه «پیدا نشد» می‌دادند.
+      if (name.isEmpty) {
+        name = _fallbackName(tags, type, language);
+      }
 
       if (name.isEmpty) {
         continue;
@@ -814,6 +844,56 @@ out center tags qt 200;
 
     return result;
   }
+
+  static const Set<MapPlaceType> _unnamedOk = {
+    MapPlaceType.fuel,
+    MapPlaceType.atm,
+    MapPlaceType.parking,
+    MapPlaceType.restroom,
+    MapPlaceType.police,
+    MapPlaceType.pharmacy,
+    MapPlaceType.taxi,
+    MapPlaceType.hospital,
+    MapPlaceType.restaurant,
+    MapPlaceType.cafe,
+    MapPlaceType.market,
+    MapPlaceType.carService,
+    MapPlaceType.simCard,
+  };
+
+  String _fallbackName(
+    Map<String, String> tags,
+    MapPlaceType type,
+    String language,
+  ) {
+    if (!_unnamedOk.contains(type)) return '';
+
+    for (final key in const ['brand', 'operator', 'network', 'ref']) {
+      final v = tags[key]?.trim();
+      if (v != null && v.isNotEmpty) return v;
+    }
+
+    final lang = _languageCode(language);
+    final labels = _genericLabels[type];
+    if (labels == null) return '';
+    return labels[lang] ?? labels['fa'] ?? '';
+  }
+
+  static const Map<MapPlaceType, Map<String, String>> _genericLabels = {
+    MapPlaceType.fuel: {'fa': 'پمپ بنزین', 'en': 'Fuel station', 'ar': 'محطة وقود'},
+    MapPlaceType.atm: {'fa': 'خودپرداز / بانک', 'en': 'ATM / Bank', 'ar': 'صراف آلي / بنك'},
+    MapPlaceType.parking: {'fa': 'پارکینگ', 'en': 'Parking', 'ar': 'موقف سيارات'},
+    MapPlaceType.restroom: {'fa': 'سرویس بهداشتی', 'en': 'Restroom', 'ar': 'دورة مياه'},
+    MapPlaceType.police: {'fa': 'پلیس', 'en': 'Police', 'ar': 'شرطة'},
+    MapPlaceType.pharmacy: {'fa': 'داروخانه', 'en': 'Pharmacy', 'ar': 'صيدلية'},
+    MapPlaceType.taxi: {'fa': 'ایستگاه تاکسی / حمل‌ونقل', 'en': 'Taxi / transit stop', 'ar': 'محطة سيارات أجرة'},
+    MapPlaceType.hospital: {'fa': 'مرکز درمانی / اورژانس', 'en': 'Hospital / Emergency', 'ar': 'مستشفى / طوارئ'},
+    MapPlaceType.restaurant: {'fa': 'رستوران', 'en': 'Restaurant', 'ar': 'مطعم'},
+    MapPlaceType.cafe: {'fa': 'کافه', 'en': 'Cafe', 'ar': 'مقهى'},
+    MapPlaceType.market: {'fa': 'فروشگاه', 'en': 'Shop', 'ar': 'متجر'},
+    MapPlaceType.carService: {'fa': 'خدمات خودرو', 'en': 'Car service', 'ar': 'خدمات السيارات'},
+    MapPlaceType.simCard: {'fa': 'فروشگاه موبایل / سیم‌کارت', 'en': 'Mobile shop', 'ar': 'متجر هواتف'},
+  };
 
   String _findName(
     Map<String, String> tags,
@@ -964,6 +1044,15 @@ tags['addr:district'] ?? '',
 
       case MapPlaceType.simCard:
         return 'sim_card';
+
+      case MapPlaceType.pharmacy:
+        return 'pharmacy';
+
+      case MapPlaceType.taxi:
+        return 'taxi';
+
+      case MapPlaceType.hospital:
+        return 'hospital';
 
       case MapPlaceType.cafe:
         return 'cafe';
