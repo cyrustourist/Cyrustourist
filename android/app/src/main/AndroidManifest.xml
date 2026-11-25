@@ -34,9 +34,6 @@
         android:usesPermissionFlags="neverForLocation"
         tools:replace="android:minSdkVersion" />
 
-    <!-- نصب APK دریافت‌شده از گوشی دیگر (دکمهٔ «نصب» در جابه‌جایی فایل بدون اینترنت) -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-
     <!-- Notification permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -112,17 +109,6 @@
                 android:value="false" />
 
         </activity>
-
-        <!-- دسترسی موقت به APK دریافتی برای نصب‌کنندهٔ سیستم -->
-        <provider
-            android:name=".ApkFileProvider"
-            android:authorities="${applicationId}.apkprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/apk_paths" />
-        </provider>
 
         <!-- Flutter embedding -->
         <meta-data
