@@ -1024,7 +1024,9 @@ class _CyrusSmartSearchState extends State<CyrusSmartSearch> {
           onFavorite: _toggleFavorite,
           onRoute: _openRoute,
           loader: () async {
-            final location = await LocationManager.getCurrentLocation();
+            // اگر GPS جواب نداد، آخرین موقعیت واقعی کاربر (نه مرکز ایران) استفاده می‌شود.
+            final location = await LocationManager.getCurrentLocation() ??
+                await LocationManager.getLastKnownLocation();
             final center = location ?? _iranCenter;
 
             final places = await fetch(center);
