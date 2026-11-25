@@ -29,7 +29,9 @@ class LocalPoiService {
       t == MapPlaceType.touristAttraction ||
       t == MapPlaceType.accommodation ||
       t == MapPlaceType.healthTourism ||
-      t == MapPlaceType.historicalSite;
+      t == MapPlaceType.historicalSite ||
+      t == MapPlaceType.pharmacy ||
+      t == MapPlaceType.hospital;
 
   /// بارگذاری پیش‌هنگام (اختیاری)؛ بدون خطا.
   Future<void> warmUp() async {
