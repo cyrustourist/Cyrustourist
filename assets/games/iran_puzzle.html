@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>پازل ایران‌گردی · Cyrus Tourist</title>
+<style>
+:root{--gold:#ffc928;--bg1:#12263f;--bg2:#050d1a;--pn:#0c2236;--ln:#25496b}
+body[data-th="1"]{--bg1:#2a1a4a;--bg2:#0d0618;--pn:#1d1236;--ln:#4a3578}
+body[data-th="2"]{--bg1:#123a2c;--bg2:#04140d;--pn:#0c2a1f;--ln:#2a6b50}
+body[data-th="3"]{--bg1:#4a2c10;--bg2:#160a02;--pn:#2e1b0a;--ln:#7a5428}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;color:#fff;font-family:Tahoma,"Vazirmatn",system-ui,sans-serif}
+body{background:radial-gradient(120% 60% at 50% 0%,var(--bg1) 0%,var(--bg2) 75%) fixed}
+#app{height:100%;display:flex;flex-direction:column;align-items:center;padding:env(safe-area-inset-top,0) 12px env(safe-area-inset-bottom,0);max-width:520px;margin:0 auto}
+.row{display:flex;gap:8px;width:100%;align-items:center}
+.pill{background:var(--pn);border:2px solid var(--ln);border-radius:16px;padding:6px 12px;font-weight:900;font-size:14px;white-space:nowrap}
+.pill b{color:var(--gold)}
+.ib{width:40px;height:40px;border:0;border-radius:13px;font-size:19px;background:linear-gradient(#ffb04a,#e87a14);box-shadow:0 3px 0 #9b4d08;color:#fff;cursor:pointer;flex:none}
+.ib:active{transform:translateY(2px);box-shadow:0 1px 0 #9b4d08}
+.cn{display:inline-block;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3a6,#f2b100);vertical-align:-3px;margin-inline-start:3px;border:2px solid #b27a00}
+.stats{margin-top:8px}
+.sc{flex:1;background:var(--pn);border:2px solid var(--ln);border-radius:16px;text-align:center;padding:7px 4px}
+.sc b{display:block;font-size:20px;color:var(--gold);line-height:1.3}
+.sc span{font-size:11.5px;color:#a9bfd6}
+#info{width:100%;font-size:12px;color:#c9d9ea;margin:8px 2px 6px;line-height:1.7}
+#info b{color:var(--gold)}
+#bwrap{flex:1 1 0;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
+#boardBox{position:relative;border-radius:20px;padding:7px;background:rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+#board{display:grid;border-radius:14px;overflow:hidden;background:#000}
+.t{background-image:var(--img);background-repeat:no-repeat;cursor:pointer;position:relative;transition:transform .12s,filter .12s}
+.t.sel{outline:4px solid var(--gold);outline-offset:-4px;z-index:2;filter:brightness(1.18);transform:scale(.96)}
+.t.ok{box-shadow:inset 0 0 0 2px rgba(80,255,140,.85)}
+.t.fl{animation:fl .35s}
+@keyframes fl{0%{transform:scale(.85);filter:brightness(1.6)}100%{transform:scale(1)}}
+#peek{position:absolute;inset:7px;border-radius:14px;background-image:var(--img);background-size:100% 100%;display:none;z-index:5;border:3px solid var(--gold)}
+#hold{width:100%;margin:8px 0;padding:12px;border:2px dashed var(--ln);border-radius:16px;text-align:center;font-size:13px;font-weight:800;color:#d7e6f5;background:rgba(255,255,255,.05);touch-action:none}
+#hold.on{background:rgba(255,201,40,.2);border-color:var(--gold)}
+.bt{flex:1;border:0;border-radius:15px;padding:11px 6px;font:inherit;font-size:14px;font-weight:900;color:#1b1300;background:linear-gradient(#ffd54a,#e8a400);box-shadow:0 4px 0 #9a6b00;cursor:pointer}
+.bt:active{transform:translateY(3px);box-shadow:0 1px 0 #9a6b00}
+.bt.gh{background:var(--pn);color:#e8f1fb;border:2px solid var(--ln);box-shadow:none}
+.bt.rd{background:linear-gradient(#e0434b,#a8191f);color:#fff;box-shadow:0 4px 0 #6d0e12}
+#modal{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);padding:18px}
+#modal.on{display:flex}
+.box{width:100%;max-width:380px;max-height:86vh;overflow:auto;background:linear-gradient(var(--pn),#050d1a);border:3px solid var(--gold);border-radius:24px;padding:18px;text-align:center}
+.box h2{margin:0 0 10px;color:var(--gold);font-size:21px}
+.big{font-size:54px}
+.st{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1);font-weight:800;font-size:14.5px;text-align:right}
+.ch{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.ch i{font-style:normal;padding:6px 10px;border:2px solid var(--ln);border-radius:12px;font-size:12.5px;cursor:pointer;background:rgba(255,255,255,.05)}
+.ch i.on{border-color:var(--gold);background:rgba(255,201,40,.2)}
+.sw{width:50px;height:28px;border-radius:14px;background:#46586c;position:relative;cursor:pointer;flex:none}
+.sw:after{content:"";position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.sw.on{background:#35c85f}
+.sw.on:after{right:25px}
+input[type=range]{width:130px;accent-color:#ffc928}
+.lv{border:0;border-radius:13px;height:50px;font:inherit;font-size:14px;font-weight:900;color:#fff;cursor:pointer;background:linear-gradient(#35c85f,#1b8a3a);line-height:1.1}
+.lv small{display:block;font-size:10px;color:#ffe27a;letter-spacing:1px}
+.lv.lk{background:#2a3b4d;opacity:.55}
+#toast{position:fixed;left:50%;bottom:16%;transform:translateX(-50%);z-index:30;background:rgba(0,0,0,.85);padding:9px 16px;border-radius:14px;font-weight:800;font-size:14px;display:none;max-width:86%;text-align:center}
+</style>
+</head>
+<body data-th="0">
+<div id="app">
+  <div class="row" style="margin-top:8px">
+    <button class="ib" id="gear">⚙️</button>
+    <div class="pill" id="tm" style="margin-inline-start:auto">⏱ <b>۰۰:۰۰</b></div>
+    <div class="pill"><span class="cn"></span><b id="coin">۰</b></div>
+  </div>
+  <div class="row stats">
+    <div class="sc"><b id="sMoves">۰</b><span>جابه‌جایی</span></div>
+    <div class="sc"><b id="sOk">۰/۰</b><span>درست</span></div>
+    <div class="sc"><b id="sPts">۰</b><span>امتیاز ممکن</span></div>
+  </div>
+  <div id="info"></div>
+  <div id="bwrap"><div id="boardBox"><div id="board"></div><div id="peek"></div></div></div>
+  <div id="hold">🖐 انگشتت رو اینجا نگه دار تا تصویر کامل رو ببینی</div>
+  <div class="row" style="margin-bottom:10px">
+    <button class="bt" id="hint">💡 راهنما <span id="hc"></span></button>
+    <button class="bt gh" id="lvls">🗺️ مرحله‌ها</button>
+  </div>
+</div>
+<div id="modal"><div class="box" id="box"></div></div>
+<div id="toast"></div>
+<script>
+'use strict';
+// ===== تصویرهای برداری (SVG) برای پازل: ۳۲ تصویر × ۲ حالت (روز/غروب) =====
+const _id = { n: 0 };
+const R = (x, y, w, h, f, e) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}" ${e || ''}/>`;
+const C = (x, y, r, f, e) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${f}" ${e || ''}/>`;
+const E = (x, y, rx, ry, f, e) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}" ${e || ''}/>`;
+const P = (d, f, e) => `<path d="${d}" fill="${f}" ${e || ''}/>`;
+const L = (x1, y1, x2, y2, s, w, e) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${s}" stroke-width="${w}" stroke-linecap="round" ${e || ''}/>`;
+const G = (cols, vert) => { const id = 'g' + (++_id.n); return [id, `<linearGradient id="${id}" x1="0" y1="0" x2="${vert === false ? 1 : 0}" y2="${vert === false ? 0 : 1}">${cols.map((c, i) => `<stop offset="${(i / (cols.length - 1)).toFixed(2)}" stop-color="${c}"/>`).join('')}</linearGradient>`]; };
+const RG = (a, b) => { const id = 'r' + (++_id.n); return [id, `<radialGradient id="${id}"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>`]; };
+const fill = (g) => `url(#${g[0]})`;
+const stars = n => { let s = '', x = 7; for (let i = 0; i < n; i++) { x = (x * 9301 + 49297) % 233280; const a = x / 233280; x = (x * 9301 + 49297) % 233280; const b = x / 233280; s += C((a * 360).toFixed(0), (b * 230).toFixed(0), (0.6 + b * 1.1).toFixed(1), '#fff', `opacity="${(0.4 + a * 0.6).toFixed(2)}"`); } return s; };
+const SKY = [['#7fcfff', '#cdeeff', '#fff2cc'], ['#ff9a8b', '#c97bd6', '#3f4aa0']];
+const sky = (v, alt) => { const g = G(alt ? alt[v] : SKY[v]); return `<defs>${g[1]}</defs>` + R(0, 0, 360, 480, fill(g)) + (v ? stars(34) : ''); };
+const sun = (x, y, r, c) => C(x, y, r * 1.9, c, 'opacity=".22"') + C(x, y, r * 1.35, c, 'opacity=".35"') + C(x, y, r, c);
+const cloud = (x, y, s) => `<g opacity=".92" fill="#fff">${E(x, y, 34 * s, 11 * s, '#fff')}${E(x + 22 * s, y - 8 * s, 22 * s, 11 * s, '#fff')}${E(x - 20 * s, y - 5 * s, 18 * s, 9 * s, '#fff')}</g>`;
+const dome = (cx, by, r, f, t) => P(`M${cx - r} ${by} A${r} ${r * (t || 1.1)} 0 0 1 ${cx + r} ${by}Z`, f) + R(cx - 1.5, by - r * (t || 1.1) - 14, 3, 14, '#d9b36a') + C(cx, by - r * (t || 1.1) - 15, 3, '#d9b36a');
+const mino = (x, by, h, w, f, cap) => R(x - w / 2, by - h, w, h, f) + R(x - w / 2 - 3, by - h * .72, w + 6, 4, '#c9a45a') + R(x - w / 2 - 3, by - h, w + 6, 5, '#c9a45a') + P(`M${x - w / 2} ${by - h} q${w / 2} ${-w * 1.5} ${w} 0z`, cap || '#2f86c8') + R(x - 1, by - h - w * .75 - 10, 2, 10, '#d9b36a');
+const arch = (x, by, w, h, f) => P(`M${x} ${by} V${by - h + w / 2} A${w / 2} ${w / 2} 0 0 1 ${x + w} ${by - h + w / 2} V${by}Z`, f);
+const cyp = (x, by, h, f) => E(x, by - h / 2, h * .12, h / 2, f || '#173626') + R(x - 2, by - 4, 4, 8, '#3b2a18');
+const pine = (x, by, s, f) => P(`M${x} ${by - 62 * s} L${x + 20 * s} ${by - 26 * s} H${x - 20 * s}Z`, f) + P(`M${x} ${by - 44 * s} L${x + 26 * s} ${by - 6 * s} H${x - 26 * s}Z`, f) + P(`M${x} ${by - 26 * s} L${x + 32 * s} ${by + 12 * s} H${x - 32 * s}Z`, f) + R(x - 3 * s, by + 12 * s, 6 * s, 10 * s, '#4a2c10');
+const mt = (d, f, snow) => P(d, f) + (snow || '');
+const dune = (y, a, f) => P(`M0 ${y} Q90 ${y - a} 180 ${y} T360 ${y} V480 H0Z`, f);
+const water = (y, cols) => { const g = G(cols); return `<defs>${g[1]}</defs>` + R(0, y, 360, 480 - y, fill(g)); };
+const ripple = (y, n, c) => { let s = ''; for (let i = 0; i < n; i++) s += `<path d="M${(i * 83 + 10) % 300} ${y + i * 17} q14 -7 28 0 t28 0 t28 0" fill="none" stroke="${c || '#fff'}" stroke-opacity=".45" stroke-width="2.4"/>`; return s; };
+const col = (x, by, h, w) => R(x - w / 2, by - h, w, h, '#e3cfa0') + R(x - w / 2 - 4, by - h - 8, w + 8, 8, '#cdb27a') + R(x - w / 2 - 3, by - 6, w + 6, 6, '#cdb27a') + [0, 1, 2].map(i => L(x - w / 4 + i * w / 4, by - h + 4, x - w / 4 + i * w / 4, by - 8, '#c4a96c', 1.5)).join('');
+const cloth = v => { const g = G(v ? ['#6e1b3d', '#9a2a4f'] : ['#c63b2f', '#e25a43'], false); let s = `<defs>${g[1]}</defs>` + R(0, 0, 360, 480, fill(g)); for (let i = 0; i < 12; i++) s += R(i * 32 - 6, 0, 8, 480, '#fff', 'opacity=".12"'); for (let j = 0; j < 16; j++) s += R(0, j * 32, 360, 6, '#fff', 'opacity=".09"'); return s; };
+const plate = (x, y, r, c) => C(x + 5, y + 9, r + 8, '#000', 'opacity=".22"') + C(x, y, r + 8, c || '#fff') + C(x, y, r, '#e9e9ee') + C(x, y, r * .86, '#fafafa');
+const dots = (x, y, rx, ry, n, c, s, r0) => { let o = '', k = 3; for (let i = 0; i < n; i++) { k = (k * 9301 + 49297) % 233280; const a = k / 233280; k = (k * 9301 + 49297) % 233280; const b = k / 233280; const dx = (a * 2 - 1) * rx, dy = (b * 2 - 1) * ry; if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) < 1) o += E(x + dx, y + dy, r0 || 2.6, (r0 || 2.6) * .6, c, `transform="rotate(${(a * 180).toFixed(0)} ${(x + dx).toFixed(1)} ${(y + dy).toFixed(1)})" opacity=".9"`); } return o; };
+const night = v => v ? R(0, 0, 360, 480, '#0a0d33', 'opacity=".28"') : '';
+const dust = v => v ? R(0, 0, 360, 480, '#ff7a3a', 'opacity=".13"') : '';
+
+// ===== تاریخی =====
+const SC = [];
+const add = (n, cat, f) => SC.push({ n, cat, f });
+add('تخت جمشید', 'h', v => sky(v) + sun(280, 90, 30, v ? '#ffd9a0' : '#fff3b0') + dune(360, 14, '#d4a762') + R(0, 360, 360, 120, '#c99a58') + [[60, 150], [120, 120], [180, 160], [240, 100], [300, 150]].map(a => col(a[0], 376, a[1], 22)).join('') + R(30, 376, 300, 14, '#b88a4a') + R(14, 390, 332, 14, '#a9793c') + R(0, 404, 360, 76, '#946632') + dust(v));
+add('دروازهٔ قرآن شیراز', 'h', v => sky(v) + mt('M0 330 L70 220 L140 300 L210 200 L290 290 L360 230 V480 H0Z', v ? '#4a4a7a' : '#8a9cc8') + P('M60 440 V290 Q180 130 300 290 V440Z', '#e9d8b4') + P('M92 440 V300 Q180 190 268 300 V440Z', v ? '#2a1f45' : '#4a3a28') + P('M120 440 V310 Q180 240 240 310 V440Z', '#1b1530') + R(0, 440, 360, 40, v ? '#241a3c' : '#6b5b3e') + cyp(34, 440, 150) + cyp(326, 440, 150) + cyp(8, 440, 110) + R(60, 290, 240, 8, '#caa66a') + C(180, 244, 10, '#2f86c8') + dust(v));
+add('برج آزادی', 'h', v => sky(v) + cloud(70, 90, 1) + cloud(290, 140, .8) + P('M90 420 V300 L120 230 Q180 130 240 230 L270 300 V420Z', '#efe9dc') + P('M140 420 V320 Q180 250 220 320 V420Z', '#1c2433') + P('M120 420 V312 Q180 232 240 312 V420Z', 'none', 'stroke="#c9bfa5" stroke-width="5"') + R(70, 420, 220, 18, '#d8cfb8') + R(40, 438, 280, 14, '#bfb597') + water(452, v ? ['#4a5db0', '#2a3478'] : ['#4fb7e8', '#1b78b0']) + ripple(458, 2, '#fff') + P('M100 300 H260 L240 230 Q180 150 120 230Z', '#f6f1e5', 'opacity=".5"') + dust(v));
+add('میدان نقش جهان', 'h', v => sky(v) + dome(95, 320, 70, '#3f8fd1') + mino(180, 320, 130, 16, '#d9b36a', '#2f86c8') + mino(10, 320, 120, 14, '#d9b36a', '#2f86c8') + R(160, 255, 120, 70, '#e3c98e') + arch(190, 325, 60, 62, '#27527d') + R(0, 320, 360, 50, '#d9a35a') + [0, 1, 2, 3, 4, 5, 6].map(i => arch(i * 52 + 6, 370, 38, 44, '#8a5a2b')).join('') + water(370, v ? ['#5a57b8', '#2f2f78'] : ['#58b9e8', '#217fb4']) + ripple(392, 5, '#fff') + dust(v));
+add('سی‌وسه‌پل', 'h', v => sky(v) + sun(70, 120, 26, v ? '#ffd9a0' : '#fff3b0') + mt('M0 290 Q90 230 180 280 T360 270 V480 H0Z', v ? '#3a3a72' : '#7ea35e') + R(0, 300, 360, 40, '#d9a35a') + [0, 1, 2, 3, 4, 5, 6, 7].map(i => arch(i * 46 + 6, 340, 34, 40, '#7a4b1e')).join('') + R(0, 292, 360, 8, '#b98644') + water(340, v ? ['#6a4fb0', '#2c2570'] : ['#52b7e6', '#1a74ab']) + [0, 1, 2, 3, 4, 5, 6, 7].map(i => P(`M${i * 46 + 6} 340 v-4 a17 17 0 0 0 34 0 v4z`, '#7a4b1e', 'opacity=".5"')).join('') + ripple(380, 6, '#fff') + R(0, 440, 360, 40, '#1a5c8c', 'opacity=".35"') + dust(v));
+add('گنبد قابوس', 'h', v => sky(v) + mt('M0 330 Q100 260 200 320 T360 300 V480 H0Z', v ? '#2f3a6a' : '#6fa65a') + P('M150 400 L160 190 H200 L210 400Z', '#b9633a') + P('M144 190 L180 70 L216 190Z', '#8a3d22') + R(140, 186, 80, 8, '#9d4a2a') + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => L(162 + i * 4, 196, 162 + i * 4, 396, '#a3512e', 1.5)).join('') + R(120, 400, 120, 14, '#a3512e') + R(0, 414, 360, 66, v ? '#26305e' : '#4f8a46') + pine(60, 420, .9, v ? '#1d2652' : '#2f6a36') + pine(310, 420, 1, v ? '#1d2652' : '#2f6a36') + dust(v));
+add('ارگ بم', 'h', v => sky(v) + sun(60, 100, 28, v ? '#ffd9a0' : '#fff3b0') + dune(330, 24, '#dcae6b') + P('M20 400 V300 H60 V280 H100 V250 H140 V230 H220 V250 H260 V280 H300 V310 H340 V400Z', '#c58b4c') + R(130, 190, 100, 44, '#b87a3d') + R(150, 160, 60, 32, '#a9692f') + R(106, 270, 12, 12, '#7a4a1e') + R(250, 296, 14, 14, '#7a4a1e') + [0, 1, 2, 3, 4, 5].map(i => R(34 + i * 50, 330, 12, 22, '#7a4a1e')).join('') + P('M0 400 H360 V480 H0Z', '#b97d3d') + dust(v));
+add('بادگیرهای یزد', 'h', v => { const w = (x, h) => R(x, 360 - h, 34, h, '#a9703a') + P(`M${x - 6} ${360 - h} L${x + 17} ${360 - h - 36} L${x + 40} ${360 - h}Z`, '#8a5528') + R(x + 8, 360 - h + 16, 18, 36, '#4a2c10') + R(x + 4, 360 - h + 70, 26, 5, '#8a5528'); return sky(v, [['#ffe29a', '#ffb36b', '#e8744a'], ['#ff9a8b', '#c97bd6', '#3f4aa0']]) + sun(90, 140, 40, '#fff0b8') + dune(330, 20, '#d99a5b') + w(190, 150) + w(250, 110) + w(120, 90) + dome(70, 360, 44, '#c68a4f', .8) + R(0, 360, 360, 120, '#b97d3d') + R(0, 410, 360, 70, '#9a6530') + R(150, 400, 60, 80, '#4a2c10') + dust(v); });
+add('حرم طلایی', 'h', v => sky(v) + dome(180, 330, 82, '#e8b830', 1.15) + P('M98 330 A82 94 0 0 1 262 330', 'none', 'stroke="#fff3a0" stroke-width="3" opacity=".55"') + mino(70, 330, 190, 18, '#2f9fb8', '#e8b830') + mino(290, 330, 190, 18, '#2f9fb8', '#e8b830') + R(100, 330, 160, 80, '#e9dfc4') + arch(148, 410, 64, 70, '#2f86c8') + arch(160, 410, 40, 52, '#16314f') + R(0, 410, 360, 70, v ? '#1d2a5a' : '#b9a97c') + [0, 1, 2, 3, 4].map(i => C(40 + i * 70, 440, 6, '#ffd36a', 'opacity=".8"')).join('') + dust(v));
+add('مسجد صورتی', 'h', v => { const g = G(['#ff6fb0', '#ffb36b', '#7ad4ff', '#b980ff'], false); return `<defs>${g[1]}</defs>` + R(0, 0, 360, 480, '#2a1b3d') + P('M50 480 V200 Q180 20 310 200 V480Z', fill(g), 'opacity=".9"') + [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => P(`M${60 + i * 28} 480 V230 Q${74 + i * 28} 140 ${88 + i * 28} 230 V480Z`, ['#ff9ec9', '#ffd36a', '#7ad4ff', '#c79cff'][i % 4], 'opacity=".5"')).join('') + P('M50 480 V200 Q180 20 310 200 V480Z', 'none', 'stroke="#f5d9a8" stroke-width="12"') + P('M90 480 V210 Q180 70 270 210 V480Z', 'none', 'stroke="#e8c88a" stroke-width="5"') + [0, 1, 2, 3, 4].map(i => R(70 + i * 56, 440, 40, 40, i % 2 ? '#c75a8a' : '#4a6fb8', 'opacity=".7"')).join('') + night(v); });
+add('برج میلاد', 'h', v => { let b = ''; for (let i = 0; i < 12; i++) { const h = 40 + (i * 37) % 70; b += R(i * 31, 450 - h, 26, h + 40, v ? '#2a2f66' : '#46557a'); } return sky(v) + mt('M-10 360 L60 230 L120 290 L190 200 L260 300 L320 250 L380 360Z', v ? '#4a4a85' : '#8497c4', P('M60 230 L44 256 L60 250 L76 260Z M190 200 L170 236 L190 226 L210 240Z M320 250 L304 274 L320 268 L336 276Z', '#fff')) + P('M172 480 L178 280 L182 280 L188 480Z', v ? '#c2c9ee' : '#5d6c8f') + E(180, 262, 30, 14, v ? '#aab2de' : '#7385ad') + R(178, 190, 4, 70, '#5d6c8f') + b + R(0, 450, 360, 30, v ? '#161a44' : '#2f3a59'); });
+add('کاخ چهل‌ستون', 'h', v => sky(v) + [0, 1, 2, 3, 4, 5].map(i => R(70 + i * 38, 250, 14, 120, '#f0e2c0') + R(66 + i * 38, 244, 22, 8, '#d9b87a')).join('') + R(52, 226, 256, 22, '#d7a04a') + P('M52 226 L180 170 L308 226Z', '#c88f3d') + R(52, 370, 256, 12, '#c9ab6f') + water(382, v ? ['#4a4f9c', '#2a2c66'] : ['#5fc0ea', '#2182b6']) + [0, 1, 2, 3, 4, 5].map(i => R(70 + i * 38, 384, 14, 70, '#f0e2c0', 'opacity=".4"')).join('') + ripple(420, 4, '#fff') + cyp(20, 382, 120) + cyp(340, 382, 120) + dust(v));
+add('کاخ گلستان', 'h', v => sky(v) + R(40, 250, 280, 150, '#e7d5ac') + R(40, 250, 280, 12, '#c79c4c') + P('M30 250 L180 170 L330 250Z', '#2f86c8') + [0, 1, 2, 3, 4, 5].map(i => arch(70 + i * 40, 400, 26, 80, '#16314f')).join('') + [0, 1, 2, 3, 4, 5].map(i => R(64 + i * 40, 270, 38, 10, '#c79c4c')).join('') + R(0, 400, 360, 80, v ? '#261f4a' : '#7ea35e') + C(180, 440, 30, v ? '#5a57b8' : '#58b9e8') + dust(v));
+
+// ===== طبیعت =====
+add('قلهٔ دماوند', 'n', v => sky(v) + cloud(60, 110, 1) + cloud(300, 80, .8) + mt('M-20 400 L150 240 L180 190 L210 240 L380 400Z', v ? '#5a5a96' : '#8a8fb8', P('M180 190 L150 240 L168 232 L180 250 L194 230 L212 242Z', '#fff')) + mt('M-30 430 Q80 330 190 400 T390 380 V480 H-30Z', v ? '#2b3a6a' : '#5b8f4f') + mt('M0 460 Q100 400 200 450 T360 440 V480 H0Z', v ? '#1f2c58' : '#3f7a3d') + dust(v));
+add('جنگل هیرکانی', 'n', v => { const g = G(v ? ['#2a3f6a', '#7aa08a'] : ['#cfeec8', '#8fd18a']); let t = ''; for (let i = 0; i < 9; i++) t += pine(20 + i * 42, 330 + (i % 3) * 18, .9 + (i % 4) * .15, ['#1f5a35', '#2a7a45', '#18492b'][i % 3]); return `<defs>${g[1]}</defs>` + R(0, 0, 360, 480, fill(g)) + sun(250, 80, 26, '#fff7c9') + [0, 1, 2, 3].map(i => P(`M${90 + i * 70} 0 L${40 + i * 70} 330 H${120 + i * 70}Z`, '#fff', 'opacity=".12"')).join('') + t + R(0, 400, 360, 80, '#16402a') + pine(60, 470, 1.6, '#123a22') + pine(300, 480, 1.9, '#0f3320') + E(180, 380, 220, 20, '#fff', 'opacity=".25"') + dust(v); });
+add('تپه‌های ماسه‌ای لوت', 'n', v => sky(v, [['#ffd48a', '#ffa45a', '#ff7a3a'], ['#2a1e5e', '#a04a7a', '#ff9a5a']]) + sun(250, 150, 36, v ? '#ffd9a0' : '#fff0b8') + dune(290, 40, '#f0a860') + dune(340, 50, '#dc8a44') + dune(400, 40, '#c27234') + dune(450, 30, '#a85a28'));
+add('غروب خلیج فارس', 'n', v => sky(v, [['#7fd8ff', '#ffd9a0', '#ffb36b'], ['#ff7a5a', '#ffb36b', '#ffe29a']]) + sun(250, 280, 44, '#fff0a0') + water(300, v ? ['#e87a5a', '#4a3a8a'] : ['#2fa7d8', '#0a5a8f']) + ripple(320, 6, '#fff') + P('M0 300 Q60 250 110 300Z', '#6a4a2a') + P('M240 330 L320 330 L300 352 L260 352Z', '#3a2410') + P('M284 330 V270 L316 326Z', '#fff'));
+add('دره‌های قشم', 'n', v => sky(v) + mt('M0 300 L40 200 L90 280 L140 180 L200 290 L260 210 L330 280 L360 240 V480 H0Z', '#c87a4a') + mt('M0 360 L60 250 L120 340 L190 240 L260 350 L330 260 L360 330 V480 H0Z', '#a85a30') + P('M0 420 Q120 380 240 430 T360 410 V480 H0Z', '#8a4422') + [0, 1, 2, 3, 4].map(i => L(60 + i * 60, 260 + (i % 2) * 40, 60 + i * 60, 420, '#6a3418', 2, 'opacity=".4"')).join('') + dust(v));
+add('قلهٔ سبلان', 'n', v => sky(v, [['#8fb8ff', '#cfe0ff', '#f3f7ff'], ['#3a3a8a', '#8a6ab8', '#ffb3a0']]) + mt('M-20 380 L100 230 L180 150 L260 230 L380 380Z', '#c4cff2', P('M180 150 L140 200 L165 192 L180 210 L198 190 L224 204Z', '#fff')) + mt('M-20 440 Q120 360 240 430 T400 420 V480 H-20Z', '#e4ebfb') + water(430, ['#7fb0e0', '#3a78b0']) + stars(v ? 20 : 0));
+add('دریاچهٔ ارومیه', 'n', v => sky(v, [['#bfe0ff', '#ffe0ee', '#fff7f2'], ['#4a3a8a', '#d07ab8', '#ffc3a0']]) + mt('M0 280 L60 220 L130 270 L210 200 L290 260 L360 230 V320 H0Z', v ? '#4a4a8a' : '#a3b3d8') + water(310, ['#f4a6c8', '#c07ab0']) + ripple(350, 6, '#fff') + E(120, 420, 70, 14, '#fff', 'opacity=".75"') + E(260, 450, 90, 14, '#fff', 'opacity=".8"') + dust(v));
+add('آبشار', 'n', v => sky(v) + mt('M0 260 L80 150 L130 220 L130 480 H0Z', '#6b7a68') + mt('M360 250 L290 140 L230 220 L230 480 H360Z', '#5e6e5c') + R(130, 220, 100, 130, '#cfeaff') + [0, 1, 2, 3, 4, 5].map(i => L(142 + i * 16, 222, 138 + i * 16, 350, '#fff', 4, 'opacity=".7"')).join('') + E(180, 360, 90, 22, '#e8f6ff') + water(370, ['#4fb8d8', '#1b7aa0']) + ripple(400, 5, '#fff') + pine(50, 330, 1, '#2f6a36') + pine(310, 330, 1.1, '#2f6a36') + dust(v));
+add('شالیزارهای شمال', 'n', v => sky(v) + mt('M0 240 Q100 160 200 230 T360 200 V480 H0Z', v ? '#2a4a5a' : '#6fb38a') + [0, 1, 2, 3, 4].map(i => P(`M0 ${290 + i * 40} Q180 ${270 + i * 40 + (i % 2) * 14} 360 ${290 + i * 40} V480 H0Z`, ['#a7dc6f', '#7cc956', '#5eb340', '#4aa032', '#3a8a28'][i])).join('') + [0, 1, 2, 3, 4].map(i => L(10 + i * 70, 300 + i * 30, 330, 304 + i * 36, '#d6f2a0', 2, 'opacity=".4"')).join('') + R(250, 250, 40, 30, '#c9a56a') + P('M244 250 L270 224 L296 250Z', '#8a4a22') + dust(v));
+add('تالاب انزلی', 'n', v => sky(v) + water(240, v ? ['#4a5ab0', '#2a3478'] : ['#79d0c0', '#2a9a9a']) + ripple(270, 7, '#fff') + [0, 1, 2, 3, 4, 5].map(i => C(40 + i * 56, 330 + (i % 3) * 36, 14, '#ff9ec9') + C(40 + i * 56, 330 + (i % 3) * 36, 6, '#ffe27a') + E(40 + i * 56 - 4, 342 + (i % 3) * 36, 24, 8, '#3a9a5a', 'opacity=".9"')).join('') + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(i => L(10 + i * 30, 240, 14 + i * 30, 120 + (i % 4) * 30, '#6a8a3a', 3)).join('') + dust(v));
+
+// ===== خوراک (نمای از بالا) =====
+add('چلوکباب', 'f', v => cloth(v) + plate(180, 240, 150) + E(150, 250, 90, 66, '#fffaf0') + dots(150, 250, 84, 60, 70, '#fff', 0, 3) + E(120, 240, 26, 14, '#ffb22e', 'opacity=".85"') + E(170, 275, 22, 10, '#ffb22e', 'opacity=".8"') + `<g transform="rotate(-24 220 220)">${R(120, 190, 190, 26, '#9a4a22')}${R(120, 190, 190, 8, '#b8672f', 'opacity=".6"')}${R(120, 232, 190, 26, '#8a3e1c')}${R(120, 232, 190, 8, '#a95a28', 'opacity=".6"')}${L(100, 205, 330, 205, '#cfd6dd', 3)}${L(100, 245, 330, 245, '#cfd6dd', 3)}</g>` + C(265, 330, 22, '#d92b1c') + C(265, 330, 12, '#ff6a4a', 'opacity=".6"') + P('M258 308 l8 -10 l8 10z', '#2f7a2f') + R(92, 320, 36, 26, '#ffe27a') + dust(v));
+add('قورمه‌سبزی', 'f', v => { const g = RG('#3a5a22', '#15310f'); return cloth(v) + plate(180, 240, 150, '#e6d9c0') + `<defs>${g[1]}</defs>` + C(180, 240, 108, fill(g)) + [...Array(26)].map((_, i) => E(180 + Math.cos(i * 2.4) * (20 + (i * 11) % 78), 240 + Math.sin(i * 2.4) * (18 + (i * 7) % 76), 12, 7, ['#5a8a2c', '#2f5a1a', '#7aa83a'][i % 3], `transform="rotate(${i * 31} ${(180 + Math.cos(i * 2.4) * (20 + (i * 11) % 78)).toFixed(0)} ${(240 + Math.sin(i * 2.4) * (18 + (i * 7) % 76)).toFixed(0)})"`)).join('') + [0, 1, 2, 3, 4, 5, 6].map(i => E(140 + (i * 23) % 80, 200 + (i * 31) % 80, 9, 6, '#7a1a1a')).join('') + C(150, 220, 10, '#e8c27a') + R(300, 120, 14, 150, '#b9bcc4') + E(307, 110, 20, 28, '#b9bcc4') + dust(v); });
+add('دیزی (آبگوشت)', 'f', v => { const g = RG('#8a6a48', '#4a3622'); return cloth(v) + C(172, 232, 130, '#000', 'opacity=".22"') + C(168, 226, 130, '#6a5238') + C(168, 226, 112, fill(g)) + `<defs>${g[1]}</defs>` + C(168, 226, 112, fill(g)) + C(168, 226, 86, '#d6b77a') + [0, 1, 2, 3, 4, 5].map(i => C(130 + (i * 29) % 80, 196 + (i * 37) % 70, 11, i % 2 ? '#e8a23a' : '#f2e3b8')).join('') + [0, 1, 2, 3].map(i => E(140 + i * 22, 250 + (i % 2) * 16, 14, 7, '#fff3c4')).join('') + E(300, 380, 50, 28, '#c9873a') + E(300, 380, 38, 20, '#e8a84a') + R(264, 90, 70, 12, '#e8c27a') + C(70, 400, 22, '#c9a0e8') + C(70, 400, 12, '#e8d0f8') + dust(v); });
+add('ته‌دیگ', 'f', v => { const g = RG('#ffd45a', '#c98a1a'); return cloth(v) + plate(180, 240, 150, '#f2ecdc') + `<defs>${g[1]}</defs>` + C(180, 240, 112, fill(g)) + [...Array(16)].map((_, i) => L(180, 240, 180 + Math.cos(i * .3927) * 108, 240 + Math.sin(i * .3927) * 108, '#b8731a', 2, 'opacity=".5"')).join('') + C(180, 240, 112, 'none', 'stroke="#a45f12" stroke-width="10" opacity=".7"') + C(180, 240, 36, '#f5b72e', 'opacity=".6"') + dots(180, 240, 96, 96, 34, '#ff9a1a', 0, 2.2) + E(300, 400, 40, 20, '#fff7dc') + dust(v); });
+add('گز و سوهان', 'f', v => cloth(v) + [0, 1, 2, 3, 4, 5].map(i => R(40 + (i % 3) * 100, 70 + Math.floor(i / 3) * 80, 80, 56, i % 2 ? '#f6ddc4' : '#fff1de', 'rx="8"') + dots(80 + (i % 3) * 100, 98 + Math.floor(i / 3) * 80, 32, 20, 8, '#7ac24a', 0, 3)).join('') + [0, 1, 2, 3, 4].map(i => C(60 + i * 62, 330 + (i % 2) * 40, 28, '#e8b648') + C(60 + i * 62, 330 + (i % 2) * 40, 22, '#f5cd6a') + dots(60 + i * 62, 330 + (i % 2) * 40, 18, 16, 6, '#fff3d0', 0, 3)).join('') + R(40, 420, 280, 22, '#fff', 'opacity=".14"') + dust(v));
+add('باقلوا', 'f', v => { let s = cloth(v) + plate(180, 240, 160, '#f4efe4'); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { const x = 100 + c * 42 + (r % 2) * 21 - 20, y = 150 + r * 40; s += P(`M${x} ${y - 22} L${x + 22} ${y} L${x} ${y + 22} L${x - 22} ${y}Z`, ['#e8a22a', '#f2b73e'][(r + c) % 2]) + C(x, y, 4, '#7ac24a'); } return s + dust(v); });
+add('آش رشته', 'f', v => { const g = RG('#d8c070', '#9a8238'); return cloth(v) + C(180, 246, 138, '#000', 'opacity=".25"') + C(180, 240, 134, '#c9d4d9') + C(180, 240, 118, '#fff') + `<defs>${g[1]}</defs>` + C(180, 240, 106, fill(g)) + [...Array(8)].map((_, i) => `<path d="M${90 + i * 8} ${150 + i * 14} q40 -18 80 0 t80 0" fill="none" stroke="#fff6e0" stroke-width="7" stroke-linecap="round" opacity=".9"/>`).join('') + dots(180, 240, 90, 90, 40, '#6a4a1a', 0, 3) + [...Array(18)].map((_, i) => E(180 + Math.cos(i * 2.1) * (20 + (i * 9) % 70), 240 + Math.sin(i * 2.1) * (20 + (i * 7) % 66), 9, 5, '#4f8a2a', `transform="rotate(${i * 40} ${(180 + Math.cos(i * 2.1) * (20 + (i * 9) % 70)).toFixed(0)} ${(240 + Math.sin(i * 2.1) * (20 + (i * 7) % 66)).toFixed(0)})"`)).join('') + dust(v); });
+add('نان سنگک و سبزی', 'f', v => cloth(v) + P('M30 120 L330 100 L340 260 L40 280Z', '#c98a3a') + [...Array(30)].map((_, i) => C(60 + (i * 53) % 260, 130 + (i * 37) % 130, 5, '#8a5a1e', 'opacity=".7"')).join('') + E(120, 360, 70, 30, '#fff7e6') + E(120, 360, 56, 22, '#fffdf4') + [...Array(10)].map((_, i) => L(180 + i * 10, 330, 200 + i * 10 + (i % 3) * 10, 440, ['#3a9a3a', '#5ab83a', '#2a7a2a'][i % 3], 5)).join('') + [0, 1, 2, 3].map(i => C(60 + i * 40, 440, 14, '#d92b5a') + C(60 + i * 40, 440, 6, '#fff', 'opacity=".5"')).join('') + [0, 1, 2].map(i => E(270 + i * 20, 300 + i * 20, 22, 17, '#b9864a')).join('') + dust(v));
+add('چای و نبات', 'f', v => { const g = RG('#ffb43a', '#a8420f'); return cloth(v) + C(185, 255, 130, '#000', 'opacity=".2"') + C(180, 248, 126, '#f5efe2') + C(180, 248, 106, '#fff') + C(180, 248, 76, '#d8ccb0') + C(180, 248, 66, '#f4ecd8') + `<defs>${g[1]}</defs>` + C(180, 248, 58, fill(g)) + E(160, 232, 22, 12, '#fff', 'opacity=".35"') + R(300, 200, 22, 140, '#f4a8c8', 'opacity=".9"') + R(320, 190, 20, 150, '#ffc36b') + [0, 1, 2, 3, 4].map(i => R(40 + i * 8, 90 + i * 30, 38, 18, '#ffd88a', 'transform="rotate(' + (i * 13) + ' 60 ' + (100 + i * 30) + ')"')).join('') + [0, 1, 2, 3, 4, 5].map(i => L(60 + i * 14, 410, 76 + i * 14, 430, '#d11a1a', 3)).join('') + E(260, 410, 22, 16, '#7a3a14') + E(300, 420, 22, 16, '#6a2e0e') + dust(v); });
+add('فسنجان', 'f', v => { const g = RG('#6a3a1e', '#2a1408'); return cloth(v) + plate(180, 240, 150, '#e6dcc8') + `<defs>${g[1]}</defs>` + C(180, 240, 106, fill(g)) + [...Array(14)].map((_, i) => E(180 + Math.cos(i * 1.9) * (18 + (i * 13) % 72), 240 + Math.sin(i * 1.9) * (18 + (i * 7) % 70), 12, 8, '#c99a5a', `transform="rotate(${i * 25} ${(180 + Math.cos(i * 1.9) * (18 + (i * 13) % 72)).toFixed(0)} ${(240 + Math.sin(i * 1.9) * (18 + (i * 7) % 70)).toFixed(0)})"`)).join('') + [...Array(22)].map((_, i) => C(150 + (i * 17) % 60, 215 + (i * 23) % 50, 3.4, '#d4161c')).join('') + C(300, 400, 36, '#d92b4a') + C(300, 400, 28, '#ff7a8a') + [...Array(8)].map((_, i) => C(290 + (i * 7) % 20, 390 + (i * 9) % 20, 3, '#a5122a')).join('') + dust(v); });
+
+// جلوگیری از خطا در حالتی که f به‌صورت تابع برمی‌گردد
+function sceneSVG(i, v) { _id.n = 0; const s = SC[i]; return `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480" viewBox="0 0 360 480">${s.f(v)}</svg>`; }
+
+
+const HINT_COST = 10;
+const fa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+const $ = id => document.getElementById(id);
+const CATE = { h: '🏛️ اثر تاریخی', n: '🌄 طبیعت', f: '🍽️ خوراک' };
+
+// ترتیب مرحله‌ها: چرخشی بین تاریخی، طبیعت و خوراک
+const ORDER = (() => { const g = { h: [], n: [], f: [] }; SC.forEach((s, i) => g[s.cat].push(i)); const o = []; for (let k = 0; o.length < SC.length; k++) ['h', 'n', 'f'].forEach(c => { if (g[c][k] !== undefined) o.push(g[c][k]); }); return o; })();
+const NL = SC.length * 2;
+const GRIDS = [[3, 4], [4, 5], [5, 6], [6, 8]];
+function levelInfo(L) {
+  const half = SC.length, v = L >= half ? 1 : 0, k = L % half;
+  const base = ORDER[v ? (k + 11) % half : k];
+  const gs = GRIDS[Math.min(GRIDS.length - 1, Math.floor(L / 16))];
+  return { base: base, v: v, cols: gs[0], rows: gs[1], name: SC[base].n, cat: SC[base].cat };
+}
+
+// ------------------------------------------------------------------ ذخیره
+const KEY = 'irpuzzle_v1';
+let PR = { done: 0, stars: {}, best: {}, set: { snd: 1, vol: 70, vib: 1, hl: 1, gap: 1, th: 0 } };
+try { const r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r) { PR = Object.assign(PR, r); PR.set = Object.assign({ snd: 1, vol: 70, vib: 1, hl: 1, gap: 1, th: 0 }, r.set || {}); } } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(PR)); } catch (e) {} };
+
+// ------------------------------------------------------------------ سکه (پل با برنامه)
+const pend = {}; let uid = 1, coins = 0;
+window.__ecoRes = (id, ok, bal, extra) => { const p = pend[id]; if (p) { delete pend[id]; p({ ok: !!ok, bal: bal, extra: extra }); } };
+function eco(a, n) {
+  return new Promise(res => {
+    if (window.Eco && window.Eco.postMessage) {
+      const id = uid++; pend[id] = res;
+      window.Eco.postMessage(JSON.stringify({ id: id, a: a, n: n || 0 }));
+      setTimeout(() => { if (pend[id]) { delete pend[id]; res({ ok: false, bal: coins }); } }, 5000);
+    } else {
+      let b = parseInt(localStorage.getItem('pz_coin') || '120', 10), ok = true;
+      if (a === 'spend') { if (b >= n) b -= n; else ok = false; } else if (a === 'add') b += n;
+      localStorage.setItem('pz_coin', String(b));
+      res({ ok: ok, bal: b, extra: n });
+    }
+  });
+}
+function setCoins(b) { if (typeof b === 'number') { coins = b; $('coin').textContent = fa(b); } }
+
+// ------------------------------------------------------------------ صدا
+let AC = null;
+function tone(f, d, type, v, when) {
+  if (!PR.set.snd) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = AC.currentTime + (when || 0), o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime((v || 0.25) * PR.set.vol / 100, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0 + d + 0.02);
+  } catch (e) {}
+}
+const sfx = { sel: () => tone(520, 0.07, 'sine', 0.22), swap: () => { tone(380, 0.08, 'triangle', 0.25); tone(560, 0.09, 'triangle', 0.25, 0.07); }, good: () => tone(880, 0.12, 'sine', 0.2), win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, 'triangle', 0.3, i * 0.1)), bad: () => tone(200, 0.15, 'square', 0.1) };
+function buzz(ms) { if (!PR.set.vib) return; try { if (navigator.vibrate) navigator.vibrate(ms); else if (window.Eco) window.Eco.postMessage(JSON.stringify({ id: 0, a: 'vib', n: ms })); } catch (e) {} }
+let tt = 0;
+function toast(t) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(tt); tt = setTimeout(() => { el.style.display = 'none'; }, 1700); }
+
+// ------------------------------------------------------------------ بازی
+let GS = null; // {L, info, cols, rows, n, perm, sel, moves, par, t0, sec, iv, done}
+function minSwaps(perm) { const seen = new Array(perm.length).fill(false); let c = 0; for (let i = 0; i < perm.length; i++) { if (seen[i]) continue; c++; let j = i; while (!seen[j]) { seen[j] = true; j = perm[j]; } } return perm.length - c; }
+function shufflePerm(n) {
+  const maxFixed = Math.max(1, Math.floor(n * 0.06));
+  for (let tries = 0; tries < 200; tries++) {
+    const a = Array.from({ length: n }, (_, i) => i);
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    if (a.filter((v, i) => v === i).length <= maxFixed) return a;
+  }
+  const a = Array.from({ length: n }, (_, i) => (i + 1) % n); return a;
+}
+const correct = () => GS.perm.filter((v, i) => v === i).length;
+const possible = () => { const mx = GS.n * 12; return Math.max(Math.round(mx * 0.3), mx - Math.max(0, GS.moves - GS.par) * 4); };
+const fmt = s => fa(String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'));
+
+function startLevel(L) {
+  if (GS && GS.iv) clearInterval(GS.iv);
+  if (L >= NL) L = NL - 1;
+  const info = levelInfo(L), n = info.cols * info.rows, perm = shufflePerm(n);
+  GS = { L: L, info: info, cols: info.cols, rows: info.rows, n: n, perm: perm, sel: -1, moves: 0, par: minSwaps(perm), sec: 0, done: false, iv: null };
+  const svg = sceneSVG(info.base, info.v);
+  const url = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
+  $('boardBox').style.setProperty('--img', url);
+  layout(); render(); closeModal();
+  GS.iv = setInterval(() => { if (!GS.done) { GS.sec++; $('tm').innerHTML = '⏱ <b>' + fmt(GS.sec) + '</b>'; } }, 1000);
+  $('tm').innerHTML = '⏱ <b>' + fmt(0) + '</b>';
+  $('info').innerHTML = 'دو تکه را پشت‌سرهم لمس کن تا جابه‌جا شوند · <b>مرحله ' + fa(L + 1) + '</b> از ' + fa(NL) + ' · ' + CATE[info.cat] + ' · <b>' + info.name + '</b>';
+  $('hc').textContent = '(' + fa(HINT_COST) + ' 🪙)';
+}
+function layout() {
+  const bw = $('bwrap').getBoundingClientRect();
+  const availW = Math.min(bw.width - 14, 460), availH = bw.height - 14;
+  let w = availW, h = w * 4 / 3; if (h > availH) { h = availH; w = h * 3 / 4; }
+  w = Math.max(160, Math.floor(w)); h = Math.floor(w * 4 / 3);
+  const b = $('board'), gap = [0, 2, 4][PR.set.gap];
+  b.style.width = w + 'px'; b.style.height = h + 'px';
+  b.style.gridTemplateColumns = 'repeat(' + GS.cols + ',1fr)'; b.style.gridTemplateRows = 'repeat(' + GS.rows + ',1fr)';
+  b.style.gap = gap + 'px';
+}
+function render() {
+  const b = $('board'); let h = '';
+  for (let p = 0; p < GS.n; p++) {
+    const piece = GS.perm[p], c = piece % GS.cols, r = Math.floor(piece / GS.cols);
+    const bx = GS.cols > 1 ? c * 100 / (GS.cols - 1) : 0, by = GS.rows > 1 ? r * 100 / (GS.rows - 1) : 0;
+    h += '<div class="t' + (GS.sel === p ? ' sel' : '') + (PR.set.hl && piece === p ? ' ok' : '') + '" data-p="' + p + '" style="background-size:' + (GS.cols * 100) + '% ' + (GS.rows * 100) + '%;background-position:' + bx.toFixed(2) + '% ' + by.toFixed(2) + '%"></div>';
+  }
+  b.innerHTML = h;
+  stats();
+}
+function stats() {
+  $('sMoves').textContent = fa(GS.moves);
+  $('sOk').textContent = fa(correct()) + '/' + fa(GS.n);
+  $('sPts').textContent = fa(possible());
+}
+function tap(p) {
+  if (GS.done) return;
+  if (GS.sel < 0) { GS.sel = p; sfx.sel(); buzz(6); render(); return; }
+  if (GS.sel === p) { GS.sel = -1; render(); return; }
+  const a = GS.sel, bb = p, before = correct();
+  [GS.perm[a], GS.perm[bb]] = [GS.perm[bb], GS.perm[a]];
+  GS.sel = -1; GS.moves++;
+  render();
+  [a, bb].forEach(i => { const el = $('board').children[i]; if (el) el.classList.add('fl'); });
+  if (correct() > before) sfx.good(); else sfx.swap();
+  buzz(10);
+  if (correct() === GS.n) win();
+}
+async function hint() {
+  if (GS.done) return;
+  let i = GS.perm.findIndex((v, k) => v !== k);
+  if (i < 0) return;
+  const r = await eco('spend', HINT_COST); setCoins(r.bal);
+  if (!r.ok) { toast('سکهٔ کافی ندارید 🪙'); return; }
+  const j = GS.perm.indexOf(i);
+  [GS.perm[i], GS.perm[j]] = [GS.perm[j], GS.perm[i]];
+  GS.sel = -1; sfx.good(); render();
+  if (correct() === GS.n) win();
+}
+
+// ------------------------------------------------------------------ پایان مرحله
+function modal(html) { $('box').innerHTML = html; $('modal').classList.add('on'); }
+function closeModal() { $('modal').classList.remove('on'); }
+async function win() {
+  GS.done = true; clearInterval(GS.iv); sfx.win(); buzz(60);
+  const par = GS.par, mv = GS.moves;
+  const stars = mv <= par + 2 ? 3 : (mv <= Math.round(par * 1.7) + 3 ? 2 : 1);
+  const score = possible();
+  const first = GS.L >= PR.done;
+  let got = 0;
+  if (first) { const r = await eco('add', 6 + stars * 4 + Math.floor(GS.L / 8)); got = (r.ok && r.extra !== undefined) ? r.extra : 0; setCoins(r.bal); PR.done = GS.L + 1; }
+  if (!PR.stars[GS.L] || stars > PR.stars[GS.L]) PR.stars[GS.L] = stars;
+  if (!PR.best[GS.L] || score > PR.best[GS.L]) PR.best[GS.L] = score;
+  save();
+  const last = GS.L >= NL - 1;
+  modal('<div class="big">' + '⭐'.repeat(stars) + '<span style="opacity:.25">' + '⭐'.repeat(3 - stars) + '</span></div><h2>آفرین! «' + GS.info.name + '» کامل شد</h2>' +
+    '<div style="line-height:2;color:#d7e6f5">جابه‌جایی: <b style="color:#ffc928">' + fa(mv) + '</b> · زمان: <b style="color:#ffc928">' + fmt(GS.sec) + '</b> · امتیاز: <b style="color:#ffc928">' + fa(score) + '</b></div>' +
+    (first ? (got > 0 ? '<div style="font-size:19px;font-weight:900;margin:8px 0">+' + fa(got) + ' <span class="cn"></span> سکه</div>' : '<div style="color:#ffd9a0;margin:6px 0">سقف سکهٔ امروز پر شده است</div>') : '<div style="color:#ffd9a0;margin:6px 0">این مرحله را قبلاً گرفته بودید (سکه ندارد)</div>') +
+    (last ? '<div style="margin:6px 0">همهٔ مرحله‌ها را تمام کردید! 🏆</div>' : '<button class="bt" style="width:100%;margin-top:6px" onclick="startLevel(' + (GS.L + 1) + ')">مرحلهٔ بعد ◀</button>') +
+    '<button class="bt gh" style="width:100%;margin-top:8px" onclick="startLevel(' + GS.L + ')">دوباره همین مرحله ↻</button>' +
+    '<button class="bt gh" style="width:100%;margin-top:8px" onclick="closeModal()">دیدن تصویر کامل</button>');
+}
+
+// ------------------------------------------------------------------ مرحله‌ها و تنظیمات
+function levelsModal() {
+  let g = '';
+  for (let i = 0; i < NL; i++) {
+    const open = i <= PR.done, st = PR.stars[i] || 0, gs = GRIDS[Math.min(GRIDS.length - 1, Math.floor(i / 16))];
+    g += '<button class="lv' + (open ? '' : ' lk') + '" ' + (open ? 'onclick="startLevel(' + i + ')"' : 'disabled') + '>' + (open ? fa(i + 1) + '<small>' + (st ? '★'.repeat(st) : fa(gs[0]) + '×' + fa(gs[1])) + '</small>' : '🔒') + '</button>';
+  }
+  modal('<h2>مرحله‌ها (' + fa(NL) + ')</h2><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">' + g + '</div><button class="bt gh" style="width:100%;margin-top:12px" onclick="closeModal()">بستن</button>');
+}
+function sw(k, on) { return '<div class="sw' + (on ? ' on' : '') + '" onclick="tg(\'' + k + '\')"></div>'; }
+function tg(k) { PR.set[k] = PR.set[k] ? 0 : 1; save(); if (k === 'hl') render(); if (k === 'snd' && PR.set.snd) sfx.good(); settings(); }
+function setv(k, v) { PR.set[k] = v; save(); if (k === 'th') document.body.dataset.th = v; if (k === 'gap') layout(); settings(); }
+function settings() {
+  const chips = (k, arr) => arr.map((n, i) => '<i class="' + (PR.set[k] === i ? 'on' : '') + '" onclick="setv(\'' + k + '\',' + i + ')">' + n + '</i>').join('');
+  modal('<h2>⚙️ تنظیمات</h2>' +
+    '<div class="st"><span>صدا</span>' + sw('snd', PR.set.snd) + '</div>' +
+    '<div class="st"><span>بلندی صدا</span><input type="range" min="0" max="100" value="' + PR.set.vol + '" oninput="PR.set.vol=+this.value;save()" onchange="sfx.good()"></div>' +
+    '<div class="st"><span>لرزش</span>' + sw('vib', PR.set.vib) + '</div>' +
+    '<div class="st"><span>نشان دادن تکه‌های درست</span>' + sw('hl', PR.set.hl) + '</div>' +
+    '<div class="st" style="display:block"><div style="margin-bottom:8px">فاصلهٔ بین تکه‌ها</div><div class="ch">' + chips('gap', ['بدون فاصله', 'کم', 'زیاد']) + '</div></div>' +
+    '<div class="st" style="display:block"><div style="margin-bottom:8px">رنگ پس‌زمینه</div><div class="ch">' + chips('th', ['نیلی', 'بنفش', 'سبز', 'کهربایی']) + '</div></div>' +
+    '<div class="st"><span>هزینهٔ راهنما</span><b>' + fa(HINT_COST) + ' سکه</b></div>' +
+    '<button class="bt rd" style="width:100%;margin-top:12px" onclick="resetAll()">شروع دوباره (پاک کردن پیشرفت)</button>' +
+    '<button class="bt" style="width:100%;margin-top:8px" onclick="closeModal()">بستن</button>');
+}
+function resetAll() { if (!confirm('همهٔ پیشرفت مرحله‌ها پاک شود؟ (سکه‌ها حفظ می‌شود)')) return; PR.done = 0; PR.stars = {}; PR.best = {}; save(); startLevel(0); }
+
+// ------------------------------------------------------------------ شروع
+async function boot() {
+  document.body.dataset.th = PR.set.th;
+  $('board').addEventListener('click', e => { const t = e.target.closest ? e.target.closest('.t') : null; if (t) tap(+t.dataset.p); });
+  const hold = $('hold'), pk = $('peek');
+  const on = () => { pk.style.display = 'block'; hold.classList.add('on'); }, off = () => { pk.style.display = 'none'; hold.classList.remove('on'); };
+  hold.addEventListener('pointerdown', on); hold.addEventListener('pointerup', off); hold.addEventListener('pointercancel', off); hold.addEventListener('pointerleave', off);
+  $('hint').onclick = hint; $('gear').onclick = settings; $('lvls').onclick = levelsModal;
+  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+  window.addEventListener('resize', () => { if (GS) layout(); });
+  startLevel(Math.min(PR.done, NL - 1));
+  const r = await eco('bal'); setCoins(r.bal);
+}
+boot();
+</script>
+</body>
+</html>
