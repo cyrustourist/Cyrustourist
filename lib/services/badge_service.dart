@@ -180,6 +180,27 @@ class BadgeService {
         timeout: timeout,
       );
 
+  // کلاینت مخصوص تماس (/api/call/*) با اتصال زنده (keep-alive): DNS و TLS برای هر درخواست
+  // دوباره انجام نمی‌شود. پایش زنگ و پایش تماس مدام از همین اتصال استفاده می‌کنند، پس
+  // موقع «پاسخ» اتصال از قبل گرم است. بقیهٔ درخواست‌ها مثل قبل کلاینت جداگانه دارند.
+  // اگر درخواستی Timeout یا خطای شبکه بخورد، کلاینت دور ریخته و تازه ساخته می‌شود تا
+  // اتصال معلق جلوی درخواست‌های بعدی را نگیرد.
+  static HttpClient? _callClient;
+
+  static HttpClient _callClientGet() {
+    return _callClient ??= HttpClient()
+      ..connectionTimeout = const Duration(seconds: 8)
+      ..idleTimeout = const Duration(seconds: 20)
+      ..maxConnectionsPerHost = 4;
+  }
+
+  static void _callClientReset(HttpClient bad) {
+    if (identical(_callClient, bad)) _callClient = null;
+    try {
+      bad.close(force: true);
+    } catch (_) {}
+  }
+
   static Future<Map<String, dynamic>?> _call(
     String method,
     String path, {
@@ -187,10 +208,44 @@ class BadgeService {
     Map<String, dynamic>? body,
     Duration timeout = const Duration(seconds: 10),
   }) async {
-    // هر درخواست کلاینت جداگانه دارد و در پایان (حتی با Timeout) کامل بسته می‌شود؛
-    // با کلاینت مشترک، اتصال‌های معلق پایش تماس (هر ۳ ثانیه) کم‌کم همهٔ ۶ اتصال را پر می‌کردند
-    // و ثبت پروفایل/چت هم Timeout می‌خورد.
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+    final keep = path.startsWith('/api/call/');
+    if (!keep) {
+      // هر درخواست کلاینت جداگانه دارد و در پایان (حتی با Timeout) کامل بسته می‌شود؛
+      // با کلاینت مشترک، اتصال‌های معلق پایش‌ها کم‌کم همهٔ اتصال‌ها را پر می‌کردند
+      // و ثبت پروفایل/چت هم Timeout می‌خورد.
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+      try {
+        return await _callOn(client, method, path, query, body, timeout);
+      } finally {
+        client.close(force: true);
+      }
+    }
+    // تماس: اتصال زنده. اگر اتصال قدیمی را سرور بسته باشد خطا بلافاصله (زیر ۳۰۰ms) می‌آید؛
+    // فقط در همین حالت یک بار با اتصال تازه تکرار می‌کنیم (درخواست هنوز به سرور نرسیده بوده).
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final client = _callClientGet();
+      final sw = Stopwatch()..start();
+      try {
+        final r = await _callOn(client, method, path, query, body, timeout, rethrowIo: attempt == 0);
+        if (r == null) _callClientReset(client);
+        return r;
+      } on _StaleConn {
+        _callClientReset(client);
+        if (sw.elapsedMilliseconds > 300) return null;
+      }
+    }
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> _callOn(
+    HttpClient client,
+    String method,
+    String path,
+    Map<String, String>? query,
+    Map<String, dynamic>? body,
+    Duration timeout, {
+    bool rethrowIo = false,
+  }) async {
     try {
       final uri = Uri.parse('$_base$path').replace(queryParameters: query);
       final req = await client.openUrl(method, uri).timeout(timeout);
@@ -220,12 +275,15 @@ class BadgeService {
       return null;
     } on SocketException catch (e) {
       lastError = 'شبکه: ${e.message}';
+      if (rethrowIo) throw _StaleConn();
+      return null;
+    } on HttpException catch (e) {
+      lastError = 'http: ${e.message}';
+      if (rethrowIo) throw _StaleConn();
       return null;
     } catch (e) {
       lastError = '${e.runtimeType}';
       return null;
-    } finally {
-      client.close(force: true);
     }
   }
 
@@ -308,3 +366,6 @@ class BadgeService {
     );
   }
 }
+
+/// خطای اتصال زنده (احتمالاً بستن اتصال بیکار توسط سرور)؛ فقط داخل BadgeService استفاده می‌شود.
+class _StaleConn implements Exception {}
