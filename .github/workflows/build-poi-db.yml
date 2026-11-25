@@ -1,0 +1,49 @@
+name: Build offline places database
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install osmium
+        run: sudo apt-get update && sudo apt-get install -y osmium-tool
+
+      - name: Download Iran extract
+        run: curl -L --fail -o iran.osm.pbf https://download.geofabrik.de/asia/iran-latest.osm.pbf
+
+      - name: Filter features
+        run: |
+          osmium tags-filter iran.osm.pbf \
+            nwr/tourism=attraction,museum,gallery,viewpoint,artwork,hotel,hostel,guest_house,motel,camp_site,caravan_site,chalet,apartment,alpine_hut,zoo,theme_park \
+            nwr/historic=monument,castle,archaeological_site,ruins,memorial,fort,tomb \
+            nwr/leisure=park,nature_reserve \
+            nwr/amenity=hospital,clinic,doctors,pharmacy,spa,fuel,atm,bank,toilets,taxi,parking \
+            nwr/natural=waterfall,hot_spring \
+            nwr/healthcare \
+            -o filtered.osm.pbf --overwrite
+
+      - name: Export to geojsonseq
+        run: |
+          echo '{"attributes":{"type":true,"id":true}}' > export.json
+          osmium export filtered.osm.pbf -c export.json -f geojsonseq -o features.geojsonseq --overwrite
+
+      - name: Build database
+        run: |
+          mkdir -p assets/poi
+          python3 tools/build_poi_db.py features.geojsonseq assets/poi/iran_poi.bin
+          ls -la assets/poi
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add assets/poi/iran_poi.bin
+          git commit -m "Rebuild offline places database" || echo "no changes"
+          git push
