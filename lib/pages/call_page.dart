@@ -10,6 +10,8 @@ import '../services/call_texts.dart';
 import '../services/friends_service.dart';
 import '../widgets/call_widgets.dart';
 
+enum _VMode { pip, split, full }
+
 /// صفحهٔ تماس صوتی (خروجی و ورودی) با ظاهر شبیه تلگرام.
 class CallPage extends StatefulWidget {
   const CallPage({super.key, required this.session, this.autoAccept = false});
@@ -35,6 +37,26 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
   Timer? _closeTimer;
   bool _busyAction = false;
   bool _accepting = false;
+
+  // چینش تماس تصویری: تصویر کوچک شناور / تقسیم صفحه (پیش‌فرض بالا ۳۰٪) / تمام‌صفحه
+  _VMode _vmode = _VMode.pip;
+  double _split = 0.30; // سهم بخش بالایی از ارتفاع صفحه
+  bool _swap = false; // false: در تقسیم بالا «من» و پایین «مقابل»؛ در شناور، مقابل بزرگ
+  int _pipSize = 1;
+  Offset? _pipOff; // null = گوشهٔ بالا (پیش‌فرض)
+  double _lastArea = -1;
+  static const List<double> _pipW = [0.26, 0.36, 0.46];
+
+  String _l(String fa, String en, String ar) {
+    switch (MenuLanguage.current) {
+      case 'en':
+        return en;
+      case 'ar':
+        return ar;
+      default:
+        return fa;
+    }
+  }
 
   @override
   void initState() {
@@ -208,104 +230,335 @@ class _CallPageState extends State<CallPage> with SingleTickerProviderStateMixin
     );
   }
 
-  /// صفحهٔ تماس تصویری وصل‌شده: تصویر طرف مقابل تمام‌صفحه + پیش‌نمایش کوچک خودم
+  void _reportArea(double area) {
+    if ((area - _lastArea).abs() < 0.03) return;
+    _lastArea = area;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) s.setViewArea(area);
+    });
+  }
+
+  Widget _remoteContent(Rect r) {
+    if (s.remoteVideoOn) {
+      return RTCVideoView(s.remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover);
+    }
+    return Container(
+      color: const Color(0xff1b2a4a),
+      alignment: Alignment.center,
+      child: CallAvatar(
+        uid: s.peerUid,
+        name: s.peerName,
+        radius: (r.shortestSide * 0.25).clamp(18.0, 64.0).toDouble(),
+        hasPhoto: s.hasPhoto,
+        background: const Color(0xff4a6fd0),
+        foreground: Colors.white,
+      ),
+    );
+  }
+
+  Widget _localContent() {
+    if (s.cameraOff) {
+      return Container(
+        color: Colors.black54,
+        alignment: Alignment.center,
+        child: const Icon(Icons.videocam_off_rounded, color: Colors.white70, size: 30),
+      );
+    }
+    return RTCVideoView(
+      s.localRenderer,
+      mirror: s.frontCamera,
+      objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+    );
+  }
+
+  Widget _tag(String text) => PositionedDirectional(
+        top: 8,
+        start: 8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(99)),
+          child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 11)),
+        ),
+      );
+
+  /// صفحهٔ تماس تصویری وصل‌شده با سه چینش: شناور، تقسیم صفحه (۳۰/۷۰ و قابل کشیدن)، تمام‌صفحه.
+  /// اندازهٔ قاب تصویر مقابل به طرف مقابل گزارش می‌شود تا رزولوشن ارسالی را خودکار کوچک/بزرگ کند.
   Widget _videoScreen() {
+    final pad = MediaQuery.of(context).padding;
     return Directionality(
       textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: s.remoteVideoOn
-                  ? RTCVideoView(s.remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
-                  : Container(
-                      color: const Color(0xff1b2a4a),
-                      alignment: Alignment.center,
-                      child: CallAvatar(
-                        uid: s.peerUid,
-                        name: s.peerName,
-                        radius: 64,
-                        hasPhoto: s.hasPhoto,
-                        background: const Color(0xff4a6fd0),
-                        foreground: Colors.white,
+        body: LayoutBuilder(
+          builder: (context, c) {
+            final w = c.maxWidth, h = c.maxHeight;
+            final full = Rect.fromLTWH(0, 0, w, h);
+            late Rect remoteR, localR;
+            var pipRect = false;
+            switch (_vmode) {
+              case _VMode.split:
+                final top = Rect.fromLTWH(0, 0, w, h * _split);
+                final bot = Rect.fromLTWH(0, h * _split, w, h * (1 - _split));
+                if (_swap) {
+                  remoteR = top;
+                  localR = bot;
+                } else {
+                  localR = top;
+                  remoteR = bot;
+                }
+                break;
+              case _VMode.full:
+                remoteR = full;
+                localR = Rect.zero;
+                break;
+              case _VMode.pip:
+                pipRect = true;
+                final pw = w * _pipW[_pipSize], ph = pw * 4 / 3;
+                final off = _pipOff ?? Offset(w - pw - 14, pad.top + 78);
+                final pip = Rect.fromLTWH(
+                  off.dx.clamp(0.0, w - pw).toDouble(),
+                  off.dy.clamp(0.0, h - ph).toDouble(),
+                  pw,
+                  ph,
+                );
+                if (_swap) {
+                  localR = full;
+                  remoteR = pip;
+                } else {
+                  remoteR = full;
+                  localR = pip;
+                }
+                break;
+            }
+            _reportArea(remoteR.width * remoteR.height / (w * h));
+            final showLocal = _vmode != _VMode.full;
+
+            Widget tile(Rect r, Widget child, {bool pip = false}) {
+              Widget t = child;
+              if (pip) {
+                t = GestureDetector(
+                  onTap: () => setState(() => _swap = !_swap),
+                  onPanUpdate: (d) => setState(() {
+                    final cur = _pipOff ?? Offset(r.left, r.top);
+                    _pipOff = cur + d.delta;
+                  }),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white70, width: 1.5),
+                    ),
+                    child: ClipRRect(borderRadius: BorderRadius.circular(13), child: child),
+                  ),
+                );
+              }
+              return Positioned.fromRect(rect: r, child: t);
+            }
+
+            final remoteIsPip = pipRect && _swap;
+            final remoteTile = tile(remoteR, _remoteContent(remoteR), pip: remoteIsPip);
+            final localTile = tile(localR, _localContent(), pip: pipRect && !_swap);
+
+            return Stack(
+              children: [
+                // اول تصویر بزرگ، بعد تصویر کوچک شناور (روی آن)
+                if (pipRect && !_swap) ...[remoteTile, if (showLocal) localTile],
+                if (pipRect && _swap) ...[if (showLocal) localTile, remoteTile],
+                if (!pipRect) ...[remoteTile, if (showLocal) localTile],
+                if (_vmode == _VMode.split) ...[
+                  _tagFor(_swap ? remoteR : localR, _swap ? s.peerName : _l('من', 'Me', 'أنا')),
+                  _tagFor(_swap ? localR : remoteR, _swap ? _l('من', 'Me', 'أنا') : s.peerName),
+                  Positioned(
+                    top: h * _split - 20,
+                    left: 0,
+                    right: 0,
+                    height: 40,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onVerticalDragUpdate: (d) => setState(() {
+                        _split = ((_split * h + d.delta.dy) / h).clamp(0.15, 0.85).toDouble();
+                      }),
+                      onVerticalDragEnd: (_) => setState(() {
+                        for (final sn in const [0.3, 0.5, 0.7]) {
+                          if ((_split - sn).abs() < 0.04) _split = sn;
+                        }
+                      }),
+                      child: Center(
+                        child: Container(
+                          width: 64,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 6)],
+                          ),
+                        ),
                       ),
                     ),
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xaa000000), Color(0x00000000)],
                   ),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 26),
-                    child: Column(
-                      children: [
-                        Text(s.peerName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 4),
-                        Text(_fmt(s.elapsed), style: const TextStyle(color: Colors.white70, fontSize: 15)),
-                      ],
+                ],
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xaa000000), Color(0x00000000)],
+                        ),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(64, 10, 64, 26),
+                          child: Column(
+                            children: [
+                              Text(s.peerName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              Text(_fmt(s.elapsed), style: const TextStyle(color: Colors.white70, fontSize: 15)),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            PositionedDirectional(
-              top: MediaQuery.of(context).padding.top + 78,
-              end: 14,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: SizedBox(
-                  width: 104,
-                  height: 148,
-                  child: s.cameraOff
-                      ? Container(
-                          color: Colors.black54,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.videocam_off_rounded, color: Colors.white70, size: 30),
-                        )
-                      : RTCVideoView(
-                          s.localRenderer,
-                          mirror: s.frontCamera,
-                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                PositionedDirectional(
+                  top: pad.top + 6,
+                  start: 6,
+                  child: Column(
+                    children: [
+                      _miniBtn(
+                        _vmode == _VMode.pip
+                            ? Icons.picture_in_picture_alt_rounded
+                            : (_vmode == _VMode.split ? Icons.horizontal_split_rounded : Icons.fullscreen_rounded),
+                        _l('چینش تصویر', 'Layout', 'التخطيط'),
+                        () => setState(() {
+                          _vmode = _VMode.values[(_vmode.index + 1) % _VMode.values.length];
+                        }),
+                      ),
+                      if (_vmode != _VMode.full) _miniBtn(Icons.swap_vert_rounded, _l('جابه‌جایی', 'Swap', 'تبديل'), () => setState(() => _swap = !_swap)),
+                      if (_vmode == _VMode.pip) _miniBtn(Icons.open_in_full_rounded, _l('اندازهٔ تصویر کوچک', 'Preview size', 'حجم المعاينة'), () => setState(() => _pipSize = (_pipSize + 1) % _pipW.length)),
+                      _miniBtn(Icons.tune_rounded, _l('کیفیت تصویر', 'Video quality', 'جودة الفيديو'), _qualitySheet),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Color(0xbb000000), Color(0x00000000)],
+                      ),
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 40, bottom: 24),
+                        child: _activeControls(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _tagFor(Rect r, String text) => Positioned.fromRect(
+        rect: r,
+        child: IgnorePointer(child: Stack(children: [_tag(text)])),
+      );
+
+  Widget _miniBtn(IconData icon, String tip, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: Colors.black45,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Tooltip(
+            message: tip,
+            child: SizedBox(width: 40, height: 40, child: Icon(icon, color: Colors.white, size: 22)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _qualitySheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xff0e2433),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => ListenableBuilder(
+        listenable: s,
+        builder: (ctx, _) => SafeArea(
+          child: Directionality(
+            textDirection: MenuLanguage.isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_l('کیفیت تصویر', 'Video quality', 'جودة الفيديو'),
+                      style: const TextStyle(color: Color(0xffffe39a), fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(
+                    _l('«خودکار» رزولوشن را با اندازهٔ قاب کم و زیاد می‌کند؛ تصویر مستقیم بین دو گوشی می‌رود.',
+                        'Auto adapts resolution to the frame size; video goes directly between the phones.',
+                        'التلقائي يضبط الدقة حسب حجم الإطار.'),
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final m in CallSession.qualityModes)
+                        ChoiceChip(
+                          label: Text(m == 'auto' ? _l('خودکار', 'Auto', 'تلقائي') : '${m}p'),
+                          selected: s.qualityMode == m,
+                          onSelected: (_) => s.setQualityMode(m),
                         ),
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: s.weakDevice,
+                    onChanged: s.setWeakDevice,
+                    title: Text(_l('گوشی ضعیف (روان‌تر)', 'Weak phone (smoother)', 'هاتف ضعيف (أسلس)'),
+                        style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(
+                      _l('سقف ۵۴۰p و ۱۵ فریم؛ فشار روی پردازنده و باتری کمتر می‌شود.',
+                          'Caps at 540p and 15 fps to reduce CPU and battery use.',
+                          'حد أقصى 540p و15 إطارًا.'),
+                      style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    ),
+                  ),
+                  if (s.sendInfo.isNotEmpty)
+                    Text('${_l('ارسال فعلی', 'Sending now', 'الإرسال الحالي')}: ${s.sendInfo}',
+                        textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                ],
               ),
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Color(0xbb000000), Color(0x00000000)],
-                  ),
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 40, bottom: 24),
-                    child: _activeControls(),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
