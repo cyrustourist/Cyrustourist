@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -433,9 +434,26 @@ class CallSession extends ChangeNotifier {
     _ctlOpen = ch.state == RTCDataChannelState.RTCDataChannelOpen;
     ch.onDataChannelState = (RTCDataChannelState s) {
       _ctlOpen = s == RTCDataChannelState.RTCDataChannelOpen;
+      // کانال که باز شد، وضعیت نمایش و کیفیت من را به طرف مقابل می‌گوییم
+      if (_ctlOpen) _sendViewState();
     };
     ch.onMessage = (RTCDataChannelMessage m) {
-      if (m.text == 'bye') unawaited(_peerBye());
+      final t = m.text;
+      if (t == 'bye') {
+        unawaited(_peerBye());
+      } else if (t.startsWith('view:')) {
+        final v = double.tryParse(t.substring(5));
+        if (v != null) {
+          _peerViewArea = v.clamp(0.05, 1.0).toDouble();
+          unawaited(_tuneVideoSender());
+        }
+      } else if (t.startsWith('q:')) {
+        _peerQuality = t.substring(2);
+        unawaited(_tuneVideoSender());
+      } else if (t.startsWith('weak:')) {
+        _peerWeak = t.endsWith('1');
+        unawaited(_tuneVideoSender());
+      }
     };
   }
 
@@ -482,20 +500,111 @@ class CallSession extends ChangeNotifier {
     }
   }
 
-  /// سقف بیت‌ریت و فریم تصویرِ خروجی را بر اساس مسیر اتصال تنظیم می‌کند.
-  /// تخمین پهنای باند خود WebRTC باز هم رزولوشن و کیفیت را با شبکه تطبیق می‌دهد؛ این فقط سقف است.
+  // ------------------------------------------------------------------
+  // کیفیت تطبیقی تصویر: رزولوشن و بیت‌ریت ارسالی با اندازهٔ قابی که طرف مقابل
+  // برای تصویر من استفاده می‌کند (کانال کنترل مستقیم، بدون سرور) و با ضعف گوشی و مسیر رله تنظیم می‌شود.
+  // ------------------------------------------------------------------
+  static const List<int> _tierH = [240, 360, 480, 540, 720];
+  static const List<int> _tierKbps = [150, 300, 450, 550, 900];
+  static const List<String> qualityModes = ['auto', '240', '360', '480', '540', '720'];
+
+  /// کیفیتی که من می‌خواهم دریافت کنم: 'auto' یا یکی از ارتفاع‌های بالا (برای طرف مقابل ارسال می‌شود)
+  String qualityMode = 'auto';
+
+  /// گوشی ضعیف: سقف ۵۴۰p و فریم کمتر (برای طرف مقابل هم ارسال می‌شود)
+  bool weakDevice = false;
+
+  /// خلاصهٔ آخرین تنظیم ارسال، مثلاً «۳۶۰p · ۳۰۰kbps · مستقیم»
+  String sendInfo = '';
+
+  double _myViewArea = 1.0; // سهم قاب تصویر مقابل از صفحهٔ من
+  double _peerViewArea = 1.0; // سهم قابی که طرف مقابل به تصویر من می‌دهد
+  String _peerQuality = 'auto';
+  bool _peerWeak = false;
+  bool _tuning = false;
+  bool _tuneAgain = false;
+
+  /// صفحه سهم قاب تصویر مقابل را (۰ تا ۱) اعلام می‌کند؛ طرف مقابل رزولوشن ارسال را با آن تنظیم می‌کند.
+  void setViewArea(double area) {
+    final a = area.clamp(0.05, 1.0).toDouble();
+    if ((a - _myViewArea).abs() < 0.03) return;
+    _myViewArea = a;
+    _sendViewState(onlyArea: true);
+  }
+
+  void setQualityMode(String mode) {
+    if (!qualityModes.contains(mode)) return;
+    qualityMode = mode;
+    _sendViewState();
+    notifyListeners();
+  }
+
+  void setWeakDevice(bool v) {
+    weakDevice = v;
+    _sendViewState();
+    unawaited(_tuneVideoSender());
+    notifyListeners();
+  }
+
+  void _sendViewState({bool onlyArea = false}) {
+    if (!_ctlOpen) return;
+    try {
+      _ctl?.send(RTCDataChannelMessage('view:${_myViewArea.toStringAsFixed(2)}'));
+      if (!onlyArea) {
+        _ctl?.send(RTCDataChannelMessage('q:$qualityMode'));
+        _ctl?.send(RTCDataChannelMessage('weak:${weakDevice ? 1 : 0}'));
+      }
+    } catch (_) {}
+  }
+
+  /// سقف بیت‌ریت، رزولوشن و فریم تصویرِ خروجی را تنظیم می‌کند (وسط تماس هم بدون برقراری دوباره).
+  /// تخمین پهنای باند خود WebRTC باز هم با شبکه تطبیق می‌دهد؛ این‌ها فقط سقف‌اند.
   Future<void> _tuneVideoSender() async {
     if (_closed || !isVideo) return;
+    if (_tuning) {
+      _tuneAgain = true;
+      return;
+    }
+    _tuning = true;
     try {
       final pc = _pc;
       if (pc == null) return;
       final kind = await _pathKind();
-      final kbps = switch (kind) {
-        'direct' => _sendKbpsDirect,
-        'relay' => _sendKbpsRelay,
-        _ => _sendKbpsUnknown,
-      };
-      final fps = kind == 'relay' ? 20 : 30;
+      final anyWeak = weakDevice || _peerWeak;
+
+      int idx;
+      if (_peerQuality == 'auto') {
+        final a = _peerViewArea;
+        idx = a <= 0.32 ? 0 : (a <= 0.55 ? 1 : (a <= 0.80 ? 3 : 4));
+        if (anyWeak) idx -= 1;
+      } else {
+        idx = _tierH.indexOf(int.tryParse(_peerQuality) ?? 720);
+        if (idx < 0) idx = 4;
+      }
+      if (anyWeak) idx = math.min(idx, 3);
+      if (kind == 'relay') idx = math.min(idx, 2); // مسیر رله: سهمیهٔ سرور نسوزد
+      if (kind == 'unknown') idx = math.min(idx, 3);
+      idx = math.max(idx, 0);
+
+      final targetH = _tierH[idx];
+      final kbps = _tierKbps[idx];
+      var fps = 30;
+      if (kind == 'relay') fps = 20;
+      if (_peerWeak) fps = math.min(fps, 20);
+      if (weakDevice) fps = 15;
+
+      // ضلع کوتاه تصویر دوربین (۵۴۰ اگر نامشخص بود) تا به ارتفاع هدف کوچک شود
+      var shortSide = 540;
+      for (final t in _local?.getVideoTracks() ?? <MediaStreamTrack>[]) {
+        try {
+          final st = t.getSettings();
+          final w = (st['width'] as num?)?.toInt() ?? 0;
+          final h = (st['height'] as num?)?.toInt() ?? 0;
+          if (w > 0 && h > 0) shortSide = math.min(w, h);
+        } catch (_) {}
+      }
+      final scale = math.max(1.0, shortSide / targetH);
+
       for (final s in await pc.getSenders()) {
         if (s.track?.kind != 'video') continue;
         final params = s.parameters;
@@ -504,24 +613,30 @@ class CallSession extends ChangeNotifier {
         for (final e in enc) {
           e.maxBitrate = kbps * 1000;
           e.maxFramerate = fps;
+          e.scaleResolutionDownBy = scale;
         }
         await s.setParameters(params);
       }
-      debugPrint('call video tuned: path=$kind max=${kbps}kbps fps=$fps');
+      final nextInfo = '${targetH}p · ${kbps}kbps · $fps fps · ${kind == 'relay' ? 'relay' : (kind == 'direct' ? 'direct' : '?')}';
+      if (nextInfo != sendInfo) {
+        sendInfo = nextInfo;
+        notifyListeners();
+      }
+      debugPrint('call video tuned: path=$kind $nextInfo area=${_peerViewArea.toStringAsFixed(2)} q=$_peerQuality');
     } catch (e) {
       debugPrint('call video tune failed: $e');
+    } finally {
+      _tuning = false;
+      if (_tuneAgain) {
+        _tuneAgain = false;
+        unawaited(_tuneVideoSender());
+      }
     }
   }
 
   // سقف پهنای باند تصویر (کیلوبیت بر ثانیه) در SDP؛ مصرف TURN و اینترنت کاربر را کم می‌کند.
-  // سقف دقیق‌تر بعد از اتصال و بر اساس نوع مسیر (مستقیم یا رله) در _tuneVideoSender اعمال می‌شود.
+  // سقف دقیق‌تر بعد از اتصال و بر اساس اندازهٔ قاب، ضعف گوشی و نوع مسیر در _tuneVideoSender اعمال می‌شود.
   static const int _videoMaxKbps = 900;
-
-  // سقف ارسال تصویر بعد از اتصال (کیلوبیت بر ثانیه): مسیر مستقیم بالاتر، رله‌شده (TURN) پایین‌تر
-  // تا سهمیهٔ سرورهای رله نسوزد. برای کیفیت بیشتر/کمتر فقط همین سه عدد را عوض کنید.
-  static const int _sendKbpsDirect = 900;
-  static const int _sendKbpsRelay = 450;
-  static const int _sendKbpsUnknown = 600;
 
   static String _capVideo(String sdp) {
     if (sdp.isEmpty || !sdp.contains('m=video')) return sdp;
