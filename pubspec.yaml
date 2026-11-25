@@ -2,7 +2,7 @@ name: cyrustourist_app3
 description: CyrusTourist base app - splash, home and tourist map.
 publish_to: "none"
 
-version: 6.1.289+6696
+version: 6.1.290+6697
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
