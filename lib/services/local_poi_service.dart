@@ -31,7 +31,14 @@ class LocalPoiService {
       t == MapPlaceType.healthTourism ||
       t == MapPlaceType.historicalSite ||
       t == MapPlaceType.pharmacy ||
-      t == MapPlaceType.hospital;
+      t == MapPlaceType.hospital ||
+      // نوع‌های زیر فقط وقتی در پایگاه ساخته‌شده باشند نتیجه می‌دهند؛ وگرنه خالی برمی‌گردد
+      // و موتور به اینترنت/کش می‌رود (بی‌خطر).
+      t == MapPlaceType.fuel ||
+      t == MapPlaceType.atm ||
+      t == MapPlaceType.parking ||
+      t == MapPlaceType.restroom ||
+      t == MapPlaceType.taxi;
 
   /// بارگذاری پیش‌هنگام (اختیاری)؛ بدون خطا.
   Future<void> warmUp() async {
@@ -78,11 +85,12 @@ class LocalPoiService {
     required MapPlaceType type,
     required List<String> tags,
     int limit = 200,
+    String language = 'fa',
   }) async {
     if (!covers(type)) return null;
     final d = await _data();
     if (d == null) return null;
-    return d.search(center, radiusMeters, type, tags, limit);
+    return d.search(center, radiusMeters, type, tags, limit, language);
   }
 }
 
@@ -166,7 +174,7 @@ class _PoiData {
     return [...starts, ...contains].take(limit).toList();
   }
 
-  List<MapPlace> search(LatLng c, double radius, MapPlaceType type, List<String> tags, int limit) {
+  List<MapPlace> search(LatLng c, double radius, MapPlaceType type, List<String> tags, int limit, String language) {
     final exact = <String>{};
     final bare = <String>{};
     for (final t in tags) {
@@ -216,7 +224,11 @@ class _PoiData {
         final p = k.indexOf('=');
         if (p > 0) tagMap[k.substring(0, p)] = k.substring(p + 1);
       }
-      final name = '${r[3]}';
+      var name = '${r[3]}'.trim();
+      if (name.isEmpty) {
+        name = MapPlacesService.instance.genericLabel(type, language);
+      }
+      if (name.isEmpty) continue;
       tagMap['name'] = name;
       if ('${r[4]}'.isNotEmpty) tagMap['name:en'] = '${r[4]}';
       if ('${r[5]}'.isNotEmpty) tagMap['phone'] = '${r[5]}';
