@@ -29,6 +29,9 @@ import 'core/language/menu_translations.dart';
 import 'services/map_places_service.dart';
 import 'services/local_gazetteer.dart';
 import 'services/local_poi_service.dart';
+import 'services/offline_tiles.dart';
+import 'services/location_manager.dart';
+import 'pages/map/map_places_service.dart' as poi;
 import 'pages/category_explorer_page.dart';
 
 
@@ -95,6 +98,9 @@ void main() async {
   // پایگاه آفلاین جاذبه‌ها/اقامتگاه‌ها/مراکز سلامت را پیش‌هنگام بارگذاری می‌کنیم
   // تا اولین جستجو بدون اینترنت منتظر باز و رمزگشایی فایل نماند.
   unawaited(LocalPoiService.instance.warmUp());
+
+  // پوشهٔ نقشهٔ آفلاین از ابتدا آماده شود تا اولین کاشی‌ها بدون تأخیر از حافظه بیایند
+  unawaited(OfflineTiles.init());
 
   // اعلان‌ها/FCM به اینترنت نیاز دارند (توکن، عضویت در Topic)؛ اگر قبل از runApp
   // منتظرشان بمانیم، با اینترنت قطع برنامه روی اسپلش اولیهٔ اندروید گیر می‌کند.
@@ -950,10 +956,20 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
   }
 
   Future<LatLng?> _resolveOrigin() async {
+    // اگر هنوز GPS جواب نداده، به‌جای جستجو دور مرکز ایران، موقعیت واقعی گرفته می‌شود.
+    if (_originIsCurrentLocation && userLocation == null) {
+      final fresh = await LocationManager.getCurrentLocation() ??
+          await LocationManager.getLastKnownLocation();
+      if (fresh != null) {
+        userLocation = fresh;
+        if (mounted) setState(() {});
+      }
+    }
+
     final referencePoint = userLocation ?? iranCenter;
 
     if (_originIsCurrentLocation) {
-      return referencePoint;
+      return userLocation;
     }
 
     final text = originController.text.trim();
@@ -1067,9 +1083,15 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
         SnackBar(
           content: Text(
             _localize(
-              'مبدأ پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
-              'Origin not found. Please enter a more exact name.',
-              'لم يتم العثور على نقطة البداية. يرجى إدخال اسم أدق.',
+              _originIsCurrentLocation
+                  ? 'موقعیت شما پیدا نشد. GPS را روشن کنید یا روی نقشه ثبت دستی بزنید.'
+                  : 'مبدأ پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
+              _originIsCurrentLocation
+                  ? 'Your location was not found. Turn on GPS or pick it on the map.'
+                  : 'Origin not found. Please enter a more exact name.',
+              _originIsCurrentLocation
+                  ? 'لم يتم العثور على موقعك. فعّل GPS أو اختر الموقع على الخريطة.'
+                  : 'لم يتم العثور على نقطة البداية. يرجى إدخال اسم أدق.',
             ),
           ),
         ),
@@ -1682,71 +1704,65 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
     _suggestionsOverlay = null;
   }
 
+  poi.MapPlaceType _quickTypeFor(String amenityTag) {
+    switch (amenityTag) {
+      case 'fuel':
+        return poi.MapPlaceType.fuel;
+      case 'restaurant':
+        return poi.MapPlaceType.restaurant;
+      case 'atm':
+        return poi.MapPlaceType.atm;
+      case 'parking':
+        return poi.MapPlaceType.parking;
+      case 'pharmacy':
+        return poi.MapPlaceType.pharmacy;
+      case 'taxi':
+        return poi.MapPlaceType.taxi;
+      case 'toilets':
+        return poi.MapPlaceType.restroom;
+      case 'hospital':
+      default:
+        return poi.MapPlaceType.hospital;
+    }
+  }
+
+  /// نزدیک‌ترین مکان با موتور مشترک نقشه (چند سرور هم‌زمان + کش + تلاش مجدد).
+  /// شعاع به‌تدریج بزرگ می‌شود: ۳ ← ۱۰ ← ۳۰ کیلومتر.
   Future<LatLng?> _findNearestAmenity(
     String amenityTag,
-    LatLng center, {
-    double radiusMeters = 5000,
-  }) async {
-    final query = '[out:json][timeout:20];'
-        '(node["amenity"="$amenityTag"](around:$radiusMeters,${center.latitude},${center.longitude});'
-        'way["amenity"="$amenityTag"](around:$radiusMeters,${center.latitude},${center.longitude});'
-        ');out center 30;';
+    LatLng center,
+  ) async {
+    final type = _quickTypeFor(amenityTag);
+    const distanceCalculator = Distance();
+    final lang = LanguageManager.current == AppLanguage.english
+        ? 'en'
+        : (LanguageManager.current == AppLanguage.arabic ? 'ar' : 'fa');
 
-    final uri = Uri.https('overpass-api.de', '/api/interpreter', {'data': query});
+    for (final radius in const [3000.0, 10000.0, 30000.0]) {
+      try {
+        final places = await poi.MapPlacesService.instance.searchNearby(
+          center: center,
+          type: type,
+          radiusMeters: radius,
+          language: lang,
+        );
+        if (places.isEmpty) continue;
 
-    HttpClient? client;
-
-    try {
-      if (!kIsWeb) {
-        client = HttpClient();
-        client.userAgent = 'CyrusTourist/1.0 (cyrustourist app)';
-        client.connectionTimeout = const Duration(seconds: 15);
-      }
-
-      final request = await (client != null ? client.getUrl(uri) : HttpClient().getUrl(uri));
-      final response = await request.close();
-
-      if (response.statusCode != 200) return null;
-
-      final body = await response.transform(const Utf8Decoder()).join();
-      final data = json.decode(body) as Map<String, dynamic>;
-      final elements = (data['elements'] as List<dynamic>?) ?? [];
-
-      if (elements.isEmpty) return null;
-
-      const distanceCalculator = Distance();
-      LatLng? nearest;
-      double bestDistance = double.infinity;
-
-      for (final element in elements) {
-        final map = element as Map<String, dynamic>;
-
-        double? lat = (map['lat'] as num?)?.toDouble();
-        double? lon = (map['lon'] as num?)?.toDouble();
-
-        if (lat == null || lon == null) {
-          final centerTag = map['center'] as Map<String, dynamic>?;
-          lat = (centerTag?['lat'] as num?)?.toDouble();
-          lon = (centerTag?['lon'] as num?)?.toDouble();
+        LatLng? nearest;
+        var best = double.infinity;
+        for (final place in places) {
+          final d = distanceCalculator(center, place.point);
+          if (d < best) {
+            best = d;
+            nearest = place.point;
+          }
         }
-
-        if (lat == null || lon == null) continue;
-
-        final point = LatLng(lat, lon);
-        final d = distanceCalculator(center, point);
-
-        if (d < bestDistance) {
-          bestDistance = d;
-          nearest = point;
-        }
+        if (nearest != null) return nearest;
+      } catch (_) {
+        // خطای شبکه: همان شعاع بعدی (و سرورهای دیگر) امتحان می‌شود.
       }
-
-      return nearest;
-    } catch (_) {
-      return null;
-    } finally {
-      client?.close();
     }
+    return null;
   }
 
   Future<void> _quickService(_QuickServiceTool tool) async {
@@ -1767,9 +1783,15 @@ class _SmartMapPageState extends State<SmartMapPage> with SingleTickerProviderSt
         SnackBar(
           content: Text(
             _localize(
-              'مبدأ پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
-              'Origin not found. Please enter a more exact name.',
-              'لم يتم العثور على نقطة البداية. يرجى إدخال اسم أدق.',
+              _originIsCurrentLocation
+                  ? 'موقعیت شما پیدا نشد. GPS را روشن کنید یا روی نقشه ثبت دستی بزنید.'
+                  : 'مبدأ پیدا نشد. لطفاً نام دقیق‌تری وارد کنید.',
+              _originIsCurrentLocation
+                  ? 'Your location was not found. Turn on GPS or pick it on the map.'
+                  : 'Origin not found. Please enter a more exact name.',
+              _originIsCurrentLocation
+                  ? 'لم يتم العثور على موقعك. فعّل GPS أو اختر الموقع على الخريطة.'
+                  : 'لم يتم العثور على نقطة البداية. يرجى إدخال اسم أدق.',
             ),
           ),
         ),
