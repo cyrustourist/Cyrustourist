@@ -20,10 +20,15 @@ WANT = {
                 "motel", "camp_site", "caravan_site", "chalet", "apartment", "alpine_hut", "zoo", "theme_park"},
     "historic": {"monument", "castle", "archaeological_site", "ruins", "memorial", "fort", "tomb"},
     "leisure": {"park", "nature_reserve"},
-    "amenity": {"hospital", "clinic", "doctors", "pharmacy", "spa"},
+    "amenity": {"hospital", "clinic", "doctors", "pharmacy", "spa",
+                # خدمات سریع نقشه (پمپ بنزین، خودپرداز/بانک، سرویس، تاکسی، پارکینگ)
+                "fuel", "atm", "bank", "toilets", "taxi", "parking"},
     "natural": {"waterfall", "hot_spring"},
 }
 BARE = {"healthcare"}  # هر مقداری
+
+# این مکان‌ها اغلب نام ندارند؛ بدون نام هم نگه داشته می‌شوند (اپ نام عمومی می‌گذارد)
+SERVICE = {"amenity=fuel", "amenity=atm", "amenity=bank", "amenity=toilets", "amenity=taxi", "amenity=parking"}
 
 
 def kinds(tags):
@@ -84,9 +89,14 @@ def main(src, dst):
             ks = kinds(tags)
             if not ks:
                 continue
+            is_service = any(k in SERVICE for k in ks)
+            if "amenity=parking" in ks and tags.get("access") in ("private", "customers", "permit", "no"):
+                continue  # پارکینگ خصوصی به درد مسافر نمی‌خورد و حجم را بالا می‌برد
             name = (tags.get("name:fa") or tags.get("name") or "").strip()
             name_en = (tags.get("name:en") or "").strip()
-            if not name and not name_en:
+            if not name and not name_en and is_service:
+                name = (tags.get("brand") or tags.get("operator") or "").strip()
+            if not name and not name_en and not is_service:
                 continue
             c = center(ft.get("geometry"))
             if not c:
