@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>ایران‌شناسی · Cyrus Tourist</title>
+<style>
+:root{--gold:#ffc928;--bg:#050d1a;--pn:#0c2236;--ln:#1d3a55}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;min-height:100%;background:var(--bg);color:#fff;font-family:Tahoma,"Vazirmatn",system-ui,sans-serif}
+body{background:radial-gradient(120% 60% at 50% 0%,#12385a 0%,#08182b 45%,#050d1a 100%) fixed;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+#app{max-width:560px;margin:0 auto;padding:12px 14px 24px}
+h1{margin:6px 0 2px;text-align:center;font-size:30px;font-weight:900;color:var(--gold);text-shadow:0 0 14px rgba(255,201,40,.45)}
+.sub{text-align:center;color:#9fb6cc;font-size:13px;margin-bottom:14px}
+.card{background:var(--pn);border:2px solid var(--ln);border-radius:22px;padding:14px;margin:10px 0}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--gold)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.chip{flex:1 1 auto;border:2px solid var(--ln);border-radius:16px;padding:9px 10px;font:inherit;font-size:13.5px;font-weight:800;color:#cfe3ff;background:#0a1c2e;cursor:pointer}
+.chip.on{border-color:var(--gold);color:#fff;box-shadow:0 0 12px rgba(255,201,40,.35)}
+.btn{width:100%;border:0;border-radius:18px;padding:13px;margin-top:10px;font:inherit;font-size:17px;font-weight:900;color:#1b1300;background:linear-gradient(#ffd54a,#e8a400);cursor:pointer;box-shadow:0 4px 0 #9a6b00}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #9a6b00}
+.btn.gh{background:#0a1c2e;color:#cfe3ff;border:2px solid var(--ln);box-shadow:none}
+.btn.sm{width:auto;padding:8px 14px;font-size:13.5px;margin:0}
+input[type=text]{width:100%;border:2px solid var(--ln);border-radius:14px;padding:10px;margin:5px 0;font:inherit;font-size:15px;color:#fff;background:#08182b;-webkit-user-select:text;user-select:text}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:800;color:#cfe3ff}
+.pill{background:#0a1c2e;border:2px solid var(--ln);border-radius:14px;padding:5px 10px}
+.pill b{color:var(--gold)}
+.bar{height:9px;border-radius:6px;background:#0a1c2e;overflow:hidden;margin:10px 0;direction:ltr}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#35c85f,#ffc928);transition:width .2s linear}
+.bar i.low{background:linear-gradient(90deg,#ff5a5a,#ff9d1f)}
+.q{font-size:19px;line-height:1.9;font-weight:800;text-align:center;margin:10px 4px 14px;min-height:70px;display:flex;align-items:center;justify-content:center}
+.op{display:block;width:100%;text-align:center;border:2px solid #2a5a85;border-radius:16px;padding:13px 8px;margin:8px 0;font:inherit;font-size:16px;font-weight:800;color:#fff;background:linear-gradient(#143a5c,#0c2740);cursor:pointer}
+.op:active{transform:scale(.98)}
+.op.ok{border-color:#5eea8e;background:linear-gradient(#1fa850,#0f7a36)}
+.op.bad{border-color:#ff7a7a;background:linear-gradient(#c93a3a,#8a1f1f)}
+.op.off{opacity:.18;pointer-events:none}
+.op:disabled{cursor:default}
+.cat{display:inline-block;font-size:12.5px;color:#9fb6cc}
+.big{font-size:54px;text-align:center}
+.res{text-align:center}
+.res .t{font-size:24px;font-weight:900;color:var(--gold);margin:6px 0}
+.rk{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.1);font-weight:800}
+.mut{color:#9fb6cc;font-size:12.5px;line-height:1.8}
+.hd{display:flex;align-items:center;justify-content:space-between}
+</style>
+</head>
+<body><div id="app"></div>
+<script>
+'use strict';
+const fa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CATS = [['🏙️','شهرها و استان‌ها'],['🏛️','جاذبه‌ها'],['🌄','طبیعت'],['🍽️','غذا و سوغات'],['📜','فرهنگ و تاریخ']];
+const TIME = 15, ROUNDS = 10;
+
+// [دسته، سؤال، گزینهٔ درست، سه گزینهٔ غلط]
+const Q = [
+// ---- شهرها و استان‌ها (۱۶)
+[0,'مرکز استان فارس کدام شهر است؟','شیراز','اصفهان','یزد','کرمان'],
+[0,'مرکز استان خوزستان کدام شهر است؟','اهواز','آبادان','شوشتر','دزفول'],
+[0,'مرکز استان آذربایجان شرقی کدام شهر است؟','تبریز','ارومیه','اردبیل','زنجان'],
+[0,'مرکز استان گیلان کدام شهر است؟','رشت','ساری','گرگان','بابل'],
+[0,'مرکز استان کرمان کدام شهر است؟','کرمان','بم','سیرجان','رفسنجان'],
+[0,'مرکز استان هرمزگان کدام شهر است؟','بندرعباس','بوشهر','قشم','کیش'],
+[0,'مرکز استان خراسان رضوی کدام شهر است؟','مشهد','نیشابور','سبزوار','بیرجند'],
+[0,'مرکز استان کردستان کدام شهر است؟','سنندج','کرمانشاه','همدان','ایلام'],
+[0,'مرکز استان مازندران کدام شهر است؟','ساری','آمل','بابل','قائم‌شهر'],
+[0,'مرکز استان سیستان و بلوچستان کدام شهر است؟','زاهدان','چابهار','زابل','ایرانشهر'],
+[0,'مرکز استان اردبیل کدام شهر است؟','اردبیل','مشگین‌شهر','پارس‌آباد','خلخال'],
+[0,'مرکز استان لرستان کدام شهر است؟','خرم‌آباد','بروجرد','دورود','الیگودرز'],
+[0,'مرکز استان مرکزی کدام شهر است؟','اراک','ساوه','قم','همدان'],
+[0,'کوچک‌ترین استان ایران از نظر مساحت کدام است؟','البرز','قم','تهران','مرکزی'],
+[0,'ایران چند استان دارد؟','۳۱','۲۸','۳۰','۳۳'],
+[0,'شهر کاشان در کدام استان قرار دارد؟','اصفهان','قم','مرکزی','یزد'],
+// ---- جاذبه‌ها (۲۸)
+[1,'تخت جمشید در کدام استان قرار دارد؟','فارس','اصفهان','خوزستان','کرمان'],
+[1,'میدان نقش جهان در کدام شهر است؟','اصفهان','شیراز','تبریز','یزد'],
+[1,'برج آزادی در کدام شهر است؟','تهران','مشهد','اصفهان','کرج'],
+[1,'آرامگاه حافظ در کدام شهر است؟','شیراز','اصفهان','تهران','مشهد'],
+[1,'آرامگاه فردوسی در کدام شهر قرار دارد؟','توس','شیراز','همدان','اصفهان'],
+[1,'آرامگاه سعدی در کدام شهر است؟','شیراز','کرمان','قم','رشت'],
+[1,'زیگورات چغازنبیل در کدام استان است؟','خوزستان','فارس','ایلام','لرستان'],
+[1,'ارگ بم در کدام استان قرار دارد؟','کرمان','یزد','سیستان و بلوچستان','هرمزگان'],
+[1,'سی‌وسه‌پل روی کدام رود ساخته شده است؟','زاینده‌رود','کارون','کرخه','ارس'],
+[1,'کاخ گلستان در کدام شهر است؟','تهران','شیراز','تبریز','اصفهان'],
+[1,'مسجد نصیرالملک (مسجد صورتی) در کدام شهر است؟','شیراز','اصفهان','یزد','کاشان'],
+[1,'بادگیرها نماد معماری کدام شهر هستند؟','یزد','رشت','تبریز','ارومیه'],
+[1,'پل خواجو در کدام شهر قرار دارد؟','اصفهان','شیراز','اهواز','همدان'],
+[1,'تخت سلیمان (تکاب) در کدام استان است؟','آذربایجان غربی','اردبیل','زنجان','کردستان'],
+[1,'گنبد قابوس در کدام استان است؟','گلستان','مازندران','گیلان','سمنان'],
+[1,'کاخ عالی‌قاپو در کدام شهر است؟','اصفهان','شیراز','تهران','قزوین'],
+[1,'کاخ‌موزهٔ نیاوران در کدام شهر است؟','تهران','رشت','مشهد','شیراز'],
+[1,'برج میلاد در کدام شهر است؟','تهران','اصفهان','کرج','قم'],
+[1,'بازار تاریخی تبریز در کدام استان است؟','آذربایجان شرقی','اردبیل','زنجان','همدان'],
+[1,'غار علی‌صدر در کدام استان است؟','همدان','کرمانشاه','لرستان','قزوین'],
+[1,'قلعه فلک‌الافلاک در کدام شهر است؟','خرم‌آباد','کرمانشاه','ایلام','همدان'],
+[1,'مجموعهٔ شیخ صفی‌الدین در کدام شهر است؟','اردبیل','تبریز','ارومیه','قزوین'],
+[1,'حرم امام رضا (ع) در کدام شهر است؟','مشهد','قم','شیراز','ری'],
+[1,'طاق بستان در کدام شهر است؟','کرمانشاه','همدان','سنندج','ایلام'],
+[1,'روستای تاریخی ماسوله در کدام استان است؟','گیلان','مازندران','اردبیل','زنجان'],
+[1,'شهر سوخته در کدام استان قرار دارد؟','سیستان و بلوچستان','کرمان','یزد','خراسان جنوبی'],
+[1,'تخت جمشید در زمان کدام پادشاه ساخته شد؟','داریوش بزرگ','شاه‌عباس','نادرشاه','کریم‌خان'],
+[1,'کتیبهٔ بیستون در کدام استان است؟','کرمانشاه','همدان','لرستان','کردستان'],
+// ---- طبیعت (۱۴)
+[2,'بلندترین قلهٔ ایران کدام است؟','دماوند','سبلان','علم‌کوه','زردکوه'],
+[2,'قلهٔ دماوند جزو کدام رشته‌کوه است؟','البرز','زاگرس','کرکس','بینالود'],
+[2,'دریاچهٔ ارومیه در کدام بخش کشور است؟','شمال غرب','جنوب شرق','شمال شرق','جنوب غرب'],
+[2,'جنگل‌های هیرکانی در کدام ناحیه قرار دارند؟','شمال ایران','جنوب ایران','غرب ایران','مرکز ایران'],
+[2,'کویر لوت در کدام بخش ایران است؟','شرق و جنوب شرق','شمال','غرب','شمال غرب'],
+[2,'بزرگ‌ترین جزیرهٔ ایران کدام است؟','قشم','کیش','هرمز','خارک'],
+[2,'جزیرهٔ کیش در کدام آب‌ها قرار دارد؟','خلیج فارس','دریای خزر','دریای عمان','دریاچه ارومیه'],
+[2,'طولانی‌ترین رودی که تماماً در ایران جریان دارد کدام است؟','کارون','ارس','سفیدرود','هیرمند'],
+[2,'دریای شمالی ایران چه نام دارد؟','خزر','عمان','مدیترانه','سیاه'],
+[2,'تالاب انزلی در کدام استان است؟','گیلان','مازندران','گلستان','اردبیل'],
+[2,'کدام جانور در ایران به «یوزپلنگ آسیایی» معروف و در معرض خطر است؟','یوزپلنگ','پلنگ','شیر','ببر'],
+[2,'چشمه‌های آب گرم سرعین در کدام استان است؟','اردبیل','گیلان','زنجان','قزوین'],
+[2,'رشته‌کوه زاگرس در کدام بخش کشور کشیده شده است؟','غرب و جنوب غرب','شمال','شرق','شمال شرق'],
+[2,'تنگهٔ هرمز کدام دو آب را به هم وصل می‌کند؟','خلیج فارس و دریای عمان','خزر و سیاه','عمان و سرخ','خلیج فارس و مدیترانه'],
+// ---- غذا و سوغات (۱۱)
+[3,'سوهان سوغات معروف کدام شهر است؟','قم','کاشان','قزوین','ساوه'],
+[3,'گز سوغات معروف کدام شهر است؟','اصفهان','شیراز','تبریز','رشت'],
+[3,'باقلوا سوغات معروف کدام شهر است؟','یزد','کرمان','اصفهان','مشهد'],
+[3,'میرزاقاسمی غذای محلی کدام منطقه است؟','شمال (گیلان و مازندران)','جنوب','شرق','غرب'],
+[3,'قیمه‌نثار غذای سنتی کدام شهر است؟','قزوین','قم','سمنان','زنجان'],
+[3,'کدام نان سنتی روی سنگ‌ریزه پخته می‌شود؟','سنگک','بربری','لواش','تافتون'],
+[3,'لقوم شیرینی سنتی کدام شهر است؟','تبریز','اهواز','رشت','کرمان'],
+[3,'شله‌زرد با کدام ادویه رنگ می‌گیرد؟','زعفران','زردچوبه','دارچین','هل'],
+[3,'سمنو در سفرهٔ کدام جشن گذاشته می‌شود؟','نوروز','یلدا','مهرگان','سده'],
+[3,'چای ایران بیشتر در کدام استان‌ها کاشته می‌شود؟','گیلان و مازندران','خوزستان و فارس','کرمان و یزد','سمنان و قم'],
+[3,'غذای آبگوشت که در ظرف سنگی سرو می‌شود چه نام دارد؟','دیزی','کله‌پاچه','حلیم','آش رشته'],
+// ---- فرهنگ و تاریخ (۱۱)
+[4,'زبان رسمی ایران کدام است؟','فارسی','عربی','ترکی','کردی'],
+[4,'جشن نوروز در کدام فصل برگزار می‌شود؟','بهار','پاییز','تابستان','زمستان'],
+[4,'شاهنامه اثر کدام شاعر است؟','فردوسی','حافظ','سعدی','مولوی'],
+[4,'گلستان و بوستان اثر کدام شاعر است؟','سعدی','حافظ','نظامی','خیام'],
+[4,'کدام شاعر به «لسان‌الغیب» معروف است؟','حافظ','سعدی','فردوسی','عطار'],
+[4,'کدام یک ساز سنتی ایرانی است؟','سنتور','پیانو','ویولن سل','ساکسیفون'],
+[4,'شب یلدا در کدام فصل است؟','پاییز (آخرین شب)','تابستان','بهار','زمستان (وسط)'],
+[4,'کورش بزرگ بنیان‌گذار کدام سلسله بود؟','هخامنشیان','ساسانیان','صفویان','قاجار'],
+[4,'قلم‌زنی روی مس و فلز از هنرهای مشهور کدام شهر است؟','اصفهان','رشت','بندرعباس','اهواز'],
+[4,'تقویم رسمی ایران کدام است؟','هجری شمسی','میلادی','قمری','جلالی قدیم'],
+[4,'چهارشنبه‌سوری چه زمانی برگزار می‌شود؟','آخرین سه‌شنبه‌شب سال','اولین روز سال','شب یلدا','سیزده‌به‌در']
+];
+
+const S = {scr:'menu', mode:'one', cat:-1, names:['بازیکن ۱','بازیکن ۲'], qs:[], i:0, sc:[0,0], ok:[0,0],
+  dl:0, iv:null, locked:false, opts:[], fifty:true, sel:-1, hide:[]};
+const app = document.getElementById('app');
+let best = 0;
+try { best = parseInt(localStorage.getItem('iranquiz_best') || '0', 10) || 0; } catch (e) {}
+
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const chip = (on, act, t) => `<button class="chip ${on ? 'on' : ''}" onclick="${act}">${t}</button>`;
+
+function menu() {
+  S.scr = 'menu'; clearInterval(S.iv);
+  const two = S.mode === 'two';
+  app.innerHTML = `<h1>🗺️ ایران‌شناسی</h1><div class="sub">مسابقهٔ اطلاعات عمومی دربارهٔ ایران · ${fa(Q.length)} سؤال · بدون اینترنت</div>
+  <div class="card"><h3>حالت بازی</h3><div class="row">${chip(!two, "S.mode='one';menu()", '👤 تک‌نفره')}${chip(two, "S.mode='two';menu()", '👥 دو نفره (روی یک گوشی)')}</div></div>
+  <div class="card"><h3>دسته‌بندی سؤال‌ها</h3><div class="row">${chip(S.cat < 0, 'S.cat=-1;menu()', 'همه')}${CATS.map((c, i) => chip(S.cat === i, `S.cat=${i};menu()`, c[0] + ' ' + c[1])).join('')}</div></div>
+  ${two ? `<div class="card"><h3>نام بازیکن‌ها</h3><input type="text" maxlength="14" value="${esc(S.names[0])}" oninput="S.names[0]=this.value||'بازیکن ۱'"><input type="text" maxlength="14" value="${esc(S.names[1])}" oninput="S.names[1]=this.value||'بازیکن ۲'"></div>` : `<div class="card mut">هر سؤال ${fa(TIME)} ثانیه وقت دارد و پاسخ سریع‌تر امتیاز بیشتری می‌دهد. یک بار «حذف دو گزینه» دارید.<br>🏆 بهترین امتیاز شما: <b style="color:#ffc928">${fa(best)}</b></div>`}
+  <button class="btn" onclick="start()">شروع بازی ▶</button>`;
+}
+
+function start() {
+  const pool = Q.filter(q => S.cat < 0 || q[0] === S.cat);
+  S.qs = shuffle(pool).slice(0, ROUNDS);
+  S.i = 0; S.sc = [0, 0]; S.ok = [0, 0]; S.fifty = true; ask();
+}
+
+function who() { return S.mode === 'two' ? S.i % 2 : 0; }
+
+function ask() {
+  const q = S.qs[S.i];
+  S.scr = 'q'; S.locked = false; S.sel = -1; S.hide = [];
+  S.opts = shuffle([q[2], q[3], q[4], q[5]]);
+  S.dl = Date.now() + TIME * 1000;
+  draw(); clearInterval(S.iv); S.iv = setInterval(tick, 200);
+}
+
+function draw() {
+  const q = S.qs[S.i], c = CATS[q[0]], two = S.mode === 'two', w = who();
+  const right = S.opts.indexOf(q[2]);
+  app.innerHTML = `<div class="top"><div class="pill">${two ? esc(S.names[w]) + ' · ' : ''}امتیاز <b>${fa(S.sc[w])}</b></div><div class="pill">سؤال <b>${fa(S.i + 1)}</b> از ${fa(S.qs.length)}</div><div class="pill" id="tm">⏱ <b>${fa(TIME)}</b></div></div>
+  <div class="bar"><i id="br"></i></div>
+  <div class="card"><span class="cat">${c[0]} ${c[1]}</span><div class="q">${esc(q[1])}</div>
+  ${S.opts.map((o, k) => {
+    let cl = 'op';
+    if (S.hide.includes(k)) cl += ' off';
+    if (S.locked) { if (k === right) cl += ' ok'; else if (k === S.sel) cl += ' bad'; }
+    return `<button class="${cl}" ${S.locked ? 'disabled' : ''} onclick="pick(${k})">${esc(o)}</button>`;
+  }).join('')}</div>
+  <div class="row">${!two && S.fifty && !S.locked ? '<button class="btn gh sm" onclick="useFifty()">✂️ حذف دو گزینه</button>' : ''}${S.locked ? '<button class="btn sm" onclick="nextQ()" style="margin-inline-start:auto">' + (S.i + 1 >= S.qs.length ? 'نتیجه ◀' : 'سؤال بعد ◀') + '</button>' : ''}</div>`;
+  tick();
+}
+
+function left() { return Math.max(0, Math.ceil((S.dl - Date.now()) / 1000)); }
+
+function tick() {
+  if (S.scr !== 'q' || S.locked) return;
+  const l = left(), ms = Math.max(0, S.dl - Date.now());
+  const tm = document.getElementById('tm'), br = document.getElementById('br');
+  if (tm) tm.innerHTML = '⏱ <b>' + fa(l) + '</b>';
+  if (br) { br.style.width = (ms / (TIME * 1000) * 100) + '%'; br.className = l <= 5 ? 'low' : ''; }
+  if (ms <= 0) pick(-1);
+}
+
+function useFifty() {
+  if (!S.fifty || S.locked) return;
+  const q = S.qs[S.i], right = S.opts.indexOf(q[2]);
+  const wrong = shuffle([0, 1, 2, 3].filter(k => k !== right)).slice(0, 2);
+  S.hide = wrong; S.fifty = false; draw();
+}
+
+function pick(k) {
+  if (S.locked) return;
+  S.locked = true; S.sel = k; clearInterval(S.iv);
+  const q = S.qs[S.i], w = who(), good = k >= 0 && S.opts[k] === q[2];
+  if (good) { S.sc[w] += 100 + left() * 6; S.ok[w]++; }
+  draw();
+  if (S.mode === 'one') setTimeout(() => { if (S.scr === 'q' && S.locked) nextQ(); }, 1700);
+}
+
+function nextQ() {
+  if (S.scr !== 'q') return;
+  S.i++;
+  if (S.i >= S.qs.length) end(); else ask();
+}
+
+function title(n) {
+  return n >= 9 ? 'ایران‌شناس حرفه‌ای 🏆' : n >= 7 ? 'راهنمای ماهر 🧭' : n >= 5 ? 'ایران‌گرد 🎒' : n >= 3 ? 'مسافر علاقه‌مند 🚌' : 'گردشگر تازه‌کار 🌱';
+}
+
+function end() {
+  S.scr = 'end'; clearInterval(S.iv);
+  if (S.mode === 'one') {
+    const nb = S.sc[0] > best;
+    if (nb) { best = S.sc[0]; try { localStorage.setItem('iranquiz_best', String(best)); } catch (e) {} }
+    app.innerHTML = `<div class="card res"><div class="big">${S.ok[0] >= 7 ? '🏆' : '🎯'}</div><div class="t">${title(S.ok[0])}</div>
+    <div class="rk"><span>پاسخ درست</span><b>${fa(S.ok[0])} از ${fa(S.qs.length)}</b></div>
+    <div class="rk"><span>امتیاز</span><b>${fa(S.sc[0])}</b></div>
+    <div class="rk"><span>بهترین امتیاز</span><b>${fa(best)}${nb ? ' 🎉 رکورد جدید' : ''}</b></div></div>
+    <button class="btn" onclick="start()">بازی دوباره ↻</button><button class="btn gh" onclick="menu()">منوی اصلی</button>`;
+  } else {
+    const a = S.sc[0], b = S.sc[1];
+    const win = a === b ? 'مساوی شدید 🤝' : '🏆 برنده: ' + esc(S.names[a > b ? 0 : 1]);
+    app.innerHTML = `<div class="card res"><div class="big">🎉</div><div class="t">${win}</div>
+    ${[0, 1].map(p => `<div class="rk"><span>${esc(S.names[p])}</span><b>${fa(S.sc[p])} امتیاز · ${fa(S.ok[p])} درست</b></div>`).join('')}</div>
+    <button class="btn" onclick="start()">بازی دوباره ↻</button><button class="btn gh" onclick="menu()">منوی اصلی</button>`;
+  }
+}
+
+menu();
+</script>
+</body>
+</html>
