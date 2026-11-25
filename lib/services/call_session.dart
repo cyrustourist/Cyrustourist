@@ -136,6 +136,20 @@ class CallSession extends ChangeNotifier {
 
   bool get isActive => !_closed && phase != CallPhase.ended;
 
+  // لاگ زمان‌بندی: هر مرحله با فاصله از شروع (زدن «پاسخ» برای گیرنده، شروع تماس برای تماس‌گیرنده).
+  // در logcat با فیلتر «call-timing» دیده می‌شود. آخرین گزارش در lastTimingReport هم می‌ماند.
+  static String lastTimingReport = '';
+  final Stopwatch _sw = Stopwatch();
+  final List<String> _marks = [];
+
+  void _mark(String label) {
+    if (!_sw.isRunning) _sw.start();
+    final line = '+${_sw.elapsedMilliseconds}ms $label';
+    _marks.add(line);
+    lastTimingReport = '${isCaller ? 'caller' : 'callee'} ${_marks.join(' | ')}';
+    debugPrint('call-timing ${isCaller ? 'caller' : 'callee'} $line');
+  }
+
   static const List<Map<String, dynamic>> _fallbackIce = [
     {
       'urls': ['stun:stun.cloudflare.com:3478']
@@ -286,10 +300,53 @@ class CallSession extends ChangeNotifier {
     }
   }
 
+  Future<bool>? _peerBuild;
+  Future<bool>? _offerApplied;
+
+  /// ساخت اتصال (بدون میکروفن). برای گیرنده همان لحظهٔ زنگ خوردن صدا زده می‌شود تا با زدن «پاسخ» آماده باشد.
+  Future<bool> _ensurePeer() => _peerBuild ??= _buildPeer();
+
+  /// گیرنده: هنگام زنگ خوردن اتصال را می‌سازد و offer را می‌گذارد؛ میکروفن باز نمی‌شود.
+  /// آدرس‌های ICE (از جمله relay) در این فاصله از پیش جمع می‌شوند (iceCandidatePoolSize)،
+  /// پس موقع پاسخ دیگر چند ثانیه منتظر relay نمی‌مانیم.
+  Future<bool> _ensureOfferApplied() => _offerApplied ??= () async {
+        if (isCaller || _remoteOffer == null) return false;
+        if (!await _ensurePeer()) return false;
+        final pc = _pc;
+        if (pc == null || _closed) return false;
+        await pc.setRemoteDescription(RTCSessionDescription(_remoteOffer, 'offer'));
+        _mark('offer applied (prewarm)');
+        return true;
+      }();
+
   Future<bool> _preparePeer() async {
-    // میکروفن و تنظیمات ICE هم‌زمان آماده می‌شوند (قبلاً پشت‌سرهم بودند)
+    // میکروفن و ساخت اتصال هم‌زمان پیش می‌روند (اگر اتصال از زمان زنگ خوردن آماده باشد، فقط میکروفن می‌ماند)
     final micF = _openMedia();
+    if (!await _ensurePeer()) {
+      await _dropMic(micF);
+      return false;
+    }
+    final pc = _pc;
+    if (pc == null || _closed) {
+      await _dropMic(micF);
+      return false;
+    }
+    return _attachMedia(pc, micF);
+  }
+
+  Future<void> _dropMic(Future<MediaStream?> micF) async {
+    try {
+      final m = await micF;
+      for (final t in m?.getTracks() ?? <MediaStreamTrack>[]) {
+        await t.stop();
+      }
+      await m?.dispose();
+    } catch (_) {}
+  }
+
+  Future<bool> _buildPeer() async {
     final ice = await _loadIce();
+    if (_closed) return false;
     _gatherDone = Completer<void>();
     _candidateReady = Completer<void>();
     _wantRelay = _hasTurn(ice);
@@ -363,6 +420,8 @@ class CallSession extends ChangeNotifier {
               }
             });
             _everConnected = true;
+            _mark('connected');
+            unawaited(_pathKind().then((k) => _mark('path=$k')));
             _set(CallPhase.connected, 'وصل شد');
             // مسیر صدا (گوشی/بلندگو) را بعد از شروع صدای تماس دوباره اعمال می‌کنیم؛
             // WebRTC گاهی هنگام شروع صدا مسیر را به‌هم می‌زند.
@@ -400,8 +459,18 @@ class CallSession extends ChangeNotifier {
           break;
       }
     };
+    if (_closed) {
+      try {
+        await pc.close();
+      } catch (_) {}
+      return false;
+    }
+    return true;
+  }
 
+  Future<bool> _attachMedia(RTCPeerConnection pc, Future<MediaStream?> micF) async {
     _local = await micF;
+    _mark('media opened');
     if (_local == null) {
       await _finish(isVideo ? 'دسترسی به میکروفن یا دوربین داده نشد. در تنظیمات گوشی اجازه را فعال کنید.' : 'دسترسی به میکروفن داده نشد. در تنظیمات گوشی اجازه را فعال کنید.', notifyServer: false);
       return false;
@@ -720,6 +789,7 @@ class CallSession extends ChangeNotifier {
     } catch (_) {}
     final d = await _pc?.getLocalDescription();
     final sdp = d?.sdp;
+    _mark('ice ready (relay=${sdp?.contains(' typ relay') ?? false}, wantRelay=$_wantRelay)');
     return (sdp == null || sdp.isEmpty) ? null : sdp;
   }
 
@@ -727,6 +797,7 @@ class CallSession extends ChangeNotifier {
   // تماس‌گیرنده
   // ------------------------------------------------------------------
   Future<void> startOutgoing() async {
+    _mark('start');
     _set(CallPhase.preparing, 'در حال آماده‌سازی…');
     await _enterAudio();
     if (_closed) return;
@@ -771,6 +842,7 @@ class CallSession extends ChangeNotifier {
         return;
       }
       callId = '${j['call_id']}';
+      _mark('start posted, ringing');
       _set(CallPhase.ringing, 'در حال زنگ زدن…');
       _startPolling();
     } catch (e) {
@@ -784,12 +856,21 @@ class CallSession extends ChangeNotifier {
   // ------------------------------------------------------------------
   Future<void> acceptIncoming() async {
     if (isCaller || _remoteOffer == null || callId == null) return;
+    _sw
+      ..reset()
+      ..start();
+    _marks.clear();
+    _mark('accept tapped (prewarmed=${_offerApplied != null})');
     _set(CallPhase.connecting, 'در حال اتصال…');
     await _enterAudio();
     if (_closed) return;
     if (!await _preparePeer()) return;
     try {
-      await _pc!.setRemoteDescription(RTCSessionDescription(_remoteOffer, 'offer'));
+      // اگر موقع زنگ خوردن انجام شده باشد همان نتیجه برمی‌گردد؛ وگرنه همین‌جا انجام می‌شود
+      if (!await _ensureOfferApplied()) {
+        if (!_closed) await _finish('اتصال برقرار نشد.', notifyServer: true);
+        return;
+      }
       final answer = await _pc!.createAnswer({'offerToReceiveAudio': 1, 'offerToReceiveVideo': isVideo ? 1 : 0});
       await _pc!.setLocalDescription(RTCSessionDescription(_capVideo(_capOpus(answer.sdp)), answer.type));
       final sdp = await _localSdpAfterGathering();
@@ -797,12 +878,14 @@ class CallSession extends ChangeNotifier {
         await _finish('پاسخ به تماس ناموفق بود.', notifyServer: true);
         return;
       }
+      _mark('answer ready, posting');
       final uid = await BadgeService.userUid();
       final j = await BadgeService.call('POST', '/api/call/answer', body: {
         'user_uid': uid,
         'call_id': callId,
         'answer_sdp': sdp,
       });
+      _mark('answer posted (ok=${j?['success'] == true})');
       if (j == null || j['success'] != true) {
         await _finish('تماس منقضی شده یا لغو شده است.', notifyServer: false);
         return;
@@ -886,6 +969,13 @@ class CallSession extends ChangeNotifier {
     if (isCaller || callId == null) return;
     if (!silent) unawaited(CallAudio.startRing());
     _startPolling();
+    // آماده‌سازی هنگام زنگ خوردن: ساخت اتصال + جمع‌آوری آدرس‌ها + offer، بدون باز کردن میکروفن
+    _sw.start();
+    _mark('ringing, prewarm start');
+    unawaited(_ensureOfferApplied().catchError((Object e) {
+      debugPrint('call prewarm failed: $e');
+      return false;
+    }));
   }
 
   bool _pollBusy = false;
@@ -934,6 +1024,7 @@ class CallSession extends ChangeNotifier {
       final ans = '${j['answer_sdp'] ?? ''}';
       if (ans.isNotEmpty) {
         _answerApplied = true;
+        _mark('answer received by poll');
         try {
           await _pc?.setRemoteDescription(RTCSessionDescription(ans, 'answer'));
           _set(CallPhase.connecting, 'در حال اتصال…');
