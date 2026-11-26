@@ -92,6 +92,7 @@ class _FruitPageState extends State<FruitPage> {
   int _downIdx = -1;
   Offset _downPos = Offset.zero;
   bool _swiped = false;
+  bool _scrollLock = false; // وقتی انگشت روی صفحهٔ بازی است، اسکرول صفحه قفل می‌شود
 
   @override
   void initState() {
@@ -354,6 +355,10 @@ class _FruitPageState extends State<FruitPage> {
   }
 
   void _tap(int i) {
+    if (_swiped) {
+      _swiped = false; // این لمس یک کشیدن بود، نه کلیک
+      return;
+    }
     if (busy || over) return;
     if (hammerMode) {
       _hammer(i);
@@ -382,15 +387,25 @@ class _FruitPageState extends State<FruitPage> {
     return r * kFruitN + c;
   }
 
-  void _onPanStart(DragStartDetails d, double sz) {
-    _downIdx = _cellAt(d.localPosition, sz);
-    _downPos = d.localPosition;
+  void _lockScroll(bool v) {
+    if (_scrollLock == v || !mounted) return;
+    setState(() => _scrollLock = v);
+  }
+
+  // لمس خام (Listener): در رقابت اسکرول صفحه شرکت نمی‌کند و روی گوشی‌هایی مثل شیائومی هم کشیدن عمودی/افقی همیشه جابه‌جا می‌کند
+  static const Offset _boardBorder = Offset(3, 3);
+
+  void _onBoardDown(PointerDownEvent e, double sz) {
+    _lockScroll(true);
+    _downPos = e.localPosition - _boardBorder;
+    _downIdx = _cellAt(_downPos, sz);
     _swiped = false;
   }
 
-  void _onPanUpdate(DragUpdateDetails d, double sz) {
+  void _onBoardMove(PointerMoveEvent e, double sz) {
     if (_downIdx < 0 || _swiped) return;
-    final dx = d.localPosition.dx - _downPos.dx, dy = d.localPosition.dy - _downPos.dy;
+    final pos = e.localPosition - _boardBorder;
+    final dx = pos.dx - _downPos.dx, dy = pos.dy - _downPos.dy;
     if (max(dx.abs(), dy.abs()) < sz * 0.3) return;
     _swiped = true;
     final r = _downIdx ~/ kFruitN, c = _downIdx % kFruitN;
@@ -500,9 +515,11 @@ class _FruitPageState extends State<FruitPage> {
     final sz = w / kFruitN;
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: GestureDetector(
-        onPanStart: (d) => _onPanStart(d, sz),
-        onPanUpdate: (d) => _onPanUpdate(d, sz),
+      child: Listener(
+        onPointerDown: (e) => _onBoardDown(e, sz),
+        onPointerMove: (e) => _onBoardMove(e, sz),
+        onPointerUp: (_) => _lockScroll(false),
+        onPointerCancel: (_) => _lockScroll(false),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: Container(
@@ -544,6 +561,7 @@ class _FruitPageState extends State<FruitPage> {
                     final avail = min(cons.maxWidth - 24, 420.0);
                     final w = ((avail - 8) / kFruitN).floorToDouble() * kFruitN;
                     return SingleChildScrollView(
+                      physics: _scrollLock ? const NeverScrollableScrollPhysics() : null,
                       padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
                       child: Center(
                         child: SizedBox(
