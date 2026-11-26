@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#1b2a4a">
+<title>سودوکو | سایروس توریست</title>
+<style>
+:root{--bs:340px;--ui:#1b2a4a;--ui2:#26396b;--acc:#f5a623;--txt:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--ui);color:var(--txt);font-family:Vazirmatn,Tahoma,"Segoe UI",system-ui,sans-serif}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);overflow-y:auto}
+.screen.on{display:flex}
+.top{width:100%;max-width:560px;display:flex;align-items:center;gap:8px;padding:10px 0}
+.top h1{flex:1;margin:0;font-size:18px;text-align:center}
+.ib{width:42px;height:42px;border-radius:12px;background:var(--ui2);font-size:20px;display:grid;place-items:center}
+.coins{background:#0004;border-radius:20px;padding:6px 12px;font-weight:700;color:#ffd35c;white-space:nowrap}
+.brand{font-size:12px;opacity:.7;letter-spacing:.5px}
+/* menu */
+#menu{background:radial-gradient(circle at 50% 0,#33508f,#1b2a4a 70%)}
+.logo{margin:8px 0 4px;display:grid;grid-template-columns:repeat(3,46px);gap:4px;direction:ltr}
+.logo i{height:46px;border-radius:10px;display:grid;place-items:center;font:700 26px system-ui;font-style:normal;background:#f5a623;color:#5a3300;box-shadow:0 3px 0 #b8741a}
+.logo i.b{background:#29c4f0;color:#05384c;box-shadow:0 3px 0 #1a8aab}.logo i.e{background:#0003;box-shadow:none}
+.menu-box{width:100%;max-width:420px;display:flex;flex-direction:column;gap:10px;margin:12px 0 20px}
+.btn{background:var(--ui2);padding:14px;border-radius:14px;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;box-shadow:0 3px 0 #0005}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn.pri{background:linear-gradient(#ffbf4d,#f08c00);color:#4a2a00;box-shadow:0 3px 0 #a35f00}
+.btn small{font-weight:400;opacity:.8;font-size:12px}
+.btn.sm{padding:10px 14px;font-size:14px;justify-content:center}
+.diffs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.diffs .btn{flex-direction:column;align-items:flex-start;padding:10px 12px;font-size:15px}
+.sec{font-size:13px;opacity:.7;margin:6px 4px -2px}
+/* game */
+#game{background:var(--pagebg,#1b2a4a);transition:background .3s}
+.info{width:var(--bs);display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:2px 2px 8px;opacity:.95}
+.info b{color:var(--acc)}
+.wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+#board{width:var(--bs);height:var(--bs);display:grid;grid-template-columns:repeat(9,1fr);background:var(--board);border:3px solid var(--lineS);border-radius:10px;overflow:hidden;position:relative;direction:ltr;box-shadow:0 8px 24px #0006}
+.c{position:relative;display:grid;place-items:center;background:var(--cell);border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:calc(var(--bs)/9*.62);color:var(--num);cursor:pointer}
+.c.cr{border-right:2px solid var(--lineS)}.c.cb{border-bottom:2px solid var(--lineS)}
+.c.c8{border-right:0}.c.r8{border-bottom:0}
+.c.alt{background:var(--cellAlt)}
+.c.peer{background:var(--peer)}.c.same{background:var(--same)}.c.sel{background:var(--sel)}
+.c.given{color:var(--given);font-weight:800}
+.c:not(.given){color:var(--user)}
+.c.err{color:var(--err)!important;background:var(--errBg)}
+.c .v{line-height:1;font-weight:600}.c.given .v{font-weight:800}
+.big .c .v{font-weight:800}
+.n{position:absolute;inset:1px;display:none;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-size:calc(var(--bs)/9*.26);color:var(--note);text-align:center;line-height:1}
+.n span{display:grid;place-items:center}
+.n.on{display:grid}
+.c.hit{animation:pop .3s}
+@keyframes pop{50%{transform:scale(1.15)}}
+#pause{position:absolute;inset:0;background:var(--board);display:none;place-items:center;font-size:20px;color:var(--num);z-index:3;direction:rtl}
+.tools{display:flex;gap:8px;width:var(--bs);justify-content:space-between}
+.tool{flex:1;background:var(--padbg);color:var(--padfg);border-radius:12px;padding:8px 2px;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;box-shadow:0 3px 0 #0004}
+.tool b{font-size:20px;font-weight:400}
+.tool.on{outline:3px solid var(--acc)}
+.tool .bd{position:absolute;top:-6px;left:-4px;background:var(--acc);color:#3a2200;font-size:11px;font-weight:700;border-radius:10px;padding:1px 6px}
+.pad{display:grid;grid-template-columns:repeat(9,1fr);gap:5px;width:var(--bs);direction:ltr}
+.pad button{aspect-ratio:.82;background:var(--padbg);color:var(--padfg);border-radius:10px;font-size:calc(var(--bs)/9*.62);font-weight:700;position:relative;box-shadow:0 3px 0 #0004;line-height:1;padding:0}
+.pad button:active{transform:translateY(2px);box-shadow:none}
+.pad button small{position:absolute;bottom:2px;left:0;right:0;font-size:10px;font-weight:400;opacity:.7}
+.pad button:disabled{opacity:.25}
+body.side .wrap{flex-direction:row}
+/* modals */
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal.on{display:flex}
+.card{background:#22345f;border-radius:20px;padding:18px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:0 10px 40px #000a}
+.card h2{margin:0 0 12px;font-size:19px;text-align:center}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #fff2;font-size:15px}
+.row:last-child{border:0}
+.sw{width:50px;height:28px;background:#0005;border-radius:20px;position:relative;flex:none;direction:ltr}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#aab;transition:.2s}
+.sw.on{background:#2ecc71}.sw.on::after{left:25px;background:#fff}
+.seg{display:flex;background:#0004;border-radius:10px;overflow:hidden}
+.seg button{background:none;padding:6px 12px;font-size:13px}.seg button.on{background:var(--acc);color:#3a2200;font-weight:700}
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.th{border-radius:14px;padding:8px;background:#0003;text-align:center;font-size:13px;position:relative}
+.th.sel{outline:3px solid var(--acc)}
+.mini{width:100%;aspect-ratio:1;border-radius:8px;display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--lineS);background:var(--board);overflow:hidden;margin-bottom:6px;direction:ltr}
+.mini i{background:var(--cell);border:.5px solid var(--line);display:grid;place-items:center;font:700 18px system-ui;font-style:normal;color:var(--num)}
+.mini i.a{background:var(--sel)}.mini i.b{background:var(--peer)}.mini i.u{color:var(--user)}
+.th .pr{display:block;margin-top:2px;color:#ffd35c;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:14px;text-align:center}
+td,th{padding:8px 4px;border-bottom:1px solid #fff2}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#000c;padding:10px 18px;border-radius:20px;z-index:50;font-size:14px;opacity:0;pointer-events:none;transition:.25s;max-width:90%;text-align:center}
+.toast.on{opacity:1}
+.stars{font-size:34px;text-align:center;color:#ffd35c;letter-spacing:6px}
+.res{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+/* themes */
+[data-theme=classic]{--pagebg:#d9c7a3;--board:#fbf5e6;--cell:#fbf5e6;--cellAlt:#f4ecd6;--line:#c9b68e;--lineS:#6b4a24;--num:#3b2a14;--given:#3b2a14;--user:#1f6fb5;--note:#7a6a50;--peer:#efe2bd;--same:#ffd98a;--sel:#9fd0ff;--err:#d6322b;--errBg:#ffd9d6;--padbg:#7b5530;--padfg:#fff3d9}
+[data-theme=lilac]{--pagebg:#e9ecfb;--board:#fff;--cell:#fff;--cellAlt:#eef0fc;--line:#c4c9e6;--lineS:#2a2f55;--num:#1a1d33;--given:#1a1d33;--user:#3b5bdb;--note:#7b80a8;--peer:#e4e7fa;--same:#c5cbff;--sel:#a9b4ff;--err:#e03131;--errBg:#ffe0e0;--padbg:#fff;--padfg:#2a2f55}
+[data-theme=wood]{--pagebg:#a8733f;--board:#fff;--cell:#fff;--cellAlt:#e9eef2;--line:#9aa3ab;--lineS:#111;--num:#111;--given:#111;--user:#1c7ed6;--note:#667;--peer:#e8eef3;--same:#a5d8ff;--sel:#74c0fc;--err:#e03131;--errBg:#ffe3e3;--padbg:#fff;--padfg:#222}
+[data-theme=royal]{--pagebg:#0d2f8f;--board:#0e3aa8;--cell:#123fb0;--cellAlt:#0f379f;--line:#f2b705;--lineS:#ffc928;--num:#fff;--given:#fff;--user:#7ee8ff;--note:#b9c9ff;--peer:#1a4cc7;--same:#2a6bff;--sel:#3c8cff;--err:#ff6b6b;--errBg:#7a1d2b;--padbg:#29c4f0;--padfg:#05384c}
+[data-theme=night]{--pagebg:#0f1220;--board:#171b2e;--cell:#171b2e;--cellAlt:#1c2137;--line:#2e3558;--lineS:#7b86c9;--num:#dfe4ff;--given:#dfe4ff;--user:#8fb3ff;--note:#8b92b8;--peer:#222949;--same:#35407a;--sel:#44529c;--err:#ff6b6b;--errBg:#4a1c2a;--padbg:#252c4d;--padfg:#dfe4ff}
+[data-theme=forest]{--pagebg:#173a2a;--board:#eaf4e4;--cell:#eaf4e4;--cellAlt:#dcebd3;--line:#a9c79a;--lineS:#255c3b;--num:#17331f;--given:#17331f;--user:#1b7f4b;--note:#5d7a60;--peer:#d0e6c6;--same:#b5e08c;--sel:#8fd3a8;--err:#d6322b;--errBg:#ffd9d6;--padbg:#2f7a4f;--padfg:#eaffef}
+[data-theme=rose]{--pagebg:#4a1f3a;--board:#fff1f5;--cell:#fff1f5;--cellAlt:#ffe3ec;--line:#e5b2c4;--lineS:#8e2a5a;--num:#4a1230;--given:#4a1230;--user:#c2255c;--note:#a0687f;--peer:#ffd8e4;--same:#ffb3cd;--sel:#ff9ec0;--err:#1f6fb5;--errBg:#d6e8ff;--padbg:#c2255c;--padfg:#fff0f5}
+[data-theme=gold]{--pagebg:#2a1c05;--board:#2d2208;--cell:#33270a;--cellAlt:#2d2208;--line:#6e5516;--lineS:#ffd35c;--num:#ffe9ad;--given:#fff3cf;--user:#ffbf3c;--note:#c8a85a;--peer:#43340d;--same:#6b5212;--sel:#8a6a14;--err:#ff7a6b;--errBg:#5a1f16;--padbg:#e0a92a;--padfg:#3a2600}
+body.side .tools,body.side .pad{display:none}
+@media (orientation:landscape) and (max-height:520px){body.side .sidepad{display:flex}}
+.sidepad{display:none;flex-direction:column;gap:5px;direction:ltr}
+.sidepad button{width:46px;height:calc((var(--bs) - 40px)/9);background:var(--padbg);color:var(--padfg);border-radius:8px;font-size:20px;font-weight:700;padding:0}
+</style>
+</head>
+<body data-theme="classic">
+
+<!-- منو -->
+<section class="screen on" id="menu">
+  <div class="top"><button class="ib" id="mExit" title="خروج">✕</button><h1 class="brand">سایروس توریست</h1><div class="coins" id="mCoins">🪙 0</div></div>
+  <div class="logo"><i>5</i><i class="b">7</i><i class="e"></i><i class="b">2</i><i class="e"></i><i>9</i><i>8</i><i class="b">1</i><i class="e"></i></div>
+  <h1 style="margin:6px 0 0">سودوکو</h1>
+  <div class="menu-box">
+    <button class="btn pri" id="bCont" style="display:none"><span>▶ ادامه بازی<br><small id="contInfo"></small></span><span>›</span></button>
+    <button class="btn" id="bDaily"><span>📅 چالش روزانه<br><small id="dailyInfo"></small></span><span id="dailyBadge">🪙 +60</span></button>
+    <div class="sec">بازی جدید</div>
+    <div class="diffs" id="diffs"></div>
+    <div class="sec">شخصی‌سازی</div>
+    <button class="btn" id="bThemes"><span>🎨 انتخاب صفحه بازی</span><span>›</span></button>
+    <button class="btn" id="bStats"><span>📊 آمار و رکوردها</span><span>›</span></button>
+    <button class="btn" id="bSet"><span>⚙️ تنظیمات</span><span>›</span></button>
+    <button class="btn" id="bRules"><span>📖 قوانین بازی</span><span>›</span></button>
+  </div>
+</section>
+
+<!-- بازی -->
+<section class="screen" id="game">
+  <div class="top" style="max-width:var(--bs)"><button class="ib" id="gBack">‹</button><h1 id="gTitle">سودوکو</h1><div class="coins" id="gCoins">🪙 0</div><button class="ib" id="gSet">⚙️</button></div>
+  <div class="info"><span>اشتباه: <b id="iMist">۰/۳</b></span><span id="iDiff"></span><span><b id="iTime">۰۰:۰۰</b> <button class="ib" id="bPause" style="display:inline-grid;width:30px;height:30px;font-size:14px;vertical-align:middle">⏸</button></span></div>
+  <div class="wrap">
+    <div id="board"><div id="pause">⏸ بازی متوقف شد — برای ادامه لمس کنید</div></div>
+    <div class="sidepad" id="sidepad"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+      <div class="tools">
+        <button class="tool" id="tUndo"><b>↩</b>برگشت</button>
+        <button class="tool" id="tErase"><b>⌫</b>پاک‌کن</button>
+        <button class="tool" id="tNotes"><b>✎</b>یادداشت</button>
+        <button class="tool" id="tHint"><b>💡</b>راهنما<span class="bd" id="hintBd">۳</span></button>
+      </div>
+      <div class="pad" id="pad"></div>
+    </div>
+  </div>
+</section>
+
+<!-- مودال‌ها -->
+<div class="modal" id="mSettings"><div class="card"><h2>⚙️ تنظیمات</h2><div id="setList"></div><button class="btn sm pri" style="width:100%;margin-top:10px" data-close>بستن</button></div></div>
+<div class="modal" id="mThemes"><div class="card"><h2>🎨 انتخاب صفحه بازی</h2><div class="themes" id="themeList"></div><button class="btn sm" style="width:100%;margin-top:12px" data-close>بستن</button></div></div>
+<div class="modal" id="mStats"><div class="card"><h2>📊 آمار</h2><div id="statBody"></div><button class="btn sm" style="width:100%;margin-top:12px" data-close>بستن</button></div></div>
+<div class="modal" id="mRules"><div class="card"><h2>📖 قوانین سودوکو</h2>
+<p style="line-height:2;font-size:14px;margin:0">جدول ۹×۹ است و از ۹ خانهٔ کوچک‌تر ۳×۳ تشکیل شده. باید خانه‌های خالی را با اعداد ۱ تا ۹ پر کنید:<br>
+• در هر <b>سطر</b> همهٔ اعداد ۱ تا ۹ بدون تکرار باشد.<br>
+• در هر <b>ستون</b> همهٔ اعداد ۱ تا ۹ بدون تکرار باشد.<br>
+• در هر <b>مربع ۳×۳</b> همهٔ اعداد ۱ تا ۹ بدون تکرار باشد.<br>
+هر معما فقط یک پاسخ درست دارد. با «یادداشت» می‌توانید حدس‌ها را کوچک بنویسید.</p>
+<button class="btn sm" style="width:100%;margin-top:12px" data-close>بستن</button></div></div>
+<div class="modal" id="mEnd"><div class="card" id="endCard"></div></div>
+<div class="modal" id="mAsk"><div class="card"><p id="askTxt" style="text-align:center;line-height:1.9;margin:4px 0 14px"></p><div class="res"><button class="btn sm pri" id="askOk"></button><button class="btn sm" id="askNo">انصراف</button></div></div></div>
+<div class="modal" id="mLoad"><div class="card" style="text-align:center">⏳ در حال ساخت معما…</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ====== ابزارها ====== */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+/* پل سکه با اپ (کانال Eco)؛ بیرون از اپ برای تست از localStorage استفاده می‌شود */
+let BAL=0,uid=1;const pend={};const IN_APP=!!(window.Eco&&window.Eco.postMessage);
+window.__ecoRes=(id,ok,bal,extra)=>{const p=pend[id];if(p){delete pend[id];p({ok:!!ok,bal:bal,extra:extra})}};
+function eco(a,n,w){return new Promise(res=>{
+  if(IN_APP){const id=uid++;pend[id]=res;window.Eco.postMessage(JSON.stringify({id,a,n:n||0,w:w||''}));setTimeout(()=>{if(pend[id]){delete pend[id];res({ok:false,bal:BAL,extra:0})}},5000)}
+  else{let b=+LS.get('cyrus_coins_dev',300);let ok=true;if(a==='spend'){if(b>=n)b-=n;else ok=false}else if(a==='add')b+=n;LS.set('cyrus_coins_dev',b);res({ok,bal:b,extra:n})}})}
+const coins=()=>BAL;
+async function earn(n){const r=await eco('add',n);if(typeof r.bal==='number')BAL=r.bal;drawCoins();return r.extra}
+async function spend(n,w){const r=await eco('spend',n,w);if(typeof r.bal==='number')BAL=r.bal;drawCoins();return r.ok}
+eco('bal').then(r=>{if(typeof r.bal==='number')BAL=r.bal;drawCoins()});
+const drawCoins=()=>{const t='🪙 '+fd(coins());$('#mCoins').textContent=t;$('#gCoins').textContent=t};
+let S=Object.assign({hlSame:true,hlPeers:true,showErr:true,maxMist:3,sound:true,vib:true,persian:true,autoNotes:true,theme:'classic',pad:'bottom',big:false,timer:true},LS.get('sd_settings',{}));
+const saveS=()=>LS.set('sd_settings',S);
+const PD='۰۱۲۳۴۵۶۷۸۹';
+function fd(n){n=String(n);return S.persian?n.replace(/\d/g,x=>PD[x]):n}
+const dd=n=>fd(n);
+function fmtT(s){const m=Math.floor(s/60),x=s%60;return fd((m<10?'0':'')+m+':'+(x<10?'0':'')+x)}
+let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1800)}
+function ask(msg,ok){return new Promise(r=>{$('#askTxt').textContent=msg;$('#askOk').textContent=ok;$('#mAsk').classList.add('on');$('#askOk').onclick=()=>{$('#mAsk').classList.remove('on');r(true)};$('#askNo').onclick=()=>{$('#mAsk').classList.remove('on');r(false)}})}
+/* صدا */
+let AC;function beep(f,d=.09,type='sine',v=.12,w=0){if(!S.sound)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;o.connect(g);g.connect(AC.destination);const t=AC.currentTime+w;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.start(t);o.stop(t+d+.02)}catch(e){}}
+const vib=p=>{if(S.vib&&navigator.vibrate)try{navigator.vibrate(p)}catch(e){}};
+const sfx={tap:()=>beep(520,.05,'triangle',.08),put:()=>beep(660,.09,'sine',.12),note:()=>beep(900,.04,'square',.04),bad:()=>{beep(160,.25,'sawtooth',.1);vib(60)},win:()=>[523,659,784,1047,1319].forEach((f,i)=>beep(f,.25,'triangle',.14,i*.12)),lose:()=>[392,330,262].forEach((f,i)=>beep(f,.3,'sawtooth',.1,i*.18)),done:()=>[784,988].forEach((f,i)=>beep(f,.12,'sine',.1,i*.08))};
+
+/* ====== سازندهٔ معما ====== */
+function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const BOX=i=>((i/27|0)*3)+((i%9)/3|0),ROW=i=>i/9|0,COL=i=>i%9;
+const POP=m=>{let c=0;while(m){m&=m-1;c++}return c};
+function solverCtx(g){const r=Array(9).fill(0),c=Array(9).fill(0),b=Array(9).fill(0);for(let i=0;i<81;i++)if(g[i]){const bit=1<<g[i];r[ROW(i)]|=bit;c[COL(i)]|=bit;b[BOX(i)]|=bit}return{r,c,b}}
+function solve(g,limit,rand){ /* شمارش جواب‌ها (تا limit)؛ اگر rand بدهیم ترتیب تصادفی و اولین جواب را در g نگه می‌دارد */
+  g=g.slice();const {r,c,b}=solverCtx(g);let cnt=0,first=null;
+  (function rec(){
+    let best=-1,bm=0,bc=10;
+    for(let i=0;i<81;i++){if(g[i])continue;const m=~(r[ROW(i)]|c[COL(i)]|b[BOX(i)])&0x3FE,n=POP(m);if(n<bc){bc=n;best=i;bm=m;if(n<2)break}}
+    if(best<0){cnt++;if(!first)first=g.slice();return cnt>=limit}
+    if(!bc)return false;
+    let vals=[];for(let v=1;v<=9;v++)if(bm>>v&1)vals.push(v);
+    if(rand)for(let i=vals.length-1;i>0;i--){const j=rand()*(i+1)|0;[vals[i],vals[j]]=[vals[j],vals[i]]}
+    for(const v of vals){const bit=1<<v,R=ROW(best),C=COL(best),B=BOX(best);g[best]=v;r[R]|=bit;c[C]|=bit;b[B]|=bit;
+      if(rec())return true;g[best]=0;r[R]&=~bit;c[C]&=~bit;b[B]&=~bit}
+    return false})();
+  return{cnt,first}}
+function makePuzzle(clues,seed){
+  const rand=rng(seed),sol=solve(Array(81).fill(0),1,rand).first,p=sol.slice();
+  const sym=clues>26,order=[];for(let i=0;i<(sym?41:81);i++)order.push(i);
+  for(let i=order.length-1;i>0;i--){const j=rand()*(i+1)|0;[order[i],order[j]]=[order[j],order[i]]}
+  let left=81;const t0=Date.now();
+  for(const i of order){
+    if(left<=clues||Date.now()-t0>2500)break;
+    const j=sym?80-i:i,a=p[i],b=p[j];p[i]=0;p[j]=0;const rem=i===j?1:2;
+    if(left-rem<clues||solve(p,2).cnt!==1){p[i]=a;p[j]=b}else left-=rem}
+  return{puzzle:p,solution:sol,clues:p.filter(Boolean).length}}
+
+/* ====== وضعیت بازی ====== */
+const DIFF=[
+ {id:'easy',n:'آسان',e:'🌱',clues:40,rw:10},
+ {id:'medium',n:'متوسط',e:'🌿',clues:34,rw:20},
+ {id:'hard',n:'سخت',e:'🔥',clues:29,rw:35},
+ {id:'expert',n:'خبره',e:'💎',clues:25,rw:55},
+ {id:'legend',n:'افسانه‌ای',e:'👑',clues:22,rw:90}];
+const THEMES=[
+ {id:'classic',n:'کاغذ کلاسیک',p:0},{id:'lilac',n:'یاسی روشن',p:0},
+ {id:'wood',n:'میز چوبی',p:150},{id:'royal',n:'آبی سلطنتی',p:250},
+ {id:'night',n:'شب',p:300},{id:'forest',n:'جنگل',p:400},
+ {id:'rose',n:'گل سرخ',p:500},{id:'gold',n:'طلایی',p:800}];
+let owned=LS.get('sd_owned',['classic','lilac']);
+let G=null,timer=null;
+const cells=[];
+const todayStr=()=>{const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()};
+let stats=Object.assign({played:{},won:{},best:{},daily:{last:0,streak:0,done:0}},LS.get('sd_stats',{}));
+const saveStats=()=>LS.set('sd_stats',stats);
+
+function buildBoard(){
+  const b=$('#board');for(let i=0;i<81;i++){const d=document.createElement('div');d.dataset.i=i;
+    d.innerHTML='<span class="v"></span><div class="n"></div>';
+    let cl='c';if(COL(i)%3===2&&COL(i)<8)cl+=' cr';if(ROW(i)%3===2&&ROW(i)<8)cl+=' cb';if(COL(i)===8)cl+=' c8';if(ROW(i)===8)cl+=' r8';
+    if((BOX(i)%2)===1)cl+=' alt';d.dataset.base=cl;d.className=cl;
+    d.addEventListener('pointerdown',e=>{e.preventDefault();select(i)});b.appendChild(d);cells.push(d)}
+  const pad=$('#pad'),sp=$('#sidepad');
+  for(let n=1;n<=9;n++){const bt=document.createElement('button');bt.dataset.n=n;bt.innerHTML='<span>'+n+'</span><small></small>';bt.onclick=()=>place(n);pad.appendChild(bt);
+    const s2=document.createElement('button');s2.textContent=n;s2.onclick=()=>place(n);sp.appendChild(s2)}
+}
+const peer=(a,b)=>a!==b&&(ROW(a)===ROW(b)||COL(a)===COL(b)||BOX(a)===BOX(b));
+const noteCache=Array(81).fill(-1);
+function render(){
+  if(!G)return;const sv=G.sel>=0?G.v[G.sel]:0;
+  for(let i=0;i<81;i++){
+    const el=cells[i],v=G.v[i];let cl=el.dataset.base;
+    if(G.sel===i)cl+=' sel';else if(S.hlPeers&&G.sel>=0&&peer(i,G.sel))cl+=' peer';
+    if(S.hlSame&&sv&&v===sv&&G.sel!==i)cl+=' same';
+    if(G.given[i])cl+=' given';
+    if(v&&!G.given[i]&&S.showErr&&v!==G.sol[i])cl+=' err';
+    el.className=cl;
+    const vs=el.firstChild,txt=v?dd(v):'';if(vs.textContent!==txt)vs.textContent=txt;
+    const nd=el.lastChild,nv=v?0:G.n[i]+(S.persian?1<<10:0);
+    if(noteCache[i]!==nv){noteCache[i]=nv;if(nv){let h='';for(let k=1;k<=9;k++)h+='<span>'+((G.n[i]>>k&1)?dd(k):'')+'</span>';nd.innerHTML=h;nd.classList.add('on')}else nd.classList.remove('on')}
+  }
+  const cnt=Array(10).fill(0);for(let i=0;i<81;i++)if(G.v[i]&&G.v[i]===G.sol[i])cnt[G.v[i]]++;
+  $$('#pad button').forEach(b=>{const n=+b.dataset.n,rem=9-cnt[n];b.disabled=rem<=0;b.firstChild.textContent=dd(n);b.lastChild.textContent=rem>0?dd(rem):''});
+  $$('#sidepad button').forEach((b,k)=>{b.textContent=dd(k+1);b.style.opacity=9-cnt[k+1]<=0?.25:1});
+  $('#tNotes').classList.toggle('on',G.notesMode);
+  $('#iMist').textContent=S.showErr?(S.maxMist?fd(G.mist)+'/'+fd(S.maxMist):fd(G.mist)):'—';
+  $('#iTime').textContent=S.timer?fmtT(G.sec):'--:--';
+  const free=Math.max(0,3-G.hints);$('#hintBd').textContent=free?fd(free):'🪙۲۰';
+}
+function select(i){if(!G||G.over||G.paused)return;G.sel=i;sfx.tap();render()}
+function save(){if(!G||G.over)return;LS.set('sd_save',{mode:G.mode,diff:G.diff,sol:G.sol,v:G.v,n:G.n,given:G.given,sec:G.sec,mist:G.mist,hints:G.hints,seed:G.seed,clues:G.clues})}
+function startFrom(o){
+  G=Object.assign({sel:-1,hist:[],notesMode:false,over:false,paused:false},o);
+  noteCache.fill(-1);applyUI();show('game');render();startTimer();
+  $('#gTitle').textContent=G.mode==='daily'?'چالش روزانه':'سودوکو';
+  const df=DIFF.find(d=>d.id===G.diff);$('#iDiff').textContent=df.e+' '+df.n;
+}
+function newGame(diff,mode,seed){
+  $('#mLoad').classList.add('on');
+  setTimeout(()=>{
+    const df=DIFF.find(d=>d.id===diff);seed=seed||((Math.random()*2**31)|0);
+    const r=makePuzzle(df.clues,seed);
+    stats.played[diff]=(stats.played[diff]||0)+1;saveStats();
+    $('#mLoad').classList.remove('on');
+    startFrom({mode:mode||'normal',diff,sol:r.solution,v:r.puzzle.slice(),n:Array(81).fill(0),given:r.puzzle.map(x=>!!x),sec:0,mist:0,hints:0,seed,clues:r.clues});
+    save()},30)}
+function startTimer(){clearInterval(timer);timer=setInterval(()=>{if(G&&!G.over&&!G.paused&&document.visibilityState==='visible'){G.sec++;$('#iTime').textContent=S.timer?fmtT(G.sec):'--:--';if(G.sec%5===0)save()}},1000)}
+function place(n){
+  if(!G||G.over||G.paused||G.sel<0){if(G&&G.sel<0)toast('اول یک خانه را انتخاب کنید');return}
+  const i=G.sel;if(G.given[i])return;
+  if(G.notesMode){if(G.v[i])return;G.hist.push([[i,0,G.n[i]]]);G.n[i]^=1<<n;sfx.note();render();save();return}
+  if(G.v[i]===n)return;
+  const ch=[[i,G.v[i],G.n[i]]];G.v[i]=n;G.n[i]=0;
+  if(S.autoNotes)for(let j=0;j<81;j++)if(peer(i,j)&&(G.n[j]>>n&1)){ch.push([j,G.v[j],G.n[j]]);G.n[j]&=~(1<<n)}
+  G.hist.push(ch);
+  const ok=n===G.sol[i];
+  if(!ok&&S.showErr){G.mist++;sfx.bad()}else sfx.put();
+  render();save();
+  if(!ok&&S.showErr&&S.maxMist&&G.mist>=S.maxMist){return lose()}
+  checkWin();
+}
+function checkWin(){
+  for(let i=0;i<81;i++)if(!G.v[i])return;
+  for(let i=0;i<81;i++)if(G.v[i]!==G.sol[i]){toast('جدول پر است ولی اشتباه دارد!');return}
+  win()}
+function sets(){ /* تکمیل ردیف/ستون/مربع برای صدا */ }
+$('#tUndo').onclick=()=>{if(!G||G.over||G.paused)return;const h=G.hist.pop();if(!h){toast('چیزی برای برگشت نیست');return}h.forEach(([i,v,n])=>{G.v[i]=v;G.n[i]=n});sfx.tap();render();save()};
+$('#tErase').onclick=()=>{if(!G||G.over||G.paused||G.sel<0)return;const i=G.sel;if(G.given[i]||(!G.v[i]&&!G.n[i]))return;G.hist.push([[i,G.v[i],G.n[i]]]);G.v[i]=0;G.n[i]=0;sfx.tap();render();save()};
+$('#tNotes').onclick=()=>{if(!G)return;G.notesMode=!G.notesMode;sfx.tap();render()};
+$('#tHint').onclick=async()=>{
+  if(!G||G.over||G.paused)return;
+  let i=G.sel;if(i<0||G.given[i]||G.v[i]===G.sol[i]){const c=[];for(let k=0;k<81;k++)if(G.v[k]!==G.sol[k])c.push(k);i=c[Math.random()*c.length|0];if(i==null)return}
+  if(G.hints>=3){if(coins()<20){toast('سکهٔ کافی ندارید (۲۰ سکه لازم است)');return}if(!(await ask('استفاده از راهنما ۲۰ سکه هزینه دارد. ادامه می‌دهید؟','بله، ۲۰ سکه')))return;if(!(await spend(20,'راهنمای سودوکو')))return}
+  G.hints++;G.sel=i;G.hist.push([[i,G.v[i],G.n[i]]]);G.v[i]=G.sol[i];G.n[i]=0;
+  for(let j=0;j<81;j++)if(peer(i,j)&&(G.n[j]>>G.sol[i]&1)&&S.autoNotes)G.n[j]&=~(1<<G.sol[i]);
+  sfx.done();render();save();checkWin()};
+$('#bPause').onclick=()=>{if(!G||G.over)return;G.paused=!G.paused;$('#pause').style.display=G.paused?'grid':'none';$('#bPause').textContent=G.paused?'▶':'⏸'};
+$('#pause').onclick=()=>$('#bPause').onclick();
+document.addEventListener('keydown',e=>{if(!G||!$('#game').classList.contains('on'))return;
+  if(e.key>='1'&&e.key<='9')place(+e.key);else if(e.key==='Backspace'||e.key==='Delete')$('#tErase').click();
+  else if(e.key==='n'||e.key==='N')$('#tNotes').click();else if(e.key==='z')$('#tUndo').click();
+  else if(G.sel>=0){const d={ArrowLeft:-1,ArrowRight:1,ArrowUp:-9,ArrowDown:9}[e.key];if(d){let k=G.sel+d;if(k>=0&&k<81&&!(Math.abs(d)===1&&ROW(k)!==ROW(G.sel))){G.sel=k;render()}}}});
+
+/* ====== پایان ====== */
+function endCard(html){$('#endCard').innerHTML=html;$('#mEnd').classList.add('on')}
+function win(){
+  G.over=true;clearInterval(timer);LS.set('sd_save',null);sfx.win();vib([40,60,40,60,120]);
+  const df=DIFF.find(d=>d.id===G.diff);let rw=df.rw;if(!G.mist)rw=Math.round(rw*1.5);if(G.hints>3)rw=Math.max(5,rw-5);
+  let extra='';
+  if(G.mode==='daily'){const t=todayStr();if(stats.daily.last!==t){const y=new Date();y.setDate(y.getDate()-1);const ys=y.getFullYear()*10000+(y.getMonth()+1)*100+y.getDate();stats.daily.streak=stats.daily.last===ys?stats.daily.streak+1:1;stats.daily.last=t;stats.daily.done++;rw=60+Math.min(stats.daily.streak,7)*5;extra='<div style="text-align:center">🔥 روزهای پیاپی: '+fd(stats.daily.streak)+'</div>'}else rw=0}
+  stats.won[G.diff]=(stats.won[G.diff]||0)+1;const b=stats.best[G.diff];let rec=false;if(!b||G.sec<b){stats.best[G.diff]=G.sec;rec=true}saveStats();
+  if(rw)earn(rw);
+  const st=G.mist===0&&G.hints===0?3:G.mist<=1?2:1;
+  endCard('<h2>🎉 آفرین! معما حل شد</h2><div class="stars">'+'★'.repeat(st)+'<span style="opacity:.25">'+'★'.repeat(3-st)+'</span></div><div style="text-align:center;line-height:2">زمان: <b>'+fmtT(G.sec)+'</b>'+(rec?' 🏅 رکورد جدید':'')+'<br>اشتباه: '+fd(G.mist)+' · راهنما: '+fd(G.hints)+'<br>'+(rw?'جایزه: <b style="color:#ffd35c">🪙 '+fd(rw)+'</b>':'جایزهٔ امروز قبلاً گرفته شده')+'</div>'+extra+
+  '<div class="res"><button class="btn sm pri" id="eAgain">بازی جدید ('+df.n+')</button><button class="btn sm" id="eMenu">منوی اصلی</button></div>');
+  $('#eAgain').onclick=()=>{$('#mEnd').classList.remove('on');newGame(G.diff)};$('#eMenu').onclick=toMenu}
+function lose(){
+  G.over=true;clearInterval(timer);sfx.lose();
+  endCard('<h2>😞 بازی تمام شد</h2><p style="text-align:center;line-height:1.9">به سقف اشتباه‌ها ('+fd(S.maxMist)+') رسیدید.</p><div class="res"><button class="btn sm pri" id="eCont">ادامه با ۵۰ سکه <small>(حذف اشتباه‌ها)</small></button><button class="btn sm" id="eRe">شروع دوبارهٔ همین معما</button><button class="btn sm" id="eNew">معمای جدید</button><button class="btn sm" id="eMenu">منو</button></div>');
+  $('#eCont').onclick=async()=>{if(coins()<50){toast('سکهٔ کافی ندارید');return}if(!(await spend(50,'ادامهٔ سودوکو')))return;G.over=false;G.mist=0;$('#mEnd').classList.remove('on');startTimer();render();save()};
+  $('#eRe').onclick=()=>{$('#mEnd').classList.remove('on');startFrom({mode:G.mode,diff:G.diff,sol:G.sol,v:G.sol.map((x,i)=>G.given[i]?x:0),n:Array(81).fill(0),given:G.given,sec:0,mist:0,hints:0,seed:G.seed,clues:G.clues});save()};
+  $('#eNew').onclick=()=>{$('#mEnd').classList.remove('on');newGame(G.diff)};$('#eMenu').onclick=toMenu}
+
+/* ====== ناوبری ====== */
+function show(id){$$('.screen').forEach(s=>s.classList.toggle('on',s.id===id));fit()}
+function toMenu(){$('#mEnd').classList.remove('on');save();clearInterval(timer);refreshMenu();show('menu')}
+function exitGame(){try{if(IN_APP){window.Eco.postMessage(JSON.stringify({id:0,a:'exit'}));return}parent.postMessage({type:'cyrus-game-exit'},'*')}catch(e){}if(history.length>1)history.back();else location.href='../index.html'}
+$('#gBack').onclick=toMenu;$('#mExit').onclick=exitGame;if(IN_APP)$('#mExit').style.visibility='hidden';
+$$('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('on'));
+function refreshMenu(){
+  drawCoins();const sv=LS.get('sd_save',null);$('#bCont').style.display=sv?'flex':'none';
+  if(sv){const df=DIFF.find(d=>d.id===sv.diff);$('#contInfo').textContent=(sv.mode==='daily'?'چالش روزانه':df.n)+' · '+fmtT(sv.sec)}
+  const t=todayStr(),done=stats.daily.last===t;
+  $('#dailyInfo').textContent=new Date().toLocaleDateString('fa-IR',{weekday:'long',month:'long',day:'numeric'})+(done?' · انجام شد ✓':'');
+  $('#dailyBadge').textContent=done?'✓':'🪙 +'+fd(60+Math.min(stats.daily.streak+1,7)*5)}
+$('#diffs').innerHTML=DIFF.map(d=>'<button class="btn" data-d="'+d.id+'"><span>'+d.e+' '+d.n+'</span><small>🪙 '+fd(d.rw)+'+ · '+fd(d.clues)+' عدد</small></button>').join('');
+$$('#diffs .btn').forEach(b=>b.onclick=()=>newGame(b.dataset.d));
+$('#bCont').onclick=()=>{const s=LS.get('sd_save',null);if(s)startFrom(s)};
+$('#bDaily').onclick=()=>newGame('hard','daily',todayStr()*7919);
+$('#bSet').onclick=()=>{drawSettings();$('#mSettings').classList.add('on')};$('#gSet').onclick=$('#bSet').onclick;
+$('#bRules').onclick=()=>$('#mRules').classList.add('on');
+$('#bStats').onclick=()=>{
+  const rows=DIFF.map(d=>'<tr><td>'+d.e+' '+d.n+'</td><td>'+fd(stats.played[d.id]||0)+'</td><td>'+fd(stats.won[d.id]||0)+'</td><td>'+(stats.best[d.id]?fmtT(stats.best[d.id]):'—')+'</td></tr>').join('');
+  $('#statBody').innerHTML='<table><tr><th>درجه</th><th>شروع</th><th>برد</th><th>بهترین</th></tr>'+rows+'</table><p style="text-align:center;margin:12px 0 0">📅 چالش روزانه: '+fd(stats.daily.done)+' بار · 🔥 روزهای پیاپی: '+fd(stats.daily.streak)+'</p>';
+  $('#mStats').classList.add('on')};
+
+/* ====== تنظیمات و صفحه‌ها ====== */
+function applyUI(){
+  document.body.dataset.theme=S.theme;document.body.classList.toggle('side',S.pad==='side');document.body.classList.toggle('big',S.big);
+  $('#iTime').style.visibility=S.timer?'visible':'hidden';fit()}
+function drawSettings(){
+  const T=(k,n,sub)=>'<div class="row" data-k="'+k+'"><span>'+n+(sub?'<br><small style="opacity:.6">'+sub+'</small>':'')+'</span><span class="sw'+(S[k]?' on':'')+'"></span></div>';
+  $('#setList').innerHTML=
+   T('showErr','نمایش اشتباه‌ها','اشتباه با رنگ قرمز و شمارنده مشخص می‌شود')+
+   '<div class="row"><span>حداکثر اشتباه</span><div class="seg" id="sgMist">'+[0,3,5].map(v=>'<button data-v="'+v+'" class="'+(S.maxMist===v?'on':'')+'">'+(v?fd(v):'نامحدود')+'</button>').join('')+'</div></div>'+
+   T('hlPeers','نمایش سطر، ستون و مربع')+T('hlSame','نمایش اعداد مشابه')+T('autoNotes','حذف خودکار یادداشت‌ها','با گذاشتن عدد، یادداشت‌های هم‌ردیف پاک می‌شود')+
+   T('timer','نمایش زمان')+T('sound','صدا')+T('vib','لرزش')+T('persian','اعداد فارسی (۱۲۳)')+T('big','اعداد پررنگ')+
+   '<div class="row"><span>جای دکمه‌های عدد</span><div class="seg" id="sgPad"><button data-v="bottom" class="'+(S.pad==='bottom'?'on':'')+'">پایین</button><button data-v="side" class="'+(S.pad==='side'?'on':'')+'">کنار (افقی)</button></div></div>'+
+   '<div class="row"><span>صفحه بازی</span><button class="btn sm" id="stTh">🎨 تغییر</button></div>';
+  $$('#setList .row[data-k]').forEach(r=>r.onclick=()=>{const k=r.dataset.k;S[k]=!S[k];saveS();applyUI();drawSettings();render()});
+  $$('#sgMist button').forEach(b=>b.onclick=()=>{S.maxMist=+b.dataset.v;saveS();drawSettings();render()});
+  $$('#sgPad button').forEach(b=>b.onclick=()=>{S.pad=b.dataset.v;saveS();applyUI();drawSettings()});
+  $('#stTh').onclick=()=>{$('#mSettings').classList.remove('on');openThemes()}}
+function openThemes(){
+  const L=$('#themeList');L.innerHTML=THEMES.map(t=>{const has=owned.includes(t.id);
+    return '<div class="th'+(S.theme===t.id?' sel':'')+'" data-id="'+t.id+'"><div class="mini" data-theme="'+t.id+'"><i class="u">5</i><i class="b">7</i><i></i><i class="b">2</i><i class="a u">4</i><i class="b">9</i><i></i><i class="b">1</i><i class="u">8</i></div>'+t.n+'<span class="pr">'+(S.theme===t.id?'✓ فعال':has?'انتخاب':'🪙 '+fd(t.p))+'</span></div>'}).join('');
+  $$('#themeList .th').forEach(el=>el.onclick=async()=>{const t=THEMES.find(x=>x.id===el.dataset.id);
+    if(!owned.includes(t.id)){if(coins()<t.p){toast('سکهٔ کافی ندارید — '+fd(t.p-coins())+' سکهٔ دیگر لازم است');return}
+      if(!(await ask('«'+t.n+'» را با '+fd(t.p)+' سکه می‌خرید؟','خرید و فعال‌سازی')))return;if(!(await spend(t.p,'صفحهٔ '+t.n)))return;owned.push(t.id);LS.set('sd_owned',owned)}
+    S.theme=t.id;saveS();applyUI();openThemes();toast('صفحهٔ «'+t.n+'» فعال شد')});
+  $('#mThemes').classList.add('on')}
+$('#bThemes').onclick=openThemes;
+
+/* ====== اندازه ====== */
+function fit(){
+  const w=innerWidth,h=innerHeight,land=w>h&&S.pad==='side'&&h<520;
+  let s=land?Math.min(h-70,w-140,520):Math.min(w-20,h-(S.pad==='side'?190:300),540);
+  s=Math.max(220,Math.floor(s/9)*9);document.documentElement.style.setProperty('--bs',s+'px');
+  document.body.classList.toggle('sidepadOn',land)}
+addEventListener('resize',fit);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+buildBoard();applyUI();refreshMenu();
+if(location.hash==='#test')window.__t={makePuzzle,solve,newGame,startFrom,place,select,get G(){return G}};
+</script>
+</body>
+</html>
