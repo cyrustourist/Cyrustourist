@@ -17,6 +17,7 @@ import '../../group_games/gg_hub_page.dart';
 import 'dots_page.dart';
 import 'iran_quiz_page.dart';
 import 'word_trip_page.dart';
+import 'html_coin_game_page.dart';
 import 'iran_puzzle_page.dart';
 import 'mines_page.dart';
 import 'mini_games_page.dart';
@@ -919,6 +920,8 @@ class _GamesHubPageState extends State<GamesHubPage> {
                     _gameCard('🗺️', GameT.fa ? 'ایران‌شناسی' : 'Know Iran', () => _push(const IranQuizPage())),
                     _gameCard('🔤', GameT.fa ? 'کلمه‌گردی' : 'Word Trip', () => _push(const WordTripPage())),
                     _gameCard('🧩', GameT.fa ? 'پازل ایران‌گردی' : 'Iran Jigsaw', () => _push(const IranPuzzlePage())),
+                    _gameCard('🔢', GameT.fa ? 'سودوکو' : 'Sudoku', () => _push(const HtmlCoinGamePage(asset: 'assets/games/sudoku.html', titleFa: 'سودوکو', titleEn: 'Sudoku', prefKey: 'sd', bg: Color(0xFF1B2A4A), barColor: Color(0xFF26396B)))),
+                    _gameCard('💎', GameT.fa ? 'گنج معبد' : 'Temple Gems', () => _push(const HtmlCoinGamePage(asset: 'assets/games/jewels.html', titleFa: 'گنج معبد', titleEn: 'Temple Gems', prefKey: 'jw', bg: Color(0xFF1D1209), barColor: Color(0xFF3A2512)))),
                   ],
                 ),
                 const SizedBox(height: 14),
