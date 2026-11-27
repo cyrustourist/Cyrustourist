@@ -124,6 +124,8 @@ class GgNet {
         }
       }
       if (!started) _shareLobby();
+    } else if (!joined) {
+      _sendJoin();
     } else if (joined) {
       _send(<String, dynamic>{'t': 'hb', 'to': hostUid.isEmpty ? null : hostUid});
       if (_lastHost != 0 && t - _lastHost > 7000) {
