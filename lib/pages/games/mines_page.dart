@@ -119,7 +119,7 @@ class _MinesPageState extends State<MinesPage> {
     } else if (stage == 'play' && isHost) {
       // گوشی‌های قطع‌شده به داور بازی خبر داده می‌شوند (نوبتشان خودکار بازی می‌شود)
       for (var i = 1; i < ids.length; i++) {
-        final here = _mesh.peers.values.any((p) => p.uid == ids[i]);
+        final here = _mesh.isReachable(ids[i]);
         _js('window.onGone($i,${here ? 0 : 1})');
       }
     }
@@ -256,6 +256,7 @@ class _MinesPageState extends State<MinesPage> {
       joined = false;
     });
     _send(<String, dynamic>{'g': 'ms_join', 'to': hostUid, 'code': code});
+    NearbyGameLink.instance.retryUntil(<String, dynamic>{'g': 'ms_join', 'to': hostUid, 'code': code}, () => mounted && stage == 'join' && !joined);
   }
 
   void _hostStart() {
