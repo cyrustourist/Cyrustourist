@@ -19,6 +19,8 @@ import android.provider.MediaStore
 import android.media.MediaScannerConnection
 import java.io.File
 import android.os.Bundle
+import android.os.PowerManager
+import android.net.wifi.WifiManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -43,6 +45,35 @@ class MainActivity : FlutterActivity() {
 
     private var sensorListener: SensorEventListener? = null
     private var callAudio: CallAudio? = null
+
+    // قفل وای‌فای (کم‌تأخیر) و CPU برای شبکه‌ی آفلاین: بدون آن، با خاموش‌شدن صفحه وای‌فای به حالت
+    // صرفه‌جویی می‌رود و اتصال/سرعت Nearby افت می‌کند.
+    private var wifiLock: WifiManager.WifiLock? = null
+    private var cpuLock: PowerManager.WakeLock? = null
+
+    private fun netLocks(on: Boolean) {
+        try {
+            if (on) {
+                if (wifiLock == null) {
+                    val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                    @Suppress("DEPRECATION")
+                    val mode = if (Build.VERSION.SDK_INT >= 29) WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+                    else WifiManager.WIFI_MODE_FULL_HIGH_PERF
+                    wifiLock = wm.createWifiLock(mode, "cyrus:mesh").apply { setReferenceCounted(false) }
+                }
+                if (wifiLock?.isHeld == false) wifiLock?.acquire()
+                if (cpuLock == null) {
+                    val pm = applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+                    cpuLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "cyrus:mesh").apply { setReferenceCounted(false) }
+                }
+                if (cpuLock?.isHeld == false) cpuLock?.acquire(4 * 60 * 60 * 1000L)
+            } else {
+                if (wifiLock?.isHeld == true) wifiLock?.release()
+                if (cpuLock?.isHeld == true) cpuLock?.release()
+            }
+        } catch (_: Throwable) {
+        }
+    }
 
     // درخواست مجوز میکروفن/دوربین (برای تماس). نتیجه: granted | denied | blocked
     private var permResult: MethodChannel.Result? = null
@@ -207,6 +238,14 @@ class MainActivity : FlutterActivity() {
 
         // وای‌فای محلی بازی (QR برای آیفون)
         HotspotBridge(applicationContext).register(messenger)
+
+        // قفل وای‌فای/CPU هنگام روشن‌بودن شبکه‌ی آفلاین
+        MethodChannel(messenger, "cyrus/net").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "lock" -> { netLocks(call.argument<Boolean>("on") ?: false); result.success(true) }
+                else -> result.notImplemented()
+            }
+        }
 
         // تماس زنده آفلاین (آزمایشی): ضبط/پخش صدا؛ بسته‌ها از طریق Dart روی Nearby جابه‌جا می‌شوند
         val live = LiveCall(applicationContext)
@@ -584,6 +623,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        netLocks(false)
         stopCompass()
         try {
             callAudio?.stopAll()
