@@ -32,6 +32,9 @@ body{background:radial-gradient(120% 60% at 50% 0%,var(--bg1) 0%,var(--bg2) 75%)
 .t.sel{outline:4px solid var(--gold);outline-offset:-4px;z-index:2;filter:brightness(1.18);transform:scale(.96)}
 .t.ok{box-shadow:inset 0 0 0 2px rgba(80,255,140,.85)}
 .t.fl{animation:fl .35s}
+.t i{position:absolute;top:2px;inset-inline-start:3px;font-style:normal;font-size:10px;font-weight:900;line-height:1;padding:2px 4px;border-radius:7px;background:rgba(0,0,0,.45);color:#fff;pointer-events:none}
+.t.hn{animation:hn .9s 2;z-index:3}
+@keyframes hn{0%,100%{box-shadow:inset 0 0 0 0 rgba(255,201,40,0)}50%{box-shadow:inset 0 0 0 6px #ffc928;filter:brightness(1.35)}}
 @keyframes fl{0%{transform:scale(.85);filter:brightness(1.6)}100%{transform:scale(1)}}
 #peek{position:absolute;inset:7px;border-radius:14px;background-image:var(--img);background-size:100% 100%;display:none;z-index:5;border:3px solid var(--gold)}
 #hold{width:100%;margin:8px 0;padding:12px;border:2px dashed var(--ln);border-radius:16px;text-align:center;font-size:13px;font-weight:800;color:#d7e6f5;background:rgba(255,255,255,.05);touch-action:none}
@@ -156,8 +159,34 @@ add('نان سنگک و سبزی', 'f', v => cloth(v) + P('M30 120 L330 100 L340
 add('چای و نبات', 'f', v => { const g = RG('#ffb43a', '#a8420f'); return cloth(v) + C(185, 255, 130, '#000', 'opacity=".2"') + C(180, 248, 126, '#f5efe2') + C(180, 248, 106, '#fff') + C(180, 248, 76, '#d8ccb0') + C(180, 248, 66, '#f4ecd8') + `<defs>${g[1]}</defs>` + C(180, 248, 58, fill(g)) + E(160, 232, 22, 12, '#fff', 'opacity=".35"') + R(300, 200, 22, 140, '#f4a8c8', 'opacity=".9"') + R(320, 190, 20, 150, '#ffc36b') + [0, 1, 2, 3, 4].map(i => R(40 + i * 8, 90 + i * 30, 38, 18, '#ffd88a', 'transform="rotate(' + (i * 13) + ' 60 ' + (100 + i * 30) + ')"')).join('') + [0, 1, 2, 3, 4, 5].map(i => L(60 + i * 14, 410, 76 + i * 14, 430, '#d11a1a', 3)).join('') + E(260, 410, 22, 16, '#7a3a14') + E(300, 420, 22, 16, '#6a2e0e') + dust(v); });
 add('فسنجان', 'f', v => { const g = RG('#6a3a1e', '#2a1408'); return cloth(v) + plate(180, 240, 150, '#e6dcc8') + `<defs>${g[1]}</defs>` + C(180, 240, 106, fill(g)) + [...Array(14)].map((_, i) => E(180 + Math.cos(i * 1.9) * (18 + (i * 13) % 72), 240 + Math.sin(i * 1.9) * (18 + (i * 7) % 70), 12, 8, '#c99a5a', `transform="rotate(${i * 25} ${(180 + Math.cos(i * 1.9) * (18 + (i * 13) % 72)).toFixed(0)} ${(240 + Math.sin(i * 1.9) * (18 + (i * 7) % 70)).toFixed(0)})"`)).join('') + [...Array(22)].map((_, i) => C(150 + (i * 17) % 60, 215 + (i * 23) % 50, 3.4, '#d4161c')).join('') + C(300, 400, 36, '#d92b4a') + C(300, 400, 28, '#ff7a8a') + [...Array(8)].map((_, i) => C(290 + (i * 7) % 20, 390 + (i * 9) % 20, 3, '#a5122a')).join('') + dust(v); });
 
+
+// ===== صحنه‌های تازه (نسخهٔ ۲) =====
+add('آرامگاه حافظ', 'h', v => sky(v) + sun(70, 100, 24, v ? '#ffd9a0' : '#fff3b0') + cyp(36, 430, 230) + cyp(76, 440, 170) + cyp(324, 430, 240) + cyp(284, 440, 175) + R(100, 400, 160, 16, '#d9b87a') + [0, 1, 2, 3, 4, 5].map(i => col(112 + i * 27, 400, 110, 13)).join('') + R(104, 282, 152, 10, '#cdb27a') + dome(180, 282, 62, '#3f8fd1', 0.9) + water(416, v ? ['#4a4f9c', '#2a2c66'] : ['#5fc0ea', '#2182b6']) + ripple(436, 3, '#fff') + night(v));
+add('پل خواجو', 'h', v => sky(v) + sun(290, 110, 28, v ? '#ffd9a0' : '#fff3b0') + mt('M0 300 Q90 250 180 290 T360 280 V480 H0Z', v ? '#3a3a72' : '#8a9cc8') + R(0, 300, 360, 18, '#c99a58') + [0, 1, 2, 3, 4, 5].map(i => arch(i * 60 + 4, 360, 52, 62, '#8a5a2b')).join('') + R(0, 318, 360, 12, '#b98644') + water(360, v ? ['#6a4fb0', '#2c2570'] : ['#52b7e6', '#1a74ab']) + ripple(385, 6, '#fff') + night(v));
+add('نقش رستم', 'h', v => sky(v) + sun(60, 90, 26, v ? '#ffd9a0' : '#fff3b0') + P('M60 480 V120 Q180 90 300 120 V480Z', v ? '#6a5a7a' : '#b89a6a') + [0, 1, 2, 3].map(i => R(96 + i * 46, 170 + (i % 2) * 40, 34, 120, '#2a1f14', 'opacity=\".75\"') + R(78 + i * 46, 214 + (i % 2) * 40, 70, 22, '#2a1f14', 'opacity=\".75\"')).join('') + R(0, 380, 360, 100, v ? '#3a2a4a' : '#c99a58') + dune(400, 10, '#b88a4a') + dust(v));
+add('ارگ علیشاه', 'h', v => sky(v) + cloud(80, 90, 1) + R(80, 150, 200, 290, '#b8683a') + R(80, 150, 200, 14, '#9a4f2a') + arch(150, 440, 60, 150, v ? '#1b1530' : '#3a2410') + [0, 1, 2, 3].map(i => R(96 + i * 46, 190, 24, 40, '#7a3f1e')).join('') + R(40, 300, 40, 140, '#a35a30') + R(280, 300, 40, 140, '#a35a30') + R(0, 440, 360, 40, v ? '#241a3c' : '#6b5b3e') + night(v));
+add('قلعهٔ الموت', 'h', v => sky(v) + mt('M-20 420 L80 280 L160 360 L240 150 L380 420Z', v ? '#4a4a7a' : '#8a7a68', P('M240 150 L210 200 L240 190 L270 205Z', '#fff')) + R(205, 128, 70, 30, '#6a5a48') + R(215, 108, 12, 22, '#5a4a38') + R(255, 108, 12, 22, '#5a4a38') + R(0, 420, 360, 60, v ? '#241a3c' : '#5b6f48') + night(v) + dust(v));
+add('مسجد جامع یزد', 'h', v => sky(v, [['#ffe29a', '#ffb36b', '#e8744a'], ['#2a1e5e', '#a04a7a', '#ff9a5a']]) + mino(95, 430, 270, 22, '#2f86c8', '#2f86c8') + mino(265, 430, 270, 22, '#2f86c8', '#2f86c8') + P('M120 440 V210 Q180 110 240 210 V440Z', '#e9d8b4') + P('M146 440 V240 Q180 170 214 240 V440Z', '#27527d') + dome(180, 150, 38, '#3f8fd1') + R(0, 440, 360, 40, v ? '#241a3c' : '#c99a58') + night(v));
+add('آرامگاه فردوسی', 'h', v => sky(v) + cyp(30, 440, 200) + cyp(330, 440, 210) + R(70, 390, 220, 18, '#d8cfb8') + R(84, 372, 192, 18, '#e8dfc8') + [0, 1, 2, 3, 4, 5].map(i => R(96 + i * 32, 230, 18, 142, '#efe5cc')).join('') + R(80, 214, 200, 18, '#cdb27a') + P('M80 214 L180 150 L280 214Z', '#e3d5ac') + R(0, 408, 360, 72, v ? '#261f4a' : '#7ea35e') + night(v));
+add('کویر مرنجاب', 'n', v => sky(v, [['#ffd48a', '#ffa45a', '#ff7a3a'], ['#2a1e5e', '#a04a7a', '#ff9a5a']]) + sun(90, 170, 34, v ? '#ffd9a0' : '#fff0b8') + dune(300, 36, '#f0b068') + dune(350, 44, '#dc8a44') + [0, 1, 2, 3].map(i => C(120 + i * 44, 330 - (i % 2) * 6, 7, '#3a2410') + R(116 + i * 44, 337 - (i % 2) * 6, 8, 18, '#3a2410')).join('') + dune(430, 40, '#c27234') + dust(v));
+add('درهٔ رنگین‌کمان هرمز', 'n', v => sky(v) + mt('M0 330 L70 200 L130 290 L200 170 L270 280 L340 210 L360 240 V480 H0Z', '#d8643c') + mt('M0 380 L80 270 L150 350 L230 250 L300 340 L360 290 V480 H0Z', '#e8a23a') + mt('M0 420 L90 330 L170 400 L260 320 L360 400 V480 H0Z', '#c24a6a') + [0, 1, 2, 3, 4].map(i => R(0, 330 + i * 26, 360, 5, ['#fff3b0', '#7ad4ff', '#ff9ec9', '#9be07a', '#ffd36a'][i], 'opacity=\".28\"')).join('') + dust(v));
+add('دریاچهٔ گهر', 'n', v => sky(v) + mt('M-20 330 L90 190 L170 280 L260 160 L380 330Z', v ? '#4a4a85' : '#7a8fb8', P('M260 160 L232 204 L260 196 L286 208Z', '#fff')) + mt('M-20 360 Q100 300 220 350 T400 340 V480 H-20Z', v ? '#2b3a6a' : '#4f8a5a') + water(350, ['#3fa0d8', '#12608f']) + ripple(380, 6, '#fff') + pine(40, 350, .9, '#1f5a35') + pine(320, 352, 1, '#18492b') + night(v));
+add('غار علی‌صدر', 'n', v => { const g = G(['#1a1f3a', '#2a4a6a', '#3f8fb8']); return `<defs>${g[1]}</defs>` + R(0, 0, 360, 480, fill(g)) + P('M0 0 H360 V300 Q330 140 180 120 Q30 140 0 300Z', '#2a2f4a') + [0, 1, 2, 3, 4, 5, 6, 7].map(i => P(`M${30 + i * 42} 0 L${44 + i * 42} ${70 + (i * 37) % 80} L${58 + i * 42} 0Z`, '#4a4a6a')).join('') + water(300, ['#3fb0d8', '#0a4a6f']) + ripple(330, 6, '#fff') + P('M130 400 L240 400 L260 370 L110 370Z', '#8a5a2b') + R(176, 340, 4, 32, '#5a3a1a') + P('M180 342 L220 366 H180Z', '#fff'); });
+add('انار', 'f', v => cloth(v) + [[110, 190], [250, 170], [180, 330]].map((a, i) => C(a[0] + 6, a[1] + 8, 82, '#000', 'opacity=\".2\"') + C(a[0], a[1], 80, i % 2 ? '#c4202f' : '#a8142a') + C(a[0] - 24, a[1] - 26, 22, '#fff', 'opacity=\".22\"') + P(`M${a[0] - 18} ${a[1] - 74} L${a[0] - 8} ${a[1] - 92} L${a[0]} ${a[1] - 76} L${a[0] + 8} ${a[1] - 92} L${a[0] + 18} ${a[1] - 74}Z`, '#7a1a1a')).join('') + dust(v));
+add('زعفران', 'f', v => cloth(v) + plate(180, 240, 140, '#f2ecdc') + [...Array(46)].map((_, i) => L(180 + Math.cos(i * 2.1) * (10 + (i * 9) % 96), 240 + Math.sin(i * 2.1) * (10 + (i * 13) % 92), 180 + Math.cos(i * 2.1) * (22 + (i * 9) % 96), 240 + Math.sin(i * 2.1) * (22 + (i * 13) % 92) + 8, i % 5 ? '#d8281c' : '#ffb22e', 3)).join('') + [0, 1, 2].map(i => C(60 + i * 120, 70, 26, '#8a4cc8', 'opacity=\".85\"')).join('') + dust(v));
+add('کباب کوبیده', 'f', v => cloth(v) + plate(180, 240, 150) + [0, 1, 2].map(i => R(70, 170 + i * 56, 210, 30, ['#9a4a22', '#8a3e1c', '#a8552a'][i], 'rx=\"15\"') + R(70, 174 + i * 56, 210, 8, '#c4753a', 'opacity=\".5\"')).join('') + E(300, 150, 24, 16, '#d8281c') + E(300, 330, 24, 16, '#d8281c') + dust(v));
+
+// بافت ظریف روی هر صحنه: پرنده، ابر کوچک و جرقه با جای ثابت برای هر صحنه، تا تکه‌های آسمان و زمین هم از هم قابل تشخیص باشند
+const texture = (seed, v) => { let k = seed * 7919 + 13, o = ''; const nx = () => { k = (k * 9301 + 49297) % 233280; return k / 233280; };
+  for (let i = 0; i < 16; i++) { const x = nx() * 340 + 10, y = nx() * 440 + 20, t = i % 4;
+    if (t === 0) o += `<path d="M${x.toFixed(0)} ${y.toFixed(0)} q6 -6 12 0 q6 -6 12 0" fill="none" stroke="${v ? '#fff' : '#2a3550'}" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/>`;
+    else if (t === 1) o += E(x.toFixed(0), y.toFixed(0), 16 + nx() * 14, 5 + nx() * 4, '#fff', 'opacity=".16"');
+    else if (t === 2) o += C(x.toFixed(0), y.toFixed(0), 1.6 + nx() * 1.6, v ? '#ffe9a8' : '#fff', 'opacity=".4"');
+    else o += R(x.toFixed(0), y.toFixed(0), 18 + nx() * 22, 2.4, v ? '#fff' : '#000', 'opacity=".07"'); }
+  return o + `<defs><radialGradient id="vg"><stop offset=".62" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></radialGradient></defs>` + R(0, 0, 360, 480, 'url(#vg)'); };
+
 // جلوگیری از خطا در حالتی که f به‌صورت تابع برمی‌گردد
-function sceneSVG(i, v) { _id.n = 0; const s = SC[i]; return `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480" viewBox="0 0 360 480">${s.f(v)}</svg>`; }
+function sceneSVG(i, v) { _id.n = 0; const s = SC[i]; return `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480" viewBox="0 0 360 480">${s.f(v)}${texture(i + 1, v)}</svg>`; }
 
 
 const HINT_COST = 10;
@@ -168,18 +197,19 @@ const CATE = { h: '🏛️ اثر تاریخی', n: '🌄 طبیعت', f: '🍽�
 // ترتیب مرحله‌ها: چرخشی بین تاریخی، طبیعت و خوراک
 const ORDER = (() => { const g = { h: [], n: [], f: [] }; SC.forEach((s, i) => g[s.cat].push(i)); const o = []; for (let k = 0; o.length < SC.length; k++) ['h', 'n', 'f'].forEach(c => { if (g[c][k] !== undefined) o.push(g[c][k]); }); return o; })();
 const NL = SC.length * 2;
-const GRIDS = [[3, 4], [4, 5], [5, 6], [6, 8]];
+const GRIDS = [[3, 4], [4, 5], [5, 6], [6, 8], [7, 9]];
+const GSTEP = Math.ceil(NL / GRIDS.length);
 function levelInfo(L) {
   const half = SC.length, v = L >= half ? 1 : 0, k = L % half;
   const base = ORDER[v ? (k + 11) % half : k];
-  const gs = GRIDS[Math.min(GRIDS.length - 1, Math.floor(L / 16))];
+  const gs = GRIDS[Math.min(GRIDS.length - 1, Math.floor(L / GSTEP))];
   return { base: base, v: v, cols: gs[0], rows: gs[1], name: SC[base].n, cat: SC[base].cat };
 }
 
 // ------------------------------------------------------------------ ذخیره
 const KEY = 'irpuzzle_v1';
-let PR = { done: 0, stars: {}, best: {}, set: { snd: 1, vol: 70, vib: 1, hl: 1, gap: 1, th: 0 } };
-try { const r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r) { PR = Object.assign(PR, r); PR.set = Object.assign({ snd: 1, vol: 70, vib: 1, hl: 1, gap: 1, th: 0 }, r.set || {}); } } catch (e) {}
+let PR = { done: 0, stars: {}, best: {}, set: { snd: 1, vol: 70, vib: 1, hl: 1, gap: 1, th: 0, num: 1 } };
+try { const r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r) { PR = Object.assign(PR, r); PR.set = Object.assign({ snd: 1, vol: 70, vib: 1, hl: 1, gap: 1, th: 0, num: 1 }, r.set || {}); } } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(PR)); } catch (e) {} };
 
 // ------------------------------------------------------------------ سکه (پل با برنامه)
@@ -243,10 +273,33 @@ function startLevel(L) {
   const url = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
   $('boardBox').style.setProperty('--img', url);
   layout(); render(); closeModal();
+  analyse(svg, GS);
   GS.iv = setInterval(() => { if (!GS.done) { GS.sec++; $('tm').innerHTML = '⏱ <b>' + fmt(GS.sec) + '</b>'; } }, 1000);
   $('tm').innerHTML = '⏱ <b>' + fmt(0) + '</b>';
   $('info').innerHTML = 'دو تکه را پشت‌سرهم لمس کن تا جابه‌جا شوند · <b>مرحله ' + fa(L + 1) + '</b> از ' + fa(NL) + ' · ' + CATE[info.cat] + ' · <b>' + info.name + '</b>';
   $('hc').textContent = '(' + fa(HINT_COST) + ' 🪙)';
+}
+
+// تحلیل تصویر: هر تکه چقدر «خاص» است؟ (برای اینکه راهنما اول سراغ تکه‌های قابل‌تشخیص برود، نه آسمان یکدست)
+function analyse(svg, g) {
+  g.dist = null;
+  try {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const S = 12, W = g.cols * S, H = g.rows * S, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0, W, H);
+        const d = cx.getImageData(0, 0, W, H).data, mean = [], vr = [];
+        for (let p = 0; p < g.n; p++) {
+          const c = p % g.cols, r = Math.floor(p / g.cols); let R_ = 0, G_ = 0, B_ = 0, ls = [], cnt = 0;
+          for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const o = (((r * S + y) * W) + c * S + x) * 4; R_ += d[o]; G_ += d[o + 1]; B_ += d[o + 2]; ls.push(d[o] * .3 + d[o + 1] * .59 + d[o + 2] * .11); cnt++; }
+          const m = ls.reduce((a, b) => a + b, 0) / cnt; mean.push([R_ / cnt, G_ / cnt, B_ / cnt]); vr.push(ls.reduce((a, b) => a + (b - m) * (b - m), 0) / cnt);
+        }
+        g.dist = mean.map((m, i) => { let near = 1e9; mean.forEach((o, j) => { if (j !== i) near = Math.min(near, Math.hypot(m[0] - o[0], m[1] - o[1], m[2] - o[2])); }); return Math.sqrt(vr[i]) * 2 + near; });
+      } catch (e) { g.dist = null; }
+    };
+    im.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  } catch (e) {}
 }
 function layout() {
   const bw = $('bwrap').getBoundingClientRect();
@@ -263,7 +316,7 @@ function render() {
   for (let p = 0; p < GS.n; p++) {
     const piece = GS.perm[p], c = piece % GS.cols, r = Math.floor(piece / GS.cols);
     const bx = GS.cols > 1 ? c * 100 / (GS.cols - 1) : 0, by = GS.rows > 1 ? r * 100 / (GS.rows - 1) : 0;
-    h += '<div class="t' + (GS.sel === p ? ' sel' : '') + (PR.set.hl && piece === p ? ' ok' : '') + '" data-p="' + p + '" style="background-size:' + (GS.cols * 100) + '% ' + (GS.rows * 100) + '%;background-position:' + bx.toFixed(2) + '% ' + by.toFixed(2) + '%"></div>';
+    h += '<div class="t' + (GS.sel === p ? ' sel' : '') + (PR.set.hl && piece === p ? ' ok' : '') + '" data-p="' + p + '" style="background-size:' + (GS.cols * 100) + '% ' + (GS.rows * 100) + '%;background-position:' + bx.toFixed(2) + '% ' + by.toFixed(2) + '%">' + (PR.set.num ? '<i>' + fa(piece + 1) + '</i>' : '') + '</div>';
   }
   b.innerHTML = h;
   stats();
@@ -286,16 +339,25 @@ function tap(p) {
   buzz(10);
   if (correct() === GS.n) win();
 }
+let hintBusy = false;
 async function hint() {
-  if (GS.done) return;
-  let i = GS.perm.findIndex((v, k) => v !== k);
-  if (i < 0) return;
-  const r = await eco('spend', HINT_COST); setCoins(r.bal);
-  if (!r.ok) { toast('سکهٔ کافی ندارید 🪙'); return; }
-  const j = GS.perm.indexOf(i);
-  [GS.perm[i], GS.perm[j]] = [GS.perm[j], GS.perm[i]];
-  GS.sel = -1; sfx.good(); render();
-  if (correct() === GS.n) win();
+  if (GS.done || hintBusy) return;
+  const wrong = []; GS.perm.forEach((v, k) => { if (v !== k) wrong.push(k); });
+  if (!wrong.length) return;
+  hintBusy = true;
+  try {
+    // کدام خانه؟ خانه‌ای که تکهٔ درستش از همه قابل‌تشخیص‌تر است (نه آسمان‌های شبیه هم)
+    let i = wrong[0];
+    if (GS.dist) i = wrong.reduce((a, b) => (GS.dist[b] > GS.dist[a] ? b : a), wrong[0]);
+    const r = await eco('spend', HINT_COST); setCoins(r.bal);
+    if (!r.ok) { toast('سکهٔ کافی ندارید 🪙'); return; }
+    const j = GS.perm.indexOf(i);
+    [GS.perm[i], GS.perm[j]] = [GS.perm[j], GS.perm[i]];
+    GS.sel = -1; GS.moves++; sfx.good(); buzz(12); render();
+    [i, j].forEach(k => { const el = $('board').children[k]; if (el) el.classList.add('hn'); });
+    toast('تکهٔ ' + fa(i + 1) + ' را سر جای درستش گذاشتم ✅');
+    if (correct() === GS.n) win();
+  } finally { hintBusy = false; }
 }
 
 // ------------------------------------------------------------------ پایان مرحله
@@ -325,13 +387,13 @@ async function win() {
 function levelsModal() {
   let g = '';
   for (let i = 0; i < NL; i++) {
-    const open = i <= PR.done, st = PR.stars[i] || 0, gs = GRIDS[Math.min(GRIDS.length - 1, Math.floor(i / 16))];
+    const open = i <= PR.done, st = PR.stars[i] || 0, gs = GRIDS[Math.min(GRIDS.length - 1, Math.floor(i / GSTEP))];
     g += '<button class="lv' + (open ? '' : ' lk') + '" ' + (open ? 'onclick="startLevel(' + i + ')"' : 'disabled') + '>' + (open ? fa(i + 1) + '<small>' + (st ? '★'.repeat(st) : fa(gs[0]) + '×' + fa(gs[1])) + '</small>' : '🔒') + '</button>';
   }
   modal('<h2>مرحله‌ها (' + fa(NL) + ')</h2><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">' + g + '</div><button class="bt gh" style="width:100%;margin-top:12px" onclick="closeModal()">بستن</button>');
 }
 function sw(k, on) { return '<div class="sw' + (on ? ' on' : '') + '" onclick="tg(\'' + k + '\')"></div>'; }
-function tg(k) { PR.set[k] = PR.set[k] ? 0 : 1; save(); if (k === 'hl') render(); if (k === 'snd' && PR.set.snd) sfx.good(); settings(); }
+function tg(k) { PR.set[k] = PR.set[k] ? 0 : 1; save(); if (k === 'hl' || k === 'num') render(); if (k === 'snd' && PR.set.snd) sfx.good(); settings(); }
 function setv(k, v) { PR.set[k] = v; save(); if (k === 'th') document.body.dataset.th = v; if (k === 'gap') layout(); settings(); }
 function settings() {
   const chips = (k, arr) => arr.map((n, i) => '<i class="' + (PR.set[k] === i ? 'on' : '') + '" onclick="setv(\'' + k + '\',' + i + ')">' + n + '</i>').join('');
@@ -340,6 +402,7 @@ function settings() {
     '<div class="st"><span>بلندی صدا</span><input type="range" min="0" max="100" value="' + PR.set.vol + '" oninput="PR.set.vol=+this.value;save()" onchange="sfx.good()"></div>' +
     '<div class="st"><span>لرزش</span>' + sw('vib', PR.set.vib) + '</div>' +
     '<div class="st"><span>نشان دادن تکه‌های درست</span>' + sw('hl', PR.set.hl) + '</div>' +
+    '<div class="st"><span>شمارهٔ روی تکه‌ها (تشخیص آسان‌تر)</span>' + sw('num', PR.set.num) + '</div>' +
     '<div class="st" style="display:block"><div style="margin-bottom:8px">فاصلهٔ بین تکه‌ها</div><div class="ch">' + chips('gap', ['بدون فاصله', 'کم', 'زیاد']) + '</div></div>' +
     '<div class="st" style="display:block"><div style="margin-bottom:8px">رنگ پس‌زمینه</div><div class="ch">' + chips('th', ['نیلی', 'بنفش', 'سبز', 'کهربایی']) + '</div></div>' +
     '<div class="st"><span>هزینهٔ راهنما</span><b>' + fa(HINT_COST) + ' سکه</b></div>' +
