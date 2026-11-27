@@ -2029,6 +2029,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
       joined = false;
     });
     _send(<String, dynamic>{'g': 'lu_join', 'to': hostUid, 'code': code});
+    NearbyGameLink.instance.retryUntil(<String, dynamic>{'g': 'lu_join', 'to': hostUid, 'code': code}, () => mounted && stage == 'join' && !joined);
   }
 
   void _hostStart() {
@@ -2057,7 +2058,7 @@ class _LudoNearbyPageState extends State<LudoNearbyPage> {
     _maybeAuto();
   }
 
-  bool _gone(int pl) => (pl != 0 && !_mesh.peers.values.any((p) => p.uid == ids[pl])) || (_timeouts[pl] ?? 0) >= 2;
+  bool _gone(int pl) => (pl != 0 && !_mesh.isReachable(ids[pl])) || (_timeouts[pl] ?? 0) >= 2;
 
   void _maybeAuto() {
     if (!isHost || stage != 'play' || winner >= 0 || busy || ph != 'roll' || turn >= ids.length) return;
@@ -2838,6 +2839,7 @@ class _StarLudoNearbyPageState extends State<StarLudoNearbyPage> {
       joined = false;
     });
     _send(<String, dynamic>{'g': 'sl_join', 'to': hostUid, 'code': code});
+    NearbyGameLink.instance.retryUntil(<String, dynamic>{'g': 'sl_join', 'to': hostUid, 'code': code}, () => mounted && stage == 'join' && !joined);
   }
 
   void _hostStart() {
@@ -2866,7 +2868,7 @@ class _StarLudoNearbyPageState extends State<StarLudoNearbyPage> {
     _maybeAuto();
   }
 
-  bool _gone(int pl) => (pl != 0 && !_mesh.peers.values.any((p) => p.uid == ids[pl])) || (_timeouts[pl] ?? 0) >= 2;
+  bool _gone(int pl) => (pl != 0 && !_mesh.isReachable(ids[pl])) || (_timeouts[pl] ?? 0) >= 2;
 
   void _maybeAuto() {
     if (!isHost || stage != 'play' || winner >= 0 || busy || ph != 'roll' || turn >= ids.length) return;
@@ -3522,7 +3524,7 @@ class _SnakesNearbyPageState extends State<SnakesNearbyPage> {
     } else if (stage == 'play' && started) {
       if (isHost) {
         _send(_snap());
-        if (!lost && peerUid.isNotEmpty && !_mesh.peers.values.any((p) => p.uid == peerUid) && winner < 0) setState(() => lost = true);
+        if (!lost && peerUid.isNotEmpty && !_mesh.isReachable(peerUid) && winner < 0) setState(() => lost = true);
       } else if (!lost && now - _lastSnap > 20000 && winner < 0) {
         setState(() => lost = true);
       }
@@ -3649,6 +3651,7 @@ class _SnakesNearbyPageState extends State<SnakesNearbyPage> {
       peerUid = r.hostUid;
     });
     NearbyGameLink.instance.send(<String, dynamic>{'g': 'sn_join', 'to': peerUid, 'code': code});
+    NearbyGameLink.instance.retryUntil(<String, dynamic>{'g': 'sn_join', 'to': peerUid, 'code': code}, () => mounted && stage == 'join' && !started);
   }
 
   void _sendChat(String raw) {
