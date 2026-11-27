@@ -1069,7 +1069,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
     } else if (stage == 'play' && started) {
       if (isHost) {
         _sendNet(_snap());
-        if (!lost && peerUid.isNotEmpty && !_mesh.peers.values.any((p) => p.uid == peerUid) && ph != 'over') {
+        if (!lost && peerUid.isNotEmpty && !_mesh.isReachable(peerUid) && ph != 'over') {
           setState(() => lost = true);
         }
       } else if (!lost && now - _lastSnap > 20000 && ph != 'over') {
@@ -1141,6 +1141,7 @@ class _BackgammonPageState extends State<BackgammonPage> {
       peerUid = r.hostUid;
     });
     NearbyGameLink.instance.send(<String, dynamic>{'g': 'bg_join', 'to': peerUid, 'code': code});
+    NearbyGameLink.instance.retryUntil(<String, dynamic>{'g': 'bg_join', 'to': peerUid, 'code': code}, () => mounted && stage == 'join' && !started);
   }
 
   // ---------------------------------------------------------------- آنلاین
