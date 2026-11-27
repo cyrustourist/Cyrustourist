@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nearby_connections/nearby_connections.dart';
@@ -82,6 +83,14 @@ class _Known {
 /// شبکه‌ی آفلاین گردشگران (بدون اینترنت) با Nearby Connections.
 /// استراتژی P2P_CLUSTER: هر گوشی هم تبلیغ می‌کند هم جستجو؛ پیام‌ها بین گوشی‌ها
 /// پاس داده می‌شوند (relay) تا گروه بزرگ‌تر از اتصال مستقیم هم پیام را بگیرد.
+const MethodChannel _netChannel = MethodChannel('cyrus/net');
+
+Future<void> _netLock(bool on) async {
+  try {
+    await _netChannel.invokeMethod<bool>('lock', <String, dynamic>{'on': on});
+  } catch (_) {}
+}
+
 class OfflineMeshService extends ChangeNotifier {
   OfflineMeshService._();
   static final OfflineMeshService instance = OfflineMeshService._();
@@ -193,19 +202,17 @@ class OfflineMeshService extends ChangeNotifier {
       // همه‌ی مجوزهای لازم درخواست می‌شوند. مجوزهایی که روی این نسخه‌ی اندروید وجود ندارند
       // (مثلاً bluetoothScan قبل از اندروید ۱۲ یا nearbyWifiDevices قبل از ۱۳) در permission_handler
       // «رد‌شده» برمی‌گردند؛ پس نتیجه‌ی تک‌تک آن‌ها شرط نیست و خود Nearby هنگام شروع، کمبود مجوز را اعلام می‌کند.
-      for (final permission in <Permission>[
-        Permission.locationWhenInUse,
-        Permission.bluetooth,
-        Permission.bluetoothAdvertise,
-        Permission.bluetoothConnect,
-        Permission.bluetoothScan,
-        Permission.nearbyWifiDevices,
-      ]) {
-        try {
-          await permission.request();
-        } catch (e) {
-          debugPrint('OfflineMeshService permission $permission: $e');
-        }
+      try {
+        await <Permission>[
+          Permission.locationWhenInUse,
+          Permission.bluetooth,
+          Permission.bluetoothAdvertise,
+          Permission.bluetoothConnect,
+          Permission.bluetoothScan,
+          Permission.nearbyWifiDevices,
+        ].request();
+      } catch (e) {
+        debugPrint('OfflineMeshService permissions: $e');
       }
 
       // GPS: در اندروید ۱۱ و پایین‌تر برای پیدا کردن گوشی‌های نزدیک لازم است. اگر کاربر
@@ -356,7 +363,7 @@ class OfflineMeshService extends ChangeNotifier {
   /// بعد از وصل‌شدن یک گوشی تازه، پیام‌های اخیری که هنوز نگرفته را برایش می‌فرستد.
   /// ttl=1 یعنی خودش فقط دریافت می‌کند؛ آن گوشی هم پیام‌ها را نگه می‌دارد و به همسایه‌های بعدی‌اش می‌رساند.
   Future<void> _syncTo(String endpointId, String peerUid) async {
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
     if (!running || !peers.containsKey(endpointId)) return;
     // خودمان را اعلام می‌کنیم و فهرست افرادی که می‌شناسیم را به همسایه‌ی تازه می‌دهیم
     _announce();
@@ -400,6 +407,16 @@ class OfflineMeshService extends ChangeNotifier {
   /// آخرین خطای شروع شبکه (برای نمایش راهنمای دقیق‌تر به کاربر)
   String lastError = '';
 
+  /// نام تبلیغ‌شده در Nearby حداکثر ~۱۳۱ بایت است؛ نام فارسی/بلند باعث شکست تبلیغ می‌شد.
+  String _label() {
+    var n = myName.replaceAll('|', ' ');
+    while (utf8.encode(n).length > 60 && n.isNotEmpty) {
+      n = n.substring(0, n.length - 1);
+    }
+    if (n.isEmpty) n = 'Traveler';
+    return '$n|$myUid';
+  }
+
   Future<bool> start() async {
     if (running) return true;
     await _loadIdentity();
@@ -409,7 +426,7 @@ class OfflineMeshService extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    final label = '$myName|$myUid';
+    final label = _label();
     final nearby = Nearby();
     try {
       final advertisingStarted = await nearby.startAdvertising(
@@ -427,13 +444,7 @@ class OfflineMeshService extends ChangeNotifier {
       final discoveryStarted = await nearby.startDiscovery(
         label,
         Strategy.P2P_CLUSTER,
-        onEndpointFound: (id, name, serviceId) {
-          _names[id] = name;
-          // برای جلوگیری از درخواست هم‌زمان دوطرفه، فقط uid کوچک‌تر درخواست می‌دهد
-          final other = name.contains('|') ? name.split('|').last : name;
-          if (peers.containsKey(id) || _pending.contains(id)) return;
-          if (myUid.compareTo(other) < 0) _request(id);
-        },
+        onEndpointFound: _onFound,
         onEndpointLost: (id) {
           _names.remove(id);
         },
@@ -447,7 +458,9 @@ class OfflineMeshService extends ChangeNotifier {
       status = 'on';
       notifyListeners();
       unawaited(_startForeground());
+      unawaited(_netLock(true));
       _startPresence();
+      _startWatchdog();
       return true;
     } catch (e) {
       running = false;
@@ -489,39 +502,134 @@ class OfflineMeshService extends ChangeNotifier {
     _fileFrom.clear();
     _presenceTimer?.cancel();
     _presenceTimer = null;
+    _watchTimer?.cancel();
+    _watchTimer = null;
+    _fails.clear();
     _known.clear();
     await _stopForeground();
+    unawaited(_netLock(false));
     notifyListeners();
   }
 
+  final Map<String, int> _fails = {};
+
   /// بعد از قطع یا شکست اتصال، اگر گوشی هنوز در دسترس است دوباره درخواست می‌دهیم
   /// (onEndpointFound فقط یک‌بار صدا زده می‌شود و بعد از قطع دوباره نمی‌آید).
+  /// فاصله‌ی تلاش‌ها کوتاه شروع می‌شود (۱٫۵ ثانیه) و تا ۸ ثانیه بیشتر می‌شود.
+  /// هر دو طرف می‌توانند تلاش کنند؛ طرف با uid بزرگ‌تر کمی دیرتر.
   void _retryLater(String id) {
-    Future<void>.delayed(const Duration(seconds: 4), () {
+    final n = (_fails[id] ?? 0) + 1;
+    _fails[id] = n;
+    final base = min(8000, 1500 * n);
+    final other0 = (_names[id] ?? '').split('|').last;
+    final delay = Duration(milliseconds: myUid.compareTo(other0) < 0 ? base : base + 2500);
+    Future<void>.delayed(delay, () {
       if (!running || peers.containsKey(id) || _pending.contains(id)) return;
-      final name = _names[id];
-      if (name == null) return; // دیگر پیدا نمی‌شود
-      final other = name.contains('|') ? name.split('|').last : name;
-      if (myUid.compareTo(other) < 0) _request(id);
+      if (_names[id] == null) return; // دیگر پیدا نمی‌شود
+      _request(id);
+    });
+  }
+
+  /// اگر گوشی مقابل (uid کوچک‌تر) ما را پیدا نکرد، خودمان بعد از چند ثانیه درخواست می‌دهیم.
+  /// قبلاً فقط uid کوچک‌تر درخواست می‌داد و اگر او آگهی ما را نمی‌دید، اتصال هرگز برقرار نمی‌شد.
+  void _fallbackRequest(String id) {
+    Future<void>.delayed(const Duration(milliseconds: 3500), () {
+      if (!running || peers.containsKey(id) || _pending.contains(id)) return;
+      if (_names[id] == null) return;
+      _request(id);
     });
   }
 
   void _request(String id) {
+    if (_pending.contains(id) || peers.containsKey(id)) return;
     _pending.add(id);
-    // اگر نتیجهٔ اتصال هرگز نرسید، id تا ابد «در حال اتصال» نماند
-    Future<void>.delayed(const Duration(seconds: 25), () {
+    // اگر نتیجه‌ی اتصال هرگز نرسید، id تا ابد «در حال اتصال» نماند
+    Future<void>.delayed(const Duration(seconds: 15), () {
       if (_pending.remove(id) && running && !peers.containsKey(id)) _retryLater(id);
     });
     Nearby().requestConnection(
-      '$myName|$myUid',
+      _label(),
       id,
       onConnectionInitiated: _onInit,
       onConnectionResult: _onResult,
       onDisconnected: _onDisc,
     ).catchError((_) {
       _pending.remove(id);
+      if (running && !peers.containsKey(id)) _retryLater(id);
       return false;
     });
+  }
+
+  // ---------------------------------------------------------------- نگهبان اتصال
+  Timer? _watchTimer;
+  int _lonelySince = 0;
+
+  /// جستجوی Nearby در اندروید بعد از مدتی کند می‌شود یا گوشی‌های تازه را نمی‌بیند؛
+  /// اگر بیش از ۲۰ ثانیه هیچ گوشی وصل نیست، تبلیغ و جستجو دوباره راه‌اندازی می‌شوند.
+  void _startWatchdog() {
+    _watchTimer?.cancel();
+    _lonelySince = DateTime.now().millisecondsSinceEpoch;
+    _watchTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!running) return;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (peers.isNotEmpty || _pending.isNotEmpty) {
+        _lonelySince = now;
+        return;
+      }
+      if (now - _lonelySince > 20000) {
+        _lonelySince = now;
+        unawaited(_restartRadio());
+      }
+    });
+  }
+
+  bool _restarting = false;
+  Future<void> _restartRadio() async {
+    if (_restarting || !running) return;
+    _restarting = true;
+    try {
+      final nearby = Nearby();
+      try {
+        await nearby.stopDiscovery();
+      } catch (_) {}
+      try {
+        await nearby.stopAdvertising();
+      } catch (_) {}
+      if (!running) return;
+      final label = _label();
+      try {
+        await nearby.startAdvertising(
+          label,
+          Strategy.P2P_CLUSTER,
+          onConnectionInitiated: _onInit,
+          onConnectionResult: _onResult,
+          onDisconnected: _onDisc,
+          serviceId: _serviceId,
+        );
+      } catch (_) {}
+      try {
+        await nearby.startDiscovery(
+          label,
+          Strategy.P2P_CLUSTER,
+          onEndpointFound: _onFound,
+          onEndpointLost: (id) => _names.remove(id),
+          serviceId: _serviceId,
+        );
+      } catch (_) {}
+    } finally {
+      _restarting = false;
+    }
+  }
+
+  void _onFound(String id, String name, String serviceId) {
+    _names[id] = name;
+    final other = name.contains('|') ? name.split('|').last : name;
+    if (peers.containsKey(id) || _pending.contains(id)) return;
+    if (myUid.compareTo(other) < 0) {
+      _request(id);
+    } else {
+      _fallbackRequest(id);
+    }
   }
 
   void _onInit(String id, ConnectionInfo info) {
@@ -540,6 +648,7 @@ class OfflineMeshService extends ChangeNotifier {
       final parts = raw.split('|');
       final name = parts.first.isEmpty ? 'Traveler' : parts.first;
       final uid = parts.length > 1 ? parts.last : id;
+      _fails.remove(id);
       peers[id] = OfflinePeer(id, uid, name);
       unawaited(_syncTo(id, uid));
     } else {
@@ -589,8 +698,7 @@ class OfflineMeshService extends ChangeNotifier {
         return;
       }
       if (m['g'] != null) {
-        final h = gameHandler;
-        if (h != null) h(m);
+        _onGamePayload(fromEndpoint, m);
         return;
       }
       // کلید 'pr' (حضور) عمداً یکتاست؛ پیام‌های بازی کلیدهایی مثل 'p' دارند
@@ -775,11 +883,65 @@ class OfflineMeshService extends ChangeNotifier {
     }
   }
 
-  /// ارسال پیام بازی به همه‌ی گوشی‌های وصل‌شده (گیرنده با فیلد 'to' خودش را تشخیص می‌دهد).
+  // پیام‌های بازی: هر پیام شناسه‌ی یکتا (gid) و ttl دارد و مثل چت رله می‌شود؛ پس میزبان بازی
+  // لازم نیست مستقیم به هر سه گوشی دیگر وصل باشد (قبلاً بدون رله بود و «اتاق پیدا نشد» می‌داد).
+  static const int _gameTtl = 3;
+  final Set<String> _gameSeen = {};
+  int _gameSeq = 0;
+
+  bool _markGameSeen(String id) {
+    if (!_gameSeen.add(id)) return false;
+    if (_gameSeen.length > 600) _gameSeen.remove(_gameSeen.first);
+    return true;
+  }
+
+  String? _endpointOfUid(String uid) {
+    for (final e in peers.entries) {
+      if (e.value.uid == uid) return e.key;
+    }
+    return null;
+  }
+
+  void _onGamePayload(String from, Map<String, dynamic> m) {
+    final gid = m['gid'];
+    if (gid != null && !_markGameSeen('$gid')) return; // تکراری (از مسیر دیگر رسیده)
+    final to = m['to'];
+    final forMe = to == null || '$to' == myUid;
+    if (forMe) {
+      final h = gameHandler;
+      if (h != null) h(m);
+    }
+    // رله: فقط پیام‌هایی که ttl دارند (نسخه‌های قدیمی ttl ندارند)
+    final ttl = (m['ttl'] as num?)?.toInt() ?? 0;
+    if (ttl <= 1 || (to != null && '$to' == myUid)) return;
+    final out = <String, dynamic>{...m, 'ttl': ttl - 1};
+    final bytes = Uint8List.fromList(utf8.encode(jsonEncode(out)));
+    if (to != null) {
+      final ep = _endpointOfUid('$to');
+      if (ep != null) {
+        Nearby().sendBytesPayload(ep, bytes).catchError((_) {});
+        return;
+      }
+    }
+    _broadcast(bytes, except: from);
+  }
+
+  /// ارسال پیام بازی؛ اگر گیرنده ('to') همسایه‌ی مستقیم باشد فقط به خودش می‌رود، وگرنه رله می‌شود.
   void sendGame(Map<String, dynamic> m) {
     if (!running) return;
-    final out = <String, dynamic>{...m, 'u': myUid, 'n': myName};
-    _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(out))));
+    final gid = '$myUid-${DateTime.now().microsecondsSinceEpoch}-${_gameSeq++}';
+    _markGameSeen(gid);
+    final out = <String, dynamic>{...m, 'u': myUid, 'n': myName, 'gid': gid, 'ttl': _gameTtl};
+    final bytes = Uint8List.fromList(utf8.encode(jsonEncode(out)));
+    final to = m['to'];
+    if (to != null) {
+      final ep = _endpointOfUid('$to');
+      if (ep != null) {
+        Nearby().sendBytesPayload(ep, bytes).catchError((_) {});
+        return;
+      }
+    }
+    _broadcast(bytes);
   }
 
   /// پیام‌های یک اتاق (گروه یا گفتگوی شخصی)؛ اتاق خالی = شبکه‌ی عمومی.
