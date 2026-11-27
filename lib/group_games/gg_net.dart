@@ -20,6 +20,7 @@ class GgNet {
   final OfflineMeshService _mesh = OfflineMeshService.instance;
   StreamSubscription<Map<String, dynamic>>? _sub;
   Timer? _tick;
+  Timer? _joinTick;
 
   int mySeat = 0;
   final List<Map<String, String>?> seats = List<Map<String, String>?>.filled(maxPlayers, null);
@@ -54,6 +55,14 @@ class GgNet {
       joined = true;
     } else {
       _sendJoin();
+      // تا زمانی که میزبان خوش‌آمد نگفته، هر ۰٫۶ ثانیه دوباره می‌فرستیم (قبلاً ۱٫۵ ثانیه)
+      _joinTick = Timer.periodic(const Duration(milliseconds: 600), (t) {
+        if (joined) {
+          t.cancel();
+        } else {
+          _sendJoin();
+        }
+      });
     }
   }
 
@@ -66,6 +75,7 @@ class GgNet {
       }
     }
     _tick?.cancel();
+    _joinTick?.cancel();
     _sub?.cancel();
     NearbyGameLink.instance.detach();
   }
