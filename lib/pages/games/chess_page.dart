@@ -821,6 +821,7 @@ class _ChessPageState extends State<ChessPage> {
       peerUid = r.hostUid;
     });
     NearbyGameLink.instance.send(<String, dynamic>{'g': 'ch_join', 'to': peerUid, 'code': code});
+    NearbyGameLink.instance.retryUntil(<String, dynamic>{'g': 'ch_join', 'to': peerUid, 'code': code}, () => mounted && stage == 'join' && !started);
   }
 
   // ---------------------------------------------------------------- آنلاین
