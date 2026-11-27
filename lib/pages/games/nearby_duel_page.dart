@@ -120,7 +120,7 @@ class _NearbyDuelPageState extends State<NearbyDuelPage> {
     }
   }
 
-  void _invite(OfflinePeer p) {
+  void _invite(OfflinePerson p) {
     setState(() => _invited = p.uid);
     NearbyGameLink.instance.send(<String, dynamic>{'g': 'inv', 'to': p.uid, 'game': widget.kind.code});
   }
@@ -128,7 +128,7 @@ class _NearbyDuelPageState extends State<NearbyDuelPage> {
   @override
   Widget build(BuildContext context) {
     final on = _mesh.running;
-    final peers = _mesh.peers.values.toList();
+    final peers = _mesh.people;
     return Directionality(
       textDirection: gDir,
       child: Scaffold(
