@@ -141,6 +141,9 @@ class HokmNet {
         }
       }
       if (!started) _shareLobby();
+    } else if (!joined) {
+      // هنوز خوش‌آمد نگرفته‌ایم: درخواست پیوستن را تکرار می‌کنیم (اتصال Nearby ممکن است چند ثانیه بعد برقرار شود)
+      _sendJoin();
     } else if (joined) {
       _send(<String, dynamic>{'t': 'hb'});
       if (_lastHost != 0 && t - _lastHost > 7000) {
