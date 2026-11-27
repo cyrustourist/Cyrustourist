@@ -912,17 +912,16 @@ class OfflineMeshService extends ChangeNotifier {
     final gid = m['gid'];
     if (gid != null && !_markGameSeen('$gid')) return; // تکراری (از مسیر دیگر رسیده)
     final to = m['to'];
-    final forMe = to == null || '$to' == myUid;
-    if (forMe) {
-      final h = gameHandler;
-      if (h != null) h(m);
-    }
+    // مثل قبل، هر پیام بازی به صفحه‌ی بازی داده می‌شود و خود بازی با فیلد 'to' فیلتر می‌کند
+    // (اسم‌وفامیل پیام همگانی را با to='*' می‌فرستد؛ فیلتر کردن اینجا آن را از بین می‌برد).
+    final h = gameHandler;
+    if (h != null) h(m);
     // رله: فقط پیام‌هایی که ttl دارند (نسخه‌های قدیمی ttl ندارند)
     final ttl = (m['ttl'] as num?)?.toInt() ?? 0;
     if (ttl <= 1 || (to != null && '$to' == myUid)) return;
     final out = <String, dynamic>{...m, 'ttl': ttl - 1};
     final bytes = Uint8List.fromList(utf8.encode(jsonEncode(out)));
-    if (to != null) {
+    if (to != null && '$to' != '*') {
       final ep = _endpointOfUid('$to');
       if (ep != null) {
         Nearby().sendBytesPayload(ep, bytes).catchError((_) {});
@@ -949,7 +948,7 @@ class OfflineMeshService extends ChangeNotifier {
     final out = <String, dynamic>{...m, 'u': myUid, 'n': myName, 'gid': gid, 'ttl': _gameTtl};
     final bytes = Uint8List.fromList(utf8.encode(jsonEncode(out)));
     final to = m['to'];
-    if (to != null) {
+    if (to != null && '$to' != '*') {
       final ep = _endpointOfUid('$to');
       if (ep != null) {
         Nearby().sendBytesPayload(ep, bytes).catchError((_) {});
