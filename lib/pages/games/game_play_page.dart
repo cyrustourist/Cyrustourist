@@ -32,6 +32,19 @@ class NearbyGameLink {
   }
 
   void send(Map<String, dynamic> m) => OfflineMeshService.instance.sendGame(m);
+
+  /// پیام را (مثلاً درخواست پیوستن) هر ۰٫۶ ثانیه تکرار می‌کند تا [keep] false شود (حداکثر ۱۲ بار).
+  /// قبلاً فقط هر ۲ ثانیه تکرار می‌شد و اگر پیام اول به‌خاطر وصل‌نشدن هنوز گم می‌شد، بازی دیر شروع می‌شد.
+  void retryUntil(Map<String, dynamic> m, bool Function() keep, {int ms = 600, int times = 12}) {
+    var n = 0;
+    Timer.periodic(Duration(milliseconds: ms), (t) {
+      if (++n > times || !keep()) {
+        t.cancel();
+        return;
+      }
+      send(m);
+    });
+  }
 }
 
 class GamePlayPage extends StatefulWidget {
@@ -331,7 +344,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
 
   void _onMesh() {
     if (!mounted || mode != PlayMode.nearby) return;
-    final here = OfflineMeshService.instance.peers.values.any((p) => p.uid == widget.peerUid);
+    final here = OfflineMeshService.instance.isReachable(widget.peerUid);
     if (!here && !peerGone && !finished) setState(() => peerGone = true);
   }
 
