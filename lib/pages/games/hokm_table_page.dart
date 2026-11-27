@@ -61,6 +61,7 @@ class _HokmTablePageState extends State<HokmTablePage> {
   String _banner = '';
   String _hl = '';
   String _hlSub = '';
+  bool _hlOurs = true;
   final Map<int, String> _bubbles = <int, String>{};
   final List<_Chat> _chat = <_Chat>[];
   final TextEditingController _chatCtl = TextEditingController();
@@ -232,6 +233,7 @@ class _HokmTablePageState extends State<HokmTablePage> {
       setState(() {
         _hl = r['k'] == true ? (ours ? 'کوت!' : 'کوت شدیم!') : (r['hk'] == true ? (ours ? 'حاکم کوت!' : 'حاکم کوت شدیم!') : (ours ? 'دست را بردیم' : 'دست را باختیم'));
         _hlSub = '$pts امتیاز برای ${ours ? 'ما' : 'حریف'}';
+        _hlOurs = ours;
       });
       _after(1900, () => setState(() => _hl = ''));
       if (_match != null && _rnd.nextInt(2) == 0) _botTalk();
@@ -476,48 +478,97 @@ class _HokmTablePageState extends State<HokmTablePage> {
     return out;
   }
 
-  Widget _tag(int s, Map<String, dynamic> v, {bool vertical = false}) {
+  /// آواتار درشت بازیکن (مثل قاب طلایی میان حلقه‌ی ورق‌ها) + روبان نام + تعداد ورق + گفتگو زیر بازیکن.
+  /// [side]: 0 وسط، 1 چپ، 2 راست (برای جهت باز شدن حباب گفتگو)؛ [bubbleAbove] فقط برای خودم (زیر من ورق‌هاست).
+  Widget _tag(int s, Map<String, dynamic> v, double u, {double size = 14, int side = 0, bool bubbleAbove = false}) {
     final pl = (v['pl'] as List)[s] as Map;
     final turn = (_n(v['turn']) == s && _n(v['ph']) == 2) || (_n(v['ph']) == 1 && _n(v['chooser']) == s);
     final conn = pl['c'] != false;
     final partner = s == (_seat + 2) % 4;
-    final avatar = HokmAvatar(avatar: '${pl['a']}', size: 34, border: turn ? const Color(0xff27e6e6) : Colors.white70);
-    final name = Text('${pl['n']}${partner ? ' (شریک)' : ''}${conn ? '' : ' ⚠'}', maxLines: 1, overflow: TextOverflow.ellipsis, textDirection: TextDirection.rtl, style: const TextStyle(color: Color(0xffffd84a), fontWeight: FontWeight.w900, fontSize: 12));
-    final crown = _n(v['hakem']) == s ? const Text('👑', style: TextStyle(fontSize: 16)) : const SizedBox.shrink();
-    final body = Container(
-      constraints: const BoxConstraints(maxWidth: 150),
-      padding: EdgeInsets.symmetric(horizontal: vertical ? 6 : 10, vertical: 4),
+    final cnt = _n((v['cnt'] as List)[s]);
+    final d = size * u;
+    final rbH = d * .4;
+    final rbW = d * 1.55;
+    final ring = d + 8;
+    final total = ring + rbH * .62;
+    final left0 = (rbW - ring) / 2;
+    const cyan = Color(0xff27e6e6);
+    final nm = '${pl['n']}${partner ? ' (یار)' : ''}${conn ? '' : ' ⚠'}';
+    final avatar = Container(
+      width: ring,
+      height: ring,
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xd11e0e06),
-        borderRadius: BorderRadius.circular(vertical ? 16 : 26),
-        border: Border.all(color: turn ? const Color(0xff27e6e6) : const Color(0xff7a5a30), width: 2),
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: <Color>[Color(0xfffff0a8), Color(0xffd9a02c), Color(0xff8a5a10)]),
         boxShadow: <BoxShadow>[
-          if (turn) const BoxShadow(color: Color(0xff27e6e6), blurRadius: 16),
-          BoxShadow(color: Colors.black.withOpacity(.5), blurRadius: 8, offset: const Offset(0, 3)),
+          if (turn) const BoxShadow(color: cyan, blurRadius: 24, spreadRadius: 4),
+          BoxShadow(color: Colors.black.withOpacity(.6), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
-      child: vertical
-          ? Column(mainAxisSize: MainAxisSize.min, children: [avatar, const SizedBox(height: 2), name, crown])
-          : Row(mainAxisSize: MainAxisSize.min, textDirection: TextDirection.rtl, children: [avatar, const SizedBox(width: 6), Flexible(child: name), const SizedBox(width: 4), crown]),
+      child: HokmAvatar(avatar: '${pl['a']}', size: d, border: turn ? cyan : const Color(0xff3a2208)),
+    );
+    final ribbon = Container(
+      height: rbH,
+      width: rbW,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[Color(0xffffe9a0), Color(0xffe0a92f), Color(0xffb87d14)]),
+        borderRadius: BorderRadius.circular(rbH / 2.4),
+        border: Border.all(color: const Color(0xff5a3a08), width: 1.5),
+        boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withOpacity(.5), blurRadius: 6, offset: const Offset(0, 3))],
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(nm, maxLines: 1, textDirection: TextDirection.rtl, style: const TextStyle(color: Color(0xff3b2208), fontWeight: FontWeight.w900, fontSize: 12.5)),
+      ),
+    );
+    final bd = d * .36;
+    final badge = Container(
+      width: bd,
+      height: bd,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: const Color(0xff2f9c8f), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5), boxShadow: const <BoxShadow>[BoxShadow(color: Colors.black54, blurRadius: 4)]),
+      child: Text('$cnt', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: bd * .6)),
     );
     final b = _bubbles[s];
-    return Opacity(
-      opacity: conn ? 1 : .55,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          body,
-          if (b != null)
-            Positioned(
-              top: -34,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: const <BoxShadow>[BoxShadow(color: Colors.black45, blurRadius: 8)]),
-                child: Text(b, textDirection: TextDirection.rtl, style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-            ),
-        ],
+    Widget? bubble;
+    if (b != null) {
+      final box = Container(
+        constraints: const BoxConstraints(maxWidth: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: const <BoxShadow>[BoxShadow(color: Colors.black45, blurRadius: 8)]),
+        child: Text(b, textAlign: TextAlign.center, textDirection: TextDirection.rtl, style: const TextStyle(color: Colors.black87, fontSize: 12.5, fontWeight: FontWeight.w800)),
+      );
+      final al = side == 1 ? Alignment.centerLeft : (side == 2 ? Alignment.centerRight : Alignment.center);
+      final l = side == 2 ? -110.0 : (side == 1 ? 0.0 : -110.0);
+      final r = side == 1 ? -110.0 : (side == 2 ? 0.0 : -110.0);
+      bubble = Positioned(
+        left: l,
+        right: r,
+        top: bubbleAbove ? null : total + 3,
+        bottom: bubbleAbove ? total + 4 : null,
+        child: Align(alignment: al, child: box),
+      );
+    }
+    return IgnorePointer(
+      child: Opacity(
+        opacity: conn ? 1 : .55,
+        child: SizedBox(
+          width: rbW,
+          height: total,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(top: 0, left: left0, child: avatar),
+              Positioned(top: ring - rbH * .38, left: 0, child: ribbon),
+              Positioned(top: 0, left: left0 - 3, child: badge),
+              if (_n(v['hakem']) == s) Positioned(top: -d * .2, right: left0 - 2, child: Text('👑', style: TextStyle(fontSize: d * .4))),
+              if (bubble != null) bubble,
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -543,22 +594,79 @@ class _HokmTablePageState extends State<HokmTablePage> {
         ),
       );
 
+  /// تابلوی نتیجه به سبک بازی فوتبال: امتیاز درشت هر تیم، شماره‌ی دست، و توپ‌های «دست‌های بردهشده» (۷ تایی).
   Widget _score(Map<String, dynamic> v) {
     final mt = _team(_seat);
     final sc = (v['scores'] as List).map(_n).toList();
-    Widget lab(String t) => Padding(padding: const EdgeInsets.symmetric(horizontal: 9), child: Text(t, style: const TextStyle(color: Color(0xffffe9a8), fontSize: 12, fontWeight: FontWeight.w700)));
-    Widget numBox(int x, Color c) => Container(width: 34, alignment: Alignment.center, color: c, child: Text('$x', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)));
+    final tr = (v['tricks'] as List).map(_n).toList();
+    Widget pips(int n, Color c) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < 7; i++)
+              Container(
+                width: 7.5,
+                height: 7.5,
+                margin: const EdgeInsets.symmetric(horizontal: 1.2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i < n ? c : Colors.white12,
+                  border: Border.all(color: i < n ? Colors.white : Colors.white24, width: 1),
+                  boxShadow: i < n ? <BoxShadow>[BoxShadow(color: c.withOpacity(.85), blurRadius: 5)] : null,
+                ),
+              ),
+          ],
+        );
+    Widget numW(int x) => AnimatedSwitcher(
+          duration: const Duration(milliseconds: 450),
+          transitionBuilder: (c, a) => ScaleTransition(scale: CurvedAnimation(parent: a, curve: Curves.elasticOut), child: FadeTransition(opacity: a, child: c)),
+          child: Text('$x', key: ValueKey<int>(x), style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, height: 1.05, shadows: <Shadow>[Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 2))])),
+        );
+    Widget team(String name, int score, int tricks, List<Color> cols, Color pip) => Container(
+          width: 76,
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 5),
+          decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: cols)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                textDirection: TextDirection.rtl,
+                children: [Text(name, style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w900)), const SizedBox(width: 6), numW(score)],
+              ),
+              const SizedBox(height: 3),
+              pips(tricks, pip),
+            ],
+          ),
+        );
     return Container(
-      height: 34,
       decoration: BoxDecoration(
-        color: const Color(0xdd0a1530),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xf00a1530),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xffe8bb55), width: 2),
-        boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withOpacity(.5), blurRadius: 10, offset: const Offset(0, 3))],
+        boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withOpacity(.65), blurRadius: 12, offset: const Offset(0, 4)), const BoxShadow(color: Color(0x44e8bb55), blurRadius: 14)],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Row(mainAxisSize: MainAxisSize.min, textDirection: TextDirection.ltr, children: [lab('حریف'), numBox(sc[1 - mt], const Color(0xffd23a4a)), numBox(sc[mt], const Color(0xff1f6fe0)), lab('ما')]),
+        borderRadius: BorderRadius.circular(11),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          textDirection: TextDirection.ltr,
+          children: [
+            team('حریف', sc[1 - mt], tr[1 - mt], const <Color>[Color(0xffe0485a), Color(0xff9c1b2c)], const Color(0xffff6b78)),
+            Container(
+              width: 44,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('دست', style: TextStyle(color: Colors.white60, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                  Text('${_n(v['no'])}', style: const TextStyle(color: Color(0xffffd84a), fontSize: 20, fontWeight: FontWeight.w900, height: 1.1)),
+                  Text('تا ${_n(v['target'])}', style: const TextStyle(color: Colors.white54, fontSize: 9.5)),
+                ],
+              ),
+            ),
+            team('ما', sc[mt], tr[mt], const <Color>[Color(0xff3b8cff), Color(0xff1550b8)], const Color(0xff7cc0ff)),
+          ],
+        ),
       ),
     );
   }
@@ -567,32 +675,33 @@ class _HokmTablePageState extends State<HokmTablePage> {
     final kind = _n(v['kind']);
     final decided = v['decided'] == true;
     final trump = _n(v['trump']);
+    const ts = TextStyle(color: Color(0xffffd84a), fontWeight: FontWeight.w900, fontSize: 25, shadows: <Shadow>[Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 2))]);
     Widget content;
     if (!decided) {
-      content = const Text('حکم : …', textDirection: TextDirection.rtl, style: TextStyle(color: Color(0xffffd84a), fontWeight: FontWeight.w900, fontSize: 18));
+      content = const Text('حکم : …', textDirection: TextDirection.rtl, style: ts);
     } else if (kind == 0) {
       content = Row(
         mainAxisSize: MainAxisSize.min,
         textDirection: TextDirection.rtl,
         children: [
-          Text(v['seven'] == true ? 'حکم (۷ یار) : ' : 'حکم : ', style: TextStyle(color: Color(0xffffd84a), fontWeight: FontWeight.w900, fontSize: 18)),
-          HokmSuit(trump, 30, (trump == 1 || trump == 2) ? const Color(0xffff4b4b) : Colors.white, shadow: true),
+          Text(v['seven'] == true ? 'حکم (۷ یار) : ' : 'حکم : ', style: ts),
+          HokmSuit(trump, 46, (trump == 1 || trump == 2) ? const Color(0xffff4b4b) : Colors.white, shadow: true),
         ],
       );
     } else {
-      content = Text('حکم : ${_kindName[kind]}', textDirection: TextDirection.rtl, style: const TextStyle(color: Color(0xffffd84a), fontWeight: FontWeight.w900, fontSize: 18));
+      content = Text('حکم : ${_kindName[kind]}', textDirection: TextDirection.rtl, style: ts);
     }
     return AnimatedScale(
       scale: _pulse ? 1.18 : 1,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutBack,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xd11e0e06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xff27e6e6), width: 2.5),
-          boxShadow: <BoxShadow>[const BoxShadow(color: Color(0x5527e6e6), blurRadius: 18), BoxShadow(color: Colors.black.withOpacity(.5), blurRadius: 8, offset: const Offset(0, 3))],
+          color: const Color(0xe61e0e06),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xff27e6e6), width: 3),
+          boxShadow: <BoxShadow>[const BoxShadow(color: Color(0x6627e6e6), blurRadius: 22), BoxShadow(color: Colors.black.withOpacity(.55), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: content,
       ),
@@ -600,8 +709,6 @@ class _HokmTablePageState extends State<HokmTablePage> {
   }
 
   Widget _info(Map<String, dynamic> v) {
-    final mt = _team(_seat);
-    final tr = (v['tricks'] as List).map(_n).toList();
     final pl = v['pl'] as List;
     final trick = v['trick'] as List;
     final choosing = _n(v['ph']) == 1;
@@ -612,15 +719,15 @@ class _HokmTablePageState extends State<HokmTablePage> {
       if (trick.isNotEmpty) {
         final ls = _card((trick.first as List)[1]).suit;
         spans.add(const TextSpan(text: 'خال زمین '));
-        spans.add(WidgetSpan(alignment: PlaceholderAlignment.middle, child: Container(color: Colors.black54, padding: const EdgeInsets.symmetric(horizontal: 4), child: HokmSuit(ls, 15, (ls == 1 || ls == 2) ? const Color(0xffff6b6b) : Colors.white))));
+        spans.add(WidgetSpan(alignment: PlaceholderAlignment.middle, child: Container(color: Colors.black54, padding: const EdgeInsets.symmetric(horizontal: 4), child: HokmSuit(ls, 17, (ls == 1 || ls == 2) ? const Color(0xffff6b6b) : Colors.white))));
         spans.add(const TextSpan(text: ' · '));
       }
-      spans.add(TextSpan(text: 'دست‌ها: ما ${tr[mt]} · حریف ${tr[1 - mt]} · تا ${_n(v['target'])} امتیاز'));
+      spans.add(TextSpan(text: 'بازی تا ${_n(v['target'])} امتیاز'));
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
-      child: Text.rich(TextSpan(style: const TextStyle(color: Colors.white, fontSize: 11), children: spans), textDirection: TextDirection.rtl),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      decoration: BoxDecoration(color: const Color(0xcc000000), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
+      child: Text.rich(TextSpan(style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700), children: spans), textDirection: TextDirection.rtl),
     );
   }
 
@@ -779,7 +886,7 @@ class _HokmTablePageState extends State<HokmTablePage> {
     final rightCards = _fan(n: cnt[(seat + 1) % 4], pivot: Offset(W - 16 * u + oR + och, H * .52), base: -pi / 2, radius: oR, cw: ow, maxDeg: 64, stepDeg: 5.5, card: (i) => HokmBackView(w: ow));
     final leftCards = _fan(n: cnt[(seat + 3) % 4], pivot: Offset(16 * u - oR - och, H * .52), base: pi / 2, radius: oR, cw: ow, maxDeg: 64, stepDeg: 5.5, card: (i) => HokmBackView(w: ow));
     final tw = 11 * u, tch = tw * 1.4;
-    final topCards = _fan(n: cnt[(seat + 2) % 4], pivot: Offset(W / 2, pad.top + 24 * u - oR - tch), base: pi, radius: oR, cw: tw, maxDeg: 64, stepDeg: 5.5, card: (i) => HokmBackView(w: tw));
+    final topCards = _fan(n: cnt[(seat + 2) % 4], pivot: Offset(W / 2, pad.top + 36 * u - oR - tch), base: pi, radius: oR, cw: tw, maxDeg: 64, stepDeg: 5.5, card: (i) => HokmBackView(w: tw));
     // --- میز
     final center = Offset(W / 2, H * .51);
     final trw = 17 * u, trh = trw * 1.4;
@@ -824,9 +931,9 @@ class _HokmTablePageState extends State<HokmTablePage> {
         ...topCards,
         ...rightCards,
         ...leftCards,
-        centered(_tag((seat + 2) % 4, v), top: pad.top + 28 * u),
-        at(_tag((seat + 3) % 4, v, vertical: true), left: 14 * u, top: H * .52 + 16 * u),
-        at(_tag((seat + 1) % 4, v, vertical: true), right: 14 * u, top: H * .52 + 16 * u),
+        centered(_tag((seat + 2) % 4, v, u, size: 16), top: pad.top + 22.5 * u),
+        at(_tag((seat + 3) % 4, v, u, size: 13, side: 1), left: .75 * u, top: H * .52 - 11 * u),
+        at(_tag((seat + 1) % 4, v, u, size: 13, side: 2), right: .75 * u, top: H * .52 - 11 * u),
         ...trickW,
         // پایین: دست من با کمی حالت سه‌بعدی
         Positioned.fill(
@@ -838,13 +945,13 @@ class _HokmTablePageState extends State<HokmTablePage> {
             child: Stack(clipBehavior: Clip.none, children: mine),
           ),
         ),
-        centered(_tag(seat, v), bottom: pad.bottom + 48 * u),
+        centered(_tag(seat, v, u, size: 15, bubbleAbove: true), bottom: pad.bottom + 15.5 * u),
         // بالا
         at(const HokmLogo(size: 42), left: 10, top: pad.top + 6),
-        Positioned(top: pad.top + 6, left: 60, right: 100, child: Center(child: _score(v))),
+        Positioned(top: pad.top + 6, left: 60, right: 100, child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: _score(v)))),
         at(Row(mainAxisSize: MainAxisSize.min, children: [_roundBtn(Icons.settings_rounded, () => showHokmSettings(context)), const SizedBox(width: 8), _roundBtn(Icons.power_settings_new_rounded, _exit)]), right: 8, top: pad.top + 4),
-        centered(_trumpBox(v), top: pad.top + 15 * u + 8),
-        centered(_info(v), top: pad.top + 38.5 * u),
+        centered(_trumpBox(v), top: pad.top + 44.5 * u),
+        centered(_info(v), top: pad.top + 59 * u),
         // کنار
         at(
           Column(
@@ -874,18 +981,33 @@ class _HokmTablePageState extends State<HokmTablePage> {
           bottom: pad.bottom + 52 * u,
         ),
         if (_banner.isNotEmpty) Positioned(left: 0, right: 0, top: pad.top + 27 * u, child: Container(color: const Color(0xffd9433b), padding: const EdgeInsets.all(6), child: Text(_banner, textAlign: TextAlign.center, textDirection: TextDirection.rtl, style: const TextStyle(color: Colors.white, fontSize: 12)))),
-        if (ph == 1 && _n(v['chooser']) == seat) Positioned(left: W * .04, right: W * .04, top: H * .27, child: _chooser(v, u)),
+        if (ph == 1 && _n(v['chooser']) == seat) Positioned(left: W * .04, right: W * .04, top: H * .31, child: _chooser(v, u)),
         if (_hl.isNotEmpty)
           Positioned(
             left: 0,
             right: 0,
-            top: H * .36,
+            top: H * .37,
             child: IgnorePointer(
-              child: Column(
-                children: [
-                  Text(_hl, textDirection: TextDirection.rtl, style: const TextStyle(color: Color(0xffffe24a), fontSize: 42, fontWeight: FontWeight.w900, shadows: <Shadow>[Shadow(color: Color(0xff7a2a00), offset: Offset(0, 3)), Shadow(color: Color(0xffff9a00), blurRadius: 24)])),
-                  Text(_hlSub, textDirection: TextDirection.rtl, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700, shadows: <Shadow>[Shadow(color: Colors.black, blurRadius: 6)])),
-                ],
+              child: TweenAnimationBuilder<double>(
+                key: ValueKey<String>('$_hl$_hlSub'),
+                tween: Tween<double>(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 520),
+                curve: Curves.easeOutBack,
+                builder: (c, t, child) => Transform(alignment: Alignment.center, transform: Matrix4.diagonal3Values(1.0, .4 + .6 * t, 1.0), child: Opacity(opacity: t.clamp(0.0, 1.0).toDouble(), child: child)),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: <Color>[Colors.transparent, (_hlOurs ? const Color(0xff1550b8) : const Color(0xff9c1b2c)).withOpacity(.92), (_hlOurs ? const Color(0xff1550b8) : const Color(0xff9c1b2c)).withOpacity(.92), Colors.transparent], stops: const <double>[0, .18, .82, 1]),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_hlOurs ? '⚽  نتیجه‌ی دست  ⚽' : '🥅  نتیجه‌ی دست  🥅', textDirection: TextDirection.rtl, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                      Text(_hl, textDirection: TextDirection.rtl, style: const TextStyle(color: Color(0xffffe24a), fontSize: 40, fontWeight: FontWeight.w900, shadows: <Shadow>[Shadow(color: Color(0xff7a2a00), offset: Offset(0, 3)), Shadow(color: Color(0xffff9a00), blurRadius: 24)])),
+                      Text(_hlSub, textDirection: TextDirection.rtl, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800, shadows: <Shadow>[Shadow(color: Colors.black, blurRadius: 6)])),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
