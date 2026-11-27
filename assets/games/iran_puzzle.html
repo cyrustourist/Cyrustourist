@@ -27,12 +27,12 @@ body{background:radial-gradient(120% 60% at 50% 0%,var(--bg1) 0%,var(--bg2) 75%)
 #info b{color:var(--gold)}
 #bwrap{flex:1 1 0;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
 #boardBox{position:relative;border-radius:20px;padding:7px;background:rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(0,0,0,.45)}
-#board{display:grid;border-radius:14px;overflow:hidden;background:#000}
+#board{display:grid;direction:ltr;border-radius:14px;overflow:hidden;background:#000}
 .t{background-image:var(--img);background-repeat:no-repeat;cursor:pointer;position:relative;transition:transform .12s,filter .12s}
 .t.sel{outline:4px solid var(--gold);outline-offset:-4px;z-index:2;filter:brightness(1.18);transform:scale(.96)}
 .t.ok{box-shadow:inset 0 0 0 2px rgba(80,255,140,.85)}
 .t.fl{animation:fl .35s}
-.t i{position:absolute;top:2px;inset-inline-start:3px;font-style:normal;font-size:10px;font-weight:900;line-height:1;padding:2px 4px;border-radius:7px;background:rgba(0,0,0,.45);color:#fff;pointer-events:none}
+.t i{position:absolute;top:2px;right:3px;font-style:normal;font-size:10px;font-weight:900;line-height:1;padding:2px 4px;border-radius:7px;background:rgba(0,0,0,.45);color:#fff;pointer-events:none}
 .t.hn{animation:hn .9s 2;z-index:3}
 @keyframes hn{0%,100%{box-shadow:inset 0 0 0 0 rgba(255,201,40,0)}50%{box-shadow:inset 0 0 0 6px #ffc928;filter:brightness(1.35)}}
 @keyframes fl{0%{transform:scale(.85);filter:brightness(1.6)}100%{transform:scale(1)}}
@@ -272,7 +272,9 @@ function startLevel(L) {
   const svg = sceneSVG(info.base, info.v);
   const url = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
   $('boardBox').style.setProperty('--img', url);
+  $('info').innerHTML = 'دو تکه را پشت‌سرهم لمس کن تا جابه‌جا شوند · <b>مرحله ' + fa(L + 1) + '</b> از ' + fa(NL) + ' · ' + CATE[info.cat] + ' · <b>' + info.name + '</b>';
   layout(); render(); closeModal();
+  requestAnimationFrame(() => { if (GS) layout(); });
   analyse(svg, GS);
   GS.iv = setInterval(() => { if (!GS.done) { GS.sec++; $('tm').innerHTML = '⏱ <b>' + fmt(GS.sec) + '</b>'; } }, 1000);
   $('tm').innerHTML = '⏱ <b>' + fmt(0) + '</b>';
