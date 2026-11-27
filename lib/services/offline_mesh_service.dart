@@ -260,7 +260,7 @@ class OfflineMeshService extends ChangeNotifier {
 
   void _announce() {
     if (!running) return;
-    final m = <String, dynamic>{'pr': 1, 'u': myUid, 'n': myName, 'ts': DateTime.now().millisecondsSinceEpoch, 'ttl': _maxTtl, 'h': 0};
+    final m = <String, dynamic>{'pr': 1, 'u': myUid, 'n': myName, 'ts': DateTime.now().millisecondsSinceEpoch, 'ttl': _maxTtl, 'h': 0, 'nb': peers.values.map((e) => e.uid).toList()};
     _broadcast(Uint8List.fromList(utf8.encode(jsonEncode(m))));
   }
 
@@ -391,6 +391,11 @@ class OfflineMeshService extends ChangeNotifier {
       } catch (_) {}
       await Future<void>.delayed(const Duration(milliseconds: 60));
     }
+    // فایل‌های قدیمی چت (عکس و صدا) لینک تازه را پر می‌کنند و پیام‌های بازی را عقب می‌اندازند؛
+    // اگر بازی باز است اصلاً نمی‌فرستیم و در غیر این صورت چند ثانیه صبر می‌کنیم.
+    if (gameHandler != null) return;
+    await Future<void>.delayed(const Duration(seconds: 6));
+    if (!running || gameHandler != null || !peers.containsKey(endpointId)) return;
     // فایل‌های اخیر (عکس و صدا) که این گوشی هنوز ندارد؛ ttl=1 یعنی خودش فقط دریافت می‌کند
     final limit = DateTime.now().subtract(_fileBoxAge).millisecondsSinceEpoch;
     for (final f in List<_StoredFile>.of(_fileBox)) {
@@ -662,6 +667,7 @@ class OfflineMeshService extends ChangeNotifier {
     peers.remove(id);
     _pending.remove(id);
     notifyListeners();
+    if (running) _announce();
     if (running) _retryLater(id);
   }
 
@@ -923,7 +929,16 @@ class OfflineMeshService extends ChangeNotifier {
         return;
       }
     }
-    _broadcast(bytes, except: from);
+    // پیام بدون گیرنده: فقط به همسایه‌هایی می‌رسانیم که فرستنده‌ی اصلی مستقیم به آن‌ها وصل نیست
+    // (اگر فهرست همسایه‌های او را نداریم، برای امنیت به همه). این کار ترافیک را چند برابر کم می‌کند.
+    final origin = '${m['u']}';
+    final nbRaw = _known[origin]?.raw['nb'];
+    final nb = nbRaw is List ? nbRaw.map((e) => '$e').toSet() : null;
+    for (final e in peers.entries) {
+      if (e.key == from || e.value.uid == origin) continue;
+      if (nb != null && nb.contains(e.value.uid)) continue;
+      Nearby().sendBytesPayload(e.key, bytes).catchError((_) {});
+    }
   }
 
   /// ارسال پیام بازی؛ اگر گیرنده ('to') همسایه‌ی مستقیم باشد فقط به خودش می‌رود، وگرنه رله می‌شود.
