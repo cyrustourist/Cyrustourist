@@ -202,7 +202,7 @@ class _HokmLobbyPageState extends State<HokmLobbyPage> {
       _st = _LS.joining;
       _busy = false;
     });
-    _joinTimeout = Timer(const Duration(seconds: 8), () {
+    _joinTimeout = Timer(const Duration(seconds: 30), () {
       if (mounted && _st == _LS.joining) _fail('اتاقی با این کد پیدا نشد. کد را بررسی کنید و مطمئن شوید همه‌ی گوشی‌ها به شبکه‌ی نزدیک وصل هستند.');
     });
   }
