@@ -40,6 +40,7 @@ class _EsmFamilNearbyPageState extends State<EsmFamilNearbyPage> {
   final Random _rnd = Random();
   StreamSubscription<Map<String, dynamic>>? _sub;
   Timer? _tick;
+  Timer? _joinTick;
   bool _starting = false;
 
   String stage = 'menu'; // menu | host | join | play
@@ -75,6 +76,7 @@ class _EsmFamilNearbyPageState extends State<EsmFamilNearbyPage> {
       _send(<String, dynamic>{'g': 'ef_leave', 'to': hostUid, 'code': code});
     }
     _tick?.cancel();
+    _joinTick?.cancel();
     _sub?.cancel();
     _mesh.removeListener(_onMesh);
     NearbyGameLink.instance.detach();
@@ -102,7 +104,7 @@ class _EsmFamilNearbyPageState extends State<EsmFamilNearbyPage> {
     } else if (stage == 'play' && isHost) {
       // گوشی‌هایی که قطع شده‌اند به داور بازی خبر داده می‌شود (نوبتشان خودکار رد می‌شود)
       for (var i = 1; i < ids.length; i++) {
-        final here = _mesh.peers.values.any((p) => p.uid == ids[i]);
+        final here = _mesh.people.any((p) => p.uid == ids[i]);
         _js('window.onGone($i,${here ? 0 : 1})');
       }
     }
@@ -236,6 +238,15 @@ class _EsmFamilNearbyPageState extends State<EsmFamilNearbyPage> {
       joined = false;
     });
     _send(<String, dynamic>{'g': 'ef_join', 'to': hostUid, 'code': code});
+    // تا وقتی میزبان فهرست بازیکنان را نفرستاده، هر ۰٫۶ ثانیه دوباره درخواست می‌دهیم
+    _joinTick?.cancel();
+    _joinTick = Timer.periodic(const Duration(milliseconds: 600), (t) {
+      if (!mounted || joined || stage != 'join' || code.isEmpty) {
+        t.cancel();
+      } else {
+        _send(<String, dynamic>{'g': 'ef_join', 'to': hostUid, 'code': code});
+      }
+    });
   }
 
   void _hostStart() {
