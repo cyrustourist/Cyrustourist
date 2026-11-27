@@ -250,6 +250,17 @@ class OfflineMeshService extends ChangeNotifier {
     return list;
   }
 
+  /// آیا این نفر الان در دسترس است؟ همسایه‌ی مستقیم، یا کسی که از راه گوشی واسط تازه (۵۵ ثانیه‌ی اخیر) دیده شده.
+  /// (بازی‌ها قبلاً فقط همسایه‌ی مستقیم را «حاضر» می‌دانستند و بازیکن دور را قطع‌شده حساب می‌کردند.)
+  bool isReachable(String uid) {
+    for (final p in peers.values) {
+      if (p.uid == uid) return true;
+    }
+    final k = _known[uid];
+    if (k == null || k.hops < 2) return false;
+    return DateTime.now().millisecondsSinceEpoch - k.seenAt < 55000;
+  }
+
   /// نام اتاق گفتگوی شخصی با یک نفر (برای هر دو گوشی یکی است).
   String dmRoomWith(String uid) {
     final ids = <String>[myUid, uid]..sort();
