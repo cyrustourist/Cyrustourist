@@ -18,6 +18,7 @@ class HokmNet {
   final OfflineMeshService _mesh = OfflineMeshService.instance;
   StreamSubscription<Map<String, dynamic>>? _sub;
   Timer? _tick;
+  Timer? _joinTick;
 
   /// صندلی من
   int mySeat = 0;
@@ -52,6 +53,14 @@ class HokmNet {
       joined = true;
     } else {
       _sendJoin();
+      // تا زمانی که میزبان خوش‌آمد نگفته، هر ۰٫۶ ثانیه دوباره می‌فرستیم (قبلاً ۱٫۵ ثانیه)
+      _joinTick = Timer.periodic(const Duration(milliseconds: 600), (t) {
+        if (joined) {
+          t.cancel();
+        } else {
+          _sendJoin();
+        }
+      });
     }
   }
 
@@ -64,6 +73,7 @@ class HokmNet {
       }
     }
     _tick?.cancel();
+    _joinTick?.cancel();
     _sub?.cancel();
     match?.destroy();
     NearbyGameLink.instance.detach();
